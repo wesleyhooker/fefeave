@@ -1,0 +1,13 @@
+# Node/Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Terraform local state & caches
+infra/**/.terraform/
+infra/**/terraform.tfstate
+infra/**/terraform.tfstate.*
+
+# OS/editor
+.DS_Store
+*.log

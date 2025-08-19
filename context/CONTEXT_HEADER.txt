@@ -1,0 +1,90 @@
+# Context Header - fefeave Project (2025-08-16)
+
+## Project Overview
+- Project: **fefeave**  
+- Purpose: Angular frontend + Node backend deployed via AWS S3 + CloudFront.  
+- Infra managed with Terraform.  
+- Goal: CI/CD pipeline with GitHub Actions  build Angular  upload to S3  invalidate CloudFront.  
+- Workflow: User keeps a `context/CONTEXT_HEADER.txt` that combines this header with the repo structure for maximum context.
+
+## Infra Setup (dev)
+- Terraform split into files under `infra/dev/`:
+  - **providers.tf**  AWS provider (`us-west-2`). Comment placeholder for future us-east-1 ACM/CloudFront provider.
+  - **s3.tf**  `aws_s3_bucket.frontend_dev`, `aws_s3_bucket_website_configuration.frontend_dev`.
+  - **cloudfront.tf**  `aws_cloudfront_origin_access_control.frontend_dev`, `aws_cloudfront_distribution.frontend_dev`.
+  - **s3_policy.tf**  `aws_s3_bucket_policy.frontend_dev`.
+  - **iam_gh_oidc.tf**  GitHub Actions OIDC IAM provider, assume-role trust policy, `aws_iam_role.gha_deploy` with least-privilege to S3 + CloudFront.
+  - **outputs.tf**  `cloudfront_distribution_id`, `s3_bucket_name`, `github_actions_role_arn`.
+  - **main.tf**  just a header explaining the file split.
+- All AWS resource names preserved (`frontend_dev` blocks).
+- S3 bucket: **fefeave-frontend-dev**.
+- Region: **us-west-2**.
+- CI/CD: Deploy artifacts to S3  serve via CloudFront  invalidate `/index.html`.
+
+## CI/CD (GitHub Actions)
+- Workflow: `.github/workflows/deploy.yml`
+- Trigger: `push` to `main` + manual dispatch.
+- Steps:
+  - Checkout  Node setup  Install deps  Build Angular (prod).
+  - AWS OIDC auth via `aws-actions/configure-aws-credentials@v4`.
+  - Upload to S3:
+    - Assets  long cache (`public, max-age=31536000, immutable`).
+    - `index.html`  no-cache (`no-cache`).
+    - Optional cleanup  `aws s3 sync --delete`.
+  - Invalidate CloudFront `/index.html`.
+- Requires repo variables:
+  - `CF_DIST_ID` (from `terraform output -raw cloudfront_distribution_id`)
+  - `ANGULAR_PROJECT` (name of Angular dist folder, e.g., `fefeave`)
+
+## Workflow for Context
+- User copies latest context update (this file) into `context/CONTEXT_HEADER.txt`.
+- Runs `ctxup` alias (or one-liner) to append repo tree.
+- Provides resulting file in new chat for full continuity.
+
+.
+├── README.md
+├── backend
+│   ├── Dockerfile
+│   └── src
+├── context
+│   └── CONTEXT_HEADER.txt
+├── docker-compose.yml
+├── frontend
+│   ├── Dockerfile
+│   ├── angular.json
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public
+│   │   └── favicon.ico
+│   ├── src
+│   │   ├── app
+│   │   │   ├── app.config.server.ts
+│   │   │   ├── app.config.ts
+│   │   │   ├── app.html
+│   │   │   ├── app.routes.server.ts
+│   │   │   ├── app.routes.ts
+│   │   │   ├── app.scss
+│   │   │   ├── app.spec.ts
+│   │   │   └── app.ts
+│   │   ├── index.html
+│   │   ├── main.server.ts
+│   │   ├── main.ts
+│   │   ├── server.ts
+│   │   └── styles.scss
+│   ├── tsconfig.app.json
+│   ├── tsconfig.json
+│   └── tsconfig.spec.json
+└── infra
+    ├── README.md
+    └── dev
+        ├── cloudfront.tf
+        ├── iam_gh_oidc.tf
+        ├── main.tf
+        ├── outputs.tf
+        ├── providers.tf
+        ├── s3.tf
+        ├── s3_policy.tf
+        ├── terraform.tfstate
+        └── terraform.tfstate.backup
+
+10 directories, 35 files
