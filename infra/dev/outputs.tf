@@ -9,3 +9,8 @@ output "s3_bucket_name" {
 output "github_actions_role_arn" {
   value = aws_iam_role.gha_deploy.arn
 }
+
+# infra/dev/outputs.tf
+output "cloudfront_domain_name" {
+  value = aws_cloudfront_distribution.frontend_dev.domain_name
+}

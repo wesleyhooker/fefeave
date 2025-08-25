@@ -1,46 +1,75 @@
-# Context Header - fefeave Project (2025-08-16)
+?? Context Header - fefeave Project (2025-08-24)
+Current State
 
-## Project Overview
-- Project: **fefeave**  
-- Purpose: Angular frontend + Node backend deployed via AWS S3 + CloudFront.  
-- Infra managed with Terraform.  
-- Goal: CI/CD pipeline with GitHub Actions  build Angular  upload to S3  invalidate CloudFront.  
-- Workflow: User keeps a `context/CONTEXT_HEADER.txt` that combines this header with the repo structure for maximum context.
+Frontend CI/CD (dev)
 
-## Infra Setup (dev)
-- Terraform split into files under `infra/dev/`:
-  - **providers.tf**  AWS provider (`us-west-2`). Comment placeholder for future us-east-1 ACM/CloudFront provider.
-  - **s3.tf**  `aws_s3_bucket.frontend_dev`, `aws_s3_bucket_website_configuration.frontend_dev`.
-  - **cloudfront.tf**  `aws_cloudfront_origin_access_control.frontend_dev`, `aws_cloudfront_distribution.frontend_dev`.
-  - **s3_policy.tf**  `aws_s3_bucket_policy.frontend_dev`.
-  - **iam_gh_oidc.tf**  GitHub Actions OIDC IAM provider, assume-role trust policy, `aws_iam_role.gha_deploy` with least-privilege to S3 + CloudFront.
-  - **outputs.tf**  `cloudfront_distribution_id`, `s3_bucket_name`, `github_actions_role_arn`.
-  - **main.tf**  just a header explaining the file split.
-- All AWS resource names preserved (`frontend_dev` blocks).
-- S3 bucket: **fefeave-frontend-dev**.
-- Region: **us-west-2**.
-- CI/CD: Deploy artifacts to S3  serve via CloudFront  invalidate `/index.html`.
+Workflow: deploy-frontend.yml.
 
-## CI/CD (GitHub Actions)
-- Workflow: `.github/workflows/deploy.yml`
-- Trigger: `push` to `main` + manual dispatch.
-- Steps:
-  - Checkout  Node setup  Install deps  Build Angular (prod).
-  - AWS OIDC auth via `aws-actions/configure-aws-credentials@v4`.
-  - Upload to S3:
-    - Assets  long cache (`public, max-age=31536000, immutable`).
-    - `index.html`  no-cache (`no-cache`).
-    - Optional cleanup  `aws s3 sync --delete`.
-  - Invalidate CloudFront `/index.html`.
-- Requires repo variables:
-  - `CF_DIST_ID` (from `terraform output -raw cloudfront_distribution_id`)
-  - `ANGULAR_PROJECT` (name of Angular dist folder, e.g., `fefeave`)
+CloudFront distro is deployed, OAC + bucket policy are correct.
 
-## Workflow for Context
-- User copies latest context update (this file) into `context/CONTEXT_HEADER.txt`.
-- Runs `ctxup` alias (or one-liner) to append repo tree.
-- Provides resulting file in new chat for full continuity.
+Problem: S3 bucket is empty after CI/CD run  CloudFront returns 403.
 
+Manual local build + aws s3 sync works fine.
+
+Likely causes:
+
+ANGULAR_PROJECT repo var missing/wrong (should be frontend).
+
+AWS_ROLE_ARN not set in repo vars (Terraform created it, but GH var may be missing).
+
+To fix: confirm and set GH vars  re-run deploy  check if S3 contains index.html.
+
+Backend CI
+
+Workflow: ci-backend.yml runs npm ci, lint, test (safe with --if-present).
+
+No backend deploy workflow yet.
+
+Infrastructure
+
+Terraform (infra/dev/) managing S3, CloudFront, IAM OIDC role.
+
+outputs.tf exports cloudfront_distribution_id, s3_bucket_name, github_actions_role_arn.
+
+Verified: bucket policy uses OAC + SourceArn correctly.
+
+Next Steps
+
+Check GH repo variables:
+
+gh variable list -R wesleyhooker/fefeave
+
+
+Ensure:
+
+S3_BUCKET = fefeave-frontend-dev
+
+CF_DIST_ID = E2AFMX1CBYH2E4
+
+ANGULAR_PROJECT = frontend
+
+AWS_ROLE_ARN = <IAM role ARN>
+
+If AWS_ROLE_ARN missing:
+
+terraform -chdir=infra/dev apply
+terraform -chdir=infra/dev output -raw github_actions_role_arn
+gh variable set -R wesleyhooker/fefeave AWS_ROLE_ARN --body "<above-value>"
+
+
+Re-run deploy workflow:
+
+gh workflow run deploy-frontend.yml -R wesleyhooker/fefeave
+
+
+Confirm files land in S3:
+
+aws s3 ls s3://fefeave-frontend-dev/index.html
+aws s3 ls s3://fefeave-frontend-dev/ --recursive | head -n 20
+
+
+Once index.html is in S3, your site should load at:
+https://d2nbb1ussku5hv.cloudfront.net
 .
 ├── README.md
 ├── backend

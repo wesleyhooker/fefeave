@@ -40,3 +40,4 @@ resource "aws_cloudfront_distribution" "frontend_dev" {
     Owner       = "wesley"
   }
 }
+
