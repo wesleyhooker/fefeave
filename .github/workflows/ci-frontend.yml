@@ -1,0 +1,34 @@
+# .github/workflows/ci-frontend.yml
+name: CI Frontend
+on:
+  push:
+    branches: [ main ]
+    paths: [ "frontend/**", "package.json", "package-lock.json", "frontend/angular.json" ]
+  pull_request:
+    paths: [ "frontend/**", "package.json", "package-lock.json", "frontend/angular.json" ]
+permissions: { contents: read }
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      ANGULAR_PROJECT: fefeave
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+      - name: Resolve dist dir
+        id: d
+        working-directory: frontend
+        run: |
+          OUT=$(node -e "const j=require('./angular.json');const p='${ANGULAR_PROJECT}';const o=j.projects?.[p]?.architect?.build?.options?.outputPath||('dist/'+p);process.stdout.write(o)")
+          [ -d "$OUT/browser" ] && echo "artifact=$OUT/browser" >> $GITHUB_OUTPUT || echo "artifact=$OUT" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/${{ steps.d.outputs.artifact }}
+          if-no-files-found: error
