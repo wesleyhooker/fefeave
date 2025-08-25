@@ -1,5 +1,5 @@
 # .github/workflows/deploy-frontend.yml
-name: Deploy Frontend (dev)
+name: Frontend Deploy (dev)
 on:
   workflow_dispatch:
   workflow_run:
