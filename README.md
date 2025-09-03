@@ -152,3 +152,25 @@ flowchart TD
     Plan --> Approve[Manual approval] --> Apply[terraform apply]
     Apply --> AWS[Create/Update Infra]
     CF --> Users[End Users]
+
+## Dev Workflow (CI/CD + Terraform)
+
+**Daily loop**
+1. Code → `git add -A && git commit -m "…" && git push`
+2. GitHub Actions:
+   - **Frontend CI** runs on push (build/lint/test)
+   - **Frontend Deploy (dev)** updates the dev site automatically
+3. Promote to prod when ready:
+   - `make deploy-prod` (or run the workflow in GitHub UI)
+
+**Infra changes** (not needed for daily code pushes):
+- We manage infra in `infra/` with Terraform workspaces (`dev`, `prod`).
+- Typical commands:
+  ```bash
+  # Dev
+  make plan-dev
+  make apply-dev
+
+  # Prod (after dev looks good)
+  make plan-prod
+  make apply-prod
