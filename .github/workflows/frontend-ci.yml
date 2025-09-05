@@ -6,6 +6,7 @@ on:
     paths: [ "frontend/**", "package.json", "package-lock.json", "frontend/angular.json" ]
   pull_request:
     paths: [ "frontend/**", "package.json", "package-lock.json", "frontend/angular.json" ]
+  workflow_dispatch:
 permissions: { contents: read }
 
 jobs:
