@@ -28,6 +28,7 @@ jobs:
         with:
           name: frontend-dist
           path: dist
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sanity check artifact
         run: |

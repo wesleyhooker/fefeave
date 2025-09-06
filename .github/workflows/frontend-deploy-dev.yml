@@ -20,7 +20,10 @@ jobs:
     environment: dev            # ← this is the key
     steps:
       - uses: actions/download-artifact@v4
-        with: { name: frontend-dist, path: dist }
+        with: 
+          name: frontend-dist
+          path: dist
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - run: test -f dist/index.html
 
