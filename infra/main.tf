@@ -96,6 +96,12 @@ resource "aws_s3_bucket_policy" "site" {
   policy = data.aws_iam_policy_document.site_policy.json
 }
 
+# --- GitHub OIDC Provider (data source) ---
+data "aws_iam_openid_connect_provider" "github" {
+  count = var.create_github_deploy_role ? 1 : 0
+  url   = "https://token.actions.githubusercontent.com"
+}
+
 # --- GitHub OIDC deploy role ---
 resource "aws_iam_role" "gh_deploy" {
   count              = var.create_github_deploy_role ? 1 : 0
@@ -106,7 +112,7 @@ resource "aws_iam_role" "gh_deploy" {
       Effect = "Allow"
       Action = "sts:AssumeRoleWithWebIdentity"
       Principal = {
-        Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+        Federated = data.aws_iam_openid_connect_provider.github[0].arn
       }
       Condition = {
         StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
