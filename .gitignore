@@ -1,13 +1,52 @@
-# Node/Angular
-frontend/node_modules/
-frontend/dist/
-frontend/.angular/
-
-# Terraform local state & caches
-infra/**/.terraform/
-infra/**/terraform.tfstate
-infra/**/terraform.tfstate.*
-
-# OS/editor
-.DS_Store
+# =========================
+# Node / Backend
+# =========================
+node_modules/
+dist/
+build/
+coverage/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env files (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# =========================
+# Angular / Frontend
+# =========================
+.angular/
+dist/
+.cache/
+.sass-cache/
+.tmp/
+
+# =========================
+# Terraform / Infra
+# =========================
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# =========================
+# Misc
+# =========================
+*.swp
+*.swo
+*.bak
+*.tmp
