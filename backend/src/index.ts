@@ -1,4 +1,6 @@
+import { randomUUID } from 'crypto';
 import Fastify from 'fastify';
+import fp from 'fastify-plugin';
 import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
@@ -7,6 +9,7 @@ import { loadEnv, getEnv } from './config/env';
 import { logger } from './utils/logger';
 import { errorHandler } from './utils/errors';
 import { requestIdPlugin } from './plugins/request-id';
+import { authPlugin } from './plugins/auth';
 import { healthRoutes } from './routes/health';
 import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
@@ -38,9 +41,7 @@ async function buildApp() {
           : undefined,
     },
     requestIdLogLabel: 'requestId',
-    genReqId: () => {
-      return undefined; // Let requestIdPlugin handle it
-    },
+    genReqId: () => randomUUID(),
   });
 
   // Register plugins
@@ -51,6 +52,9 @@ async function buildApp() {
 
   // Register request ID plugin (must be early)
   await app.register(requestIdPlugin);
+
+  // Register auth plugin (fp so hook runs for all routes)
+  await app.register(fp(authPlugin));
 
   // Register Swagger/OpenAPI
   await app.register(swagger, {
@@ -67,6 +71,16 @@ async function buildApp() {
           description: 'Local development server',
         },
       ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            description: 'Cognito JWT (when AUTH_MODE=cognito)',
+          },
+        },
+      },
     },
   });
 
