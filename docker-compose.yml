@@ -1,9 +1,15 @@
-version: '3.9'
-
 services:
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+  postgres:
+    image: postgres:16-alpine
+    container_name: fefeave-postgres
+    environment:
+      POSTGRES_USER: fefeave
+      POSTGRES_PASSWORD: fefeave
+      POSTGRES_DB: fefeave
     ports:
-      - "4200:80"
+      - "5432:5432"
+    volumes:
+      - fefeave_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  fefeave_postgres_data:

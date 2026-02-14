@@ -22,6 +22,13 @@ const baseEnvSchema = z.object({
   COGNITO_REGION: z.string().optional(),
   COGNITO_USER_POOL_ID: z.string().optional(),
   COGNITO_APP_CLIENT_ID: z.string().optional(),
+  // Database: DATABASE_URL (preferred) or split vars
+  DATABASE_URL: z.string().optional(),
+  DB_HOST: z.string().optional(),
+  DB_PORT: z.coerce.number().int().positive().optional(),
+  DB_NAME: z.string().optional(),
+  DB_USER: z.string().optional(),
+  DB_PASSWORD: z.string().optional(),
 });
 
 export type Env = z.infer<typeof baseEnvSchema>;
@@ -47,6 +54,18 @@ const envSchema = baseEnvSchema.superRefine((data, ctx) => {
         path: ['AUTH_DEV_BYPASS_ROLE'],
       });
   }
+  // Database: require all split vars if any is set (DB_PASSWORD can be empty)
+  const hasAnyDbSplit =
+    data.DB_HOST || data.DB_PORT || data.DB_NAME || data.DB_USER || data.DB_PASSWORD;
+  const hasAllDbSplit = data.DB_HOST && data.DB_PORT && data.DB_NAME && data.DB_USER !== undefined;
+  if (hasAnyDbSplit && !data.DATABASE_URL && !hasAllDbSplit) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'When using split DB vars, all of DB_HOST, DB_PORT, DB_NAME, DB_USER are required',
+      path: ['DB_HOST'],
+    });
+  }
+
   if (data.AUTH_MODE === 'cognito') {
     if (!data.COGNITO_REGION)
       ctx.addIssue({
@@ -93,6 +112,18 @@ export function getEnv(): Env {
     return loadEnv();
   }
   return env;
+}
+
+/** Build database URL from env. Returns null if no DB config. */
+export function getDatabaseUrl(): string | null {
+  const e = getEnv();
+  if (e.DATABASE_URL) return e.DATABASE_URL;
+  if (e.DB_HOST && e.DB_PORT && e.DB_NAME && e.DB_USER !== undefined) {
+    const user = encodeURIComponent(e.DB_USER);
+    const password = encodeURIComponent(e.DB_PASSWORD ?? '');
+    return `postgres://${user}:${password}@${e.DB_HOST}:${e.DB_PORT}/${e.DB_NAME}`;
+  }
+  return null;
 }
 
 /** Reset cached env so loadEnv() re-reads process.env. For tests only. */

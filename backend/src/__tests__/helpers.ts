@@ -15,6 +15,12 @@ export type TestEnvOverrides = Partial<{
   COGNITO_REGION: string;
   COGNITO_USER_POOL_ID: string;
   COGNITO_APP_CLIENT_ID: string;
+  DATABASE_URL: string;
+  DB_HOST: string;
+  DB_PORT: string;
+  DB_NAME: string;
+  DB_USER: string;
+  DB_PASSWORD: string;
 }>;
 
 export type BuildAppResult = {

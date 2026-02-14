@@ -63,7 +63,36 @@ The server will start on `http://localhost:3000` (or the port specified in `PORT
 - `npm run start` - Start production server (requires build first)
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Prettier
-- `npm run test` - Run tests (when implemented)
+- `npm run test` - Run tests
+- `npm run migrate:up` - Run database migrations
+- `npm run migrate:down` - Roll back last migration
+- `npm run migrate:create -- <name>` - Create a new migration file
+- `npm run test:integration` - Run DB smoke test (requires Postgres and DATABASE_URL)
+
+### Local Database (Postgres)
+
+1. **Start Postgres** (from project root):
+
+   ```bash
+   docker compose up -d postgres
+   ```
+
+2. **Run migrations**:
+
+   ```bash
+   cd backend
+   export DATABASE_URL=postgres://fefeave:fefeave@localhost:5432/fefeave
+   npm run migrate:up
+   ```
+
+   Or use split vars in `.env`:
+   ```
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_NAME=fefeave
+   DB_USER=fefeave
+   DB_PASSWORD=fefeave
+   ```
 
 ### Environment Variables
 
@@ -73,8 +102,9 @@ The following environment variables are supported:
 - `PORT` - Server port - defaults to `3000`
 - `LOG_LEVEL` - Logging level (fatal, error, warn, info, debug, trace) - defaults to `info`
 - `API_PREFIX` - API route prefix - defaults to `/api`
+- `DATABASE_URL` - Postgres connection string (preferred). Or use `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` as split vars.
 
-The application will fail to start if required environment variables are missing or invalid.
+The application will fail to start if required environment variables are missing or invalid. Database configuration is optional; health, docs, and auth work without it.
 
 ### Endpoints
 
