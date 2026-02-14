@@ -353,9 +353,7 @@ export const up = (pgm) => {
     'ALTER TABLE attachments ADD CONSTRAINT chk_attachments_filename_not_empty CHECK (length(trim(filename)) > 0)'
   );
 
-  // Indexes
-  pgm.createIndex('users', 'cognito_user_id', { name: 'idx_users_cognito_user_id' });
-  pgm.createIndex('users', 'email', { name: 'idx_users_email' });
+  // Indexes (cognito_user_id and email already indexed via unique constraints)
   pgm.createIndex('users', 'role', {
     name: 'idx_users_role',
     where: 'deleted_at IS NULL',
