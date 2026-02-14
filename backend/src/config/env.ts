@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { APP_ROLE_VALUES } from '../auth/types';
 
 const authModeEnum = z.enum(['off', 'dev_bypass', 'cognito']);
 
@@ -11,7 +12,12 @@ const baseEnvSchema = z.object({
   // Dev bypass (required when AUTH_MODE=dev_bypass)
   AUTH_DEV_BYPASS_USER_ID: z.string().optional(),
   AUTH_DEV_BYPASS_EMAIL: z.string().email().optional(),
-  AUTH_DEV_BYPASS_ROLE: z.enum(['ADMIN', 'OPERATOR']).optional(),
+  AUTH_DEV_BYPASS_ROLE: z.enum(APP_ROLE_VALUES).optional(),
+  // Explicit opt-in to allow x-dev-user header override (security: default off)
+  AUTH_DEV_ALLOW_HEADER_OVERRIDE: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
   // Cognito (required when AUTH_MODE=cognito)
   COGNITO_REGION: z.string().optional(),
   COGNITO_USER_POOL_ID: z.string().optional(),

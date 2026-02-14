@@ -17,16 +17,41 @@ export type TestEnvOverrides = Partial<{
   COGNITO_APP_CLIENT_ID: string;
 }>;
 
+export type BuildAppResult = {
+  app: FastifyInstance;
+  restoreEnv: () => void;
+};
+
 /**
  * Build the Fastify app for tests without calling listen().
  * Clears env cache and applies overrides so each test can control AUTH_MODE etc.
+ * Returns { app, restoreEnv }. Call restoreEnv() in afterEach so later tests
+ * do not inherit stale auth settings.
  */
-export async function buildAppForTest(envOverrides?: TestEnvOverrides): Promise<FastifyInstance> {
+export async function buildAppForTest(envOverrides?: TestEnvOverrides): Promise<BuildAppResult> {
   clearEnvCache();
+
+  const saved: Record<string, string | undefined> = {};
   if (envOverrides) {
     for (const [key, value] of Object.entries(envOverrides)) {
-      if (value !== undefined) process.env[key] = value;
+      if (value !== undefined) {
+        saved[key] = process.env[key];
+        process.env[key] = value;
+      }
     }
   }
-  return buildApp();
+
+  const restoreEnv = (): void => {
+    for (const [key, prior] of Object.entries(saved)) {
+      if (prior === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = prior;
+      }
+    }
+    clearEnvCache();
+  };
+
+  const app = await buildApp();
+  return { app, restoreEnv };
 }

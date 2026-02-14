@@ -1,4 +1,5 @@
-export type AppRole = 'ADMIN' | 'OPERATOR' | 'WHOLESALER';
+export const APP_ROLE_VALUES = ['ADMIN', 'OPERATOR', 'WHOLESALER'] as const;
+export type AppRole = (typeof APP_ROLE_VALUES)[number];
 
 export interface AuthUser {
   cognitoSub: string;

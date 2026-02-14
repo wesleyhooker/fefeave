@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } f
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { getEnv } from '../config/env';
 import { UnauthorizedError } from '../utils/errors';
-import type { AuthUser, AppRole } from '../auth/types';
+import { APP_ROLE_VALUES, type AuthUser, type AppRole } from '../auth/types';
 
 const COGNITO_ISSUER_PREFIX = 'https://cognito-idp.';
 
@@ -32,15 +32,20 @@ export async function authPlugin(
 
     if (env.AUTH_MODE === 'dev_bypass') {
       const overrideHeader = request.headers['x-dev-user'];
-      if (overrideHeader) {
+      const allowHeaderOverride =
+        env.AUTH_DEV_ALLOW_HEADER_OVERRIDE &&
+        overrideHeader &&
+        env.NODE_ENV !== 'production';
+      if (allowHeaderOverride) {
         try {
           const payload = JSON.parse(overrideHeader as string) as {
             sub?: string;
             email?: string;
             roles?: string[];
           };
+          // Never accept ADMIN from header - only trusted server-side config can grant it
           const roles = (payload.roles ?? []).filter((r): r is AppRole =>
-            ['ADMIN', 'OPERATOR', 'WHOLESALER'].includes(r)
+            (APP_ROLE_VALUES as readonly string[]).includes(r) && r !== 'ADMIN'
           );
           if (payload.sub && payload.email) {
             request.user = {
@@ -77,7 +82,7 @@ export async function authPlugin(
         });
         const groups = (payload['cognito:groups'] as string[] | undefined) ?? [];
         const roles = groups.filter((r): r is AppRole =>
-          ['ADMIN', 'OPERATOR', 'WHOLESALER'].includes(r)
+          (APP_ROLE_VALUES as readonly string[]).includes(r)
         );
         request.user = {
           cognitoSub: payload.sub as string,
