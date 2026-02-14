@@ -57,7 +57,8 @@ const envSchema = baseEnvSchema.superRefine((data, ctx) => {
   // Database: require all split vars if any is set (DB_PASSWORD can be empty)
   const hasAnyDbSplit =
     data.DB_HOST || data.DB_PORT || data.DB_NAME || data.DB_USER || data.DB_PASSWORD;
-  const hasAllDbSplit = data.DB_HOST && data.DB_PORT && data.DB_NAME && data.DB_USER !== undefined;
+  const hasAllDbSplit =
+    !!data.DB_HOST?.trim() && !!data.DB_PORT && !!data.DB_NAME?.trim() && !!data.DB_USER?.trim();
   if (hasAnyDbSplit && !data.DATABASE_URL && !hasAllDbSplit) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -118,10 +119,10 @@ export function getEnv(): Env {
 export function getDatabaseUrl(): string | null {
   const e = getEnv();
   if (e.DATABASE_URL) return e.DATABASE_URL;
-  if (e.DB_HOST && e.DB_PORT && e.DB_NAME && e.DB_USER !== undefined) {
-    const user = encodeURIComponent(e.DB_USER);
+  if (e.DB_HOST?.trim() && e.DB_PORT && e.DB_NAME?.trim() && e.DB_USER?.trim()) {
+    const user = encodeURIComponent(e.DB_USER.trim());
     const password = encodeURIComponent(e.DB_PASSWORD ?? '');
-    return `postgres://${user}:${password}@${e.DB_HOST}:${e.DB_PORT}/${e.DB_NAME}`;
+    return `postgres://${user}:${password}@${e.DB_HOST.trim()}:${e.DB_PORT}/${e.DB_NAME.trim()}`;
   }
   return null;
 }

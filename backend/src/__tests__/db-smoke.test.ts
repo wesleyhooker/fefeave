@@ -58,7 +58,7 @@ describe('DB smoke test', () => {
       );
       const show = showRes.rows[0];
       expect(show.name).toBe('Test Show');
-      expect(show.show_date).toEqual(new Date('2025-03-15'));
+      expect(show.show_date).toBe('2025-03-15');
 
       const lineItemRes = await client.query(
         `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, description, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING id, amount, description`,
