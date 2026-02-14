@@ -32,7 +32,7 @@ describe('DB smoke test', () => {
     pool = new Pool({ connectionString: databaseUrl });
   });
 
-  it('runs migrate:up and inserts wholesaler, show, owed_line_item', async () => {
+  test('runs migrate:up and inserts wholesaler, show, owed_line_item', async () => {
     runMigrations(databaseUrl);
 
     const client = await pool.connect();
@@ -82,8 +82,8 @@ describe('DB smoke test', () => {
         `SELECT id, amount, description FROM owed_line_items WHERE id = $1`,
         [lineItem.id]
       );
-      expect(readLineItem.rows[0].amount).toBe('1250.50');
-      expect(readLineItem.rows[0].description).toBe('Booth rental');
+      expect(readLineItem.rows[0]?.amount).toBe('1250.50');
+      expect(readLineItem.rows[0]?.description).toBe('Booth rental');
     } finally {
       client.release();
     }

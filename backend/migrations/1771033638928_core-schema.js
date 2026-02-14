@@ -82,7 +82,9 @@ export const up = (pgm) => {
     deleted_at: { type: 'timestamptz' },
   });
 
-  pgm.sql('ALTER TABLE wholesalers ADD CONSTRAINT chk_wholesalers_name_not_empty CHECK (length(trim(name)) > 0)');
+  pgm.sql(
+    'ALTER TABLE wholesalers ADD CONSTRAINT chk_wholesalers_name_not_empty CHECK (length(trim(name)) > 0)'
+  );
 
   pgm.createTable('shows', {
     id: {
@@ -126,7 +128,9 @@ export const up = (pgm) => {
     deleted_at: { type: 'timestamptz' },
   });
 
-  pgm.sql('ALTER TABLE shows ADD CONSTRAINT chk_shows_name_not_empty CHECK (length(trim(name)) > 0)');
+  pgm.sql(`
+    ALTER TABLE shows ADD CONSTRAINT chk_shows_name_not_empty CHECK (length(trim(name)) > 0)
+  `);
 
   pgm.createTable('owed_line_items', {
     id: {
@@ -180,7 +184,7 @@ export const up = (pgm) => {
   });
 
   pgm.sql(
-    "ALTER TABLE owed_line_items ADD CONSTRAINT chk_owed_line_items_amount_positive CHECK (amount > 0)"
+    'ALTER TABLE owed_line_items ADD CONSTRAINT chk_owed_line_items_amount_positive CHECK (amount > 0)'
   );
   pgm.sql(
     'ALTER TABLE owed_line_items ADD CONSTRAINT chk_owed_line_items_description_not_empty CHECK (length(trim(description)) > 0)'
@@ -263,13 +267,12 @@ export const up = (pgm) => {
   });
 
   pgm.sql(
-    "ALTER TABLE payment_allocations ADD CONSTRAINT chk_payment_allocations_amount_positive CHECK (amount > 0)"
+    'ALTER TABLE payment_allocations ADD CONSTRAINT chk_payment_allocations_amount_positive CHECK (amount > 0)'
   );
-  pgm.createIndex(
-    'payment_allocations',
-    ['payment_id', 'line_item_id'],
-    { unique: true, name: 'idx_payment_allocations_unique' }
-  );
+  pgm.createIndex('payment_allocations', ['payment_id', 'line_item_id'], {
+    unique: true,
+    name: 'idx_payment_allocations_unique',
+  });
 
   pgm.createTable('adjustments', {
     id: {
@@ -347,7 +350,7 @@ export const up = (pgm) => {
   });
 
   pgm.sql(
-    "ALTER TABLE attachments ADD CONSTRAINT chk_attachments_size_positive CHECK (size_bytes > 0)"
+    'ALTER TABLE attachments ADD CONSTRAINT chk_attachments_size_positive CHECK (size_bytes > 0)'
   );
   pgm.sql(
     'ALTER TABLE attachments ADD CONSTRAINT chk_attachments_filename_not_empty CHECK (length(trim(filename)) > 0)'
