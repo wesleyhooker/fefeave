@@ -1,93 +1,124 @@
 # Fefeave Backend
 
-Backend API for the Fefeave reseller business system.
+Fastify API for the Fefeave reseller system. Postgres for data; Zod for env validation; Swagger at `/docs`.
 
-## Framework Choice: Fastify
+---
 
-- **Performance**: Fastify is significantly faster than Express (up to 2x in benchmarks) with lower overhead, making it ideal for high-throughput API endpoints
-- **TypeScript Support**: Built-in TypeScript support with excellent type inference and schema validation capabilities that align well with our API contract requirements
-- **Schema Validation**: Native JSON Schema validation reduces boilerplate and ensures type safety at runtime, critical for financial data integrity
-
-## Project Structure
-
-```
-backend/
-├── src/
-│   ├── config/          # Environment configuration
-│   ├── routes/          # API route handlers
-│   ├── plugins/         # Fastify plugins
-│   ├── utils/           # Utilities (logger, errors)
-│   └── index.ts         # Application entry point
-├── dist/                # Compiled JavaScript (generated)
-└── package.json
-```
-
-## Modules
-
-The following modules are scaffolded (routes defined, implementation pending):
-
-- `auth` - Authentication and authorization
-- `users` - User management
-- `wholesalers` - Wholesaler entities
-- `shows` - Sales events
-- `owed-line-items` - Financial obligations
-- `payments` - Payment records
-- `adjustments` - Adjustments, refunds, fees
-- `attachments` - File uploads/downloads
-
-## Running Locally
+## 1. Local Development
 
 ### Prerequisites
 
-- Node.js 20+ 
-- npm or yarn
+- Node.js 20+
+- Postgres (or use `docker compose up -d postgres` from repo root)
 
-### Installation
+### Quick start
 
 ```bash
 npm install
-```
-
-### Development
-
-```bash
+export DATABASE_URL=postgres://fefeave:fefeave@localhost:5432/fefeave
 npm run dev
 ```
 
-The server will start on `http://localhost:3000` (or the port specified in `PORT` environment variable).
+API at `http://localhost:3000/api`. Health at `/api/health`, docs at `/docs`.
 
-### Available Scripts
+---
 
-- `npm run dev` - Start development server with hot reload
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm run start` - Start production server (requires build first)
-- `npm run lint` - Run ESLint
-- `npm run format` - Format code with Prettier
-- `npm run test` - Run tests (when implemented)
+## 2. Available Scripts
 
-### Environment Variables
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | Dev server with watch |
+| `npm run build` | Compile to `dist/` |
+| `npm start` | Run compiled app |
+| `npm run lint` | ESLint |
+| `npm run format` | Prettier |
+| `npm test` | Unit tests (Jest, excludes DB smoke) |
+| `npm run test:integration` | DB smoke test (requires `DATABASE_URL`) |
+| `npm run migrate:up` | Run migrations |
+| `npm run migrate:down` | Rollback last migration |
+| `npm run migrate:create` | Create new migration |
 
-The following environment variables are supported:
+---
 
-- `NODE_ENV` - Environment (development, production, test) - defaults to `development`
-- `PORT` - Server port - defaults to `3000`
-- `LOG_LEVEL` - Logging level (fatal, error, warn, info, debug, trace) - defaults to `info`
-- `API_PREFIX` - API route prefix - defaults to `/api`
+## 3. Database
 
-The application will fail to start if required environment variables are missing or invalid.
+### Local Postgres (Docker)
 
-### Endpoints
+From repo root:
 
-- `GET /api/health` - Health check endpoint
-- `GET /docs` - Swagger/OpenAPI documentation UI
+```bash
+docker compose up -d postgres
+```
 
-All other endpoints return `501 Not Implemented` until implemented.
+Then in `backend/`:
 
-## Features
+```bash
+export DATABASE_URL=postgres://fefeave:fefeave@localhost:5432/fefeave
+npm run migrate:up
+```
 
-- **Structured Logging**: Request ID tracking per request with Pino logger
-- **Error Handling**: Centralized error handling with proper HTTP status codes
-- **Environment Validation**: Zod-based environment variable validation (fails fast on invalid config)
-- **OpenAPI/Swagger**: API documentation scaffold (Swagger UI at `/docs`)
-- **TypeScript**: Full type safety throughout the application
-- **Security**: Helmet for security headers, CORS configuration
+### Split env vars
+
+Alternatively use `.env` with:
+
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=fefeave
+DB_USER=fefeave
+DB_PASSWORD=fefeave
+```
+
+---
+
+## 4. Environment Variables
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `NODE_ENV` | Environment | `development` |
+| `PORT` | Server port | `3000` |
+| `LOG_LEVEL` | Log level | `info` |
+| `API_PREFIX` | Route prefix | `/api` |
+| `DATABASE_URL` | Postgres connection string | — |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Split DB config (alternative to `DATABASE_URL`) | — |
+| `AUTH_MODE` | `off`, `dev_bypass`, or `cognito` | `off` |
+| `AUTH_DEV_BYPASS_*` | Required when `AUTH_MODE=dev_bypass` | — |
+| `COGNITO_*` | Required when `AUTH_MODE=cognito` | — |
+
+Database is optional for health, docs, and auth endpoints. The app fails fast on invalid config.
+
+---
+
+## 5. Project Structure
+
+```text
+backend/
+├── src/
+│   ├── config/       # Env, database URL
+│   ├── routes/       # API handlers
+│   ├── plugins/      # Fastify plugins
+│   ├── utils/        # Logger, errors
+│   └── index.ts
+├── migrations/       # node-pg-migrate
+└── package.json
+```
+
+---
+
+## 6. Module Status
+
+Routes scaffolded; implementations pending:
+
+- `auth` — Authentication
+- `users` — User management
+- `wholesalers`, `shows`, `owed-line-items`, `payments`, `adjustments`, `attachments`
+
+---
+
+## 7. Troubleshooting
+
+| Issue | Fix |
+| --- | --- |
+| App fails to start | Check `DATABASE_URL` or split DB vars; Postgres must be running. |
+| `npm run test:integration` fails | Set `DATABASE_URL` to a running Postgres instance. |
+| Migrations fail | Ensure DB exists; user has create-table privileges. |
