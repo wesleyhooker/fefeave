@@ -29,19 +29,43 @@ export type Env = z.infer<typeof baseEnvSchema>;
 const envSchema = baseEnvSchema.superRefine((data, ctx) => {
   if (data.AUTH_MODE === 'dev_bypass') {
     if (!data.AUTH_DEV_BYPASS_USER_ID)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'AUTH_DEV_BYPASS_USER_ID required when AUTH_MODE=dev_bypass', path: ['AUTH_DEV_BYPASS_USER_ID'] });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'AUTH_DEV_BYPASS_USER_ID required when AUTH_MODE=dev_bypass',
+        path: ['AUTH_DEV_BYPASS_USER_ID'],
+      });
     if (!data.AUTH_DEV_BYPASS_EMAIL)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'AUTH_DEV_BYPASS_EMAIL required when AUTH_MODE=dev_bypass', path: ['AUTH_DEV_BYPASS_EMAIL'] });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'AUTH_DEV_BYPASS_EMAIL required when AUTH_MODE=dev_bypass',
+        path: ['AUTH_DEV_BYPASS_EMAIL'],
+      });
     if (!data.AUTH_DEV_BYPASS_ROLE)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'AUTH_DEV_BYPASS_ROLE required when AUTH_MODE=dev_bypass', path: ['AUTH_DEV_BYPASS_ROLE'] });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'AUTH_DEV_BYPASS_ROLE required when AUTH_MODE=dev_bypass',
+        path: ['AUTH_DEV_BYPASS_ROLE'],
+      });
   }
   if (data.AUTH_MODE === 'cognito') {
     if (!data.COGNITO_REGION)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'COGNITO_REGION required when AUTH_MODE=cognito', path: ['COGNITO_REGION'] });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'COGNITO_REGION required when AUTH_MODE=cognito',
+        path: ['COGNITO_REGION'],
+      });
     if (!data.COGNITO_USER_POOL_ID)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'COGNITO_USER_POOL_ID required when AUTH_MODE=cognito', path: ['COGNITO_USER_POOL_ID'] });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'COGNITO_USER_POOL_ID required when AUTH_MODE=cognito',
+        path: ['COGNITO_USER_POOL_ID'],
+      });
     if (!data.COGNITO_APP_CLIENT_ID)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'COGNITO_APP_CLIENT_ID required when AUTH_MODE=cognito', path: ['COGNITO_APP_CLIENT_ID'] });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'COGNITO_APP_CLIENT_ID required when AUTH_MODE=cognito',
+        path: ['COGNITO_APP_CLIENT_ID'],
+      });
   }
 });
 

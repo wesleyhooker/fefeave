@@ -33,9 +33,7 @@ export async function authPlugin(
     if (env.AUTH_MODE === 'dev_bypass') {
       const overrideHeader = request.headers['x-dev-user'];
       const allowHeaderOverride =
-        env.AUTH_DEV_ALLOW_HEADER_OVERRIDE &&
-        overrideHeader &&
-        env.NODE_ENV !== 'production';
+        env.AUTH_DEV_ALLOW_HEADER_OVERRIDE && overrideHeader && env.NODE_ENV !== 'production';
       if (allowHeaderOverride) {
         try {
           const payload = JSON.parse(overrideHeader as string) as {
@@ -44,8 +42,8 @@ export async function authPlugin(
             roles?: string[];
           };
           // Never accept ADMIN from header - only trusted server-side config can grant it
-          const roles = (payload.roles ?? []).filter((r): r is AppRole =>
-            (APP_ROLE_VALUES as readonly string[]).includes(r) && r !== 'ADMIN'
+          const roles = (payload.roles ?? []).filter(
+            (r): r is AppRole => (APP_ROLE_VALUES as readonly string[]).includes(r) && r !== 'ADMIN'
           );
           if (payload.sub && payload.email) {
             request.user = {

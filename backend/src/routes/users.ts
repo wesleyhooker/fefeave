@@ -18,7 +18,13 @@ export async function userRoutes(
             properties: {
               id: { type: 'string', description: 'Cognito sub' },
               email: { type: 'string' },
-              roles: { type: 'array', items: { type: 'string', enum: ['ADMIN', 'OPERATOR', 'WHOLESALER'] } },
+              roles: {
+                type: 'array',
+                items: {
+                  type: 'string',
+                  enum: ['ADMIN', 'OPERATOR', 'WHOLESALER'],
+                },
+              },
             },
           },
         },
