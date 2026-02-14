@@ -6,7 +6,8 @@ export async function requestIdPlugin(
   _options: FastifyPluginOptions
 ): Promise<void> {
   fastify.addHook('onRequest', async (request) => {
-    const requestId = request.headers['x-request-id'] || randomUUID();
+    const raw = request.headers['x-request-id'];
+    const requestId = (Array.isArray(raw) ? raw[0] : raw) || randomUUID();
     request.id = requestId;
     request.log = request.log.child({ requestId });
   });

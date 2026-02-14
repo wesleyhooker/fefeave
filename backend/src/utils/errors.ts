@@ -48,7 +48,8 @@ export async function errorHandler(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const requestId = request.id as string;
+  const req = request as FastifyRequest & { id?: string };
+  const requestId = req.id ?? 'unknown';
   const requestLogger = createRequestLogger(requestId);
 
   // Zod validation errors

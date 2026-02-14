@@ -1298,19 +1298,12 @@ Soft delete attachment.
 ## Design Principles Applied
 
 1. **Append-Only Financial Records**: `payments`, `payment_allocations`, `adjustments` have no UPDATE/DELETE operations (only soft deletes for audit)
-
 2. **Soft Deletes**: All tables use `deleted_at` for logical deletion, preserving referential integrity
-
 3. **Decimal Precision**: All monetary amounts use `NUMERIC(19,4)` (supports up to $999,999,999,999.9999)
-
 4. **UTC Timestamps**: All `created_at`, `updated_at`, `deleted_at` are `TIMESTAMPTZ` (stored in UTC)
-
 5. **Polymorphic Attachments**: `attachments.entity_type` + `entity_id` supports any entity without foreign key constraints
-
 6. **Status Computed from Allocations**: Line item status derived from payment allocations, not stored directly (enforced via triggers or application logic)
-
 7. **Idempotency Ready**: All POST endpoints can accept `idempotency_key` header (not shown in contracts but should be implemented)
-
 8. **Role-Based Access**: Authorization rules enforce data isolation (WHOLESALER sees only their data)
 
 This schema and API design supports the production system requirements while remaining extensible for future needs without requiring refactoring of core financial tables.
@@ -1322,29 +1315,22 @@ This schema and API design supports the production system requirements while rem
 The following additive updates have been incorporated:
 
 1. **Metadata Fields Added:**
-
-   - `source` (WHATNOT | INSTAGRAM | MANUAL) on `shows` table
-   - `created_via` (WEB | IMPORT | API) on `shows`, `owed_line_items`, `payments`, `adjustments`
-   - `platform` (WHATNOT | INSTAGRAM | MANUAL) on `shows` table
-   - `external_reference` (VARCHAR, optional) on `shows` table
-
+  - `source` (WHATNOT | INSTAGRAM | MANUAL) on `shows` table
+  - `created_via` (WEB | IMPORT | API) on `shows`, `owed_line_items`, `payments`, `adjustments`
+  - `platform` (WHATNOT | INSTAGRAM | MANUAL) on `shows` table
+  - `external_reference` (VARCHAR, optional) on `shows` table
 2. **Platform Fees:**
-
-   - Added `PLATFORM_FEE` to `adjustment_type` ENUM
-   - Added `affects_wholesaler_obligation` BOOLEAN column to `adjustments` table
-   - Platform fees track FEFE profit impact but do not change wholesaler obligations
-   - Business logic ensures platform fees do not affect line item status or outstanding amounts
-
+  - Added `PLATFORM_FEE` to `adjustment_type` ENUM
+  - Added `affects_wholesaler_obligation` BOOLEAN column to `adjustments` table
+  - Platform fees track FEFE profit impact but do not change wholesaler obligations
+  - Business logic ensures platform fees do not affect line item status or outstanding amounts
 3. **Line Items:**
-
-   - Confirmed as descriptive (not SKU-level)
-   - Random pulls expected and supported
-   - No schema changes required
-
+  - Confirmed as descriptive (not SKU-level)
+  - Random pulls expected and supported
+  - No schema changes required
 4. **Soft Deletes:**
-
-   - Already implemented via `deleted_at` TIMESTAMPTZ on all tables
-   - No changes required
+  - Already implemented via `deleted_at` TIMESTAMPTZ on all tables
+  - No changes required
 
 **Core Entities & Relationships:** Unchanged. All updates are additive columns or ENUM value additions. No foreign keys, primary keys, or relationship structures modified.
 

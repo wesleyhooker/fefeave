@@ -1,13 +1,43 @@
 import { z } from 'zod';
 
-const envSchema = z.object({
+const authModeEnum = z.enum(['off', 'dev_bypass', 'cognito']);
+
+const baseEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   API_PREFIX: z.string().default('/api'),
+  AUTH_MODE: authModeEnum.default('off'),
+  // Dev bypass (required when AUTH_MODE=dev_bypass)
+  AUTH_DEV_BYPASS_USER_ID: z.string().optional(),
+  AUTH_DEV_BYPASS_EMAIL: z.string().email().optional(),
+  AUTH_DEV_BYPASS_ROLE: z.enum(['ADMIN', 'OPERATOR']).optional(),
+  // Cognito (required when AUTH_MODE=cognito)
+  COGNITO_REGION: z.string().optional(),
+  COGNITO_USER_POOL_ID: z.string().optional(),
+  COGNITO_APP_CLIENT_ID: z.string().optional(),
 });
 
-export type Env = z.infer<typeof envSchema>;
+export type Env = z.infer<typeof baseEnvSchema>;
+
+const envSchema = baseEnvSchema.superRefine((data, ctx) => {
+  if (data.AUTH_MODE === 'dev_bypass') {
+    if (!data.AUTH_DEV_BYPASS_USER_ID)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'AUTH_DEV_BYPASS_USER_ID required when AUTH_MODE=dev_bypass', path: ['AUTH_DEV_BYPASS_USER_ID'] });
+    if (!data.AUTH_DEV_BYPASS_EMAIL)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'AUTH_DEV_BYPASS_EMAIL required when AUTH_MODE=dev_bypass', path: ['AUTH_DEV_BYPASS_EMAIL'] });
+    if (!data.AUTH_DEV_BYPASS_ROLE)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'AUTH_DEV_BYPASS_ROLE required when AUTH_MODE=dev_bypass', path: ['AUTH_DEV_BYPASS_ROLE'] });
+  }
+  if (data.AUTH_MODE === 'cognito') {
+    if (!data.COGNITO_REGION)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'COGNITO_REGION required when AUTH_MODE=cognito', path: ['COGNITO_REGION'] });
+    if (!data.COGNITO_USER_POOL_ID)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'COGNITO_USER_POOL_ID required when AUTH_MODE=cognito', path: ['COGNITO_USER_POOL_ID'] });
+    if (!data.COGNITO_APP_CLIENT_ID)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'COGNITO_APP_CLIENT_ID required when AUTH_MODE=cognito', path: ['COGNITO_APP_CLIENT_ID'] });
+  }
+});
 
 let env: Env;
 
@@ -17,7 +47,7 @@ export function loadEnv(): Env {
   }
 
   try {
-    env = envSchema.parse(process.env);
+    env = envSchema.parse(process.env) as Env;
     return env;
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -33,4 +63,10 @@ export function getEnv(): Env {
     return loadEnv();
   }
   return env;
+}
+
+/** Reset cached env so loadEnv() re-reads process.env. For tests only. */
+export function clearEnvCache(): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (env as any) = undefined;
 }
