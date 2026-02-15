@@ -9,8 +9,8 @@
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "test": "jest --testPathIgnorePatterns=\"db-smoke|shows-integration\"",
-    "test:integration": "jest --testPathPattern=\"(db-smoke|shows-integration)\"",
+    "test": "jest --testPathIgnorePatterns=\"db-smoke|shows-integration|wholesalers-integration\"",
+    "test:integration": "bash scripts/run-integration-tests.sh",
     "migrate:up": "node-pg-migrate up -m migrations",
     "migrate:down": "node-pg-migrate down -m migrations",
     "migrate:create": "node-pg-migrate create -m migrations"

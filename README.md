@@ -16,6 +16,23 @@ Monorepo layout: `frontend/`, `backend/`, `infra/`.
 
 ---
 
+## PROJECT HEAD Snapshot (ChatGPT context reset)
+
+A repo-grounded markdown snapshot for starting a new ChatGPT (or similar) thread without long-context lag. Includes git identity, uncommitted working tree changes, and branch delta vs base (PR view).
+
+**Run from WSL terminal:**
+```bash
+./scripts/copy-project-head.sh
+./scripts/copy-project-head.sh origin/main   # custom base ref
+```
+
+**Run from Cursor / VS Code:**
+`Run Task` → **Copy PROJECT HEAD to Clipboard** (prompts for base ref; default `origin/main`).
+
+Useful mid-milestone and after merge.
+
+---
+
 ## 2. Local Development
 
 ### Frontend
