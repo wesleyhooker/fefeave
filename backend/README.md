@@ -32,15 +32,30 @@ API at `http://localhost:3000/api`. Health at `/api/health`, docs at `/docs`.
 | `npm start` | Run compiled app |
 | `npm run lint` | ESLint |
 | `npm run format` | Prettier |
-| `npm test` | Unit tests (Jest, excludes DB smoke) |
-| `npm run test:integration` | DB smoke test (requires `DATABASE_URL`) |
+| `npm test` | Unit tests (Jest, DB-free) |
+| `npm run test:integration` | Integration tests (starts Postgres automatically; see below) |
 | `npm run migrate:up` | Run migrations |
 | `npm run migrate:down` | Rollback last migration |
 | `npm run migrate:create` | Create new migration |
 
 ---
 
-## 3. Database
+## 3. Integration Tests (One Command)
+
+`npm run test:integration` runs all integration tests (db-smoke, shows, wholesalers) with **zero manual setup**:
+
+1. Starts Postgres via `docker compose up -d postgres` (from repo root)
+2. Waits until Postgres is ready
+3. Runs tests with schema isolation (test schema)
+4. Stops containers with `docker compose down`
+
+**Prerequisites:** Docker installed. Run from repo root or `backend/` (script uses `../docker-compose.yml`).
+
+**CI / existing Postgres:** If `DATABASE_URL` is already set, the script skips docker and runs jest only (e.g. GitHub Actions with a postgres service).
+
+---
+
+## 4. Database
 
 ### Local Postgres (Docker)
 
@@ -71,7 +86,7 @@ DB_PASSWORD=fefeave
 
 ---
 
-## 4. Environment Variables
+## 5. Environment Variables
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
@@ -89,7 +104,7 @@ Database is optional for health, docs, and auth endpoints. The app fails fast on
 
 ---
 
-## 5. Project Structure
+## 6. Project Structure
 
 ```text
 backend/
@@ -105,20 +120,21 @@ backend/
 
 ---
 
-## 6. Module Status
-
-Routes scaffolded; implementations pending:
+## 7. Module Status
 
 - `auth` — Authentication
 - `users` — User management
-- `wholesalers`, `shows`, `owed-line-items`, `payments`, `adjustments`, `attachments`
+- `wholesalers` — POST/GET (implemented)
+- `shows` — POST/GET (implemented)
+- `owed-line-items` — POST/GET under shows (implemented)
+- `payments`, `adjustments`, `attachments` — Pending
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Issue | Fix |
 | --- | --- |
 | App fails to start | Check `DATABASE_URL` or split DB vars; Postgres must be running. |
-| `npm run test:integration` fails | Set `DATABASE_URL` to a running Postgres instance. |
+| `npm run test:integration` fails | Ensure Docker is running. For manual runs, set `DATABASE_URL` to skip docker. |
 | Migrations fail | Ensure DB exists; user has create-table privileges. |
