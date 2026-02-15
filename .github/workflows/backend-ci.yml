@@ -20,6 +20,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
+      - name: Install root tooling
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+        working-directory: .
+      - name: Test PROJECT HEAD tooling
+        run: npm run test:project-head
+        working-directory: .
       - run: npm ci
       - run: npm run lint --if-present
       - run: npm test --if-present

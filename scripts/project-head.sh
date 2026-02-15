@@ -12,17 +12,21 @@ TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 Branch="(unknown)"
 HEAD_SHA="(unknown)"
 DIRTY="no"
-DELIV_N="(unknown)"
-DELIV_TOPIC="(unknown)"
+VERSION="(unknown)"
+PHASE="(unknown)"
+EPIC="(unknown)"
+TOPIC="(unknown)"
 if git rev-parse --git-dir >/dev/null 2>&1; then
   Branch="$(git branch --show-current 2>/dev/null || echo '(detached)')"
   HEAD_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo '(unknown)')"
   if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
     DIRTY="yes"
   fi
-  if [[ "$Branch" =~ ^deliverable-([0-9]+)-(.*)$ ]]; then
-    DELIV_N="${BASH_REMATCH[1]}"
-    DELIV_TOPIC="${BASH_REMATCH[2]}"
+  if [[ "$Branch" =~ ^feature/v([0-9]+)-([0-9]+)\.([0-9]+)-(.*)$ ]]; then
+    VERSION="v${BASH_REMATCH[1]}"
+    PHASE="${BASH_REMATCH[2]}"
+    EPIC="${BASH_REMATCH[3]}"
+    TOPIC="${BASH_REMATCH[4]}"
   fi
 else
   echo "# WARNING: Not a git repository" >&2
@@ -37,8 +41,10 @@ echo "- Branch: $Branch"
 echo "- HEAD: $HEAD_SHA"
 echo "- Base: $BASE_REF"
 echo "- Dirty: $DIRTY"
-echo "- Deliverable: $DELIV_N"
-echo "- Topic: $DELIV_TOPIC"
+echo "- Version: $VERSION"
+echo "- Phase: $PHASE"
+echo "- Epic: $EPIC"
+echo "- Topic: $TOPIC"
 echo ""
 
 # Working tree changes
@@ -173,8 +179,8 @@ for pkg in package.json backend/package.json frontend/package.json; do
 done
 echo ""
 
-# Deliverables Roadmap
-echo "## Deliverables Roadmap"
+# Roadmap (from context/DELIVERABLES.md)
+echo "## Roadmap (from context/DELIVERABLES.md)"
 if [ -f "$REPO_ROOT/context/DELIVERABLES.md" ]; then
   cat "$REPO_ROOT/context/DELIVERABLES.md"
 else
@@ -182,24 +188,24 @@ else
 fi
 echo ""
 
-# Milestone (auto)
-if [ "$DELIV_N" != "(unknown)" ] && [ -n "$DELIV_TOPIC" ] && [ "$DELIV_TOPIC" != "(unknown)" ]; then
-  MILESTONE_OBJ="Deliverable $DELIV_N: $DELIV_TOPIC"
+# Work Context (auto)
+if [ "$VERSION" != "(unknown)" ] && [ "$PHASE" != "(unknown)" ] && [ "$EPIC" != "(unknown)" ] && [ "$TOPIC" != "(unknown)" ]; then
+  WORK_OBJ="$VERSION / $PHASE.$EPIC / $TOPIC"
 else
-  MILESTONE_OBJ="$Branch"
+  WORK_OBJ="$Branch"
 fi
 if [ "$DIRTY" = "yes" ]; then
-  MILESTONE_STATUS="in progress (uncommitted changes)"
+  WORK_STATUS="dirty"
 elif [ -n "$BRANCH_DIFF_FILES" ]; then
-  MILESTONE_STATUS="ready for PR/review (committed changes)"
+  WORK_STATUS="committed delta"
 else
-  MILESTONE_STATUS="clean baseline (no delta vs base)"
+  WORK_STATUS="clean baseline"
 fi
-echo "## Milestone (auto)"
-echo "- Objective: $MILESTONE_OBJ"
-echo "- Status: $MILESTONE_STATUS"
+echo "## Work Context (auto)"
+echo "- Objective: $WORK_OBJ"
+echo "- Status: $WORK_STATUS"
 echo "- Constraints:"
 echo "  - Integration tests should pass (or explain local skips)"
 echo "  - No breaking DB schema changes without migration"
-echo "  - Keep API contracts stable (document breaking changes)"
+echo "  - Keep API contracts stable (document breaking change)"
 echo "  - Follow AWS best practices for deployed components"

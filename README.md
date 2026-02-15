@@ -16,14 +16,29 @@ Monorepo layout: `frontend/`, `backend/`, `infra/`.
 
 ---
 
+## Roadmap & Branching Strategy
+
+Roadmap uses **Version → Phase → Epic** and lives in `context/DELIVERABLES.md`.
+
+**Branch naming:** `feature/v<version>-<phase>.<epic>-short-description`
+
+Examples:
+* `feature/v1-2.1-s3-uploads` — Phase 2, Epic 1 (S3 uploads)
+* `feature/v1-3.2-show-workflow-ui` — Phase 3, Epic 2 (Show workflow UI)
+* `feature/v1-1.3-settlement-api` — Phase 1, Epic 3 (Settlement API)
+
+Legacy `deliverable-*` branches may exist historically; all new work should use `feature/v1-*` naming.
+
+---
+
 ## PROJECT HEAD Snapshot (ChatGPT context reset)
 
 A repo-grounded markdown snapshot for starting a new ChatGPT (or similar) thread without long-context lag. Includes git identity, uncommitted working tree changes, and branch delta vs base (PR view).
 
 **Snapshot contents:**
-- **Deliverables Roadmap** from `context/DELIVERABLES.md` (table of contents)
-- **Current Deliverable** auto-detected from branch name (e.g. `deliverable-4-shows` → Deliverable 4, Topic: shows)
-- **Milestone (auto)** — objective, status, and constraints derived from git state (no manual fill-in)
+- **Roadmap** from `context/DELIVERABLES.md` (Version → Phase → Epic)
+- **Version/Phase/Epic/Topic** auto-detected from branch name (e.g. `feature/v1-2.1-s3-uploads`)
+- **Work Context (auto)** — objective, status, and constraints derived from git state (no manual fill-in)
 
 **Run from WSL terminal:**
 ```bash
@@ -33,6 +48,9 @@ A repo-grounded markdown snapshot for starting a new ChatGPT (or similar) thread
 
 **Run from Cursor / VS Code:**
 `Run Task` → **Copy PROJECT HEAD to Clipboard** (prompts for base ref; default `origin/main`).
+
+**Automated test:** `npm run test:project-head`  
+Enforced in CI via `backend-ci.yml`, so no manual verification required.
 
 Useful mid-milestone and after merge.
 

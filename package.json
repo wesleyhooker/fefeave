@@ -1,0 +1,7 @@
+{
+  "name": "fefeave",
+  "private": true,
+  "scripts": {
+    "test:project-head": "node scripts/test-project-head.mjs"
+  }
+}
