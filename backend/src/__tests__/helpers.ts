@@ -21,6 +21,7 @@ export type TestEnvOverrides = Partial<{
   DB_NAME: string;
   DB_USER: string;
   DB_PASSWORD: string;
+  PGOPTIONS: string;
 }>;
 
 export type BuildAppResult = {
