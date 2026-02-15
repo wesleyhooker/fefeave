@@ -5,10 +5,20 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'scripts/**'
+      - 'context/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/backend-ci.yml'
   pull_request:
     paths:
       - 'backend/**'
+      - 'scripts/**'
+      - 'context/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/backend-ci.yml'
+
 
 jobs:
   test:
