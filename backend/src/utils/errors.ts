@@ -43,6 +43,13 @@ export class ForbiddenError extends AppError {
   }
 }
 
+export class ConflictError extends AppError {
+  constructor(message: string) {
+    super(409, message, 'CONFLICT');
+    this.name = 'ConflictError';
+  }
+}
+
 export async function errorHandler(
   error: Error,
   request: FastifyRequest,

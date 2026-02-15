@@ -15,6 +15,7 @@ import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
 import { wholesalerRoutes } from './routes/wholesalers';
 import { showRoutes } from './routes/shows';
+import { showFinancialsRoutes } from './routes/show-financials';
 import { owedLineItemRoutes } from './routes/owed-line-items';
 import { paymentRoutes } from './routes/payments';
 import { adjustmentRoutes } from './routes/adjustments';
@@ -101,6 +102,7 @@ async function buildApp() {
   await app.register(userRoutes, { prefix: env.API_PREFIX });
   await app.register(wholesalerRoutes, { prefix: env.API_PREFIX });
   await app.register(showRoutes, { prefix: env.API_PREFIX });
+  await app.register(showFinancialsRoutes, { prefix: env.API_PREFIX });
   await app.register(owedLineItemRoutes, { prefix: env.API_PREFIX });
   await app.register(paymentRoutes, { prefix: env.API_PREFIX });
   await app.register(adjustmentRoutes, { prefix: env.API_PREFIX });
