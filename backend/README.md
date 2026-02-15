@@ -126,7 +126,8 @@ backend/
 - `users` — User management
 - `wholesalers` — POST/GET (implemented)
 - `shows` — POST/GET (implemented)
-- `owed-line-items`, `payments`, `adjustments`, `attachments` — Pending
+- `owed-line-items` — POST/GET under shows (implemented)
+- `payments`, `adjustments`, `attachments` — Pending
 
 ---
 

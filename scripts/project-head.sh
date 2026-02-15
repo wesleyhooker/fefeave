@@ -10,13 +10,19 @@ TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # Git identity (robust)
 Branch="(unknown)"
- HEAD_SHA="(unknown)"
- DIRTY="no"
+HEAD_SHA="(unknown)"
+DIRTY="no"
+DELIV_N="(unknown)"
+DELIV_TOPIC="(unknown)"
 if git rev-parse --git-dir >/dev/null 2>&1; then
   Branch="$(git branch --show-current 2>/dev/null || echo '(detached)')"
   HEAD_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo '(unknown)')"
   if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
     DIRTY="yes"
+  fi
+  if [[ "$Branch" =~ ^deliverable-([0-9]+)-(.*)$ ]]; then
+    DELIV_N="${BASH_REMATCH[1]}"
+    DELIV_TOPIC="${BASH_REMATCH[2]}"
   fi
 else
   echo "# WARNING: Not a git repository" >&2
@@ -31,6 +37,8 @@ echo "- Branch: $Branch"
 echo "- HEAD: $HEAD_SHA"
 echo "- Base: $BASE_REF"
 echo "- Dirty: $DIRTY"
+echo "- Deliverable: $DELIV_N"
+echo "- Topic: $DELIV_TOPIC"
 echo ""
 
 # Working tree changes
@@ -165,8 +173,33 @@ for pkg in package.json backend/package.json frontend/package.json; do
 done
 echo ""
 
-echo "## Fill-In (keep short)"
-echo "- Milestone objective:"
-echo "- Implemented so far:"
-echo "- Remaining work:"
-echo "- Constraints / non-negotiables:"
+# Deliverables Roadmap
+echo "## Deliverables Roadmap"
+if [ -f "$REPO_ROOT/context/DELIVERABLES.md" ]; then
+  cat "$REPO_ROOT/context/DELIVERABLES.md"
+else
+  echo "(not found)"
+fi
+echo ""
+
+# Milestone (auto)
+if [ "$DELIV_N" != "(unknown)" ] && [ -n "$DELIV_TOPIC" ] && [ "$DELIV_TOPIC" != "(unknown)" ]; then
+  MILESTONE_OBJ="Deliverable $DELIV_N: $DELIV_TOPIC"
+else
+  MILESTONE_OBJ="$Branch"
+fi
+if [ "$DIRTY" = "yes" ]; then
+  MILESTONE_STATUS="in progress (uncommitted changes)"
+elif [ -n "$BRANCH_DIFF_FILES" ]; then
+  MILESTONE_STATUS="ready for PR/review (committed changes)"
+else
+  MILESTONE_STATUS="clean baseline (no delta vs base)"
+fi
+echo "## Milestone (auto)"
+echo "- Objective: $MILESTONE_OBJ"
+echo "- Status: $MILESTONE_STATUS"
+echo "- Constraints:"
+echo "  - Integration tests should pass (or explain local skips)"
+echo "  - No breaking DB schema changes without migration"
+echo "  - Keep API contracts stable (document breaking changes)"
+echo "  - Follow AWS best practices for deployed components"

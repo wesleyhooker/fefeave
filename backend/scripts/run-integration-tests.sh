@@ -36,7 +36,7 @@ fi
 
 echo "Running integration tests..."
 cd "$BACKEND_DIR"
-DATABASE_URL="$DATABASE_URL" npx jest --testPathPattern="(db-smoke|shows-integration|wholesalers-integration)" --forceExit
+DATABASE_URL="$DATABASE_URL" npx jest --testPathPattern="(db-smoke|shows-integration|wholesalers-integration|owed-line-items-integration)" --forceExit
 EXIT_CODE=$?
 
 # Only stop Postgres if we started it (it was not running before)

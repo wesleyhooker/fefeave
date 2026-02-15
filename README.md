@@ -20,6 +20,11 @@ Monorepo layout: `frontend/`, `backend/`, `infra/`.
 
 A repo-grounded markdown snapshot for starting a new ChatGPT (or similar) thread without long-context lag. Includes git identity, uncommitted working tree changes, and branch delta vs base (PR view).
 
+**Snapshot contents:**
+- **Deliverables Roadmap** from `context/DELIVERABLES.md` (table of contents)
+- **Current Deliverable** auto-detected from branch name (e.g. `deliverable-4-shows` → Deliverable 4, Topic: shows)
+- **Milestone (auto)** — objective, status, and constraints derived from git state (no manual fill-in)
+
 **Run from WSL terminal:**
 ```bash
 ./scripts/copy-project-head.sh
