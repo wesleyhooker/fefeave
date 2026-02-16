@@ -41,20 +41,19 @@ try {
   execSync(`git worktree add "${TEMP_BASE}"`, { cwd: REPO_ROOT, stdio: 'pipe' });
   worktreeCreated = true;
 
-  // Create and checkout test branch
-  let branchName = 'feature/v1-2.1-s3-uploads';
+  // Create and checkout test branch (use timestamp suffix for uniqueness)
+  const branchName = `feature/v1-2.1-s3-uploads-${Date.now()}`;
   const branchResult = run(`git checkout -b ${branchName}`, { cwd: TEMP_BASE });
-  if (branchResult.status !== 0) {
-    branchName = `feature/v1-2.1-s3-uploads-${Date.now()}`;
-    const retry = run(`git checkout -b ${branchName}`, { cwd: TEMP_BASE });
-    assert.strictEqual(retry.status, 0, `Failed to create branch: ${retry.stderr}`);
-  }
+  assert.strictEqual(branchResult.status, 0, `Failed to create branch: ${branchResult.stderr}`);
 
-  // Topic: s3-uploads (without suffix) or s3-uploads-<ts> (with suffix)
-  const topic = branchName === 'feature/v1-2.1-s3-uploads' ? 's3-uploads' : branchName.replace('feature/v1-2.1-', '');
-  const objective = `v1 / 2.1 / ${topic}`;
+  const topic = 's3-uploads';
+  const objective = 'v1 / 2.1 / s3-uploads';
 
-  // Run project-head.sh
+  // Copy current script into worktree (tests working copy) and run from worktree for correct git context
+  fs.copyFileSync(
+    path.join(REPO_ROOT, 'scripts', 'project-head.sh'),
+    path.join(TEMP_BASE, 'scripts', 'project-head.sh')
+  );
   const result = run('./scripts/project-head.sh origin/main', { cwd: TEMP_BASE });
   assert.strictEqual(result.status, 0, `project-head.sh failed: ${result.stderr}`);
   const output = result.stdout + result.stderr;
@@ -65,11 +64,15 @@ try {
   assert.ok(output.includes('Phase: 2'), 'Expected "Phase: 2"');
   assert.ok(output.includes('Epic: 1'), 'Expected "Epic: 1"');
   assert.ok(output.includes(`Topic: ${topic}`), `Expected "Topic: ${topic}"`);
+  const suffixMatch = output.match(/Suffix: ([0-9]+)/);
+  assert.ok(suffixMatch, 'Expected "Suffix: <digits>"');
+  assert.ok(/^[0-9]+$/.test(suffixMatch[1]), 'Suffix should be digits only');
   assert.ok(output.includes('## Roadmap'), 'Expected "## Roadmap" section');
   const roadmapIdx = output.indexOf('## Roadmap');
   const fefeaveIdx = output.indexOf('# FefeAve Roadmap', roadmapIdx);
   assert.ok(fefeaveIdx > roadmapIdx, 'Expected "# FefeAve Roadmap" below ## Roadmap section');
   assert.ok(output.includes(`Objective: ${objective}`), `Expected "Objective: ${objective}"`);
+  assert.ok(output.includes('# PROJECT HEAD - FefeAve'), 'Expected ASCII dash in header');
 
   console.log('test-project-head: all assertions passed');
 } finally {

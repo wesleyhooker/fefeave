@@ -16,6 +16,7 @@ VERSION="(unknown)"
 PHASE="(unknown)"
 EPIC="(unknown)"
 TOPIC="(unknown)"
+SUFFIX="(none)"
 if git rev-parse --git-dir >/dev/null 2>&1; then
   Branch="$(git branch --show-current 2>/dev/null || echo '(detached)')"
   HEAD_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo '(unknown)')"
@@ -26,13 +27,20 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
     VERSION="v${BASH_REMATCH[1]}"
     PHASE="${BASH_REMATCH[2]}"
     EPIC="${BASH_REMATCH[3]}"
-    TOPIC="${BASH_REMATCH[4]}"
+    FULL_TOPIC="${BASH_REMATCH[4]}"
+    SUFFIX="(none)"
+    if [[ "$FULL_TOPIC" =~ -[0-9]+$ ]]; then
+      SUFFIX="${FULL_TOPIC##*-}"
+      TOPIC="${FULL_TOPIC%%-[0-9]*}"
+    else
+      TOPIC="$FULL_TOPIC"
+    fi
   fi
 else
   echo "# WARNING: Not a git repository" >&2
 fi
 
-echo "# PROJECT HEAD – FefeAve"
+echo "# PROJECT HEAD - FefeAve"
 echo "Generated: $TIMESTAMP"
 echo "Hosting: AWS (deployed)"
 echo ""
@@ -45,6 +53,7 @@ echo "- Version: $VERSION"
 echo "- Phase: $PHASE"
 echo "- Epic: $EPIC"
 echo "- Topic: $TOPIC"
+echo "- Suffix: $SUFFIX"
 echo ""
 
 # Working tree changes
@@ -182,7 +191,7 @@ echo ""
 # Roadmap (from context/DELIVERABLES.md)
 echo "## Roadmap (from context/DELIVERABLES.md)"
 if [ -f "$REPO_ROOT/context/DELIVERABLES.md" ]; then
-  cat "$REPO_ROOT/context/DELIVERABLES.md"
+  sed 's/\xe2\x80\x93/ - /g; s/\xe2\x80\x94/ - /g' "$REPO_ROOT/context/DELIVERABLES.md"
 else
   echo "(not found)"
 fi

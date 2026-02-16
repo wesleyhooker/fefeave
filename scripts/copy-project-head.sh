@@ -3,11 +3,20 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if ! command -v powershell.exe >/dev/null 2>&1; then
-  echo "Error: powershell.exe not found. This script requires PowerShell (Windows) to copy to clipboard." >&2
-  echo "  On WSL, ensure Windows PowerShell is on PATH (e.g. /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe)" >&2
-  exit 1
+# Prefer clip.exe (most reliable for WSL -> Windows clipboard)
+if command -v clip.exe >/dev/null 2>&1; then
+  "$SCRIPT_DIR/project-head.sh" "$@" | clip.exe
+  echo "PROJECT HEAD snapshot copied to Windows clipboard." >&2
+  exit 0
 fi
 
-"$SCRIPT_DIR/project-head.sh" "$@" | powershell.exe -NoProfile -Command "Set-Clipboard"
-echo "PROJECT HEAD snapshot copied to Windows clipboard." >&2
+# Fallback to PowerShell if clip.exe isn't available
+if command -v powershell.exe >/dev/null 2>&1; then
+  "$SCRIPT_DIR/project-head.sh" "$@" | powershell.exe -NoProfile -Command "Set-Clipboard"
+  echo "PROJECT HEAD snapshot copied to Windows clipboard." >&2
+  exit 0
+fi
+
+echo "Error: Neither clip.exe nor powershell.exe found. Cannot copy to clipboard." >&2
+echo "Tip: Run ./scripts/project-head.sh and copy manually." >&2
+exit 1
