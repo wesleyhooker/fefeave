@@ -47,7 +47,6 @@ try {
   assert.strictEqual(branchResult.status, 0, `Failed to create branch: ${branchResult.stderr}`);
 
   const topic = 's3-uploads';
-  const objective = 'v1 / 2.1 / s3-uploads';
 
   // Copy current script into worktree (tests working copy) and run from worktree for correct git context
   fs.copyFileSync(
@@ -71,7 +70,9 @@ try {
   const roadmapIdx = output.indexOf('## Roadmap');
   const fefeaveIdx = output.indexOf('# FefeAve Roadmap', roadmapIdx);
   assert.ok(fefeaveIdx > roadmapIdx, 'Expected "# FefeAve Roadmap" below ## Roadmap section');
-  assert.ok(output.includes(`Objective: ${objective}`), `Expected "Objective: ${objective}"`);
+  assert.ok(output.includes('Target: v1 / Phase 2'), 'Expected Target line with v1 / Phase 2');
+  assert.ok(output.includes('Current Epic: 2.1 (s3-uploads)'), 'Expected Current Epic line with 2.1 (s3-uploads)');
+  assert.ok(output.includes('Planned:'), 'Expected Planned line');
   assert.ok(output.includes('# PROJECT HEAD - FefeAve'), 'Expected ASCII dash in header');
 
   console.log('test-project-head: all assertions passed');

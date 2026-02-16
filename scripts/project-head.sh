@@ -199,9 +199,27 @@ echo ""
 
 # Work Context (auto)
 if [ "$VERSION" != "(unknown)" ] && [ "$PHASE" != "(unknown)" ] && [ "$EPIC" != "(unknown)" ] && [ "$TOPIC" != "(unknown)" ]; then
-  WORK_OBJ="$VERSION / $PHASE.$EPIC / $TOPIC"
+  PHASE_NAME=""
+  if [ -f "$REPO_ROOT/context/DELIVERABLES.md" ]; then
+    PHASE_NAME="$(PHASE="$PHASE" node -e "
+      const fs=require('fs');
+      const phase=process.env.PHASE;
+      const content=fs.readFileSync(process.argv[1],'utf8');
+      const m=content.match(new RegExp('^## Phase '+phase+' [\\\\u2013\\\\u2014\\\\-\\\\s]+(.+)\$','m'));
+      process.stdout.write(m ? m[1].trim() : '');
+    " "$REPO_ROOT/context/DELIVERABLES.md" 2>/dev/null)" || true
+  fi
+  if [ -n "$PHASE_NAME" ]; then
+    WORK_TARGET="$VERSION / Phase $PHASE ($PHASE_NAME)"
+  else
+    WORK_TARGET="$VERSION / Phase $PHASE"
+  fi
+  WORK_EPIC="$PHASE.$EPIC ($TOPIC)"
+  WORK_PLANNED="complete Phase $PHASE (all epics in this phase) unless noted"
 else
-  WORK_OBJ="$Branch"
+  WORK_TARGET="$Branch"
+  WORK_EPIC="(unknown)"
+  WORK_PLANNED="(unknown)"
 fi
 if [ "$DIRTY" = "yes" ]; then
   WORK_STATUS="dirty"
@@ -211,7 +229,9 @@ else
   WORK_STATUS="clean baseline"
 fi
 echo "## Work Context (auto)"
-echo "- Objective: $WORK_OBJ"
+echo "- Target: $WORK_TARGET"
+echo "- Current Epic: $WORK_EPIC"
+echo "- Planned: $WORK_PLANNED"
 echo "- Status: $WORK_STATUS"
 echo "- Constraints:"
 echo "  - Integration tests should pass (or explain local skips)"
