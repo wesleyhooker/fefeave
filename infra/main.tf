@@ -1,8 +1,9 @@
 data "aws_caller_identity" "current" {}
 
 locals {
-  bucket_name = "${var.project_name}-${var.env}"
-  cf_comment  = "${var.project_name}-${var.env}"
+  bucket_name           = "${var.project_name}-${var.env}"
+  attachments_bucket_name = "fefeave-attachments-${var.env}"
+  cf_comment            = "${var.project_name}-${var.env}"
   tags = {
     Project     = var.project_name
     Environment = var.env
@@ -134,6 +135,123 @@ resource "aws_iam_role_policy" "gh_inline" {
       { Sid = "S3RW",   Action = ["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:PutObjectAcl"], Effect = "Allow", Resource = ["${aws_s3_bucket.site.arn}/*"] },
       { Sid = "CFInvalidate", Action = ["cloudfront:CreateInvalidation"], Effect = "Allow",
         Resource = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${aws_cloudfront_distribution.cdn.id}" }
+    ]
+  })
+}
+
+# --- Attachments S3 bucket (Epic 2.1; not used by CloudFront) ---
+resource "aws_s3_bucket" "attachments" {
+  bucket = local.attachments_bucket_name
+  tags   = local.tags
+}
+
+resource "aws_s3_bucket_public_access_block" "attachments" {
+  bucket                  = aws_s3_bucket.attachments.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "attachments" {
+  bucket = aws_s3_bucket.attachments.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "attachments" {
+  bucket = aws_s3_bucket.attachments.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# --- Attachments bucket policy (TLS + encryption enforcement) ---
+data "aws_iam_policy_document" "attachments_policy" {
+  # Deny non-HTTPS (require TLS)
+  statement {
+    sid       = "DenyInsecureTransport"
+    effect    = "Deny"
+    actions   = ["s3:*"]
+    resources = [aws_s3_bucket.attachments.arn, "${aws_s3_bucket.attachments.arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+
+  # Deny PutObject without server-side encryption or with non-AES256
+  statement {
+    sid       = "DenyUnencryptedPut"
+    effect    = "Deny"
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.attachments.arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "Null"
+      variable = "s3:x-amz-server-side-encryption"
+      values   = ["true"]
+    }
+  }
+  statement {
+    sid       = "DenyNonAES256Put"
+    effect    = "Deny"
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.attachments.arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "StringNotEquals"
+      variable = "s3:x-amz-server-side-encryption"
+      values   = ["AES256"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "attachments" {
+  bucket = aws_s3_bucket.attachments.id
+  policy = data.aws_iam_policy_document.attachments_policy.json
+}
+
+# --- Backend runtime IAM role (ECS Fargate task role; not CI/CD) ---
+resource "aws_iam_role" "backend" {
+  name               = "fefeave-backend-${var.env}"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = "sts:AssumeRole"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+    }]
+  })
+  tags = local.tags
+}
+
+resource "aws_iam_role_policy" "backend_attachments" {
+  name   = "fefeave-backend-${var.env}-attachments"
+  role   = aws_iam_role.backend.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      { Sid = "S3List", Action = ["s3:ListBucket"], Effect = "Allow", Resource = [aws_s3_bucket.attachments.arn] },
+      { Sid = "S3Objects", Action = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"], Effect = "Allow", Resource = ["${aws_s3_bucket.attachments.arn}/*"] }
     ]
   })
 }

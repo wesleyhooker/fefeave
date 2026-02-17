@@ -22,6 +22,8 @@ export type TestEnvOverrides = Partial<{
   DB_USER: string;
   DB_PASSWORD: string;
   PGOPTIONS: string;
+  S3_ATTACHMENTS_BUCKET: string;
+  AWS_REGION: string;
 }>;
 
 export type BuildAppResult = {
