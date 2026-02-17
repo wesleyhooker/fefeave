@@ -2,6 +2,20 @@
   "name": "fefeave",
   "private": true,
   "scripts": {
-    "test:project-head": "node scripts/test-project-head.mjs"
+    "prepare": "husky",
+    "test:project-head": "node scripts/test-project-head.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.4"
+  },
+  "lint-staged": {
+    "backend/**/*.{ts,js,json,md}": [
+      "prettier --write",
+      "node scripts/lint-staged-eslint.js"
+    ]
   }
 }
