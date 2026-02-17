@@ -29,6 +29,9 @@ const baseEnvSchema = z.object({
   DB_NAME: z.string().optional(),
   DB_USER: z.string().optional(),
   DB_PASSWORD: z.string().optional(),
+  // S3 attachments bucket (Epic 2.1; wire to Terraform output in deployment)
+  S3_ATTACHMENTS_BUCKET: z.string().min(1).optional(),
+  AWS_REGION: z.string().optional().default('us-east-1'),
 });
 
 export type Env = z.infer<typeof baseEnvSchema>;

@@ -498,4 +498,172 @@ export async function owedLineItemRoutes(
       );
     }
   );
+
+  const linkAttachmentBodySchema = z.object({
+    attachmentId: z.string().uuid(),
+  });
+
+  fastify.post<{
+    Params: { settlementId: string };
+    Body: z.infer<typeof linkAttachmentBodySchema>;
+  }>(
+    '/settlements/:settlementId/attachments',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Link an attachment to a settlement (owed line item)',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['settlementId'],
+          properties: { settlementId: { type: 'string', format: 'uuid' } },
+        },
+        body: {
+          type: 'object',
+          required: ['attachmentId'],
+          properties: { attachmentId: { type: 'string', format: 'uuid' } },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              settlementId: { type: 'string' },
+              attachmentId: { type: 'string' },
+              id: { type: 'string' },
+              key: { type: 'string' },
+              originalFilename: { type: 'string' },
+              contentType: { type: 'string' },
+              sizeBytes: { type: 'number' },
+              createdAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const settlementIdParsed = uuidSchema.safeParse(request.params.settlementId);
+      if (!settlementIdParsed.success) {
+        throw new ValidationError('Invalid settlement id', settlementIdParsed.error.errors);
+      }
+      const bodyParsed = linkAttachmentBodySchema.safeParse(request.body);
+      if (!bodyParsed.success) {
+        throw new ValidationError('Invalid request body', bodyParsed.error.errors);
+      }
+      const settlementId = settlementIdParsed.data;
+      const attachmentId = bodyParsed.data.attachmentId;
+
+      const pool = getPool();
+      const settlementRow = await pool.query(
+        'SELECT id FROM owed_line_items WHERE id = $1 AND deleted_at IS NULL',
+        [settlementId]
+      );
+      if (settlementRow.rows.length === 0) {
+        throw new NotFoundError('Settlement', settlementId);
+      }
+      const attRow = await pool.query(
+        'SELECT id, s3_key, original_filename, content_type, size_bytes, created_at FROM attachments WHERE id = $1 AND deleted_at IS NULL',
+        [attachmentId]
+      );
+      if (attRow.rows.length === 0) {
+        throw new NotFoundError('Attachment', attachmentId);
+      }
+      const att = attRow.rows[0] as {
+        id: string;
+        s3_key: string;
+        original_filename: string;
+        content_type: string;
+        size_bytes: string;
+        created_at: Date;
+      };
+      await pool.query(
+        `INSERT INTO settlement_attachments (settlement_id, attachment_id)
+         VALUES ($1, $2)
+         ON CONFLICT (settlement_id, attachment_id) DO NOTHING`,
+        [settlementId, attachmentId]
+      );
+      return reply.status(201).send({
+        settlementId,
+        attachmentId: att.id,
+        id: att.id,
+        key: att.s3_key,
+        originalFilename: att.original_filename,
+        contentType: att.content_type,
+        sizeBytes: Number(att.size_bytes),
+        createdAt: att.created_at,
+      });
+    }
+  );
+
+  fastify.get<{ Params: { settlementId: string } }>(
+    '/settlements/:settlementId/attachments',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'List attachments linked to a settlement (excludes soft-deleted)',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['settlementId'],
+          properties: { settlementId: { type: 'string', format: 'uuid' } },
+        },
+        response: {
+          200: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                key: { type: 'string' },
+                filename: { type: 'string' },
+                contentType: { type: 'string' },
+                sizeBytes: { type: 'number' },
+                createdAt: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const parsed = uuidSchema.safeParse(request.params.settlementId);
+      if (!parsed.success) {
+        throw new ValidationError('Invalid settlement id', parsed.error.errors);
+      }
+      const settlementId = parsed.data;
+      const pool = getPool();
+      const settlementExists = await pool.query(
+        'SELECT 1 FROM owed_line_items WHERE id = $1 AND deleted_at IS NULL',
+        [settlementId]
+      );
+      if (settlementExists.rows.length === 0) {
+        throw new NotFoundError('Settlement', settlementId);
+      }
+      const result = await pool.query(
+        `SELECT a.id, a.s3_key, a.original_filename, a.content_type, a.size_bytes, a.created_at
+         FROM attachments a
+         INNER JOIN settlement_attachments sa ON sa.attachment_id = a.id
+         WHERE sa.settlement_id = $1 AND a.deleted_at IS NULL
+         ORDER BY a.created_at DESC`,
+        [settlementId]
+      );
+      const rows = result.rows as Array<{
+        id: string;
+        s3_key: string;
+        original_filename: string;
+        content_type: string;
+        size_bytes: string;
+        created_at: Date;
+      }>;
+      return reply.send(
+        rows.map((r) => ({
+          id: r.id,
+          key: r.s3_key,
+          filename: r.original_filename,
+          contentType: r.content_type,
+          sizeBytes: Number(r.size_bytes),
+          createdAt: r.created_at,
+        }))
+      );
+    }
+  );
 }

@@ -249,4 +249,169 @@ export async function showRoutes(
       });
     }
   );
+
+  const linkAttachmentBodySchema = z.object({
+    attachmentId: z.string().uuid(),
+  });
+
+  fastify.post<{ Params: { showId: string }; Body: z.infer<typeof linkAttachmentBodySchema> }>(
+    '/shows/:showId/attachments',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Link an attachment to a show',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['showId'],
+          properties: { showId: { type: 'string', format: 'uuid' } },
+        },
+        body: {
+          type: 'object',
+          required: ['attachmentId'],
+          properties: { attachmentId: { type: 'string', format: 'uuid' } },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              showId: { type: 'string' },
+              attachmentId: { type: 'string' },
+              id: { type: 'string' },
+              key: { type: 'string' },
+              originalFilename: { type: 'string' },
+              contentType: { type: 'string' },
+              sizeBytes: { type: 'number' },
+              createdAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const showIdParsed = uuidSchema.safeParse(request.params.showId);
+      if (!showIdParsed.success) {
+        throw new ValidationError('Invalid show id', showIdParsed.error.errors);
+      }
+      const bodyParsed = linkAttachmentBodySchema.safeParse(request.body);
+      if (!bodyParsed.success) {
+        throw new ValidationError('Invalid request body', bodyParsed.error.errors);
+      }
+      const showId = showIdParsed.data;
+      const attachmentId = bodyParsed.data.attachmentId;
+
+      const pool = getPool();
+      const showRow = await pool.query(
+        'SELECT id FROM shows WHERE id = $1 AND deleted_at IS NULL',
+        [showId]
+      );
+      if (showRow.rows.length === 0) {
+        throw new NotFoundError('Show', showId);
+      }
+      const attRow = await pool.query(
+        'SELECT id, s3_key, original_filename, content_type, size_bytes, created_at FROM attachments WHERE id = $1 AND deleted_at IS NULL',
+        [attachmentId]
+      );
+      if (attRow.rows.length === 0) {
+        throw new NotFoundError('Attachment', attachmentId);
+      }
+      const att = attRow.rows[0] as {
+        id: string;
+        s3_key: string;
+        original_filename: string;
+        content_type: string;
+        size_bytes: string;
+        created_at: Date;
+      };
+      await pool.query(
+        `INSERT INTO show_attachments (show_id, attachment_id)
+         VALUES ($1, $2)
+         ON CONFLICT (show_id, attachment_id) DO NOTHING`,
+        [showId, attachmentId]
+      );
+      return reply.status(201).send({
+        showId,
+        attachmentId: att.id,
+        id: att.id,
+        key: att.s3_key,
+        originalFilename: att.original_filename,
+        contentType: att.content_type,
+        sizeBytes: Number(att.size_bytes),
+        createdAt: att.created_at,
+      });
+    }
+  );
+
+  fastify.get<{ Params: { showId: string } }>(
+    '/shows/:showId/attachments',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'List attachments linked to a show (excludes soft-deleted)',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['showId'],
+          properties: { showId: { type: 'string', format: 'uuid' } },
+        },
+        response: {
+          200: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                key: { type: 'string' },
+                filename: { type: 'string' },
+                contentType: { type: 'string' },
+                sizeBytes: { type: 'number' },
+                createdAt: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const parsed = uuidSchema.safeParse(request.params.showId);
+      if (!parsed.success) {
+        throw new ValidationError('Invalid show id', parsed.error.errors);
+      }
+      const showId = parsed.data;
+      const pool = getPool();
+      const showExists = await pool.query(
+        'SELECT 1 FROM shows WHERE id = $1 AND deleted_at IS NULL',
+        [showId]
+      );
+      if (showExists.rows.length === 0) {
+        throw new NotFoundError('Show', showId);
+      }
+      const result = await pool.query(
+        `SELECT a.id, a.s3_key, a.original_filename, a.content_type, a.size_bytes, a.created_at
+         FROM attachments a
+         INNER JOIN show_attachments sa ON sa.attachment_id = a.id
+         WHERE sa.show_id = $1 AND a.deleted_at IS NULL
+         ORDER BY a.created_at DESC`,
+        [showId]
+      );
+      const rows = result.rows as Array<{
+        id: string;
+        s3_key: string;
+        original_filename: string;
+        content_type: string;
+        size_bytes: string;
+        created_at: Date;
+      }>;
+      return reply.send(
+        rows.map((r) => ({
+          id: r.id,
+          key: r.s3_key,
+          filename: r.original_filename,
+          contentType: r.content_type,
+          sizeBytes: Number(r.size_bytes),
+          createdAt: r.created_at,
+        }))
+      );
+    }
+  );
 }

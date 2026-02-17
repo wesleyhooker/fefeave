@@ -33,9 +33,13 @@ jobs:
       - name: Install root tooling
         run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
         working-directory: .
+      - name: Check formatting
+        run: npm run format:check
+        working-directory: .
       - name: Test PROJECT HEAD tooling
         run: npm run test:project-head
         working-directory: .
       - run: npm ci
-      - run: npm run lint --if-present
+      - name: Lint backend
+        run: npm run lint
       - run: npm test --if-present

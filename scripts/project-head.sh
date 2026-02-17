@@ -16,6 +16,7 @@ VERSION="(unknown)"
 PHASE="(unknown)"
 EPIC="(unknown)"
 TOPIC="(unknown)"
+SUFFIX="(none)"
 if git rev-parse --git-dir >/dev/null 2>&1; then
   Branch="$(git branch --show-current 2>/dev/null || echo '(detached)')"
   HEAD_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo '(unknown)')"
@@ -26,13 +27,20 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
     VERSION="v${BASH_REMATCH[1]}"
     PHASE="${BASH_REMATCH[2]}"
     EPIC="${BASH_REMATCH[3]}"
-    TOPIC="${BASH_REMATCH[4]}"
+    FULL_TOPIC="${BASH_REMATCH[4]}"
+    SUFFIX="(none)"
+    if [[ "$FULL_TOPIC" =~ -[0-9]+$ ]]; then
+      SUFFIX="${FULL_TOPIC##*-}"
+      TOPIC="${FULL_TOPIC%%-[0-9]*}"
+    else
+      TOPIC="$FULL_TOPIC"
+    fi
   fi
 else
   echo "# WARNING: Not a git repository" >&2
 fi
 
-echo "# PROJECT HEAD – FefeAve"
+echo "# PROJECT HEAD - FefeAve"
 echo "Generated: $TIMESTAMP"
 echo "Hosting: AWS (deployed)"
 echo ""
@@ -45,6 +53,7 @@ echo "- Version: $VERSION"
 echo "- Phase: $PHASE"
 echo "- Epic: $EPIC"
 echo "- Topic: $TOPIC"
+echo "- Suffix: $SUFFIX"
 echo ""
 
 # Working tree changes
@@ -182,7 +191,7 @@ echo ""
 # Roadmap (from context/DELIVERABLES.md)
 echo "## Roadmap (from context/DELIVERABLES.md)"
 if [ -f "$REPO_ROOT/context/DELIVERABLES.md" ]; then
-  cat "$REPO_ROOT/context/DELIVERABLES.md"
+  sed 's/\xe2\x80\x93/ - /g; s/\xe2\x80\x94/ - /g' "$REPO_ROOT/context/DELIVERABLES.md"
 else
   echo "(not found)"
 fi
@@ -190,9 +199,27 @@ echo ""
 
 # Work Context (auto)
 if [ "$VERSION" != "(unknown)" ] && [ "$PHASE" != "(unknown)" ] && [ "$EPIC" != "(unknown)" ] && [ "$TOPIC" != "(unknown)" ]; then
-  WORK_OBJ="$VERSION / $PHASE.$EPIC / $TOPIC"
+  PHASE_NAME=""
+  if [ -f "$REPO_ROOT/context/DELIVERABLES.md" ]; then
+    PHASE_NAME="$(PHASE="$PHASE" node -e "
+      const fs=require('fs');
+      const phase=process.env.PHASE;
+      const content=fs.readFileSync(process.argv[1],'utf8');
+      const m=content.match(new RegExp('^## Phase '+phase+' [\\\\u2013\\\\u2014\\\\-\\\\s]+(.+)\$','m'));
+      process.stdout.write(m ? m[1].trim() : '');
+    " "$REPO_ROOT/context/DELIVERABLES.md" 2>/dev/null)" || true
+  fi
+  if [ -n "$PHASE_NAME" ]; then
+    WORK_TARGET="$VERSION / Phase $PHASE ($PHASE_NAME)"
+  else
+    WORK_TARGET="$VERSION / Phase $PHASE"
+  fi
+  WORK_EPIC="$PHASE.$EPIC ($TOPIC)"
+  WORK_PLANNED="complete Phase $PHASE (all epics in this phase) unless noted"
 else
-  WORK_OBJ="$Branch"
+  WORK_TARGET="$Branch"
+  WORK_EPIC="(unknown)"
+  WORK_PLANNED="(unknown)"
 fi
 if [ "$DIRTY" = "yes" ]; then
   WORK_STATUS="dirty"
@@ -202,7 +229,9 @@ else
   WORK_STATUS="clean baseline"
 fi
 echo "## Work Context (auto)"
-echo "- Objective: $WORK_OBJ"
+echo "- Target: $WORK_TARGET"
+echo "- Current Epic: $WORK_EPIC"
+echo "- Planned: $WORK_PLANNED"
 echo "- Status: $WORK_STATUS"
 echo "- Constraints:"
 echo "  - Integration tests should pass (or explain local skips)"

@@ -203,4 +203,172 @@ export async function paymentRoutes(
       );
     }
   );
+
+  const linkAttachmentBodySchema = z.object({
+    attachmentId: z.string().uuid(),
+  });
+
+  fastify.post<{
+    Params: { paymentId: string };
+    Body: z.infer<typeof linkAttachmentBodySchema>;
+  }>(
+    '/payments/:paymentId/attachments',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Link an attachment to a payment',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['paymentId'],
+          properties: { paymentId: { type: 'string', format: 'uuid' } },
+        },
+        body: {
+          type: 'object',
+          required: ['attachmentId'],
+          properties: { attachmentId: { type: 'string', format: 'uuid' } },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              paymentId: { type: 'string' },
+              attachmentId: { type: 'string' },
+              id: { type: 'string' },
+              key: { type: 'string' },
+              originalFilename: { type: 'string' },
+              contentType: { type: 'string' },
+              sizeBytes: { type: 'number' },
+              createdAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const paymentIdParsed = uuidSchema.safeParse(request.params.paymentId);
+      if (!paymentIdParsed.success) {
+        throw new ValidationError('Invalid payment id', paymentIdParsed.error.errors);
+      }
+      const bodyParsed = linkAttachmentBodySchema.safeParse(request.body);
+      if (!bodyParsed.success) {
+        throw new ValidationError('Invalid request body', bodyParsed.error.errors);
+      }
+      const paymentId = paymentIdParsed.data;
+      const attachmentId = bodyParsed.data.attachmentId;
+
+      const pool = getPool();
+      const paymentRow = await pool.query(
+        'SELECT id FROM payments WHERE id = $1 AND deleted_at IS NULL',
+        [paymentId]
+      );
+      if (paymentRow.rows.length === 0) {
+        throw new NotFoundError('Payment', paymentId);
+      }
+      const attRow = await pool.query(
+        'SELECT id, s3_key, original_filename, content_type, size_bytes, created_at FROM attachments WHERE id = $1 AND deleted_at IS NULL',
+        [attachmentId]
+      );
+      if (attRow.rows.length === 0) {
+        throw new NotFoundError('Attachment', attachmentId);
+      }
+      const att = attRow.rows[0] as {
+        id: string;
+        s3_key: string;
+        original_filename: string;
+        content_type: string;
+        size_bytes: string;
+        created_at: Date;
+      };
+      await pool.query(
+        `INSERT INTO payment_attachments (payment_id, attachment_id)
+         VALUES ($1, $2)
+         ON CONFLICT (payment_id, attachment_id) DO NOTHING`,
+        [paymentId, attachmentId]
+      );
+      return reply.status(201).send({
+        paymentId,
+        attachmentId: att.id,
+        id: att.id,
+        key: att.s3_key,
+        originalFilename: att.original_filename,
+        contentType: att.content_type,
+        sizeBytes: Number(att.size_bytes),
+        createdAt: att.created_at,
+      });
+    }
+  );
+
+  fastify.get<{ Params: { paymentId: string } }>(
+    '/payments/:paymentId/attachments',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'List attachments linked to a payment (excludes soft-deleted)',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['paymentId'],
+          properties: { paymentId: { type: 'string', format: 'uuid' } },
+        },
+        response: {
+          200: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                key: { type: 'string' },
+                filename: { type: 'string' },
+                contentType: { type: 'string' },
+                sizeBytes: { type: 'number' },
+                createdAt: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const parsed = uuidSchema.safeParse(request.params.paymentId);
+      if (!parsed.success) {
+        throw new ValidationError('Invalid payment id', parsed.error.errors);
+      }
+      const paymentId = parsed.data;
+      const pool = getPool();
+      const paymentExists = await pool.query(
+        'SELECT 1 FROM payments WHERE id = $1 AND deleted_at IS NULL',
+        [paymentId]
+      );
+      if (paymentExists.rows.length === 0) {
+        throw new NotFoundError('Payment', paymentId);
+      }
+      const result = await pool.query(
+        `SELECT a.id, a.s3_key, a.original_filename, a.content_type, a.size_bytes, a.created_at
+         FROM attachments a
+         INNER JOIN payment_attachments pa ON pa.attachment_id = a.id
+         WHERE pa.payment_id = $1 AND a.deleted_at IS NULL
+         ORDER BY a.created_at DESC`,
+        [paymentId]
+      );
+      const rows = result.rows as Array<{
+        id: string;
+        s3_key: string;
+        original_filename: string;
+        content_type: string;
+        size_bytes: string;
+        created_at: Date;
+      }>;
+      return reply.send(
+        rows.map((r) => ({
+          id: r.id,
+          key: r.s3_key,
+          filename: r.original_filename,
+          contentType: r.content_type,
+          sizeBytes: Number(r.size_bytes),
+          createdAt: r.created_at,
+        }))
+      );
+    }
+  );
 }
