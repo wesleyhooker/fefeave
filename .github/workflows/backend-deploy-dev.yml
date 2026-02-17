@@ -1,0 +1,116 @@
+# Backend deploy to DEV: build image, push to ECR, update ECS service.
+# Uses OIDC (backend_deploy_role_arn). Requires GitHub env "dev" vars:
+#   BACKEND_DEPLOY_ROLE_ARN, AWS_REGION, BACKEND_ECR_REPO_URL,
+#   BACKEND_ECS_CLUSTER, BACKEND_ECS_SERVICE, BACKEND_API_BASE_URL
+
+name: Backend Deploy (dev)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'infra/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.BACKEND_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set image tag
+        id: image
+        run: |
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          echo "tag=$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "Image tag: $SHA_SHORT"
+
+      - name: Login to ECR
+        run: |
+          ECR_REPO_URL="${{ vars.BACKEND_ECR_REPO_URL }}"
+          ECR_HOST="${ECR_REPO_URL%%/*}"
+          aws ecr get-login-password --region ${{ vars.AWS_REGION }} | \
+            docker login --username AWS --password-stdin "$ECR_HOST"
+
+      - name: Build and push Docker image
+        run: |
+          REPO_URL='${{ vars.BACKEND_ECR_REPO_URL }}'
+          TAG='${{ steps.image.outputs.tag }}'
+          docker build -t "${REPO_URL}:${TAG}" -t "${REPO_URL}:dev-latest" -f backend/Dockerfile backend/
+          docker push "${REPO_URL}:${TAG}"
+          docker push "${REPO_URL}:dev-latest"
+
+      - name: Get current task definition
+        id: taskdef
+        run: |
+          CLUSTER='${{ vars.BACKEND_ECS_CLUSTER }}'
+          SERVICE='${{ vars.BACKEND_ECS_SERVICE }}'
+          TASK_DEF_ARN=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+            --query 'services[0].taskDefinition' --output text)
+          echo "current_task_def=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
+          echo "Current task definition: $TASK_DEF_ARN"
+
+      - name: Register new task definition revision
+        id: register
+        run: |
+          NEW_IMAGE='${{ vars.BACKEND_ECR_REPO_URL }}:${{ steps.image.outputs.tag }}'
+          aws ecs describe-task-definition --task-definition ${{ steps.taskdef.outputs.current_task_def }} \
+            --query 'taskDefinition' > task-def.json
+          # Remove read-only fields so we can re-register
+          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) |
+              .containerDefinitions[0].image = $image' \
+            --arg image "$NEW_IMAGE" task-def.json > new-task-def.json
+          REGISTERED=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          REVISION=$(aws ecs describe-task-definition --task-definition "$REGISTERED" \
+            --query 'taskDefinition.revision' --output text)
+          echo "task_def_arn=$REGISTERED" >> $GITHUB_OUTPUT
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          echo "Registered: $REGISTERED (revision $REVISION)"
+
+      - name: Update ECS service
+        run: |
+          CLUSTER='${{ vars.BACKEND_ECS_CLUSTER }}'
+          SERVICE='${{ vars.BACKEND_ECS_SERVICE }}'
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "$SERVICE" \
+            --task-definition ${{ steps.register.outputs.task_def_arn }} \
+            --force-new-deployment \
+            --query 'service.deployments' --output table
+
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable \
+            --cluster '${{ vars.BACKEND_ECS_CLUSTER }}' \
+            --services '${{ vars.BACKEND_ECS_SERVICE }}'
+          echo "Service is stable."
+
+      - name: Deployment summary
+        run: |
+          echo "## Backend deploy (dev) complete" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image tag** | \`${{ steps.image.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Task definition** | \`${{ steps.register.outputs.task_def_arn }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backend API base URL** | ${{ vars.BACKEND_API_BASE_URL }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "API: ${{ vars.BACKEND_API_BASE_URL }}/api" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed image: ${{ vars.BACKEND_ECR_REPO_URL }}:${{ steps.image.outputs.tag }}"
