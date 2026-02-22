@@ -9,19 +9,19 @@ resource "aws_ecs_cluster" "backend" {
 resource "aws_cloudwatch_log_group" "backend" {
   count             = var.create_backend_infra ? 1 : 0
   name              = "/ecs/fefeave-backend-${var.env}"
-  retention_in_days  = 14
+  retention_in_days = 14
   tags              = local.tags
 }
 
 # Task execution role: ECR pull + CloudWatch Logs (used by ECS agent, not the app)
 resource "aws_iam_role" "backend_execution" {
-  count              = var.create_backend_infra ? 1 : 0
-  name               = "fefeave-backend-${var.env}-execution"
+  count = var.create_backend_infra ? 1 : 0
+  name  = "fefeave-backend-${var.env}-execution"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
-      Action = "sts:AssumeRole"
+      Effect    = "Allow"
+      Action    = "sts:AssumeRole"
       Principal = { Service = "ecs-tasks.amazonaws.com" }
     }]
   })
@@ -36,9 +36,9 @@ resource "aws_iam_role_policy_attachment" "backend_execution_ecr" {
 
 # Extra policy so execution role can write to our log group (ECSTaskExecutionRolePolicy already includes basic logs)
 resource "aws_iam_role_policy" "backend_execution_logs" {
-  count  = var.create_backend_infra ? 1 : 0
-  name   = "fefeave-backend-${var.env}-execution-logs"
-  role   = aws_iam_role.backend_execution[0].id
+  count = var.create_backend_infra ? 1 : 0
+  name  = "fefeave-backend-${var.env}-execution-logs"
+  role  = aws_iam_role.backend_execution[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -54,9 +54,9 @@ resource "aws_iam_role_policy" "backend_execution_logs" {
 
 # Execution role must read Secrets Manager for DATABASE_URL injection into container
 resource "aws_iam_role_policy" "backend_execution_secrets" {
-  count  = var.create_backend_infra && var.create_rds ? 1 : 0
-  name   = "fefeave-backend-${var.env}-execution-secrets"
-  role   = aws_iam_role.backend_execution[0].id
+  count = var.create_backend_infra && var.create_rds ? 1 : 0
+  name  = "fefeave-backend-${var.env}-execution-secrets"
+  role  = aws_iam_role.backend_execution[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -118,8 +118,8 @@ resource "aws_ecs_task_definition" "backend" {
       logDriver = "awslogs"
       options = {
         "awslogs-group"         = aws_cloudwatch_log_group.backend[0].name
-        "awslogs-region"         = var.aws_region
-        "awslogs-stream-prefix"  = "ecs"
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "ecs"
       }
     }
     secrets = var.create_rds ? [

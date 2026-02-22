@@ -16,13 +16,13 @@ variable "aws_region" {
 }
 
 variable "github_repo" {
-  type        = string
-  default     = "wesleyhooker/fefeave"
+  type    = string
+  default = "wesleyhooker/fefeave"
 }
 
 variable "github_branch" {
-  type        = string
-  default     = "main"
+  type    = string
+  default = "main"
 }
 
 variable "create_github_deploy_role" {

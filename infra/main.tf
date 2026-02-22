@@ -1,9 +1,9 @@
 data "aws_caller_identity" "current" {}
 
 locals {
-  bucket_name           = "${var.project_name}-${var.env}"
+  bucket_name             = "${var.project_name}-${var.env}"
   attachments_bucket_name = "fefeave-attachments-${var.env}"
-  cf_comment            = "${var.project_name}-${var.env}"
+  cf_comment              = "${var.project_name}-${var.env}"
   tags = {
     Project     = var.project_name
     Environment = var.env
@@ -67,10 +67,10 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   restrictions {
-  geo_restriction {
-    restriction_type = "none"
+    geo_restriction {
+      restriction_type = "none"
+    }
   }
-}
   viewer_certificate { cloudfront_default_certificate = true }
   tags = local.tags
 }
@@ -81,9 +81,9 @@ data "aws_iam_policy_document" "site_policy" {
     actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.site.arn}/*"]
     principals {
-  type        = "Service"
-  identifiers = ["cloudfront.amazonaws.com"]
-}
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
     condition {
       test     = "StringEquals"
       variable = "AWS:SourceArn"
@@ -105,8 +105,8 @@ data "aws_iam_openid_connect_provider" "github" {
 
 # --- GitHub OIDC deploy role ---
 resource "aws_iam_role" "gh_deploy" {
-  count              = var.create_github_deploy_role ? 1 : 0
-  name               = "${var.project_name}-deploy-${var.env}"
+  count = var.create_github_deploy_role ? 1 : 0
+  name  = "${var.project_name}-deploy-${var.env}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -125,16 +125,16 @@ resource "aws_iam_role" "gh_deploy" {
 }
 
 resource "aws_iam_role_policy" "gh_inline" {
-  count  = var.create_github_deploy_role ? 1 : 0
-  name   = "${var.project_name}-deploy-${var.env}-inline"
-  role   = aws_iam_role.gh_deploy[0].id
+  count = var.create_github_deploy_role ? 1 : 0
+  name  = "${var.project_name}-deploy-${var.env}-inline"
+  role  = aws_iam_role.gh_deploy[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       { Sid = "S3List", Action = ["s3:ListBucket"], Effect = "Allow", Resource = [aws_s3_bucket.site.arn] },
-      { Sid = "S3RW",   Action = ["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:PutObjectAcl"], Effect = "Allow", Resource = ["${aws_s3_bucket.site.arn}/*"] },
+      { Sid = "S3RW", Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:PutObjectAcl"], Effect = "Allow", Resource = ["${aws_s3_bucket.site.arn}/*"] },
       { Sid = "CFInvalidate", Action = ["cloudfront:CreateInvalidation"], Effect = "Allow",
-        Resource = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${aws_cloudfront_distribution.cdn.id}" }
+      Resource = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${aws_cloudfront_distribution.cdn.id}" }
     ]
   })
 }
@@ -230,7 +230,7 @@ resource "aws_s3_bucket_policy" "attachments" {
 
 # --- Backend runtime IAM role (ECS Fargate task role; not CI/CD) ---
 resource "aws_iam_role" "backend" {
-  name               = "fefeave-backend-${var.env}"
+  name = "fefeave-backend-${var.env}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -245,8 +245,8 @@ resource "aws_iam_role" "backend" {
 }
 
 resource "aws_iam_role_policy" "backend_attachments" {
-  name   = "fefeave-backend-${var.env}-attachments"
-  role   = aws_iam_role.backend.id
+  name = "fefeave-backend-${var.env}-attachments"
+  role = aws_iam_role.backend.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

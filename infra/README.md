@@ -105,12 +105,29 @@ Values come from `dev.tfvars` and `prod.tfvars`. DEV enables backend + RDS; prod
 
 1. **First time:** `make init` → `make plan-dev` → `make apply-dev`
 2. **Sync to GitHub:** `make gh-sync-dev` (writes **frontend** env vars for Actions).
-3. **Backend deploy (dev):** For workflow `Backend Deploy (dev)` set GitHub environment **dev** variables from Terraform outputs: `BACKEND_DEPLOY_ROLE_ARN`, `BACKEND_ECR_REPO_URL`, `BACKEND_ECS_CLUSTER`, `BACKEND_ECS_SERVICE`, `BACKEND_API_BASE_URL` (and `AWS_REGION` if not already set).
-4. **Prod:** `make plan-prod` → `make apply-prod` → `make gh-sync-prod`
+3. **Backend deploy (dev):** For workflow `Backend Deploy (dev)` set GitHub environment **dev** variables from Terraform outputs (see **DEV vars** below). Dev auto-deploys on push to `main` (backend/infra paths); also runnable via `workflow_dispatch`.
+4. **Prod:** `make plan-prod` → `make apply-prod` → `make gh-sync-prod`. **PROD deploy is manual only** — backend is deployed only via the `Backend Deploy (prod)` workflow (Actions → Run workflow). No push triggers.
 
 ---
 
-## 7. Troubleshooting
+## 7. GitHub environment variables
+
+**DEV (backend deploy)** — set in GitHub environment **dev** (from Terraform outputs when `create_backend_infra = true`):
+
+| Variable | Source / use |
+| --- | --- |
+| `BACKEND_DEPLOY_ROLE_ARN` | OIDC role for ECR push + ECS update |
+| `AWS_REGION` | e.g. `us-west-2` |
+| `BACKEND_ECR_REPO_URL` | ECR repository URL (push target) |
+| `BACKEND_ECS_CLUSTER` | ECS cluster name |
+| `BACKEND_ECS_SERVICE` | ECS service name |
+| `BACKEND_API_BASE_URL` | Backend API base URL (e.g. `http://...`) |
+
+**PROD (backend deploy)** — set in GitHub environment **prod** when backend infra is enabled in prod (same names as above, from prod Terraform outputs). Used only by the manual `Backend Deploy (prod)` workflow.
+
+---
+
+## 8. Troubleshooting
 
 | Issue | Fix |
 | --- | --- |

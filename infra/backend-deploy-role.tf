@@ -3,8 +3,8 @@
 # Created only when both GitHub OIDC provider and backend infra exist.
 
 resource "aws_iam_role" "gh_backend_deploy" {
-  count              = (var.create_github_deploy_role && var.create_backend_infra) ? 1 : 0
-  name               = "fefeave-backend-deploy-${var.env}"
+  count = (var.create_github_deploy_role && var.create_backend_infra) ? 1 : 0
+  name  = "fefeave-backend-deploy-${var.env}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -23,9 +23,9 @@ resource "aws_iam_role" "gh_backend_deploy" {
 }
 
 resource "aws_iam_role_policy" "gh_backend_deploy_inline" {
-  count  = (var.create_github_deploy_role && var.create_backend_infra) ? 1 : 0
-  name   = "fefeave-backend-deploy-${var.env}-inline"
-  role   = aws_iam_role.gh_backend_deploy[0].id
+  count = (var.create_github_deploy_role && var.create_backend_infra) ? 1 : 0
+  name  = "fefeave-backend-deploy-${var.env}-inline"
+  role  = aws_iam_role.gh_backend_deploy[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
