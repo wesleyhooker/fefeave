@@ -1,8 +1,73 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { ShowDetail, SettlementRow } from "@/lib/mockData";
-import { deriveStatusFromSettlements } from "@/lib/mockData";
+import { deriveStatusFromTotals } from "@/lib/mockData";
+
+// --- Client-only structured settlement (used by ShowDetailView state) ---
+
+export type StructuredSettlement =
+  | {
+      type: "PERCENT";
+      percent: number;
+      wholesaler: string;
+      amountPaid: number;
+    }
+  | {
+      type: "FIXED";
+      fixedAmount: number;
+      wholesaler: string;
+      amountPaid: number;
+    };
+
+function roundToCents(x: number): number {
+  return Math.round(x * 100) / 100;
+}
+
+export function amountOwedFor(
+  payoutAfterFees: number,
+  s: StructuredSettlement,
+): number {
+  if (s.type === "FIXED") return s.fixedAmount;
+  return roundToCents(payoutAfterFees * (s.percent / 100));
+}
+
+function percentOrFixedDisplay(s: StructuredSettlement): string {
+  if (s.type === "PERCENT") return `${s.percent}%`;
+  return `$${s.fixedAmount.toFixed(2)} fixed`;
+}
+
+/** Parse server SettlementRow (percentOrFixed string + amountOwed/amountPaid) into StructuredSettlement. */
+function parseSettlementRow(row: SettlementRow): StructuredSettlement {
+  const trimmed = (row.percentOrFixed || "").trim();
+  const percentMatch = trimmed.match(/^([\d.]+)\s*%?\s*$/);
+  const fixedMatch = trimmed.match(/\$\s*([\d.]+)\s*fix/i);
+  if (percentMatch) {
+    const percent = Number(percentMatch[1]);
+    return {
+      type: "PERCENT",
+      percent: Number.isNaN(percent) ? 0 : percent,
+      wholesaler: row.wholesaler,
+      amountPaid: row.amountPaid,
+    };
+  }
+  if (fixedMatch) {
+    const fixedAmount = Number(fixedMatch[1]);
+    return {
+      type: "FIXED",
+      fixedAmount: Number.isNaN(fixedAmount) ? 0 : fixedAmount,
+      wholesaler: row.wholesaler,
+      amountPaid: row.amountPaid,
+    };
+  }
+  // Fallback: treat as FIXED using amountOwed from row
+  return {
+    type: "FIXED",
+    fixedAmount: row.amountOwed,
+    wholesaler: row.wholesaler,
+    amountPaid: row.amountPaid,
+  };
+}
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -22,18 +87,23 @@ function formatDate(iso: string) {
 
 function computeTotals(
   payoutAfterFees: number,
-  settlements: SettlementRow[],
+  settlements: StructuredSettlement[],
   closedAt?: string,
 ) {
   const totalSettlementsOwed = settlements.reduce(
-    (s, r) => s + r.amountOwed,
+    (sum, s) => sum + amountOwedFor(payoutAfterFees, s),
     0,
   );
-  const totalPaid = settlements.reduce((s, r) => s + r.amountPaid, 0);
+  const totalPaid = settlements.reduce((sum, s) => sum + s.amountPaid, 0);
   const remainingToAllocate = payoutAfterFees - totalSettlementsOwed;
   const remainingToPay = totalSettlementsOwed - totalPaid;
   const estimatedProfit = payoutAfterFees - totalSettlementsOwed;
-  const status = deriveStatusFromSettlements(settlements, closedAt);
+  const status = deriveStatusFromTotals(
+    totalSettlementsOwed,
+    totalPaid,
+    settlements.length,
+    closedAt,
+  );
   return {
     totalSettlementsOwed,
     remainingToAllocate,
@@ -55,19 +125,21 @@ export function ShowDetailView({
 }: {
   initialDetail: ShowDetail;
 }) {
-  const [settlements, setSettlements] = useState<SettlementRow[]>(
-    initialDetail.settlements,
+  const [payoutAfterFees, setPayoutAfterFees] = useState(
+    initialDetail.payoutAfterFees,
+  );
+  const [settlements, setSettlements] = useState<StructuredSettlement[]>(() =>
+    initialDetail.settlements.map(parseSettlementRow),
   );
 
   const totals = useMemo(
-    () =>
-      computeTotals(
-        initialDetail.payoutAfterFees,
-        settlements,
-        initialDetail.closedAt,
-      ),
-    [initialDetail.payoutAfterFees, initialDetail.closedAt, settlements],
+    () => computeTotals(payoutAfterFees, settlements, initialDetail.closedAt),
+    [payoutAfterFees, initialDetail.closedAt, settlements],
   );
+
+  const handleAddSettlement = useCallback((s: StructuredSettlement) => {
+    setSettlements((prev) => [...prev, s]);
+  }, []);
 
   return (
     <div>
@@ -97,8 +169,11 @@ export function ShowDetailView({
             <dt className="text-xs font-medium uppercase text-gray-500">
               Payout After Fees
             </dt>
-            <dd className="mt-0.5 text-sm text-gray-900">
-              {formatCurrency(initialDetail.payoutAfterFees)}
+            <dd className="mt-0.5">
+              <EditablePayout
+                value={payoutAfterFees}
+                onSave={(v) => setPayoutAfterFees(v)}
+              />
             </dd>
           </div>
           <div>
@@ -225,21 +300,22 @@ export function ShowDetailView({
                   </td>
                 </tr>
               ) : (
-                settlements.map((row, i) => {
-                  const balanceRemaining = row.amountOwed - row.amountPaid;
+                settlements.map((s, i) => {
+                  const owed = amountOwedFor(payoutAfterFees, s);
+                  const balanceRemaining = owed - s.amountPaid;
                   return (
                     <tr key={i} className="hover:bg-gray-50">
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                        {row.wholesaler}
+                        {s.wholesaler}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                        {row.percentOrFixed}
+                        {percentOrFixedDisplay(s)}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                        {formatCurrency(row.amountOwed)}
+                        {formatCurrency(owed)}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                        {formatCurrency(row.amountPaid)}
+                        {formatCurrency(s.amountPaid)}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
                         {formatCurrency(balanceRemaining)}
@@ -253,61 +329,186 @@ export function ShowDetailView({
         </div>
 
         <AddSettlementForm
-          onAdd={(row) => setSettlements((prev) => [...prev, row])}
+          payoutAfterFees={payoutAfterFees}
+          onAdd={handleAddSettlement}
         />
       </section>
     </div>
   );
 }
 
-// --- Add Settlement inline form ---
+// --- Editable Payout After Fees ---
 
-type SettlementType = "Percent" | "Fixed";
+function EditablePayout({
+  value,
+  onSave,
+}: {
+  value: number;
+  onSave: (v: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-function AddSettlementForm({ onAdd }: { onAdd: (row: SettlementRow) => void }) {
+  function startEdit() {
+    setInput(String(value));
+    setError(null);
+    setEditing(true);
+  }
+
+  function cancel() {
+    setEditing(false);
+    setInput("");
+    setError(null);
+  }
+
+  function save() {
+    const n = Number(input);
+    if (input.trim() === "" || Number.isNaN(n)) {
+      setError("Enter a valid number");
+      return;
+    }
+    if (n < 0) {
+      setError("Payout must be ≥ 0");
+      return;
+    }
+    onSave(n);
+    setEditing(false);
+    setInput("");
+    setError(null);
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-900">{formatCurrency(value)}</span>
+        <button
+          type="button"
+          onClick={startEdit}
+          className="text-xs text-gray-500 underline hover:text-gray-700"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") cancel();
+        }}
+        className="w-28 rounded border border-gray-300 px-2 py-1 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+        autoFocus
+      />
+      <button
+        type="button"
+        onClick={save}
+        className="rounded bg-gray-900 px-2 py-1 text-xs text-white hover:bg-gray-800"
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        onClick={cancel}
+        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
+      >
+        Cancel
+      </button>
+      {error && <p className="w-full text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+// --- Add Settlement form (structured: PERCENT | FIXED) ---
+
+function AddSettlementForm({
+  payoutAfterFees,
+  onAdd,
+}: {
+  payoutAfterFees: number;
+  onAdd: (s: StructuredSettlement) => void;
+}) {
   const [wholesaler, setWholesaler] = useState("");
-  const [type, setType] = useState<SettlementType>("Percent");
-  const [percentValue, setPercentValue] = useState("");
-  const [amountOwed, setAmountOwed] = useState("");
+  const [type, setType] = useState<"PERCENT" | "FIXED">("PERCENT");
+  const [percent, setPercent] = useState("");
+  const [fixedAmount, setFixedAmount] = useState("");
   const [amountPaid, setAmountPaid] = useState("0");
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function getComputedOwed(): number | null {
+    if (type === "PERCENT") {
+      const p = Number(percent);
+      if (percent === "" || Number.isNaN(p) || p < 0) return null;
+      return roundToCents(payoutAfterFees * (p / 100));
+    }
+    const f = Number(fixedAmount);
+    if (fixedAmount === "" || Number.isNaN(f) || f < 0) return null;
+    return f;
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const err: Record<string, string> = {};
     const wholesalerTrim = wholesaler.trim();
     if (!wholesalerTrim) err.wholesaler = "Wholesaler is required";
-    const owed = amountOwed === "" ? NaN : Number(amountOwed);
+
+    if (type === "PERCENT") {
+      const p = Number(percent);
+      if (percent === "" || Number.isNaN(p))
+        err.percent = "Percent is required";
+      else if (p < 0 || p > 100) err.percent = "Percent must be 0–100";
+    } else {
+      const f = Number(fixedAmount);
+      if (fixedAmount === "" || Number.isNaN(f))
+        err.fixedAmount = "Fixed amount is required";
+      else if (f < 0) err.fixedAmount = "Amount must be ≥ 0";
+    }
+
     const paid = amountPaid === "" ? NaN : Number(amountPaid);
-    if (Number.isNaN(owed) || owed < 0)
-      err.amountOwed = "Amount owed must be ≥ 0";
     if (Number.isNaN(paid) || paid < 0)
       err.amountPaid = "Amount paid must be ≥ 0";
-    if (owed >= 0 && paid >= 0 && paid > owed)
+
+    const owed = getComputedOwed();
+    if (owed !== null && paid > owed)
       err.amountPaid = "Amount paid cannot exceed amount owed";
 
     setErrors(err);
     if (Object.keys(err).length > 0) return;
 
-    const percentOrFixed =
-      type === "Percent"
-        ? `${percentValue || "0"}%`
-        : `$${owed.toFixed(2)} fixed`;
-
-    onAdd({
-      wholesaler: wholesalerTrim,
-      percentOrFixed,
-      amountOwed: owed,
-      amountPaid: paid,
-    });
+    const paidVal = Number(amountPaid) || 0;
+    if (type === "PERCENT") {
+      onAdd({
+        type: "PERCENT",
+        percent: Number(percent),
+        wholesaler: wholesalerTrim,
+        amountPaid: paidVal,
+      });
+    } else {
+      onAdd({
+        type: "FIXED",
+        fixedAmount: Number(fixedAmount),
+        wholesaler: wholesalerTrim,
+        amountPaid: paidVal,
+      });
+    }
 
     setWholesaler("");
-    setType("Percent");
-    setPercentValue("");
-    setAmountOwed("");
+    setType("PERCENT");
+    setPercent("");
+    setFixedAmount("");
     setAmountPaid("0");
     setErrors({});
   }
+
+  const computedOwed = getComputedOwed();
 
   return (
     <div className="border-t border-gray-200 bg-gray-50 p-4">
@@ -348,21 +549,21 @@ function AddSettlementForm({ onAdd }: { onAdd: (row: SettlementRow) => void }) {
           <select
             id="add-type"
             value={type}
-            onChange={(e) => setType(e.target.value as SettlementType)}
+            onChange={(e) => setType(e.target.value as "PERCENT" | "FIXED")}
             className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
           >
-            <option value="Percent">Percent</option>
-            <option value="Fixed">Fixed</option>
+            <option value="PERCENT">Percent</option>
+            <option value="FIXED">Fixed</option>
           </select>
         </div>
 
-        {type === "Percent" && (
+        {type === "PERCENT" && (
           <div>
             <label
               htmlFor="add-percent"
               className="mb-1 block text-xs font-medium text-gray-600"
             >
-              Percent value
+              Percent <span className="text-red-500">*</span>
             </label>
             <input
               id="add-percent"
@@ -370,35 +571,47 @@ function AddSettlementForm({ onAdd }: { onAdd: (row: SettlementRow) => void }) {
               min="0"
               max="100"
               step="0.5"
-              value={percentValue}
-              onChange={(e) => setPercentValue(e.target.value)}
+              value={percent}
+              onChange={(e) => setPercent(e.target.value)}
               className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
               placeholder="40"
             />
+            {errors.percent && (
+              <p className="mt-0.5 text-xs text-red-600">{errors.percent}</p>
+            )}
+            {computedOwed !== null && (
+              <p className="mt-0.5 text-xs text-gray-500">
+                Owed: {formatCurrency(computedOwed)}
+              </p>
+            )}
           </div>
         )}
 
-        <div>
-          <label
-            htmlFor="add-owed"
-            className="mb-1 block text-xs font-medium text-gray-600"
-          >
-            Amount Owed <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="add-owed"
-            type="number"
-            min="0"
-            step="0.01"
-            value={amountOwed}
-            onChange={(e) => setAmountOwed(e.target.value)}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            placeholder="0.00"
-          />
-          {errors.amountOwed && (
-            <p className="mt-0.5 text-xs text-red-600">{errors.amountOwed}</p>
-          )}
-        </div>
+        {type === "FIXED" && (
+          <div>
+            <label
+              htmlFor="add-fixed"
+              className="mb-1 block text-xs font-medium text-gray-600"
+            >
+              Fixed amount <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="add-fixed"
+              type="number"
+              min="0"
+              step="0.01"
+              value={fixedAmount}
+              onChange={(e) => setFixedAmount(e.target.value)}
+              className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              placeholder="0.00"
+            />
+            {errors.fixedAmount && (
+              <p className="mt-0.5 text-xs text-red-600">
+                {errors.fixedAmount}
+              </p>
+            )}
+          </div>
+        )}
 
         <div>
           <label

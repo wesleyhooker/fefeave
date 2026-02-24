@@ -154,7 +154,7 @@ function rawToDetail(raw: RawShow): ShowDetail {
   };
 }
 
-/** Derive status from settlements + closedAt (for client-side recompute). */
+/** Derive status from settlements + closedAt (for server / legacy). */
 export function deriveStatusFromSettlements(
   settlements: SettlementRow[],
   closedAt?: string,
@@ -164,6 +164,19 @@ export function deriveStatusFromSettlements(
   const remainingToPay = totalOwed - totalPaid;
   if (closedAt) return 'Closed';
   if (settlements.length >= 1 && remainingToPay === 0) return 'Settled';
+  return 'Draft';
+}
+
+/** Derive status from totals (for client when amount owed is computed from payout). */
+export function deriveStatusFromTotals(
+  totalSettlementsOwed: number,
+  totalPaid: number,
+  settlementCount: number,
+  closedAt?: string,
+): ShowStatus {
+  const remainingToPay = totalSettlementsOwed - totalPaid;
+  if (closedAt) return 'Closed';
+  if (settlementCount >= 1 && remainingToPay === 0) return 'Settled';
   return 'Draft';
 }
 
