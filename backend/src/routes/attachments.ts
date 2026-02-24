@@ -13,17 +13,14 @@ import {
   PRESIGN_GET_EXPIRES_SECONDS,
 } from '../lib/s3Presign';
 
-const ALLOWED_CONTENT_TYPES = [
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-  'text/csv',
-] as const;
+const ALLOWED_CONTENT_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'text/csv'] as const;
 
 const presignBodySchema = z.object({
   filename: z.string().min(1, 'filename is required'),
   contentType: z.enum(ALLOWED_CONTENT_TYPES, {
-    errorMap: () => ({ message: `contentType must be one of: ${ALLOWED_CONTENT_TYPES.join(', ')}` }),
+    errorMap: () => ({
+      message: `contentType must be one of: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
+    }),
   }),
   sizeBytes: z.number().int().min(0).max(MAX_UPLOAD_BYTES),
 });
@@ -50,10 +47,15 @@ function filenameFromKey(key: string): string | undefined {
 }
 
 const createAttachmentBodySchema = z.object({
-  key: z.string().min(1).refine((k) => k.startsWith('attachments/'), 'key must start with attachments/'),
+  key: z
+    .string()
+    .min(1)
+    .refine((k) => k.startsWith('attachments/'), 'key must start with attachments/'),
   originalFilename: z.string().min(1, 'originalFilename is required'),
   contentType: z.enum(ALLOWED_CONTENT_TYPES, {
-    errorMap: () => ({ message: `contentType must be one of: ${ALLOWED_CONTENT_TYPES.join(', ')}` }),
+    errorMap: () => ({
+      message: `contentType must be one of: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
+    }),
   }),
   sizeBytes: z.number().int().min(0).max(MAX_UPLOAD_BYTES),
 });
@@ -76,7 +78,10 @@ export async function attachmentRoutes(
           required: ['filename', 'contentType', 'sizeBytes'],
           properties: {
             filename: { type: 'string', description: 'Original filename' },
-            contentType: { type: 'string', description: 'One of: application/pdf, image/png, image/jpeg, text/csv' },
+            contentType: {
+              type: 'string',
+              description: 'One of: application/pdf, image/png, image/jpeg, text/csv',
+            },
             sizeBytes: { type: 'number', description: 'File size in bytes, max 10MB' },
           },
         },
@@ -117,12 +122,15 @@ export async function attachmentRoutes(
     }
   );
 
+  const adminPre = [requireAuth, requireRole(['ADMIN', 'OPERATOR'])];
+
   fastify.get<{ Params: { '*': string } }>(
     '/uploads/download/*',
     {
-      preHandler: [requireAuth],
+      preHandler: adminPre,
       schema: {
-        description: 'Get a presigned download URL for an attachment. Key is path after /download/ (e.g. attachments/uuid-filename.pdf).',
+        description:
+          'Get a presigned download URL for an attachment (ADMIN/OPERATOR only). Key is path after /download/ (e.g. attachments/uuid-filename.pdf).',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
@@ -147,11 +155,7 @@ export async function attachmentRoutes(
       }
 
       const filename = filenameFromKey(key);
-      const result = await createPresignedDownloadUrl(
-        key,
-        PRESIGN_GET_EXPIRES_SECONDS,
-        filename
-      );
+      const result = await createPresignedDownloadUrl(key, PRESIGN_GET_EXPIRES_SECONDS, filename);
 
       return reply.send({
         downloadUrl: result.downloadUrl,
@@ -159,8 +163,6 @@ export async function attachmentRoutes(
       });
     }
   );
-
-  const adminPre = [requireAuth, requireRole(['ADMIN', 'OPERATOR'])];
 
   // --- Attachment records (Epic 2.2) ---
 
@@ -289,7 +291,9 @@ export async function attachmentRoutes(
         `SELECT id, s3_key, original_filename FROM attachments WHERE id = $1 AND deleted_at IS NULL`,
         [attachmentId]
       );
-      const r = row.rows[0] as { id: string; s3_key: string; original_filename: string } | undefined;
+      const r = row.rows[0] as
+        | { id: string; s3_key: string; original_filename: string }
+        | undefined;
       if (!r) {
         throw new NotFoundError('Attachment', attachmentId);
       }

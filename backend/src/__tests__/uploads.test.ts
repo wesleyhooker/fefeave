@@ -137,6 +137,25 @@ describe('Uploads (Epic 2.1)', () => {
       expect(res.statusCode).toBe(401);
     });
 
+    it('returns 403 for non-admin role (WHOLESALER)', async () => {
+      const result = await buildAppForTest({
+        NODE_ENV: 'test',
+        LOG_LEVEL: 'error',
+        AUTH_MODE: 'dev_bypass',
+        AUTH_DEV_BYPASS_USER_ID: 'test-wholesaler',
+        AUTH_DEV_BYPASS_EMAIL: 'wholesaler@test.example.com',
+        AUTH_DEV_BYPASS_ROLE: 'WHOLESALER',
+        S3_ATTACHMENTS_BUCKET: 'test-bucket',
+      });
+      app = result.app;
+      restoreEnv = result.restoreEnv;
+      const res = await app.inject({
+        method: 'GET',
+        url: `${prefix()}/uploads/download/attachments/abc-123-invoice.pdf`,
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
     it('rejects key that does not start with attachments/ (400)', async () => {
       const result = await buildAppForTest(authEnv);
       app = result.app;
