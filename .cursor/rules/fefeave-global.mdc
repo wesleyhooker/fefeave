@@ -1,0 +1,22 @@
+---
+description: "FefeAve global guardrails (lean)"
+globs:
+  - "backend/**"
+  - "frontend/**"
+  - "infra/**"
+alwaysApply: true
+---
+
+# FefeAve — Global Rules (Lean)
+
+- Stay within the requested Version/Phase/Epic. Avoid scope creep.
+- Prefer small, reviewable diffs. Refactor only when it improves correctness or consistency.
+- Security first: never public S3, least-privilege IAM, no secrets/tokens/presigned URLs in logs.
+- Server is authoritative for permissions and financial calculations; UI is not the source of truth.
+- No breaking API changes unless explicitly requested.
+- When touching an endpoint: keep validation + guards + Swagger + tests in sync.
+  - Tests may be skipped only for non-functional changes (docs/comments); explicitly note "tests not run" and why.
+- No DB schema changes without migrations; follow existing patterns (soft delete, indexes).
+- If infra changes: summarize blast radius + rollback note.
+- If uncertain: make a reasonable assumption, state it explicitly, and proceed with a minimal diff.
+- OPTIONAL ideas may be suggested in a clearly labeled section, but must not be implemented unless requested.
