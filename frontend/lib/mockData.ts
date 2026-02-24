@@ -31,6 +31,8 @@ export interface ShowDetail {
   remainingToPay: number;
   estimatedProfit: number;
   status: ShowStatus;
+  /** When set, status is Closed (for client-side status derivation). */
+  closedAt?: string;
 }
 
 // --- Raw mock data (single source of truth) ---
@@ -148,7 +150,21 @@ function rawToDetail(raw: RawShow): ShowDetail {
     remainingToPay,
     estimatedProfit,
     status: deriveStatus(raw),
+    closedAt: raw.closedAt,
   };
+}
+
+/** Derive status from settlements + closedAt (for client-side recompute). */
+export function deriveStatusFromSettlements(
+  settlements: SettlementRow[],
+  closedAt?: string,
+): ShowStatus {
+  const totalOwed = settlements.reduce((s, r) => s + r.amountOwed, 0);
+  const totalPaid = settlements.reduce((s, r) => s + r.amountPaid, 0);
+  const remainingToPay = totalOwed - totalPaid;
+  if (closedAt) return 'Closed';
+  if (settlements.length >= 1 && remainingToPay === 0) return 'Settled';
+  return 'Draft';
 }
 
 // --- Public API ---
