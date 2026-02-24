@@ -12,7 +12,7 @@ Terraform-managed AWS resources: frontend static hosting (S3, CloudFront, OIDC);
 
 | Resource                 | Purpose                                                   |
 | ------------------------ | --------------------------------------------------------- |
-| S3 bucket                | Static site hosting (Angular build output)                |
+| S3 bucket                | Static site hosting (Next.js build output)                |
 | CloudFront               | CDN, HTTPS, SPA fallback                                  |
 | IAM OIDC role (frontend) | GitHub Actions deploy without long-lived secrets          |
 | ECR                      | Backend container images (scan on push)                   |

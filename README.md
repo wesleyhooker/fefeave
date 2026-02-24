@@ -1,6 +1,6 @@
 # Fefeave
 
-Reseller business system: Angular frontend (SSR), Fastify backend, Postgres, Terraform-provisioned AWS (S3 + CloudFront for static assets).
+Reseller business system: React + Next.js (App Router) + TypeScript frontend, Fastify backend, Postgres, Terraform-provisioned AWS (S3 + CloudFront for static assets).
 
 ---
 
@@ -8,7 +8,7 @@ Reseller business system: Angular frontend (SSR), Fastify backend, Postgres, Ter
 
 | Component | Stack                                            |
 | --------- | ------------------------------------------------ |
-| Frontend  | Angular 20, SSR                                  |
+| Frontend  | React 19, Next.js 15 (App Router), TypeScript    |
 | Backend   | Fastify, Node.js, Postgres                       |
 | Infra     | Terraform, S3, CloudFront, GitHub Actions (OIDC) |
 
@@ -64,10 +64,10 @@ Useful mid-milestone and after merge.
 ### Frontend
 
 ```bash
-cd frontend && npm install && npm start
+cd frontend && npm install && npm run dev
 ```
 
-App at `http://localhost:4200/`. Hot reload on save.
+App at `http://localhost:3000/`. Hot reload on save.
 
 ### Backend
 
@@ -83,12 +83,11 @@ API at `http://localhost:3000/api`. Requires Postgres and `DATABASE_URL` (or `DB
 
 ### Frontend (`frontend/`)
 
-| Script          | Command                    |
-| --------------- | -------------------------- |
-| `npm start`     | Dev server (`ng serve`)    |
-| `npm run build` | Production build → `dist/` |
-| `npm run watch` | Dev build with watch       |
-| `npm test`      | Unit tests (Karma)         |
+| Script          | Command                              |
+| --------------- | ------------------------------------ |
+| `npm run dev`   | Dev server (`next dev`)              |
+| `npm run build` | Production build                     |
+| `npm start`     | Run production server (`next start`) |
 
 ### Backend (`backend/`)
 
