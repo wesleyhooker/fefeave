@@ -13,8 +13,10 @@
     "prettier": "^3.2.4"
   },
   "lint-staged": {
-    "backend/**/*.{ts,js,json,md}": [
-      "prettier --write",
+    "*.{js,jsx,ts,tsx,json,md,yml,yaml,css,scss,html}": [
+      "prettier --write"
+    ],
+    "backend/**/*.{ts,js}": [
       "node scripts/lint-staged-eslint.js"
     ]
   }

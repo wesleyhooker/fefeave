@@ -25,18 +25,18 @@ API at `http://localhost:3000/api`. Health at `/api/health`, docs at `/docs`.
 
 ## 2. Available Scripts
 
-| Script | Purpose |
-| --- | --- |
-| `npm run dev` | Dev server with watch |
-| `npm run build` | Compile to `dist/` |
-| `npm start` | Run compiled app |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier |
-| `npm test` | Unit tests (Jest, DB-free) |
+| Script                     | Purpose                                                      |
+| -------------------------- | ------------------------------------------------------------ |
+| `npm run dev`              | Dev server with watch                                        |
+| `npm run build`            | Compile to `dist/`                                           |
+| `npm start`                | Run compiled app                                             |
+| `npm run lint`             | ESLint                                                       |
+| `npm run format`           | Prettier                                                     |
+| `npm test`                 | Unit tests (Jest, DB-free)                                   |
 | `npm run test:integration` | Integration tests (starts Postgres automatically; see below) |
-| `npm run migrate:up` | Run migrations |
-| `npm run migrate:down` | Rollback last migration |
-| `npm run migrate:create` | Create new migration |
+| `npm run migrate:up`       | Run migrations                                               |
+| `npm run migrate:down`     | Rollback last migration                                      |
+| `npm run migrate:create`   | Create new migration                                         |
 
 ---
 
@@ -88,17 +88,17 @@ DB_PASSWORD=fefeave
 
 ## 5. Environment Variables
 
-| Variable | Purpose | Default |
-| --- | --- | --- |
-| `NODE_ENV` | Environment | `development` |
-| `PORT` | Server port | `3000` |
-| `LOG_LEVEL` | Log level | `info` |
-| `API_PREFIX` | Route prefix | `/api` |
-| `DATABASE_URL` | Postgres connection string | — |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Split DB config (alternative to `DATABASE_URL`) | — |
-| `AUTH_MODE` | `off`, `dev_bypass`, or `cognito` | `off` |
-| `AUTH_DEV_BYPASS_*` | Required when `AUTH_MODE=dev_bypass` | — |
-| `COGNITO_*` | Required when `AUTH_MODE=cognito` | — |
+| Variable                                                  | Purpose                                         | Default       |
+| --------------------------------------------------------- | ----------------------------------------------- | ------------- |
+| `NODE_ENV`                                                | Environment                                     | `development` |
+| `PORT`                                                    | Server port                                     | `3000`        |
+| `LOG_LEVEL`                                               | Log level                                       | `info`        |
+| `API_PREFIX`                                              | Route prefix                                    | `/api`        |
+| `DATABASE_URL`                                            | Postgres connection string                      | —             |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Split DB config (alternative to `DATABASE_URL`) | —             |
+| `AUTH_MODE`                                               | `off`, `dev_bypass`, or `cognito`               | `off`         |
+| `AUTH_DEV_BYPASS_*`                                       | Required when `AUTH_MODE=dev_bypass`            | —             |
+| `COGNITO_*`                                               | Required when `AUTH_MODE=cognito`               | —             |
 
 Database is optional for health, docs, and auth endpoints. The app fails fast on invalid config.
 
@@ -133,8 +133,8 @@ backend/
 
 ## 8. Troubleshooting
 
-| Issue | Fix |
-| --- | --- |
-| App fails to start | Check `DATABASE_URL` or split DB vars; Postgres must be running. |
+| Issue                            | Fix                                                                           |
+| -------------------------------- | ----------------------------------------------------------------------------- |
+| App fails to start               | Check `DATABASE_URL` or split DB vars; Postgres must be running.              |
 | `npm run test:integration` fails | Ensure Docker is running. For manual runs, set `DATABASE_URL` to skip docker. |
-| Migrations fail | Ensure DB exists; user has create-table privileges. |
+| Migrations fail                  | Ensure DB exists; user has create-table privileges.                           |

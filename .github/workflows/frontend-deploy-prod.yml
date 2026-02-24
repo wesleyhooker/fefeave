@@ -3,8 +3,8 @@ name: Frontend Deploy (prod)
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: [ "Frontend CI" ]   # display name of your CI workflow
-    types: [ completed ]
+    workflows: ["Frontend CI"] # display name of your CI workflow
+    types: [completed]
 
 permissions:
   id-token: write
@@ -21,7 +21,7 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    environment: prod   # <-- GitHub Environment: prod
+    environment: prod # <-- GitHub Environment: prod
     steps:
       - name: Download build artifact from CI
         uses: actions/download-artifact@v4
@@ -38,8 +38,8 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}   # from Environment: prod
-          aws-region:    ${{ vars.AWS_REGION }}      # from Environment: prod
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }} # from Environment: prod
+          aws-region: ${{ vars.AWS_REGION }} # from Environment: prod
 
       - name: Upload static assets (immutable caching)
         run: |

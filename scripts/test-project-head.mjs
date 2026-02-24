@@ -4,18 +4,18 @@
  * Uses Node built-ins only. No dependencies.
  * Run from repo root: node scripts/test-project-head.mjs
  */
-import { execSync, spawnSync } from 'child_process';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import assert from 'assert';
+import { execSync, spawnSync } from "child_process";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import assert from "assert";
 
 const REPO_ROOT = process.cwd();
 const TEMP_BASE = path.join(os.tmpdir(), `fefeave-ph-test-${Date.now()}`);
 
 function run(cmd, opts = {}) {
-  const result = spawnSync('bash', ['-c', cmd], {
-    encoding: 'utf8',
+  const result = spawnSync("bash", ["-c", cmd], {
+    encoding: "utf8",
     cwd: opts.cwd || REPO_ROOT,
     ...opts,
   });
@@ -32,50 +32,78 @@ function cleanup() {
 }
 
 let worktreeCreated = false;
-process.on('exit', (code) => {
+process.on("exit", (code) => {
   if (worktreeCreated) cleanup();
 });
 
 try {
   // Create worktree
-  execSync(`git worktree add "${TEMP_BASE}"`, { cwd: REPO_ROOT, stdio: 'pipe' });
+  execSync(`git worktree add "${TEMP_BASE}"`, {
+    cwd: REPO_ROOT,
+    stdio: "pipe",
+  });
   worktreeCreated = true;
 
   // Create and checkout test branch (use timestamp suffix for uniqueness)
   const branchName = `feature/v1-2.1-s3-uploads-${Date.now()}`;
   const branchResult = run(`git checkout -b ${branchName}`, { cwd: TEMP_BASE });
-  assert.strictEqual(branchResult.status, 0, `Failed to create branch: ${branchResult.stderr}`);
+  assert.strictEqual(
+    branchResult.status,
+    0,
+    `Failed to create branch: ${branchResult.stderr}`,
+  );
 
-  const topic = 's3-uploads';
+  const topic = "s3-uploads";
 
   // Copy current script into worktree (tests working copy) and run from worktree for correct git context
   fs.copyFileSync(
-    path.join(REPO_ROOT, 'scripts', 'project-head.sh'),
-    path.join(TEMP_BASE, 'scripts', 'project-head.sh')
+    path.join(REPO_ROOT, "scripts", "project-head.sh"),
+    path.join(TEMP_BASE, "scripts", "project-head.sh"),
   );
-  const result = run('./scripts/project-head.sh origin/main', { cwd: TEMP_BASE });
-  assert.strictEqual(result.status, 0, `project-head.sh failed: ${result.stderr}`);
+  const result = run("./scripts/project-head.sh origin/main", {
+    cwd: TEMP_BASE,
+  });
+  assert.strictEqual(
+    result.status,
+    0,
+    `project-head.sh failed: ${result.stderr}`,
+  );
   const output = result.stdout + result.stderr;
 
   // Assertions
-  assert.ok(output.includes(`Branch: ${branchName}`), `Expected "Branch: ${branchName}" in output`);
-  assert.ok(output.includes('Version: v1'), 'Expected "Version: v1"');
-  assert.ok(output.includes('Phase: 2'), 'Expected "Phase: 2"');
-  assert.ok(output.includes('Epic: 1'), 'Expected "Epic: 1"');
+  assert.ok(
+    output.includes(`Branch: ${branchName}`),
+    `Expected "Branch: ${branchName}" in output`,
+  );
+  assert.ok(output.includes("Version: v1"), 'Expected "Version: v1"');
+  assert.ok(output.includes("Phase: 2"), 'Expected "Phase: 2"');
+  assert.ok(output.includes("Epic: 1"), 'Expected "Epic: 1"');
   assert.ok(output.includes(`Topic: ${topic}`), `Expected "Topic: ${topic}"`);
   const suffixMatch = output.match(/Suffix: ([0-9]+)/);
   assert.ok(suffixMatch, 'Expected "Suffix: <digits>"');
-  assert.ok(/^[0-9]+$/.test(suffixMatch[1]), 'Suffix should be digits only');
-  assert.ok(output.includes('## Roadmap'), 'Expected "## Roadmap" section');
-  const roadmapIdx = output.indexOf('## Roadmap');
-  const fefeaveIdx = output.indexOf('# FefeAve Roadmap', roadmapIdx);
-  assert.ok(fefeaveIdx > roadmapIdx, 'Expected "# FefeAve Roadmap" below ## Roadmap section');
-  assert.ok(output.includes('Target: v1 / Phase 2'), 'Expected Target line with v1 / Phase 2');
-  assert.ok(output.includes('Current Epic: 2.1 (s3-uploads)'), 'Expected Current Epic line with 2.1 (s3-uploads)');
-  assert.ok(output.includes('Planned:'), 'Expected Planned line');
-  assert.ok(output.includes('# PROJECT HEAD - FefeAve'), 'Expected ASCII dash in header');
+  assert.ok(/^[0-9]+$/.test(suffixMatch[1]), "Suffix should be digits only");
+  assert.ok(output.includes("## Roadmap"), 'Expected "## Roadmap" section');
+  const roadmapIdx = output.indexOf("## Roadmap");
+  const fefeaveIdx = output.indexOf("# FefeAve Roadmap", roadmapIdx);
+  assert.ok(
+    fefeaveIdx > roadmapIdx,
+    'Expected "# FefeAve Roadmap" below ## Roadmap section',
+  );
+  assert.ok(
+    output.includes("Target: v1 / Phase 2"),
+    "Expected Target line with v1 / Phase 2",
+  );
+  assert.ok(
+    output.includes("Current Epic: 2.1 (s3-uploads)"),
+    "Expected Current Epic line with 2.1 (s3-uploads)",
+  );
+  assert.ok(output.includes("Planned:"), "Expected Planned line");
+  assert.ok(
+    output.includes("# PROJECT HEAD - FefeAve"),
+    "Expected ASCII dash in header",
+  );
 
-  console.log('test-project-head: all assertions passed');
+  console.log("test-project-head: all assertions passed");
 } finally {
   if (worktreeCreated) cleanup();
 }

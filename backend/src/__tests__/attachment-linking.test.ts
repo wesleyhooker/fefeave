@@ -21,7 +21,9 @@ jest.mock('../db', () => ({
 }));
 
 jest.mock('../lib/s3Presign', () => ({
-  createPresignedPostForUpload: jest.fn().mockResolvedValue({ url: '', fields: {}, key: '', expiresInSeconds: 900 }),
+  createPresignedPostForUpload: jest
+    .fn()
+    .mockResolvedValue({ url: '', fields: {}, key: '', expiresInSeconds: 900 }),
   createPresignedDownloadUrl: jest.fn().mockResolvedValue({
     downloadUrl: 'https://s3.example.com/presigned',
     expiresInSeconds: 300,
@@ -140,20 +142,18 @@ describe('Attachment linking (Epic 2.2)', () => {
     });
 
     it('returns attachment object with correct shape when created', async () => {
-      mockClient.query
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: 'att-123',
-              s3_key: 'attachments/abc-file.pdf',
-              original_filename: 'file.pdf',
-              content_type: 'application/pdf',
-              size_bytes: '1024',
-              created_at: new Date('2025-01-01T00:00:00Z'),
-            },
-          ],
-        });
+      mockClient.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'att-123',
+            s3_key: 'attachments/abc-file.pdf',
+            original_filename: 'file.pdf',
+            content_type: 'application/pdf',
+            size_bytes: '1024',
+            created_at: new Date('2025-01-01T00:00:00Z'),
+          },
+        ],
+      });
       const result = await buildAppForTest(authEnv);
       app = result.app;
       restoreEnv = result.restoreEnv;
@@ -251,9 +251,7 @@ describe('Attachment linking (Epic 2.2)', () => {
 
   describe('POST /shows/:showId/attachments', () => {
     it('returns 404 when show does not exist', async () => {
-      mockPool.query
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      mockPool.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
       const result = await buildAppForTest(authEnv);
       app = result.app;
       restoreEnv = result.restoreEnv;
@@ -352,20 +350,18 @@ describe('Attachment linking (Epic 2.2)', () => {
     });
 
     it('returns list of attachments excluding deleted', async () => {
-      mockPool.query
-        .mockResolvedValueOnce({ rows: [{ id: 'show-1' }] })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: 'att-1',
-              s3_key: 'attachments/a-file.pdf',
-              original_filename: 'file.pdf',
-              content_type: 'application/pdf',
-              size_bytes: '100',
-              created_at: new Date('2025-01-01T00:00:00Z'),
-            },
-          ],
-        });
+      mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'show-1' }] }).mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'att-1',
+            s3_key: 'attachments/a-file.pdf',
+            original_filename: 'file.pdf',
+            content_type: 'application/pdf',
+            size_bytes: '100',
+            created_at: new Date('2025-01-01T00:00:00Z'),
+          },
+        ],
+      });
       const result = await buildAppForTest(authEnv);
       app = result.app;
       restoreEnv = result.restoreEnv;
@@ -389,9 +385,7 @@ describe('Attachment linking (Epic 2.2)', () => {
 
   describe('POST /settlements/:settlementId/attachments', () => {
     it('returns 404 when settlement does not exist', async () => {
-      mockPool.query
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      mockPool.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
       const result = await buildAppForTest(authEnv);
       app = result.app;
       restoreEnv = result.restoreEnv;
@@ -527,9 +521,7 @@ describe('Attachment linking (Epic 2.2)', () => {
 
   describe('POST /payments/:paymentId/attachments', () => {
     it('returns 404 when payment does not exist', async () => {
-      mockPool.query
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      mockPool.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
       const result = await buildAppForTest(authEnv);
       app = result.app;
       restoreEnv = result.restoreEnv;
@@ -628,20 +620,18 @@ describe('Attachment linking (Epic 2.2)', () => {
     });
 
     it('returns list of attachments excluding deleted', async () => {
-      mockPool.query
-        .mockResolvedValueOnce({ rows: [{ id: 'payment-1' }] })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: 'att-1',
-              s3_key: 'attachments/payment-receipt.pdf',
-              original_filename: 'payment-receipt.pdf',
-              content_type: 'application/pdf',
-              size_bytes: '300',
-              created_at: new Date('2025-01-01T00:00:00Z'),
-            },
-          ],
-        });
+      mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'payment-1' }] }).mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'att-1',
+            s3_key: 'attachments/payment-receipt.pdf',
+            original_filename: 'payment-receipt.pdf',
+            content_type: 'application/pdf',
+            size_bytes: '300',
+            created_at: new Date('2025-01-01T00:00:00Z'),
+          },
+        ],
+      });
       const result = await buildAppForTest(authEnv);
       app = result.app;
       restoreEnv = result.restoreEnv;

@@ -6,11 +6,11 @@ Reseller business system: Angular frontend (SSR), Fastify backend, Postgres, Ter
 
 ## 1. Project Overview
 
-| Component | Stack |
-| --- | --- |
-| Frontend | Angular 20, SSR |
-| Backend | Fastify, Node.js, Postgres |
-| Infra | Terraform, S3, CloudFront, GitHub Actions (OIDC) |
+| Component | Stack                                            |
+| --------- | ------------------------------------------------ |
+| Frontend  | Angular 20, SSR                                  |
+| Backend   | Fastify, Node.js, Postgres                       |
+| Infra     | Terraform, S3, CloudFront, GitHub Actions (OIDC) |
 
 Monorepo layout: `frontend/`, `backend/`, `infra/`.
 
@@ -23,9 +23,10 @@ Roadmap uses **Version → Phase → Epic** and lives in `context/DELIVERABLES.m
 **Branch naming:** `feature/v<version>-<phase>.<epic>-short-description`
 
 Examples:
-* `feature/v1-2.1-s3-uploads` — Phase 2, Epic 1 (S3 uploads)
-* `feature/v1-3.2-show-workflow-ui` — Phase 3, Epic 2 (Show workflow UI)
-* `feature/v1-1.3-settlement-api` — Phase 1, Epic 3 (Settlement API)
+
+- `feature/v1-2.1-s3-uploads` — Phase 2, Epic 1 (S3 uploads)
+- `feature/v1-3.2-show-workflow-ui` — Phase 3, Epic 2 (Show workflow UI)
+- `feature/v1-1.3-settlement-api` — Phase 1, Epic 3 (Settlement API)
 
 Legacy `deliverable-*` branches may exist historically; all new work should use `feature/v1-*` naming.
 
@@ -36,11 +37,13 @@ Legacy `deliverable-*` branches may exist historically; all new work should use 
 A repo-grounded markdown snapshot for starting a new ChatGPT (or similar) thread without long-context lag. Includes git identity, uncommitted working tree changes, and branch delta vs base (PR view).
 
 **Snapshot contents:**
+
 - **Roadmap** from `context/DELIVERABLES.md` (Version → Phase → Epic)
 - **Version/Phase/Epic/Topic** auto-detected from branch name (e.g. `feature/v1-2.1-s3-uploads`)
 - **Work Context (auto)** — objective, status, and constraints derived from git state (no manual fill-in)
 
 **Run from WSL terminal:**
+
 ```bash
 ./scripts/copy-project-head.sh
 ./scripts/copy-project-head.sh origin/main   # custom base ref
@@ -80,27 +83,27 @@ API at `http://localhost:3000/api`. Requires Postgres and `DATABASE_URL` (or `DB
 
 ### Frontend (`frontend/`)
 
-| Script | Command |
-| --- | --- |
-| `npm start` | Dev server (`ng serve`) |
+| Script          | Command                    |
+| --------------- | -------------------------- |
+| `npm start`     | Dev server (`ng serve`)    |
 | `npm run build` | Production build → `dist/` |
-| `npm run watch` | Dev build with watch |
-| `npm test` | Unit tests (Karma) |
+| `npm run watch` | Dev build with watch       |
+| `npm test`      | Unit tests (Karma)         |
 
 ### Backend (`backend/`)
 
-| Script | Command |
-| --- | --- |
-| `npm run dev` | Dev server with watch |
-| `npm run build` | Compile to `dist/` |
-| `npm start` | Run compiled app |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier |
-| `npm test` | Unit tests (Jest, excludes DB smoke) |
+| Script                     | Command                                 |
+| -------------------------- | --------------------------------------- |
+| `npm run dev`              | Dev server with watch                   |
+| `npm run build`            | Compile to `dist/`                      |
+| `npm start`                | Run compiled app                        |
+| `npm run lint`             | ESLint                                  |
+| `npm run format`           | Prettier                                |
+| `npm test`                 | Unit tests (Jest, excludes DB smoke)    |
 | `npm run test:integration` | DB smoke test (requires `DATABASE_URL`) |
-| `npm run migrate:up` | Run DB migrations |
-| `npm run migrate:down` | Rollback last migration |
-| `npm run migrate:create` | Create new migration |
+| `npm run migrate:up`       | Run DB migrations                       |
+| `npm run migrate:down`     | Rollback last migration                 |
+| `npm run migrate:create`   | Create new migration                    |
 
 ---
 
@@ -155,14 +158,14 @@ flowchart LR
 
 ### Make targets (run from repo root)
 
-| Target | Purpose |
-| --- | --- |
-| `make init` | Terraform init (after provider changes) |
-| `make plan-dev` / `make apply-dev` | Plan/apply dev |
-| `make plan-prod` / `make apply-prod` | Plan/apply prod |
-| `make output-dev` / `make output-prod` | Show outputs |
+| Target                                   | Purpose                                               |
+| ---------------------------------------- | ----------------------------------------------------- |
+| `make init`                              | Terraform init (after provider changes)               |
+| `make plan-dev` / `make apply-dev`       | Plan/apply dev                                        |
+| `make plan-prod` / `make apply-prod`     | Plan/apply prod                                       |
+| `make output-dev` / `make output-prod`   | Show outputs                                          |
 | `make gh-sync-dev` / `make gh-sync-prod` | Sync TF outputs → GitHub env vars (requires `gh` CLI) |
-| `make deploy-dev` / `make deploy-prod` | Trigger deploy workflow via `gh` |
+| `make deploy-dev` / `make deploy-prod`   | Trigger deploy workflow via `gh`                      |
 
 ---
 
@@ -176,10 +179,10 @@ flowchart LR
 
 ## 7. Troubleshooting
 
-| Issue | Fix |
-| --- | --- |
-| Backend fails to start | Ensure Postgres is running and `DATABASE_URL` (or split DB vars) is set. |
-| `npm run test:integration` fails | Set `DATABASE_URL` to a Postgres instance. |
-| Dev deploy not running | Confirm workflow “Frontend Deploy (dev)” is triggered by “Frontend CI” on `main`. |
-| `make gh-sync-*` fails | Install `gh` CLI and authenticate (`gh auth login`). |
-| Terraform apply fails | Run `make init` after pulling provider or module changes. |
+| Issue                            | Fix                                                                               |
+| -------------------------------- | --------------------------------------------------------------------------------- |
+| Backend fails to start           | Ensure Postgres is running and `DATABASE_URL` (or split DB vars) is set.          |
+| `npm run test:integration` fails | Set `DATABASE_URL` to a Postgres instance.                                        |
+| Dev deploy not running           | Confirm workflow “Frontend Deploy (dev)” is triggered by “Frontend CI” on `main`. |
+| `make gh-sync-*` fails           | Install `gh` CLI and authenticate (`gh auth login`).                              |
+| Terraform apply fails            | Run `make init` after pulling provider or module changes.                         |

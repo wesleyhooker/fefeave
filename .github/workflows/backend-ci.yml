@@ -4,21 +4,20 @@ on:
   push:
     branches: [main]
     paths:
-      - 'backend/**'
-      - 'scripts/**'
-      - 'context/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/backend-ci.yml'
+      - "backend/**"
+      - "scripts/**"
+      - "context/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
-      - 'backend/**'
-      - 'scripts/**'
-      - 'context/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/backend-ci.yml'
-
+      - "backend/**"
+      - "scripts/**"
+      - "context/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/backend-ci.yml"
 
 jobs:
   test:
@@ -29,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        with: { node-version: "20" }
       - name: Install root tooling
         run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
         working-directory: .

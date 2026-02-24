@@ -44,7 +44,9 @@ export const up = (pgm) => {
     'ALTER TABLE attachments ADD CONSTRAINT chk_attachments_original_filename_not_empty CHECK (length(trim(original_filename)) > 0)'
   );
   pgm.createIndex('attachments', 's3_key', { name: 'idx_attachments_s3_key', unique: true });
-  pgm.createIndex('attachments', 'created_by_user_id', { name: 'idx_attachments_created_by_user_id' });
+  pgm.createIndex('attachments', 'created_by_user_id', {
+    name: 'idx_attachments_created_by_user_id',
+  });
   pgm.createIndex('attachments', 'created_at', {
     name: 'idx_attachments_created_at',
     where: 'deleted_at IS NULL',

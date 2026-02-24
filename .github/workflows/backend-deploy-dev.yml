@@ -9,9 +9,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'backend/**'
-      - 'infra/**'
-      - '.github/workflows/**'
+      - "backend/**"
+      - "infra/**"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:

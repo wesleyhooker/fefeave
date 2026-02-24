@@ -308,7 +308,7 @@ Computed view showing outstanding amounts per line item.
 
 ```sql
 CREATE VIEW line_item_balances AS
-SELECT 
+SELECT
   oli.id,
   oli.show_id,
   oli.wholesaler_id,
@@ -721,11 +721,11 @@ Get single line item with payment history.
       "createdAt": "2025-01-20T00:00:00Z"
     }
   ],
-      "createdBy": "uuid",
-      "createdByName": "John Doe",
-      "createdVia": "WEB",
-      "createdAt": "2025-01-27T00:00:00Z",
-      "updatedAt": "2025-01-27T00:00:00Z"
+  "createdBy": "uuid",
+  "createdByName": "John Doe",
+  "createdVia": "WEB",
+  "createdAt": "2025-01-27T00:00:00Z",
+  "updatedAt": "2025-01-27T00:00:00Z"
 }
 ```
 
@@ -859,12 +859,12 @@ Get single payment with allocations.
       "createdAt": "2025-01-20T00:00:00Z"
     }
   ],
-      "adjustments": [],
-      "createdBy": "uuid",
-      "createdByName": "John Doe",
-      "createdVia": "WEB",
-      "createdAt": "2025-01-20T00:00:00Z",
-      "updatedAt": "2025-01-20T00:00:00Z"
+  "adjustments": [],
+  "createdBy": "uuid",
+  "createdByName": "John Doe",
+  "createdVia": "WEB",
+  "createdAt": "2025-01-20T00:00:00Z",
+  "updatedAt": "2025-01-20T00:00:00Z"
 }
 ```
 
@@ -1173,7 +1173,7 @@ Get presigned S3 upload URL.
 - Upload URL expires in 5 minutes
 - After upload, client must call POST /api/attachments/:id/confirm to finalize
 - File size limit: 10MB (enforce in application)
-- Allowed MIME types: image/*, application/pdf
+- Allowed MIME types: image/\*, application/pdf
 
 ---
 
@@ -1315,22 +1315,29 @@ This schema and API design supports the production system requirements while rem
 The following additive updates have been incorporated:
 
 1. **Metadata Fields Added:**
-  - `source` (WHATNOT | INSTAGRAM | MANUAL) on `shows` table
-  - `created_via` (WEB | IMPORT | API) on `shows`, `owed_line_items`, `payments`, `adjustments`
-  - `platform` (WHATNOT | INSTAGRAM | MANUAL) on `shows` table
-  - `external_reference` (VARCHAR, optional) on `shows` table
+
+- `source` (WHATNOT | INSTAGRAM | MANUAL) on `shows` table
+- `created_via` (WEB | IMPORT | API) on `shows`, `owed_line_items`, `payments`, `adjustments`
+- `platform` (WHATNOT | INSTAGRAM | MANUAL) on `shows` table
+- `external_reference` (VARCHAR, optional) on `shows` table
+
 2. **Platform Fees:**
-  - Added `PLATFORM_FEE` to `adjustment_type` ENUM
-  - Added `affects_wholesaler_obligation` BOOLEAN column to `adjustments` table
-  - Platform fees track FEFE profit impact but do not change wholesaler obligations
-  - Business logic ensures platform fees do not affect line item status or outstanding amounts
+
+- Added `PLATFORM_FEE` to `adjustment_type` ENUM
+- Added `affects_wholesaler_obligation` BOOLEAN column to `adjustments` table
+- Platform fees track FEFE profit impact but do not change wholesaler obligations
+- Business logic ensures platform fees do not affect line item status or outstanding amounts
+
 3. **Line Items:**
-  - Confirmed as descriptive (not SKU-level)
-  - Random pulls expected and supported
-  - No schema changes required
+
+- Confirmed as descriptive (not SKU-level)
+- Random pulls expected and supported
+- No schema changes required
+
 4. **Soft Deletes:**
-  - Already implemented via `deleted_at` TIMESTAMPTZ on all tables
-  - No changes required
+
+- Already implemented via `deleted_at` TIMESTAMPTZ on all tables
+- No changes required
 
 **Core Entities & Relationships:** Unchanged. All updates are additive columns or ENUM value additions. No foreign keys, primary keys, or relationship structures modified.
 

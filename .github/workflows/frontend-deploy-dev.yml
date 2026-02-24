@@ -3,8 +3,8 @@ name: Frontend Deploy (dev)
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: [ "Frontend CI" ]
-    types: [ completed ]
+    workflows: ["Frontend CI"]
+    types: [completed]
 
 permissions:
   id-token: write
@@ -17,7 +17,7 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    environment: dev            # ← this is the key
+    environment: dev # ← this is the key
     steps:
       - name: Download build artifact from CI
         uses: dawidd6/action-download-artifact@v2
@@ -32,8 +32,8 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}   # from env:dev
-          aws-region:    ${{ vars.AWS_REGION }}      # from env:dev
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }} # from env:dev
+          aws-region: ${{ vars.AWS_REGION }} # from env:dev
 
       - name: Upload assets (immutable)
         run: |
