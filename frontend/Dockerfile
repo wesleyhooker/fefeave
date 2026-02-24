@@ -7,5 +7,5 @@ RUN npm run build
 
 # Use nginx to serve the built static site
 FROM nginx:alpine
-COPY --from=builder /app/dist/fefeave /usr/share/nginx/html
+COPY --from=builder /app/out /usr/share/nginx/html
 EXPOSE 80
