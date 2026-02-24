@@ -20,3 +20,4 @@ alwaysApply: true
 - If infra changes: summarize blast radius + rollback note.
 - If uncertain: make a reasonable assumption, state it explicitly, and proceed with a minimal diff.
 - OPTIONAL ideas may be suggested in a clearly labeled section, but must not be implemented unless requested.
+- Frontend: Next.js App Router + TypeScript; prefer Server Components by default; use route groups (public/admin/portal) when applicable.

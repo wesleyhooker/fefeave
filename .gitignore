@@ -16,9 +16,10 @@ yarn-error.log*
 !.env.example
 
 # =========================
-# Angular / Frontend
+# Frontend
 # =========================
 .angular/
+.next/
 dist/
 .cache/
 .sass-cache/

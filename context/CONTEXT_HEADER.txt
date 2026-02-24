@@ -13,7 +13,7 @@ Manual local build + aws s3 sync works fine.
 
 Likely causes:
 
-ANGULAR_PROJECT repo var missing/wrong (should be frontend).
+FRONTEND_PROJECT repo var missing/wrong (should be frontend).
 
 AWS_ROLE_ARN not set in repo vars (Terraform created it, but GH var may be missing).
 
@@ -46,7 +46,7 @@ S3_BUCKET = fefeave-frontend-dev
 
 CF_DIST_ID = E2AFMX1CBYH2E4
 
-ANGULAR_PROJECT = frontend
+FRONTEND_PROJECT = frontend
 
 AWS_ROLE_ARN = <IAM role ARN>
 
@@ -80,7 +80,7 @@ https://d2nbb1ussku5hv.cloudfront.net
 ├── docker-compose.yml
 ├── frontend
 │   ├── Dockerfile
-│   ├── angular.json
+│   ├── next.config.ts
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── public
