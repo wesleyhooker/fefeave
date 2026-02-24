@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import { formatCurrency, formatDate } from "@/lib/format";
 import type { ShowDetail, SettlementRow } from "@/lib/mockData";
 import { deriveStatusFromTotals } from "@/lib/mockData";
 
@@ -67,22 +68,6 @@ function parseSettlementRow(row: SettlementRow): StructuredSettlement {
     wholesaler: row.wholesaler,
     amountPaid: row.amountPaid,
   };
-}
-
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(n);
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 function computeTotals(

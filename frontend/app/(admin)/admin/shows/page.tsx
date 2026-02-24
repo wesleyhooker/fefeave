@@ -1,21 +1,6 @@
 import Link from "next/link";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { getShowSummaries } from "@/lib/mockData";
-
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(n);
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {

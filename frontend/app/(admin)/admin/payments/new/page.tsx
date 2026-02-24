@@ -21,13 +21,13 @@ function RecordPaymentForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (
-      prefilledWholesalerId &&
-      wholesalers.some((w) => w.id === prefilledWholesalerId)
-    ) {
-      setWholesalerId(prefilledWholesalerId);
-    }
-  }, [prefilledWholesalerId, wholesalers]);
+    if (!prefilledWholesalerId) return;
+    const list = getWholesalers();
+    if (!list.some((w) => w.id === prefilledWholesalerId)) return;
+    setWholesalerId((current) =>
+      current === "" ? prefilledWholesalerId : current,
+    );
+  }, [prefilledWholesalerId]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

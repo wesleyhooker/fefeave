@@ -2,23 +2,8 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { getPayments, getWholesalerById } from "@/lib/ledgerMock";
-
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(n);
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 const METHOD_LABELS: Record<string, string> = {
   Cash: "Cash",

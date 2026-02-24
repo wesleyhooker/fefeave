@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function AdminLayout({
   children,
 }: {
@@ -10,36 +12,36 @@ export default function AdminLayout({
           Admin
         </h2>
         <nav className="flex flex-col gap-1">
-          <a
+          <Link
             href="/admin"
             className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
           >
             Overview
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/dashboard"
             className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
           >
             Dashboard
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/shows"
             className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
           >
             Shows
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/wholesalers"
             className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
           >
             Wholesalers
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/payments"
             className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
           >
             Payments
-          </a>
+          </Link>
         </nav>
       </aside>
       <div className="flex flex-1 flex-col">
@@ -48,9 +50,12 @@ export default function AdminLayout({
             <span className="text-sm font-medium text-gray-700">
               Admin area
             </span>
-            <a href="/" className="text-sm text-gray-500 hover:text-gray-700">
+            <Link
+              href="/"
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
               ← Back to site
-            </a>
+            </Link>
           </div>
         </header>
         <main className="flex-1 p-6">{children}</main>

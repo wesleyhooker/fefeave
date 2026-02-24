@@ -2,19 +2,12 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { formatCurrency } from "@/lib/format";
 import {
   getWholesalers,
   getWholesalerBalance,
   getWholesalerStatement,
 } from "@/lib/ledgerMock";
-
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(n);
-}
 
 function totalPaidForWholesaler(wholesalerId: string): number {
   const statement = getWholesalerStatement(wholesalerId);
