@@ -137,12 +137,68 @@ export function ShowDetailView({
     [payoutAfterFees, initialDetail.closedAt, settlements],
   );
 
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
   const handleAddSettlement = useCallback((s: StructuredSettlement) => {
     setSettlements((prev) => [...prev, s]);
   }, []);
 
+  const handleUpdateSettlement = useCallback(
+    (index: number, s: StructuredSettlement) => {
+      setSettlements((prev) => prev.map((row, i) => (i === index ? s : row)));
+      setEditingIndex(null);
+    },
+    [],
+  );
+
+  const handleDeleteSettlement = useCallback((index: number) => {
+    if (window.confirm("Delete this settlement?")) {
+      setSettlements((prev) => prev.filter((_, i) => i !== index));
+      setEditingIndex(null);
+    }
+  }, []);
+
+  const totalPercent = useMemo(
+    () =>
+      settlements.reduce(
+        (sum, s) => sum + (s.type === "PERCENT" ? s.percent : 0),
+        0,
+      ),
+    [settlements],
+  );
+
+  const hasPercentSettlements = settlements.some((s) => s.type === "PERCENT");
+  const percentOver100 = totalPercent > 100;
+  const allocatedOverPayout = totals.remainingToAllocate < 0;
+  const remainingToPayNegative = totals.remainingToPay < 0;
+  const displayRemainingToPay = Math.max(0, totals.remainingToPay);
+
   return (
     <div>
+      {/* Guardrails / workflow hints */}
+      {(percentOver100 ||
+        allocatedOverPayout ||
+        remainingToPayNegative ||
+        (payoutAfterFees === 0 && hasPercentSettlements)) && (
+        <section className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h3 className="mb-2 text-sm font-semibold text-amber-900">
+            Warnings &amp; hints
+          </h3>
+          <ul className="list-inside list-disc space-y-1 text-sm text-amber-800">
+            {percentOver100 && (
+              <li>Total percent across PERCENT settlements is over 100%.</li>
+            )}
+            {allocatedOverPayout && <li>Allocated more than payout.</li>}
+            {remainingToPayNegative && (
+              <li>Remaining to pay was negative; shown as zero.</li>
+            )}
+            {payoutAfterFees === 0 && hasPercentSettlements && (
+              <li>Percent settlements depend on payout.</li>
+            )}
+          </ul>
+        </section>
+      )}
+
       {/* Show Summary */}
       <section className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">
@@ -230,7 +286,7 @@ export function ShowDetailView({
               Remaining to pay
             </dt>
             <dd className="mt-0.5 text-sm text-gray-900">
-              {formatCurrency(totals.remainingToPay)}
+              {formatCurrency(displayRemainingToPay)}
             </dd>
           </div>
           <div>
@@ -287,13 +343,19 @@ export function ShowDetailView({
                 >
                   Balance Remaining
                 </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {settlements.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-6 text-center text-sm text-gray-500"
                   >
                     No settlements yet.
@@ -301,6 +363,17 @@ export function ShowDetailView({
                 </tr>
               ) : (
                 settlements.map((s, i) => {
+                  if (editingIndex === i) {
+                    return (
+                      <EditSettlementRow
+                        key={i}
+                        payoutAfterFees={payoutAfterFees}
+                        initial={s}
+                        onSave={(updated) => handleUpdateSettlement(i, updated)}
+                        onCancel={() => setEditingIndex(null)}
+                      />
+                    );
+                  }
                   const owed = amountOwedFor(payoutAfterFees, s);
                   const balanceRemaining = owed - s.amountPaid;
                   return (
@@ -320,6 +393,24 @@ export function ShowDetailView({
                       <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
                         {formatCurrency(balanceRemaining)}
                       </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right">
+                        <span className="isolate inline-flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingIndex(i)}
+                            className="text-xs text-gray-600 underline hover:text-gray-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSettlement(i)}
+                            className="text-xs text-red-600 underline hover:text-red-800"
+                          >
+                            Delete
+                          </button>
+                        </span>
+                      </td>
                     </tr>
                   );
                 })
@@ -334,6 +425,205 @@ export function ShowDetailView({
         />
       </section>
     </div>
+  );
+}
+
+// --- Inline Edit Settlement Row ---
+
+function EditSettlementRow({
+  payoutAfterFees,
+  initial,
+  onSave,
+  onCancel,
+}: {
+  payoutAfterFees: number;
+  initial: StructuredSettlement;
+  onSave: (s: StructuredSettlement) => void;
+  onCancel: () => void;
+}) {
+  const [wholesaler, setWholesaler] = useState(initial.wholesaler);
+  const [type, setType] = useState<"PERCENT" | "FIXED">(
+    initial.type === "PERCENT" ? "PERCENT" : "FIXED",
+  );
+  const [percent, setPercent] = useState(
+    initial.type === "PERCENT" ? String(initial.percent) : "",
+  );
+  const [fixedAmount, setFixedAmount] = useState(
+    initial.type === "FIXED" ? String(initial.fixedAmount) : "",
+  );
+  const [amountPaid, setAmountPaid] = useState(String(initial.amountPaid));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function getComputedOwed(): number | null {
+    if (type === "PERCENT") {
+      const p = Number(percent);
+      if (percent === "" || Number.isNaN(p) || p < 0) return null;
+      return roundToCents(payoutAfterFees * (p / 100));
+    }
+    const f = Number(fixedAmount);
+    if (fixedAmount === "" || Number.isNaN(f) || f < 0) return null;
+    return f;
+  }
+
+  function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    const err: Record<string, string> = {};
+    const wholesalerTrim = wholesaler.trim();
+    if (!wholesalerTrim) err.wholesaler = "Wholesaler is required";
+
+    if (type === "PERCENT") {
+      const p = Number(percent);
+      if (percent === "" || Number.isNaN(p))
+        err.percent = "Percent is required";
+      else if (p < 0 || p > 100) err.percent = "Percent must be 0–100";
+    } else {
+      const f = Number(fixedAmount);
+      if (fixedAmount === "" || Number.isNaN(f))
+        err.fixedAmount = "Fixed amount is required";
+      else if (f < 0) err.fixedAmount = "Amount must be ≥ 0";
+    }
+
+    const paid = amountPaid === "" ? NaN : Number(amountPaid);
+    if (Number.isNaN(paid) || paid < 0)
+      err.amountPaid = "Amount paid must be ≥ 0";
+
+    const owed = getComputedOwed();
+    if (owed !== null && paid > owed)
+      err.amountPaid = "Amount paid cannot exceed amount owed";
+
+    setErrors(err);
+    if (Object.keys(err).length > 0) return;
+
+    const paidVal = Number(amountPaid) || 0;
+    if (type === "PERCENT") {
+      onSave({
+        type: "PERCENT",
+        percent: Number(percent),
+        wholesaler: wholesalerTrim,
+        amountPaid: paidVal,
+      });
+    } else {
+      onSave({
+        type: "FIXED",
+        fixedAmount: Number(fixedAmount),
+        wholesaler: wholesalerTrim,
+        amountPaid: paidVal,
+      });
+    }
+  }
+
+  const computedOwed = getComputedOwed();
+
+  return (
+    <tr className="bg-gray-50">
+      <td className="px-4 py-2" colSpan={6}>
+        <form
+          onSubmit={handleSave}
+          className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-6 lg:items-end"
+        >
+          <div>
+            <label className="mb-0.5 block text-xs font-medium text-gray-600">
+              Wholesaler <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={wholesaler}
+              onChange={(e) => setWholesaler(e.target.value)}
+              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            />
+            {errors.wholesaler && (
+              <p className="text-xs text-red-600">{errors.wholesaler}</p>
+            )}
+          </div>
+          <div>
+            <label className="mb-0.5 block text-xs font-medium text-gray-600">
+              Type
+            </label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as "PERCENT" | "FIXED")}
+              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            >
+              <option value="PERCENT">Percent</option>
+              <option value="FIXED">Fixed</option>
+            </select>
+          </div>
+          {type === "PERCENT" && (
+            <div>
+              <label className="mb-0.5 block text-xs font-medium text-gray-600">
+                Percent <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={percent}
+                onChange={(e) => setPercent(e.target.value)}
+                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              />
+              {errors.percent && (
+                <p className="text-xs text-red-600">{errors.percent}</p>
+              )}
+              {computedOwed !== null && (
+                <p className="text-xs text-gray-500">
+                  Owed: {formatCurrency(computedOwed)}
+                </p>
+              )}
+            </div>
+          )}
+          {type === "FIXED" && (
+            <div>
+              <label className="mb-0.5 block text-xs font-medium text-gray-600">
+                Fixed amount <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={fixedAmount}
+                onChange={(e) => setFixedAmount(e.target.value)}
+                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              />
+              {errors.fixedAmount && (
+                <p className="text-xs text-red-600">{errors.fixedAmount}</p>
+              )}
+            </div>
+          )}
+          <div>
+            <label className="mb-0.5 block text-xs font-medium text-gray-600">
+              Amount Paid
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value)}
+              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            />
+            {errors.amountPaid && (
+              <p className="text-xs text-red-600">{errors.amountPaid}</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </td>
+    </tr>
   );
 }
 

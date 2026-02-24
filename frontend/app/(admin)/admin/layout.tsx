@@ -28,6 +28,18 @@ export default function AdminLayout({
           >
             Shows
           </a>
+          <a
+            href="/admin/wholesalers"
+            className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
+          >
+            Wholesalers
+          </a>
+          <a
+            href="/admin/payments"
+            className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
+          >
+            Payments
+          </a>
         </nav>
       </aside>
       <div className="flex flex-1 flex-col">
