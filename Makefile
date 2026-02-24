@@ -54,7 +54,20 @@ gh-sync-dev: ws-dev
 	  gh variable set -R $(REPO) --env dev CF_DIST_ID --body "$$CF"; \
 	  gh variable set -R $(REPO) --env dev AWS_ROLE_ARN --body "$$ROLE"; \
 	  gh variable set -R $(REPO) --env dev AWS_REGION --body "$(AWS_REGION)"; \
-	  echo "Synced dev env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_ROLE_ARN=$$ROLE"
+	  echo "Synced dev env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_ROLE_ARN=$$ROLE"; \
+	  BDR=$$($(TF) output -raw backend_deploy_role_arn 2>/dev/null); \
+	  if [ -n "$$BDR" ]; then \
+	    BECR=$$($(TF) output -raw backend_ecr_repo_url); \
+	    BCL=$$($(TF) output -raw backend_ecs_cluster_name); \
+	    BSV=$$($(TF) output -raw backend_ecs_service_name); \
+	    BAPI=$$($(TF) output -raw backend_api_base_url); \
+	    gh variable set -R $(REPO) --env dev BACKEND_DEPLOY_ROLE_ARN --body "$$BDR"; \
+	    gh variable set -R $(REPO) --env dev BACKEND_ECR_REPO_URL --body "$$BECR"; \
+	    gh variable set -R $(REPO) --env dev BACKEND_ECS_CLUSTER --body "$$BCL"; \
+	    gh variable set -R $(REPO) --env dev BACKEND_ECS_SERVICE --body "$$BSV"; \
+	    gh variable set -R $(REPO) --env dev BACKEND_API_BASE_URL --body "$$BAPI"; \
+	    echo "Synced dev backend env vars"; \
+	  fi
 
 gh-sync-prod: ws-prod
 	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)

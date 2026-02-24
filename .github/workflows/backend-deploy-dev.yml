@@ -29,6 +29,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check required env vars
+        run: |
+          missing=""
+          [ -z "${{ vars.BACKEND_DEPLOY_ROLE_ARN }}" ] && missing="$missing BACKEND_DEPLOY_ROLE_ARN"
+          [ -z "${{ vars.BACKEND_ECR_REPO_URL }}" ] && missing="$missing BACKEND_ECR_REPO_URL"
+          [ -z "${{ vars.BACKEND_ECS_CLUSTER }}" ] && missing="$missing BACKEND_ECS_CLUSTER"
+          [ -z "${{ vars.BACKEND_ECS_SERVICE }}" ] && missing="$missing BACKEND_ECS_SERVICE"
+          [ -z "${{ vars.AWS_REGION }}" ] && missing="$missing AWS_REGION"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing or empty GitHub env vars:$missing"
+            exit 1
+          fi
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:

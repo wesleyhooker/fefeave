@@ -7,17 +7,30 @@ resource "aws_iam_role" "gh_backend_deploy" {
   name  = "fefeave-backend-deploy-${var.env}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Principal = {
-        Federated = data.aws_iam_openid_connect_provider.github[0].arn
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Principal = {
+          Federated = data.aws_iam_openid_connect_provider.github[0].arn
+        }
+        Condition = {
+          StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
+          StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:ref:refs/heads/${var.github_branch}" }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Principal = {
+          Federated = data.aws_iam_openid_connect_provider.github[0].arn
+        }
+        Condition = {
+          StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
+          StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:environment:${var.env}" }
+        }
       }
-      Condition = {
-        StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
-        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:ref:refs/heads/${var.github_branch}" }
-      }
-    }]
+    ]
   })
   tags = local.tags
 }
