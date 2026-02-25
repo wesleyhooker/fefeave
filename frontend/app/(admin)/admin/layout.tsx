@@ -37,6 +37,12 @@ export default function AdminLayout({
             Wholesalers
           </Link>
           <Link
+            href="/admin/balances"
+            className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
+          >
+            Balances
+          </Link>
+          <Link
             href="/admin/payments"
             className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
           >
