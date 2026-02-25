@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { apiGetText } from "@/lib/api";
@@ -32,6 +32,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
   const [owingOnly, setOwingOnly] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("balance_owed");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let list = data;
@@ -122,11 +123,23 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         sortKey,
         sortDir,
       });
+      setExportNotice(null);
       downloadCsv(getFilename(), csvText, { includeBom: false });
     } catch {
+      setExportNotice(
+        "Server export unavailable — downloaded a local export instead.",
+      );
       doClientExport();
     }
   };
+
+  useEffect(() => {
+    if (!exportNotice) return;
+    const timer = window.setTimeout(() => {
+      setExportNotice(null);
+    }, 6000);
+    return () => window.clearTimeout(timer);
+  }, [exportNotice]);
 
   return (
     <div>
@@ -154,6 +167,14 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         >
           Download CSV
         </button>
+        {exportNotice && (
+          <div
+            role="status"
+            className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+          >
+            {exportNotice}
+          </div>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
