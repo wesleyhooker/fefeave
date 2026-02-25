@@ -1,18 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { apiGet } from "@/lib/api";
-
-export interface WholesalerBalanceRow {
-  wholesaler_id: string;
-  name: string;
-  owed_total: string;
-  paid_total: string;
-  balance_owed: string;
-  last_payment_date?: string;
-}
+import { BalancesTable, type WholesalerBalanceRow } from "./BalancesTable";
 
 function parseNum(s: string): number {
   const n = Number(s);
@@ -46,13 +37,6 @@ export default function AdminBalancesPage() {
       cancelled = true;
     };
   }, []);
-
-  const sorted = useMemo(() => {
-    if (!data) return [];
-    return [...data].sort(
-      (a, b) => parseNum(b.balance_owed) - parseNum(a.balance_owed),
-    );
-  }, [data]);
 
   const summary = useMemo(() => {
     if (!data) return null;
@@ -154,70 +138,7 @@ export default function AdminBalancesPage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Wholesaler
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Owed Total
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Paid Total
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Balance Owed
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Last Payment Date
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
-            {sorted.map((r) => (
-              <tr key={r.wholesaler_id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap px-4 py-3">
-                  <Link
-                    href={`/admin/wholesalers/${r.wholesaler_id}`}
-                    className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
-                  >
-                    {r.name}
-                  </Link>
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                  {formatCurrency(parseNum(r.owed_total))}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                  {formatCurrency(parseNum(r.paid_total))}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                  {formatCurrency(parseNum(r.balance_owed))}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                  {r.last_payment_date ? formatDate(r.last_payment_date) : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {data && <BalancesTable data={data} />}
     </div>
   );
 }
