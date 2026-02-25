@@ -18,10 +18,17 @@ function getAuthHeaders(): HeadersInit {
   return {};
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
+function buildUrl(path: string, params?: Record<string, string>): string {
   const base = getBaseUrl().replace(/\/$/, '');
-  const url = path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
-  const res = await fetch(url, {
+  const pathPart = path.startsWith('/') ? path : `/${path}`;
+  if (params && Object.keys(params).length > 0) {
+    return `${base}${pathPart}?${new URLSearchParams(params).toString()}`;
+  }
+  return `${base}${pathPart}`;
+}
+
+export async function apiGet<T>(path: string): Promise<T> {
+  const res = await fetch(buildUrl(path), {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -33,4 +40,20 @@ export async function apiGet<T>(path: string): Promise<T> {
     throw new Error(`API error ${res.status}: ${res.statusText}`);
   }
   return res.json() as Promise<T>;
+}
+
+/** GET request that returns response body as text (e.g. for CSV export). */
+export async function apiGetText(
+  path: string,
+  params?: Record<string, string>,
+): Promise<string> {
+  const res = await fetch(buildUrl(path, params), {
+    method: 'GET',
+    headers: { ...getAuthHeaders() },
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${res.statusText}`);
+  }
+  return res.text();
 }

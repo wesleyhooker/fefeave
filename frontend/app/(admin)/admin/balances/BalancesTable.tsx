@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { downloadCsv, toCsv } from "@/lib/csv";
+import { apiGetText } from "@/lib/api";
 
 export interface WholesalerBalanceRow {
   wholesaler_id: string;
@@ -86,6 +88,46 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
       </span>
     ) : null;
 
+  const getFilename = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `balances-${yyyy}-${mm}-${dd}.csv`;
+  };
+
+  const doClientExport = () => {
+    const headers = [
+      "Wholesaler",
+      "Owed Total",
+      "Paid Total",
+      "Balance Owed",
+      "Last Payment Date",
+    ];
+    const rows: (string | number)[][] = sorted.map((r) => [
+      r.name,
+      parseNum(r.owed_total),
+      parseNum(r.paid_total),
+      parseNum(r.balance_owed),
+      r.last_payment_date ? r.last_payment_date.slice(0, 10) : "",
+    ]);
+    downloadCsv(getFilename(), toCsv(headers, rows), { includeBom: true });
+  };
+
+  const handleDownloadCsv = async () => {
+    try {
+      const csvText = await apiGetText("exports/balances.csv", {
+        search: search.trim(),
+        owingOnly: owingOnly ? "true" : "false",
+        sortKey,
+        sortDir,
+      });
+      downloadCsv(getFilename(), csvText, { includeBom: false });
+    } catch {
+      doClientExport();
+    }
+  };
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-4">
@@ -105,6 +147,13 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
           />
           Owing only
         </label>
+        <button
+          type="button"
+          onClick={handleDownloadCsv}
+          className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Download CSV
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">

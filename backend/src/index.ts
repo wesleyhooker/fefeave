@@ -20,6 +20,7 @@ import { owedLineItemRoutes } from './routes/owed-line-items';
 import { paymentRoutes } from './routes/payments';
 import { adjustmentRoutes } from './routes/adjustments';
 import { attachmentRoutes } from './routes/attachments';
+import { exportRoutes } from './routes/exports';
 
 async function buildApp() {
   // Load and validate environment variables (fail fast)
@@ -107,6 +108,7 @@ async function buildApp() {
   await app.register(paymentRoutes, { prefix: env.API_PREFIX });
   await app.register(adjustmentRoutes, { prefix: env.API_PREFIX });
   await app.register(attachmentRoutes, { prefix: env.API_PREFIX });
+  await app.register(exportRoutes, { prefix: env.API_PREFIX });
 
   return app;
 }
