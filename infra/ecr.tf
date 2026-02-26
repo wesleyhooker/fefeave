@@ -9,3 +9,13 @@ resource "aws_ecr_repository" "backend" {
   }
   tags = local.tags
 }
+
+resource "aws_ecr_repository" "frontend" {
+  count                = var.create_backend_infra ? 1 : 0
+  name                 = "fefeave-frontend-${var.env}"
+  image_tag_mutability = "MUTABLE"
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+  tags = local.tags
+}

@@ -1,5 +1,9 @@
-# .github/workflows/deploy-frontend.yml
 name: Frontend Deploy (dev)
+# Verification notes:
+# 1) terraform workspace select dev && terraform apply -var-file=dev.tfvars
+# 2) Run this workflow
+# 3) curl http://<alb-dns>/          # expect frontend HTML
+# 4) curl http://<alb-dns>/api/health # expect backend health JSON
 on:
   workflow_dispatch:
   workflow_run:
@@ -17,34 +21,67 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    environment: dev # ← this is the key
+    environment: dev
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
     steps:
-      - name: Download build artifact from CI
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          name: frontend-dist
-          path: dist
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          repo: ${{ github.repository }}
-          run_id: ${{ github.event.workflow_run.id }}
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - run: test -f dist/index.html
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }} # from env:dev
-          aws-region: ${{ vars.AWS_REGION }} # from env:dev
-
-      - name: Upload assets (immutable)
+      - name: Check required env vars
         run: |
-          aws s3 sync dist "s3://${{ vars.S3_BUCKET }}/" \
-            --exclude "index.html" --delete \
-            --cache-control "public, max-age=31536000, immutable"
+          missing=""
+          [ -z "${{ vars.FRONTEND_DEPLOY_ROLE_ARN }}" ] && missing="$missing FRONTEND_DEPLOY_ROLE_ARN"
+          [ -z "${{ vars.FRONTEND_ECR_REPO_URL }}" ] && missing="$missing FRONTEND_ECR_REPO_URL"
+          [ -z "${{ vars.FRONTEND_ECS_CLUSTER }}" ] && missing="$missing FRONTEND_ECS_CLUSTER"
+          [ -z "${{ vars.FRONTEND_ECS_SERVICE }}" ] && missing="$missing FRONTEND_ECS_SERVICE"
+          [ -z "${{ vars.AWS_REGION }}" ] && missing="$missing AWS_REGION"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing or empty GitHub env vars:$missing"
+            exit 1
+          fi
 
-      - name: Upload index.html (no-cache)
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.FRONTEND_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set image tag
+        id: image
         run: |
-          aws s3 cp dist/index.html "s3://${{ vars.S3_BUCKET }}/index.html" \
-            --cache-control "no-cache, no-store, must-revalidate"
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          echo "tag=$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "Image tag: $SHA_SHORT"
 
-      - name: Invalidate CloudFront
-        run: aws cloudfront create-invalidation --distribution-id "${{ vars.CF_DIST_ID }}" --paths "/index.html" "/*.js" "/*.css"
+      - name: Login to ECR
+        run: |
+          ECR_REPO_URL="${{ vars.FRONTEND_ECR_REPO_URL }}"
+          ECR_HOST="${ECR_REPO_URL%%/*}"
+          aws ecr get-login-password --region ${{ vars.AWS_REGION }} | \
+            docker login --username AWS --password-stdin "$ECR_HOST"
+
+      - name: Build and push Docker image
+        run: |
+          REPO_URL="${{ vars.FRONTEND_ECR_REPO_URL }}"
+          TAG="${{ steps.image.outputs.tag }}"
+          docker build -t "${REPO_URL}:${TAG}" -t "${REPO_URL}:dev-latest" -f frontend/Dockerfile frontend/
+          docker push "${REPO_URL}:${TAG}"
+          docker push "${REPO_URL}:dev-latest"
+
+      - name: Update ECS service (task def uses dev-latest; force new deployment)
+        run: |
+          CLUSTER="${{ vars.FRONTEND_ECS_CLUSTER }}"
+          SERVICE="${{ vars.FRONTEND_ECS_SERVICE }}"
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "$SERVICE" \
+            --force-new-deployment \
+            --query 'service.deployments' --output table
+
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable \
+            --cluster "${{ vars.FRONTEND_ECS_CLUSTER }}" \
+            --services "${{ vars.FRONTEND_ECS_SERVICE }}"
+          echo "Service is stable."
