@@ -1,37 +1,98 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
-  getWholesalerById,
-  getWholesalerBalance,
-  getWholesalerStatement,
-} from "@/lib/ledgerMock";
-import type { LedgerRow } from "@/lib/ledgerMock";
-
-function computeRunningBalance(
-  statement: LedgerRow[],
-): Array<LedgerRow & { runningBalance: number }> {
-  const chrono = [...statement].reverse();
-  let running = 0;
-  const result: Array<LedgerRow & { runningBalance: number }> = [];
-  for (const e of chrono) {
-    if (e.type === "SETTLEMENT") running += e.amountOwed;
-    else running -= e.amountPaid;
-    result.push({ ...e, runningBalance: running });
-  }
-  return result.reverse();
-}
+  fetchWholesalerBalances,
+  fetchWholesalerStatement,
+  mapBalanceRowToListView,
+  mapStatementRowToDetailView,
+  type WholesalerListRowView,
+  type WholesalerStatementRowView,
+} from "@/src/lib/api/wholesalers";
 
 export function WholesalerDetailView({ id }: { id: string }) {
-  const wholesaler = useMemo(() => getWholesalerById(id), [id]);
-  const balance = useMemo(() => getWholesalerBalance(id), [id]);
-  const statement = useMemo(() => getWholesalerStatement(id), [id]);
-  const withRunningBalance = useMemo(
-    () => computeRunningBalance(statement),
-    [statement],
+  const [wholesaler, setWholesaler] = useState<WholesalerListRowView | null>(
+    null,
   );
+  const [statement, setStatement] = useState<WholesalerStatementRowView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    Promise.all([fetchWholesalerBalances(), fetchWholesalerStatement(id)])
+      .then(([balances, statementRows]) => {
+        if (cancelled) return;
+        const found = balances
+          .map(mapBalanceRowToListView)
+          .find((row) => row.id === id);
+        setWholesaler(found ?? null);
+        setStatement(statementRows.map(mapStatementRowToDetailView));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, reloadToken]);
+
+  const balance = useMemo(() => {
+    if (statement.length === 0) return wholesaler?.balanceOwed ?? 0;
+    return statement[statement.length - 1]?.runningBalance ?? 0;
+  }, [statement, wholesaler]);
+
+  if (loading) {
+    return (
+      <div>
+        <Link
+          href="/admin/wholesalers"
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          ← Back to Wholesalers
+        </Link>
+        <p className="mt-4 text-gray-600">Loading wholesaler details...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Link
+          href="/admin/wholesalers"
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          ← Back to Wholesalers
+        </Link>
+        <div
+          className="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="alert"
+        >
+          <p className="font-medium">Could not load wholesaler statement.</p>
+          <p className="mt-1">{error}</p>
+          <button
+            type="button"
+            onClick={() => setReloadToken((v) => v + 1)}
+            className="mt-3 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!wholesaler) {
     return (
@@ -118,7 +179,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {withRunningBalance.length === 0 ? (
+              {statement.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
@@ -128,24 +189,27 @@ export function WholesalerDetailView({ id }: { id: string }) {
                   </td>
                 </tr>
               ) : (
-                withRunningBalance.map((row, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
+                statement.map((row, i) => (
+                  <tr
+                    key={`${row.date}-${row.type}-${i}`}
+                    className="hover:bg-gray-50"
+                  >
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                       {formatDate(row.date)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
-                      {row.type === "SETTLEMENT" ? "Settlement" : "Payment"}
+                      {row.type === "OWED" ? "Settlement" : "Payment"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                      {row.type === "SETTLEMENT" ? row.showName : "—"}
+                      {row.showName}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                      {row.type === "SETTLEMENT"
+                      {row.amountOwed !== null
                         ? formatCurrency(row.amountOwed)
                         : "—"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                      {row.type === "PAYMENT"
+                      {row.amountPaid !== null
                         ? formatCurrency(row.amountPaid)
                         : "—"}
                     </td>

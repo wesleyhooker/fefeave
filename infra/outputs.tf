@@ -14,13 +14,14 @@ output "backend_role_name" {
   value = aws_iam_role.backend.name
 }
 
-output "github_actions_role_arn" {
-  value = try(aws_iam_role.gh_deploy[0].arn, null)
-}
-
 output "backend_deploy_role_arn" {
   description = "OIDC role ARN for GitHub Actions backend deploy (ECR push + ECS update)"
   value       = (var.create_github_deploy_role && var.create_backend_infra) ? aws_iam_role.gh_backend_deploy[0].arn : null
+}
+
+output "frontend_deploy_role_arn" {
+  description = "OIDC role ARN for GitHub Actions frontend deploy (ECR push + ECS update)"
+  value       = (var.create_github_deploy_role && var.create_backend_infra) ? aws_iam_role.gh_frontend_deploy[0].arn : null
 }
 
 # --- Backend (ECS / ALB / ECR / RDS) ---
@@ -47,6 +48,26 @@ output "backend_ecs_cluster_name" {
 output "backend_ecs_service_name" {
   description = "ECS service name for backend (GitHub Actions / CLI)"
   value       = var.create_backend_infra ? aws_ecs_service.backend[0].name : null
+}
+
+output "frontend_app_base_url" {
+  description = "Frontend app URL (ALB DNS root)"
+  value       = var.create_backend_infra ? "http://${aws_lb.backend[0].dns_name}" : null
+}
+
+output "frontend_ecr_repo_url" {
+  description = "ECR repository URL for frontend images"
+  value       = var.create_backend_infra ? aws_ecr_repository.frontend[0].repository_url : null
+}
+
+output "frontend_ecs_cluster_name" {
+  description = "ECS cluster name for frontend (GitHub Actions / CLI)"
+  value       = var.create_backend_infra ? aws_ecs_cluster.backend[0].name : null
+}
+
+output "frontend_ecs_service_name" {
+  description = "ECS service name for frontend (GitHub Actions / CLI)"
+  value       = var.create_backend_infra ? aws_ecs_service.frontend[0].name : null
 }
 
 output "rds_endpoint" {

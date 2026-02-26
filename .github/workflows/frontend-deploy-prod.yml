@@ -21,40 +21,81 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    environment: prod # <-- GitHub Environment: prod
+    environment: prod
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
     steps:
-      - name: Download build artifact from CI
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: dist
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Sanity check artifact
+      - name: Check required env vars
         run: |
-          test -f dist/index.html || { echo "index.html missing"; exit 1; }
-          find dist -maxdepth 2 -type f | head -n 20
+          missing=""
+          [ -z "${{ vars.FRONTEND_DEPLOY_ROLE_ARN }}" ] && missing="$missing FRONTEND_DEPLOY_ROLE_ARN"
+          [ -z "${{ vars.FRONTEND_ECR_REPO_URL }}" ] && missing="$missing FRONTEND_ECR_REPO_URL"
+          [ -z "${{ vars.FRONTEND_ECS_CLUSTER }}" ] && missing="$missing FRONTEND_ECS_CLUSTER"
+          [ -z "${{ vars.FRONTEND_ECS_SERVICE }}" ] && missing="$missing FRONTEND_ECS_SERVICE"
+          [ -z "${{ vars.AWS_REGION }}" ] && missing="$missing AWS_REGION"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing or empty GitHub env vars:$missing"
+            exit 1
+          fi
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }} # from Environment: prod
-          aws-region: ${{ vars.AWS_REGION }} # from Environment: prod
+          role-to-assume: ${{ vars.FRONTEND_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Upload static assets (immutable caching)
+      - name: Set image tag
+        id: image
         run: |
-          aws s3 sync dist "s3://${{ vars.S3_BUCKET }}/" \
-            --exclude "index.html" \
-            --delete \
-            --cache-control "public, max-age=31536000, immutable"
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          echo "tag=$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "Image tag: $SHA_SHORT (immutable)"
 
-      - name: Upload index.html (no-cache)
+      - name: Login to ECR
         run: |
-          aws s3 cp dist/index.html "s3://${{ vars.S3_BUCKET }}/index.html" \
-            --cache-control "no-cache, no-store, must-revalidate"
+          ECR_REPO_URL="${{ vars.FRONTEND_ECR_REPO_URL }}"
+          ECR_HOST="${ECR_REPO_URL%%/*}"
+          aws ecr get-login-password --region ${{ vars.AWS_REGION }} | \
+            docker login --username AWS --password-stdin "$ECR_HOST"
 
-      - name: Invalidate CloudFront
+      - name: Build and push Docker image (immutable tag only)
         run: |
-          aws cloudfront create-invalidation \
-            --distribution-id "${{ vars.CF_DIST_ID }}" \
-            --paths "/index.html" "/*.js" "/*.css"
+          REPO_URL="${{ vars.FRONTEND_ECR_REPO_URL }}"
+          TAG="${{ steps.image.outputs.tag }}"
+          docker build -t "${REPO_URL}:${TAG}" -f frontend/Dockerfile frontend/
+          docker push "${REPO_URL}:${TAG}"
+
+      - name: Register new task definition and update ECS service
+        run: |
+          CLUSTER="${{ vars.FRONTEND_ECS_CLUSTER }}"
+          SERVICE="${{ vars.FRONTEND_ECS_SERVICE }}"
+          REPO_URL="${{ vars.FRONTEND_ECR_REPO_URL }}"
+          TAG="${{ steps.image.outputs.tag }}"
+          IMAGE="${REPO_URL}:${TAG}"
+
+          TASK_ARN=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+            --query 'services[0].taskDefinition' --output text)
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition "$TASK_ARN" \
+            --query 'taskDefinition')
+          NEW_DEF=$(echo "$TASK_DEF" | jq --arg img "$IMAGE" \
+            'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) |
+            .containerDefinitions[0].image = $img')
+          NEW_TASK=$(aws ecs register-task-definition --cli-input-json "$NEW_DEF")
+          FAMILY=$(echo "$NEW_TASK" | jq -r '.taskDefinition.family')
+          REV=$(echo "$NEW_TASK" | jq -r '.taskDefinition.revision')
+
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "$SERVICE" \
+            --task-definition "${FAMILY}:${REV}" \
+            --query 'service.deployments' --output table
+
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable \
+            --cluster "${{ vars.FRONTEND_ECS_CLUSTER }}" \
+            --services "${{ vars.FRONTEND_ECS_SERVICE }}"
+          echo "Service is stable."

@@ -49,6 +49,36 @@ variable "backend_desired_count" {
   default     = 1
 }
 
+variable "frontend_image_tag" {
+  type        = string
+  description = "Docker image tag for frontend task definition (e.g. dev-latest/prod-latest)."
+  default     = "latest"
+}
+
+variable "frontend_desired_count" {
+  type        = number
+  description = "Desired count for ECS frontend service."
+  default     = 1
+}
+
+variable "frontend_container_cpu" {
+  type        = string
+  description = "CPU units for frontend ECS task definition."
+  default     = "256"
+}
+
+variable "frontend_container_memory" {
+  type        = string
+  description = "Memory (MiB) for frontend ECS task definition."
+  default     = "512"
+}
+
+variable "frontend_next_public_backend_url" {
+  type        = string
+  description = "NEXT_PUBLIC_BACKEND_URL for frontend runtime."
+  default     = "/api"
+}
+
 variable "vpc_cidr" {
   type        = string
   description = "CIDR for backend VPC (used when create_backend_infra is true)."

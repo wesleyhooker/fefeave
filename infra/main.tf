@@ -103,42 +103,6 @@ data "aws_iam_openid_connect_provider" "github" {
   url   = "https://token.actions.githubusercontent.com"
 }
 
-# --- GitHub OIDC deploy role ---
-resource "aws_iam_role" "gh_deploy" {
-  count = var.create_github_deploy_role ? 1 : 0
-  name  = "${var.project_name}-deploy-${var.env}"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Principal = {
-        Federated = data.aws_iam_openid_connect_provider.github[0].arn
-      }
-      Condition = {
-        StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
-        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:ref:refs/heads/${var.github_branch}" }
-      }
-    }]
-  })
-  tags = local.tags
-}
-
-resource "aws_iam_role_policy" "gh_inline" {
-  count = var.create_github_deploy_role ? 1 : 0
-  name  = "${var.project_name}-deploy-${var.env}-inline"
-  role  = aws_iam_role.gh_deploy[0].id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      { Sid = "S3List", Action = ["s3:ListBucket"], Effect = "Allow", Resource = [aws_s3_bucket.site.arn] },
-      { Sid = "S3RW", Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:PutObjectAcl"], Effect = "Allow", Resource = ["${aws_s3_bucket.site.arn}/*"] },
-      { Sid = "CFInvalidate", Action = ["cloudfront:CreateInvalidation"], Effect = "Allow",
-      Resource = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${aws_cloudfront_distribution.cdn.id}" }
-    ]
-  })
-}
-
 # --- Attachments S3 bucket (Epic 2.1; not used by CloudFront) ---
 resource "aws_s3_bucket" "attachments" {
   bucket = local.attachments_bucket_name

@@ -13,6 +13,13 @@ resource "aws_cloudwatch_log_group" "backend" {
   tags              = local.tags
 }
 
+resource "aws_cloudwatch_log_group" "frontend" {
+  count             = var.create_backend_infra ? 1 : 0
+  name              = "/ecs/fefeave-frontend-${var.env}"
+  retention_in_days = 14
+  tags              = local.tags
+}
+
 # Task execution role: ECR pull + CloudWatch Logs (used by ECS agent, not the app)
 resource "aws_iam_role" "backend_execution" {
   count = var.create_backend_infra ? 1 : 0
@@ -149,6 +156,62 @@ resource "aws_ecs_service" "backend" {
   load_balancer {
     target_group_arn = aws_lb_target_group.backend[0].arn
     container_name   = "backend"
+    container_port   = 3000
+  }
+}
+
+resource "aws_ecs_task_definition" "frontend" {
+  count                    = var.create_backend_infra ? 1 : 0
+  family                   = "fefeave-frontend-${var.env}"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = var.frontend_container_cpu
+  memory                   = var.frontend_container_memory
+  execution_role_arn       = aws_iam_role.backend_execution[0].arn
+  task_role_arn            = aws_iam_role.backend.arn
+
+  container_definitions = jsonencode([{
+    name  = "frontend"
+    image = "${aws_ecr_repository.frontend[0].repository_url}:${var.frontend_image_tag}"
+    portMappings = [{
+      containerPort = 3000
+      protocol      = "tcp"
+    }]
+    essential = true
+    environment = [
+      { name = "NODE_ENV", value = "production" },
+      { name = "PORT", value = "3000" },
+      { name = "NEXT_PUBLIC_BACKEND_URL", value = var.frontend_next_public_backend_url }
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.frontend[0].name
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "ecs"
+      }
+    }
+  }])
+  tags = local.tags
+}
+
+resource "aws_ecs_service" "frontend" {
+  count           = var.create_backend_infra ? 1 : 0
+  name            = "fefeave-frontend-${var.env}"
+  cluster         = aws_ecs_cluster.backend[0].id
+  task_definition = aws_ecs_task_definition.frontend[0].arn
+  desired_count   = var.frontend_desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = aws_subnet.private[*].id
+    security_groups  = [aws_security_group.ecs[0].id]
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.frontend[0].arn
+    container_name   = "frontend"
     container_port   = 3000
   }
 }
