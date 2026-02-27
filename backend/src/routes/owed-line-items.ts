@@ -462,7 +462,7 @@ export async function owedLineItemRoutes(
       const result = await pool.query(
         `SELECT id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at
          FROM owed_line_items
-         WHERE show_id = $1 AND deleted_at IS NULL
+         WHERE show_id = $1 AND calculation_method IS NOT NULL AND deleted_at IS NULL
          ORDER BY created_at ASC`,
         [showId]
       );
@@ -496,6 +496,80 @@ export async function owedLineItemRoutes(
           updated_at: r.updated_at,
         }))
       );
+    }
+  );
+
+  fastify.delete<{ Params: { showId: string; settlementId: string } }>(
+    '/shows/:showId/settlements/:settlementId',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Soft-delete a settlement obligation for a show',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['showId', 'settlementId'],
+          properties: {
+            showId: { type: 'string', format: 'uuid' },
+            settlementId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const showIdParsed = uuidSchema.safeParse(request.params.showId);
+      if (!showIdParsed.success) {
+        throw new ValidationError('Invalid showId', showIdParsed.error.errors);
+      }
+      const settlementIdParsed = uuidSchema.safeParse(request.params.settlementId);
+      if (!settlementIdParsed.success) {
+        throw new ValidationError('Invalid settlementId', settlementIdParsed.error.errors);
+      }
+      const showId = showIdParsed.data;
+      const settlementId = settlementIdParsed.data;
+
+      const pool = getPool();
+      const settlementResult = await pool.query(
+        `SELECT id, show_id, calculation_method, deleted_at
+         FROM owed_line_items
+         WHERE id = $1`,
+        [settlementId]
+      );
+      if (settlementResult.rows.length === 0) {
+        throw new NotFoundError('Settlement', settlementId);
+      }
+
+      const settlement = settlementResult.rows[0] as {
+        id: string;
+        show_id: string;
+        calculation_method: string | null;
+        deleted_at: Date | null;
+      };
+
+      if (settlement.show_id !== showId || settlement.calculation_method == null) {
+        throw new NotFoundError('Settlement', settlementId);
+      }
+
+      if (settlement.deleted_at) {
+        return reply.send({ ok: true });
+      }
+
+      await pool.query(
+        `UPDATE owed_line_items
+         SET deleted_at = NOW(), updated_at = NOW()
+         WHERE id = $1 AND deleted_at IS NULL`,
+        [settlementId]
+      );
+
+      return reply.send({ ok: true });
     }
   );
 
