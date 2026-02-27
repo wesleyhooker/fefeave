@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
-import { getWholesalers, createPayment } from "@/lib/ledgerMock";
+import { createPayment } from "@/src/lib/api/payments";
+import { fetchWholesalerBalances } from "@/src/lib/api/wholesalers";
 
 const METHODS = ["Cash", "Zelle", "Venmo", "Check", "Other"] as const;
 
@@ -12,42 +13,89 @@ function RecordPaymentForm() {
   const searchParams = useSearchParams();
   const prefilledWholesalerId = searchParams.get("wholesalerId") ?? "";
 
-  const wholesalers = getWholesalers();
+  const [wholesalers, setWholesalers] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [loadingWholesalers, setLoadingWholesalers] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [date, setDate] = useState("");
   const [wholesalerId, setWholesalerId] = useState("");
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<string>("Zelle");
   const [reference, setReference] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
-    if (!prefilledWholesalerId) return;
-    const list = getWholesalers();
-    if (!list.some((w) => w.id === prefilledWholesalerId)) return;
+    let cancelled = false;
+    setLoadingWholesalers(true);
+    setLoadError(null);
+    fetchWholesalerBalances()
+      .then((rows) => {
+        if (cancelled) return;
+        setWholesalers(
+          rows.map((row) => ({ id: row.wholesaler_id, name: row.name })),
+        );
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setLoadError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingWholesalers(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadToken]);
+
+  useEffect(() => {
+    if (!prefilledWholesalerId || wholesalers.length === 0) return;
+    if (!wholesalers.some((w) => w.id === prefilledWholesalerId)) return;
     setWholesalerId((current) =>
       current === "" ? prefilledWholesalerId : current,
     );
-  }, [prefilledWholesalerId]);
+  }, [prefilledWholesalerId, wholesalers]);
 
-  function handleSubmit(e: React.FormEvent) {
+  function composeNotesFromMethod(
+    existingNotes: string | undefined,
+    selectedMethod: string,
+  ): string {
+    const methodText = `Method: ${selectedMethod || "Other"}`;
+    if (!existingNotes?.trim()) return methodText;
+    return `${existingNotes.trim()} | ${methodText}`;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitError(null);
     const err: Record<string, string> = {};
     if (!date.trim()) err.date = "Date is required";
     if (!wholesalerId) err.wholesalerId = "Wholesaler is required";
     const amt = amount === "" ? NaN : Number(amount);
-    if (Number.isNaN(amt) || amt < 0) err.amount = "Amount must be ≥ 0";
+    if (Number.isNaN(amt) || amt <= 0) err.amount = "Amount must be > 0";
     setErrors(err);
     if (Object.keys(err).length > 0) return;
 
     const payload = {
-      date: date.trim(),
-      wholesalerId,
+      wholesaler_id: wholesalerId,
       amount: amt,
-      method: method || "Other",
+      payment_date: date.trim(),
       reference: reference.trim(),
+      notes: composeNotesFromMethod(undefined, method),
     };
-    createPayment(payload);
-    router.push(`/admin/wholesalers/${wholesalerId}`);
+    setSubmitting(true);
+    try {
+      await createPayment(payload);
+      router.push(`/admin/wholesalers/${wholesalerId}`);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -61,6 +109,33 @@ function RecordPaymentForm() {
         </Link>
       </div>
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Record Payment</h1>
+
+      {loadError && (
+        <div
+          className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="alert"
+        >
+          <p className="font-medium">Could not load wholesalers.</p>
+          <p className="mt-1">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => setReloadToken((v) => v + 1)}
+            className="mt-3 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {submitError && (
+        <div
+          className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="alert"
+        >
+          <p className="font-medium">Could not record payment.</p>
+          <p className="mt-1">{submitError}</p>
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -98,6 +173,7 @@ function RecordPaymentForm() {
             required
             value={wholesalerId}
             onChange={(e) => setWholesalerId(e.target.value)}
+            disabled={loadingWholesalers || wholesalers.length === 0}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
           >
             <option value="">Select wholesaler</option>
@@ -123,7 +199,7 @@ function RecordPaymentForm() {
             id="amount"
             type="number"
             required
-            min="0"
+            min="0.01"
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -176,9 +252,10 @@ function RecordPaymentForm() {
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
+            disabled={submitting || loadingWholesalers}
             className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
           >
-            Record Payment
+            {submitting ? "Saving..." : "Record Payment"}
           </button>
           <Link
             href="/admin/payments"
