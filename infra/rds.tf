@@ -64,5 +64,5 @@ resource "aws_secretsmanager_secret" "db_url" {
 resource "aws_secretsmanager_secret_version" "db_url" {
   count         = var.create_backend_infra && var.create_rds ? 1 : 0
   secret_id     = aws_secretsmanager_secret.db_url[0].id
-  secret_string = "postgres://${var.db_username}:${urlencode(random_password.db_password[0].result)}@${aws_db_instance.backend[0].address}:${aws_db_instance.backend[0].port}/${aws_db_instance.backend[0].db_name}"
+  secret_string = "postgres://${var.db_username}:${urlencode(random_password.db_password[0].result)}@${aws_db_instance.backend[0].address}:${aws_db_instance.backend[0].port}/${aws_db_instance.backend[0].db_name}?uselibpqcompat=true&sslmode=require"
 }

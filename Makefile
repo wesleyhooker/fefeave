@@ -133,7 +133,7 @@ ui-aws:
 	DEV_BACKEND_ORIGIN="$${backend_url%/}" \
 	  && echo "Using DEV_BACKEND_ORIGIN=$$DEV_BACKEND_ORIGIN" \
 	  && cd frontend \
-	  && DEV_BACKEND_ORIGIN="$$DEV_BACKEND_ORIGIN" npm run dev
+	  && DEV_BACKEND_ORIGIN="$$DEV_BACKEND_ORIGIN" npm run dev -- -H 0.0.0.0 -p 3000
 
 dev-backend-health:
 	@echo "Checking dev backend health endpoint"

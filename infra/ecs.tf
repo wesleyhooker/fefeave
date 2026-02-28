@@ -167,6 +167,39 @@ resource "aws_ecs_service" "backend" {
   }
 }
 
+# Dev-only helper: force a fresh backend rollout after task/env changes so new
+# container environment values are picked up immediately after terraform apply.
+resource "terraform_data" "backend_force_new_deployment_dev" {
+  count = (var.create_backend_infra && var.env == "dev") ? 1 : 0
+
+  triggers_replace = [
+    aws_ecs_task_definition.backend[0].arn,
+    var.create_rds ? aws_secretsmanager_secret_version.db_url[0].version_id : "no-rds",
+    "AUTH_MODE=dev_bypass",
+    "AUTH_DEV_BYPASS_USER_ID=dev-user",
+    "AUTH_DEV_BYPASS_EMAIL=dev@fefeave.local",
+    "AUTH_DEV_BYPASS_ROLE=ADMIN",
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["/usr/bin/env", "bash", "-lc"]
+    command     = <<-EOT
+      set -euo pipefail
+      aws ecs update-service \
+        --region ${var.aws_region} \
+        --cluster ${aws_ecs_cluster.backend[0].name} \
+        --service ${aws_ecs_service.backend[0].name} \
+        --force-new-deployment
+      aws ecs wait services-stable \
+        --region ${var.aws_region} \
+        --cluster ${aws_ecs_cluster.backend[0].name} \
+        --services ${aws_ecs_service.backend[0].name}
+    EOT
+  }
+
+  depends_on = [aws_ecs_service.backend]
+}
+
 resource "aws_ecs_task_definition" "frontend" {
   count                    = var.create_backend_infra ? 1 : 0
   family                   = "fefeave-frontend-${var.env}"
