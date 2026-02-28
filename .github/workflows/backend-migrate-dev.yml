@@ -1,0 +1,168 @@
+name: Run Migrations (dev)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Check required env vars
+        run: |
+          missing=""
+          [ -z "${{ vars.BACKEND_DEPLOY_ROLE_ARN }}" ] && missing="$missing BACKEND_DEPLOY_ROLE_ARN"
+          [ -z "${{ vars.BACKEND_ECS_CLUSTER }}" ] && missing="$missing BACKEND_ECS_CLUSTER"
+          [ -z "${{ vars.BACKEND_ECS_SERVICE }}" ] && missing="$missing BACKEND_ECS_SERVICE"
+          [ -z "${{ vars.AWS_REGION }}" ] && missing="$missing AWS_REGION"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing or empty GitHub env vars:$missing"
+            exit 1
+          fi
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.BACKEND_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Discover ECS service runtime config
+        id: discover
+        run: |
+          set -euo pipefail
+          cluster="${{ vars.BACKEND_ECS_CLUSTER }}"
+          service="${{ vars.BACKEND_ECS_SERVICE }}"
+
+          task_def_arn="$(aws ecs describe-services \
+            --cluster "$cluster" \
+            --services "$service" \
+            --query 'services[0].taskDefinition' \
+            --output text)"
+          subnets="$(aws ecs describe-services \
+            --cluster "$cluster" \
+            --services "$service" \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration.subnets' \
+            --output text | tr '\t' ',')"
+          sgs="$(aws ecs describe-services \
+            --cluster "$cluster" \
+            --services "$service" \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration.securityGroups' \
+            --output text | tr '\t' ',')"
+          assign_public_ip="$(aws ecs describe-services \
+            --cluster "$cluster" \
+            --services "$service" \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration.assignPublicIp' \
+            --output text)"
+          container_name="$(aws ecs describe-services \
+            --cluster "$cluster" \
+            --services "$service" \
+            --query 'services[0].loadBalancers[0].containerName' \
+            --output text)"
+          if [ "$container_name" = "None" ] || [ -z "$container_name" ]; then
+            container_name="backend"
+          fi
+          log_group="$(aws ecs describe-task-definition \
+            --task-definition "$task_def_arn" \
+            --query "taskDefinition.containerDefinitions[?name==\`$container_name\`].logConfiguration.options.\"awslogs-group\" | [0]" \
+            --output text)"
+
+          echo "cluster=$cluster" >> "$GITHUB_OUTPUT"
+          echo "service=$service" >> "$GITHUB_OUTPUT"
+          echo "task_def_arn=$task_def_arn" >> "$GITHUB_OUTPUT"
+          echo "subnets=$subnets" >> "$GITHUB_OUTPUT"
+          echo "sgs=$sgs" >> "$GITHUB_OUTPUT"
+          echo "assign_public_ip=$assign_public_ip" >> "$GITHUB_OUTPUT"
+          echo "container_name=$container_name" >> "$GITHUB_OUTPUT"
+          echo "log_group=$log_group" >> "$GITHUB_OUTPUT"
+
+      - name: Run migration task
+        id: run
+        run: |
+          set -euo pipefail
+          task_arn="$(aws ecs run-task \
+            --cluster "${{ steps.discover.outputs.cluster }}" \
+            --launch-type FARGATE \
+            --task-definition "${{ steps.discover.outputs.task_def_arn }}" \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ steps.discover.outputs.subnets }}],securityGroups=[${{ steps.discover.outputs.sgs }}],assignPublicIp=${{ steps.discover.outputs.assign_public_ip }}}" \
+            --overrides "{\"containerOverrides\":[{\"name\":\"${{ steps.discover.outputs.container_name }}\",\"command\":[\"npm\",\"run\",\"migrate:up\"]}]}" \
+            --query 'tasks[0].taskArn' \
+            --output text)"
+          if [ "$task_arn" = "None" ] || [ -z "$task_arn" ]; then
+            echo "::error::Failed to start migration task"
+            exit 1
+          fi
+          echo "task_arn=$task_arn" >> "$GITHUB_OUTPUT"
+          echo "Started migration task: $task_arn"
+
+      - name: Wait for migration task to stop
+        run: |
+          set -euo pipefail
+          aws ecs wait tasks-stopped \
+            --cluster "${{ steps.discover.outputs.cluster }}" \
+            --tasks "${{ steps.run.outputs.task_arn }}"
+
+      - name: Collect task status and logs
+        run: |
+          set -euo pipefail
+          task_arn="${{ steps.run.outputs.task_arn }}"
+          cluster="${{ steps.discover.outputs.cluster }}"
+          container_name="${{ steps.discover.outputs.container_name }}"
+          log_group="${{ steps.discover.outputs.log_group }}"
+
+          exit_code="$(aws ecs describe-tasks \
+            --cluster "$cluster" \
+            --tasks "$task_arn" \
+            --query "tasks[0].containers[?name==\`$container_name\`].exitCode | [0]" \
+            --output text)"
+          reason="$(aws ecs describe-tasks \
+            --cluster "$cluster" \
+            --tasks "$task_arn" \
+            --query "tasks[0].containers[?name==\`$container_name\`].reason | [0]" \
+            --output text)"
+          log_stream="$(aws ecs describe-tasks \
+            --cluster "$cluster" \
+            --tasks "$task_arn" \
+            --query "tasks[0].containers[?name==\`$container_name\`].logStreamName | [0]" \
+            --output text)"
+
+          echo "Migration task ARN: $task_arn"
+          echo "Migration container log stream: $log_stream"
+          echo "Migration exit code: $exit_code"
+          if [ "$reason" != "None" ] && [ -n "$reason" ]; then
+            echo "Container reason: $reason"
+          fi
+
+          if [ "$log_stream" != "None" ] && [ -n "$log_stream" ]; then
+            echo "----- Last 50 migration log lines -----"
+            aws logs get-log-events \
+              --log-group-name "$log_group" \
+              --log-stream-name "$log_stream" \
+              --limit 50 \
+              --query 'events[].message' \
+              --output text | tr '\t' '\n'
+            echo "---------------------------------------"
+          fi
+
+          {
+            echo "## Dev migration task"
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Cluster | \`${{ steps.discover.outputs.cluster }}\` |"
+            echo "| Service | \`${{ steps.discover.outputs.service }}\` |"
+            echo "| Task definition | \`${{ steps.discover.outputs.task_def_arn }}\` |"
+            echo "| Task ARN | \`$task_arn\` |"
+            echo "| Log stream | \`$log_stream\` |"
+            echo "| Exit code | \`$exit_code\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$exit_code" = "None" ] || [ -z "$exit_code" ] || [ "$exit_code" != "0" ]; then
+            echo "::error::Migration task failed (exit code: $exit_code)"
+            exit 1
+          fi

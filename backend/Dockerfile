@@ -27,6 +27,7 @@ RUN npm ci --only=production
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/migrations ./migrations
 
 # Expose port
 EXPOSE 3000

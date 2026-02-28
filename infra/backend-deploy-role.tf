@@ -75,6 +75,25 @@ resource "aws_iam_role_policy" "gh_backend_deploy_inline" {
         ]
         Resource = ["arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:service/${aws_ecs_cluster.backend[0].name}/${aws_ecs_service.backend[0].name}"]
       },
+      {
+        Sid    = "ECSRunTask"
+        Effect = "Allow"
+        Action = [
+          "ecs:RunTask"
+        ]
+        Resource = "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:task-definition/fefeave-backend-${var.env}:*"
+        Condition = {
+          ArnEquals = {
+            "ecs:cluster" = aws_ecs_cluster.backend[0].arn
+          }
+        }
+      },
+      {
+        Sid      = "ECSTaskStatus"
+        Effect   = "Allow"
+        Action   = ["ecs:DescribeTasks"]
+        Resource = "*"
+      },
       # B) ECS: task definition - Describe scoped to backend family; RegisterTaskDefinition has no resource scope in IAM
       {
         Sid      = "ECSTaskDefDescribe"
@@ -93,10 +112,22 @@ resource "aws_iam_role_policy" "gh_backend_deploy_inline" {
         Sid      = "PassRoleExecution"
         Effect   = "Allow"
         Action   = ["iam:PassRole"]
-        Resource = [aws_iam_role.backend_execution[0].arn]
+        Resource = [aws_iam_role.backend_execution[0].arn, aws_iam_role.backend.arn]
         Condition = {
           StringEquals = { "iam:PassedToService" = "ecs-tasks.amazonaws.com" }
         }
+      },
+      {
+        Sid    = "ReadBackendMigrationLogs"
+        Effect = "Allow"
+        Action = [
+          "logs:DescribeLogStreams",
+          "logs:GetLogEvents"
+        ]
+        Resource = [
+          aws_cloudwatch_log_group.backend[0].arn,
+          "${aws_cloudwatch_log_group.backend[0].arn}:*"
+        ]
       }
     ]
   })

@@ -9,6 +9,15 @@ Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). Ne
 - `make dev-plan` — Terraform dev plan (`infra`, `dev.tfvars`)
 - `make dev-apply` — Terraform dev apply (`infra`, `dev.tfvars`)
 - `make ui-aws` — start frontend dev against AWS backend via `/api` proxy
+- `make dev-migrate` — run DB migrations in AWS dev via ECS one-off task
 - `make dev-backend-health` — check `/api/health` on dev ALB
 - `make dev-backend-wholesalers` — check `/api/wholesalers/balances` status code
 - `make test` — run backend tests, then frontend build
+
+## Standard dev loop
+
+1. `make ui-aws`
+2. `make dev-migrate` (run whenever schema/migrations changed, or when bootstrapping a new dev DB)
+3. `make test`
+
+Dev migrations are **manual** by design for safety and auditability. Production migrations are **not** run automatically in deploy workflows.
