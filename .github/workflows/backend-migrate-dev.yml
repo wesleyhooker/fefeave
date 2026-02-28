@@ -7,9 +7,6 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-
 jobs:
   migrate:
     runs-on: ubuntu-latest
