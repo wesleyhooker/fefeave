@@ -11,11 +11,27 @@ TF_DIR := infra
 DEV_VARS := dev.tfvars
 PROD_VARS := prod.tfvars
 TF := terraform -chdir=$(TF_DIR)
+DEV_ALB_FALLBACK := http://fefeave-backend-dev-379356847.us-west-2.elb.amazonaws.com
 
 REPO := wesleyhooker/fefeave
 AWS_REGION := us-west-2
 
-.PHONY: init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod
+.DEFAULT_GOAL := help
+
+.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-backend-health dev-backend-wholesalers test
+
+help:
+	@echo "Available targets:"
+	@echo "  dev-plan                 Terraform plan for dev workspace"
+	@echo "  dev-apply                Terraform apply for dev workspace"
+	@echo "  ui-aws                   Run frontend dev against AWS backend via /api proxy"
+	@echo "  dev-backend-health       Curl /api/health on dev backend ALB"
+	@echo "  dev-backend-wholesalers  Check /api/wholesalers/balances status code"
+	@echo "  test                     Run backend tests and frontend build"
+	@echo ""
+	@echo "Legacy targets:"
+	@echo "  init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod"
+	@echo "  gh-sync-dev gh-sync-prod deploy-dev deploy-prod"
 
 # One-time (or after provider/module changes)
 init:
@@ -88,3 +104,49 @@ deploy-dev:
 deploy-prod:
 	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)
 	gh workflow run "Frontend Deploy (prod)" -R $(REPO)
+
+# --- Centralized dev command surface ---
+dev-plan:
+	@echo "Selecting Terraform workspace: dev"
+	@terraform -chdir=infra workspace select dev
+	@echo "Running Terraform plan (dev.tfvars)"
+	@terraform -chdir=infra plan -var-file=dev.tfvars
+
+dev-apply:
+	@echo "Selecting Terraform workspace: dev"
+	@terraform -chdir=infra workspace select dev
+	@echo "Running Terraform apply (dev.tfvars)"
+	@terraform -chdir=infra apply -var-file=dev.tfvars
+
+ui-aws:
+	@echo "Preparing frontend/.env.local with NEXT_PUBLIC_BACKEND_URL=/api"
+	@mkdir -p frontend
+	@touch frontend/.env.local
+	@if rg -q '^NEXT_PUBLIC_BACKEND_URL=' frontend/.env.local; then \
+	  sed -i 's|^NEXT_PUBLIC_BACKEND_URL=.*|NEXT_PUBLIC_BACKEND_URL=/api|' frontend/.env.local; \
+	else \
+	  printf '\nNEXT_PUBLIC_BACKEND_URL=/api\n' >> frontend/.env.local; \
+	fi
+	@echo "Resolving dev backend origin from Terraform output (backend_api_base_url)"
+	@backend_url=$$(terraform -chdir=infra workspace select dev >/dev/null 2>&1; terraform -chdir=infra output -raw backend_api_base_url 2>/dev/null || true); \
+	if [ -z "$$backend_url" ]; then backend_url="$(DEV_ALB_FALLBACK)"; fi; \
+	DEV_BACKEND_ORIGIN="$${backend_url%/}" \
+	  && echo "Using DEV_BACKEND_ORIGIN=$$DEV_BACKEND_ORIGIN" \
+	  && cd frontend \
+	  && DEV_BACKEND_ORIGIN="$$DEV_BACKEND_ORIGIN" npm run dev
+
+dev-backend-health:
+	@echo "Checking dev backend health endpoint"
+	@terraform -chdir=infra workspace select dev >/dev/null
+	@curl -i "$$(terraform -chdir=infra output -raw backend_api_base_url)/api/health" | head
+
+dev-backend-wholesalers:
+	@echo "Checking dev backend wholesaler balances endpoint"
+	@terraform -chdir=infra workspace select dev >/dev/null
+	@curl -s -o /dev/null -w "%{http_code}\n" "$$(terraform -chdir=infra output -raw backend_api_base_url)/api/wholesalers/balances"
+
+test:
+	@echo "Running backend tests"
+	@cd backend && npm test
+	@echo "Running frontend build"
+	@cd frontend && npm run build

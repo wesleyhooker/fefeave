@@ -19,7 +19,11 @@ function getBackendBaseUrl(): string {
 function toAbsoluteUrl(path: string): string {
   const base = getBackendBaseUrl();
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${base}${normalizedPath}`;
+  const baseIsApi = /\/api$/.test(base);
+  const deDuplicatedPath = baseIsApi
+    ? normalizedPath.replace(/^\/api(?=\/|$)/, '')
+    : normalizedPath;
+  return `${base}${deDuplicatedPath}`;
 }
 
 export async function backendGetJson<T>(

@@ -114,13 +114,20 @@ resource "aws_ecs_task_definition" "backend" {
       protocol      = "tcp"
     }]
     essential = true
-    environment = [
-      { name = "PORT", value = "3000" },
-      { name = "AUTH_MODE", value = "off" },
-      { name = "AWS_REGION", value = var.aws_region },
-      { name = "NODE_ENV", value = "production" },
-      { name = "S3_ATTACHMENTS_BUCKET", value = aws_s3_bucket.attachments.bucket }
-    ]
+    environment = concat(
+      [
+        { name = "PORT", value = "3000" },
+        { name = "AUTH_MODE", value = var.env == "dev" ? "dev_bypass" : "off" },
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "NODE_ENV", value = "production" },
+        { name = "S3_ATTACHMENTS_BUCKET", value = aws_s3_bucket.attachments.bucket }
+      ],
+      var.env == "dev" ? [
+        { name = "AUTH_DEV_BYPASS_USER_ID", value = "dev-user" },
+        { name = "AUTH_DEV_BYPASS_EMAIL", value = "dev@fefeave.local" },
+        { name = "AUTH_DEV_BYPASS_ROLE", value = "ADMIN" }
+      ] : []
+    )
     logConfiguration = {
       logDriver = "awslogs"
       options = {
