@@ -99,7 +99,7 @@ resource "aws_iam_role_policy" "gh_backend_deploy_inline" {
         Sid      = "ECSTaskDefDescribe"
         Effect   = "Allow"
         Action   = ["ecs:DescribeTaskDefinition"]
-        Resource = "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:task-definition/fefeave-backend-${var.env}:*"
+        Resource = "*"
       },
       {
         Sid      = "ECSTaskDefRegister"

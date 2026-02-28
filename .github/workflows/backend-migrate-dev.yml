@@ -131,6 +131,10 @@ jobs:
             --tasks "$task_arn" \
             --query "tasks[0].containers[?name==\`$container_name\`].logStreamName | [0]" \
             --output text)"
+          if [ "$log_stream" = "None" ] || [ -z "$log_stream" ]; then
+            task_id="${task_arn##*/}"
+            log_stream="ecs/${container_name}/${task_id}"
+          fi
 
           echo "Migration task ARN: $task_arn"
           echo "Migration container log stream: $log_stream"
@@ -139,16 +143,14 @@ jobs:
             echo "Container reason: $reason"
           fi
 
-          if [ "$log_stream" != "None" ] && [ -n "$log_stream" ]; then
-            echo "----- Last 50 migration log lines -----"
-            aws logs get-log-events \
-              --log-group-name "$log_group" \
-              --log-stream-name "$log_stream" \
-              --limit 50 \
-              --query 'events[].message' \
-              --output text | tr '\t' '\n'
-            echo "---------------------------------------"
-          fi
+          echo "----- Last 50 migration log lines -----"
+          aws logs get-log-events \
+            --log-group-name "$log_group" \
+            --log-stream-name "$log_stream" \
+            --limit 50 \
+            --query 'events[].message' \
+            --output text | tr '\t' '\n'
+          echo "---------------------------------------"
 
           {
             echo "## Dev migration task"
