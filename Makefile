@@ -214,3 +214,14 @@ test:
 	@cd backend && npm test
 	@echo "Running frontend build"
 	@cd frontend && npm run build
+
+dev:
+	@$(MAKE) dev-db-up
+	@$(MAKE) dev-migrate
+	@if tmux has-session -t fefeave-dev 2>/dev/null; then \
+	  tmux attach -t fefeave-dev; \
+	else \
+	  tmux new-session -d -s fefeave-dev "cd $(CURDIR) && make dev-api"; \
+	  tmux split-window -h -t fefeave-dev "cd $(CURDIR) && make dev-ui"; \
+	  tmux attach -t fefeave-dev; \
+	fi
