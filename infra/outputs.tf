@@ -79,3 +79,25 @@ output "database_url_secret_arn" {
   description = "Secrets Manager ARN for DATABASE_URL (used by ECS task definition)"
   value       = (var.create_backend_infra && var.create_rds) ? aws_secretsmanager_secret.db_url[0].arn : null
 }
+
+# --- Cognito (DEV) ---
+output "user_pool_id" {
+  description = "Cognito User Pool ID for dev auth."
+  value       = var.env == "dev" ? aws_cognito_user_pool.dev[0].id : null
+}
+
+output "app_client_id" {
+  description = "Cognito App Client ID for dev auth."
+  value       = var.env == "dev" ? aws_cognito_user_pool_client.dev[0].id : null
+}
+
+output "app_client_secret" {
+  description = "Cognito App Client Secret for dev auth."
+  value       = var.env == "dev" ? aws_cognito_user_pool_client.dev[0].client_secret : null
+  sensitive   = true
+}
+
+output "cognito_domain" {
+  description = "Full Cognito Hosted UI domain for dev auth."
+  value       = var.env == "dev" ? "${aws_cognito_user_pool_domain.dev[0].domain}.auth.${var.aws_region}.amazoncognito.com" : null
+}

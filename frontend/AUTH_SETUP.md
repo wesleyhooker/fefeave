@@ -2,6 +2,8 @@
 
 This app uses Cognito Hosted UI + server-side session cookies.
 
+Never commit `frontend/.env.local`. Keep real values local only.
+
 ## Required env vars (frontend)
 
 Set these in `frontend/.env.local` for local dev:
@@ -10,9 +12,38 @@ Set these in `frontend/.env.local` for local dev:
 - `COGNITO_DOMAIN` - Cognito Hosted UI domain (no trailing slash)
 - `COGNITO_CLIENT_ID`
 - `COGNITO_CLIENT_SECRET`
-- `COGNITO_REDIRECT_URI` - should match Cognito app client callback URL exactly (example: `http://localhost:3000/api/auth/callback`)
-- `BACKEND_BASE_URL` - backend origin + API prefix used by auth callback server route (example: `http://localhost:3001/api`)
+- `COGNITO_REDIRECT_URI` - should match Cognito app client callback URL exactly (example: `http://localhost:3001/api/auth/callback`)
+- `BACKEND_BASE_URL` - backend origin + API prefix used by auth callback server route (example: `http://localhost:3000/api`)
 - `NEXT_PUBLIC_BACKEND_URL` - **set to `/api`** so browser traffic goes through the frontend BFF proxy
+
+## AWS Console mapping (copy/paste source)
+
+Use Cognito User Pool app client + Hosted UI settings:
+
+- `COGNITO_DOMAIN`
+  - Cognito Console -> User pool -> App integration -> Domain -> your Hosted UI domain
+  - Example format: `your-domain.auth.us-west-2.amazoncognito.com` (no protocol)
+- `COGNITO_CLIENT_ID`
+  - Cognito Console -> User pool -> App integration -> App clients -> selected client -> Client ID
+- `COGNITO_CLIENT_SECRET`
+  - Cognito Console -> User pool -> App integration -> App clients -> selected client -> Client secret
+- `COGNITO_REDIRECT_URI`
+  - Must match app client callback URL exactly:
+  - `http://localhost:3001/api/auth/callback`
+- `AUTH_SESSION_SECRET`
+  - Generate a long random value locally (used to sign session cookie)
+- `BACKEND_BASE_URL`
+  - Local backend API origin for auth callback route:
+  - `http://localhost:3000/api`
+- `NEXT_PUBLIC_BACKEND_URL`
+  - Keep `/api` for BFF mode.
+
+## Makefile ports (local)
+
+- Backend runs on `http://localhost:3000` (`make dev-api` / `make dev-api-cognito`)
+- Frontend runs on `http://localhost:3001` (`make dev-ui`)
+- OAuth callback route is frontend-owned: `http://localhost:3001/api/auth/callback`
+- Keep `BACKEND_BASE_URL=http://localhost:3000/api`
 
 ## Deploy env guidance
 
@@ -38,6 +69,9 @@ Use `GET /api/auth/health` to quickly verify session state without exposing toke
 
 - `redirect_uri mismatch` in Cognito:
   - `COGNITO_REDIRECT_URI` must exactly match Cognito callback URL (scheme, host, path, trailing slash behavior).
+- Login URL contains `change_me_domain` or `CHANGE_ME_FRONTEND_CLIENT_ID`:
+  - your env values were not set correctly.
+  - set `COGNITO_DOMAIN` and `COGNITO_CLIENT_ID` in shell env or `frontend/.env.local`.
 - Missing or wrong roles/groups:
   - users can authenticate but then route to `/403` if they do not have `ADMIN`/`OPERATOR`/`WHOLESALER` claims expected by backend `/users/me` and session roles.
 - Cookie issues:
@@ -61,6 +95,18 @@ Use `GET /api/auth/health` to quickly verify session state without exposing toke
    - WHOLESALER visiting `/admin/*` -> `/403`
    - ADMIN/OPERATOR visiting `/portal/*` -> `/403`
 6. Click logout from admin/portal layout and confirm protected routes redirect to `/login`.
+
+If you use the Makefile flow:
+
+- `make dev` uses backend `AUTH_MODE=dev_bypass` (fast local loop)
+- `make dev-cognito` runs local stack with backend `AUTH_MODE=cognito` (real Hosted UI/session path)
+- `make dev-cognito` fails fast if required Cognito vars are missing and prints setup hints.
+
+## Verification
+
+1. `cd ~/dev/fefeave && make dev-cognito`
+2. Open `http://localhost:3001/login`
+3. Confirm Hosted UI authorize URL uses your real `COGNITO_DOMAIN` and `COGNITO_CLIENT_ID` (not placeholders).
 
 ## Phase 5.1 role/link smoke steps
 

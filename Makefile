@@ -23,7 +23,7 @@ LOCAL_AUTH_ROLE := ADMIN
 
 .DEFAULT_GOAL := help
 
-.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-db-up dev-db-down dev-db-reset dev-migrate dev-api dev-ui dev-up dev-status dev-backend-health dev-backend-wholesalers test
+.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-db-up dev-db-down dev-db-reset dev-migrate check-cognito-env dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-up dev-cognito dev-status dev-backend-health dev-backend-wholesalers test
 
 help:
 	@echo "Available targets:"
@@ -32,10 +32,15 @@ help:
 	@echo "  dev-db-reset             Reset local Postgres volume and restart"
 	@echo "  dev-migrate              Run backend migrations against local Postgres"
 	@echo "  dev-api                  Run backend locally on :3000 with dev_bypass"
+	@echo "  dev-api-cognito          Run backend locally on :3000 with AUTH_MODE=cognito"
 	@echo "  dev-ui                   Run frontend locally on :3001 (0.0.0.0)"
+	@echo "  dev-tmux                 Run dev-api + dev-ui in tmux split panes"
+	@echo "  dev-tmux-cognito         Run dev-api-cognito + dev-ui in tmux split panes"
 	@echo "  dev-up                   Print daily inner-loop startup steps"
+	@echo "  dev-cognito              Bring up db+migrations and run cognito backend + frontend in tmux"
 	@echo "  dev-status               Check local backend endpoint status codes"
 	@echo "  test                     Run backend tests and frontend build"
+	@echo "  NOTE                     make dev uses AUTH_MODE=dev_bypass (fast local). Use make dev-cognito for real Hosted UI testing."
 	@echo ""
 	@echo "Outer-loop / AWS helper targets:"
 	@echo "  dev-plan dev-apply ui-aws dev-backend-health dev-backend-wholesalers"
@@ -149,6 +154,62 @@ dev-migrate:
 	@echo "Running backend migrations against local DB"
 	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run migrate:up
 
+check-cognito-env:
+	@missing=""; \
+	read_frontend_var() { \
+	  key="$$1"; \
+	  env_val="$$2"; \
+	  if [ -n "$$env_val" ]; then \
+	    printf '%s' "$$env_val"; \
+	    return; \
+	  fi; \
+	  [ -f frontend/.env.local ] || return; \
+	  awk -v k="$$key" ' \
+	    /^[[:space:]]*#/ { next } \
+	    /^[[:space:]]*$$/ { next } \
+	    { \
+	      line=$$0; \
+	      if (line ~ "^[[:space:]]*" k "[[:space:]]*=") { \
+	        sub("^[[:space:]]*" k "[[:space:]]*=[[:space:]]*", "", line); \
+	        sub(/\r$$/, "", line); \
+	        print line; \
+	        exit; \
+	      } \
+	    } \
+	  ' frontend/.env.local; \
+	}; \
+	[ -n "$$COGNITO_REGION" ] || missing="$$missing COGNITO_REGION"; \
+	[ -n "$$COGNITO_USER_POOL_ID" ] || missing="$$missing COGNITO_USER_POOL_ID"; \
+	[ -n "$$COGNITO_APP_CLIENT_ID" ] || missing="$$missing COGNITO_APP_CLIENT_ID"; \
+	frontend_auth_secret="$$(read_frontend_var AUTH_SESSION_SECRET "$$AUTH_SESSION_SECRET")"; \
+	frontend_domain="$$(read_frontend_var COGNITO_DOMAIN "$$COGNITO_DOMAIN")"; \
+	frontend_client_id="$$(read_frontend_var COGNITO_CLIENT_ID "$$COGNITO_CLIENT_ID")"; \
+	frontend_client_secret="$$(read_frontend_var COGNITO_CLIENT_SECRET "$$COGNITO_CLIENT_SECRET")"; \
+	frontend_redirect_uri="$$(read_frontend_var COGNITO_REDIRECT_URI "$$COGNITO_REDIRECT_URI")"; \
+	frontend_backend_base="$$(read_frontend_var BACKEND_BASE_URL "$$BACKEND_BASE_URL")"; \
+	[ -n "$$frontend_auth_secret" ] || missing="$$missing AUTH_SESSION_SECRET"; \
+	[ -n "$$frontend_domain" ] || missing="$$missing COGNITO_DOMAIN"; \
+	[ -n "$$frontend_client_id" ] || missing="$$missing COGNITO_CLIENT_ID"; \
+	[ -n "$$frontend_client_secret" ] || missing="$$missing COGNITO_CLIENT_SECRET"; \
+	[ -n "$$frontend_redirect_uri" ] || missing="$$missing COGNITO_REDIRECT_URI"; \
+	[ -n "$$frontend_backend_base" ] || missing="$$missing BACKEND_BASE_URL"; \
+	if [ -n "$$missing" ]; then \
+	  echo "Missing required Cognito env vars:$$missing"; \
+	  echo "Set backend vars in shell env and frontend vars in shell env or frontend/.env.local."; \
+	  if [ -f scripts/dev/print-cognito-env-help.sh ]; then \
+	    sh scripts/dev/print-cognito-env-help.sh; \
+	  fi; \
+	  exit 1; \
+	fi; \
+	if [ "$$frontend_redirect_uri" != "http://localhost:3001/api/auth/callback" ]; then \
+	  echo "COGNITO_REDIRECT_URI must be http://localhost:3001/api/auth/callback for make dev-cognito."; \
+	  exit 1; \
+	fi; \
+	if [ "$$frontend_backend_base" != "http://localhost:3000/api" ]; then \
+	  echo "BACKEND_BASE_URL must be http://localhost:3000/api for make dev-cognito."; \
+	  exit 1; \
+	fi
+
 dev-api:
 	@echo "Starting backend on http://0.0.0.0:3000 (dev_bypass)"
 	@PORT=3000 \
@@ -159,9 +220,34 @@ dev-api:
 	 AUTH_DEV_BYPASS_ROLE="$${AUTH_DEV_BYPASS_ROLE:-$(LOCAL_AUTH_ROLE)}" \
 	 npm --prefix backend run dev
 
+dev-api-cognito: check-cognito-env
+	@echo "Starting backend on http://0.0.0.0:3000 (cognito)"
+	@PORT=3000 \
+	 DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" \
+	 AUTH_MODE=cognito \
+	 npm --prefix backend run dev
+
 dev-ui:
 	@echo "Starting frontend on http://0.0.0.0:3001 with /api proxy to localhost:3000"
 	@NEXT_PUBLIC_BACKEND_URL=/api npm --prefix frontend run dev -- -H 0.0.0.0 -p 3001
+
+dev-tmux:
+	@if tmux has-session -t fefeave-dev 2>/dev/null; then \
+	  tmux attach -t fefeave-dev; \
+	else \
+	  tmux new-session -d -s fefeave-dev "cd $(CURDIR) && bash -lc 'make dev-api; rc=\$$?; echo; echo \"backend exited \$$rc\"; read -n 1 -s -r -p \"press any key\"'"; \
+	  tmux split-window -h -t fefeave-dev "cd $(CURDIR) && make dev-ui"; \
+	  tmux attach -t fefeave-dev; \
+	fi
+
+dev-tmux-cognito:
+	@if tmux has-session -t fefeave-dev 2>/dev/null; then \
+	  tmux attach -t fefeave-dev; \
+	else \
+	  tmux new-session -d -s fefeave-dev "cd $(CURDIR) && bash -lc 'make dev-api-cognito; rc=\$$?; echo; echo \"backend exited \$$rc\"; read -n 1 -s -r -p \"press any key\"'"; \
+	  tmux split-window -h -t fefeave-dev "cd $(CURDIR) && make dev-ui"; \
+	  tmux attach -t fefeave-dev; \
+	fi
 
 dev-up:
 	@echo "Daily inner-loop startup:"
@@ -218,10 +304,9 @@ test:
 dev:
 	@$(MAKE) dev-db-up
 	@$(MAKE) dev-migrate
-	@if tmux has-session -t fefeave-dev 2>/dev/null; then \
-	  tmux attach -t fefeave-dev; \
-	else \
-	  tmux new-session -d -s fefeave-dev "cd $(CURDIR) && make dev-api"; \
-	  tmux split-window -h -t fefeave-dev "cd $(CURDIR) && make dev-ui"; \
-	  tmux attach -t fefeave-dev; \
-	fi
+	@$(MAKE) dev-tmux
+
+dev-cognito:
+	@$(MAKE) dev-db-up
+	@$(MAKE) dev-migrate
+	@$(MAKE) dev-tmux-cognito
