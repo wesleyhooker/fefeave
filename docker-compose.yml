@@ -1,15 +1,19 @@
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: fefeave-postgres
-    environment:
-      POSTGRES_USER: fefeave
-      POSTGRES_PASSWORD: fefeave
-      POSTGRES_DB: fefeave
+    image: postgres:16
     ports:
       - "5432:5432"
+    environment:
+      POSTGRES_DB: fefeave
+      POSTGRES_USER: fefeave
+      POSTGRES_PASSWORD: fefeave
     volumes:
-      - fefeave_postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fefeave -d fefeave"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
-  fefeave_postgres_data:
+  postgres_data:

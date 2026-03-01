@@ -15,20 +15,30 @@ DEV_ALB_FALLBACK := http://fefeave-backend-dev-379356847.us-west-2.elb.amazonaws
 
 REPO := wesleyhooker/fefeave
 AWS_REGION := us-west-2
+LOCAL_DB_URL := postgres://fefeave:fefeave@localhost:5432/fefeave
+LOCAL_AUTH_MODE := dev_bypass
+LOCAL_AUTH_USER_ID := local-dev-user
+LOCAL_AUTH_EMAIL := local@fefeave.local
+LOCAL_AUTH_ROLE := ADMIN
 
 .DEFAULT_GOAL := help
 
-.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-backend-health dev-backend-wholesalers dev-migrate test
+.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-db-up dev-db-down dev-db-reset dev-migrate dev-api dev-ui dev-up dev-status dev-backend-health dev-backend-wholesalers test
 
 help:
 	@echo "Available targets:"
-	@echo "  dev-plan                 Terraform plan for dev workspace"
-	@echo "  dev-apply                Terraform apply for dev workspace"
-	@echo "  ui-aws                   Run frontend dev against AWS backend via /api proxy"
-	@echo "  dev-migrate              Run backend DB migrations in AWS dev (ECS one-off task)"
-	@echo "  dev-backend-health       Curl /api/health on dev backend ALB"
-	@echo "  dev-backend-wholesalers  Check /api/wholesalers/balances status code"
+	@echo "  dev-db-up                Start local Postgres (docker compose)"
+	@echo "  dev-db-down              Stop local Postgres"
+	@echo "  dev-db-reset             Reset local Postgres volume and restart"
+	@echo "  dev-migrate              Run backend migrations against local Postgres"
+	@echo "  dev-api                  Run backend locally on :3000 with dev_bypass"
+	@echo "  dev-ui                   Run frontend locally on :3001 (0.0.0.0)"
+	@echo "  dev-up                   Print daily inner-loop startup steps"
+	@echo "  dev-status               Check local backend endpoint status codes"
 	@echo "  test                     Run backend tests and frontend build"
+	@echo ""
+	@echo "Outer-loop / AWS helper targets:"
+	@echo "  dev-plan dev-apply ui-aws dev-backend-health dev-backend-wholesalers"
 	@echo ""
 	@echo "Legacy targets:"
 	@echo "  init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod"
@@ -119,6 +129,59 @@ dev-apply:
 	@echo "Running Terraform apply (dev.tfvars)"
 	@terraform -chdir=infra apply -var-file=dev.tfvars
 
+dev-db-up:
+	@echo "Starting local Postgres on port 5432"
+	@docker compose up -d postgres
+	@echo "Waiting for Postgres to report healthy..."
+	@docker compose ps
+
+dev-db-down:
+	@echo "Stopping local Postgres"
+	@docker compose down
+
+dev-db-reset:
+	@echo "Resetting local Postgres volume and restarting"
+	@docker compose down -v
+	@docker compose up -d postgres
+	@docker compose ps
+
+dev-migrate:
+	@echo "Running backend migrations against local DB"
+	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run migrate:up
+
+dev-api:
+	@echo "Starting backend on http://0.0.0.0:3000 (dev_bypass)"
+	@PORT=3000 \
+	 DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" \
+	 AUTH_MODE="$${AUTH_MODE:-$(LOCAL_AUTH_MODE)}" \
+	 AUTH_DEV_BYPASS_USER_ID="$${AUTH_DEV_BYPASS_USER_ID:-$(LOCAL_AUTH_USER_ID)}" \
+	 AUTH_DEV_BYPASS_EMAIL="$${AUTH_DEV_BYPASS_EMAIL:-$(LOCAL_AUTH_EMAIL)}" \
+	 AUTH_DEV_BYPASS_ROLE="$${AUTH_DEV_BYPASS_ROLE:-$(LOCAL_AUTH_ROLE)}" \
+	 npm --prefix backend run dev
+
+dev-ui:
+	@echo "Starting frontend on http://0.0.0.0:3001 with /api proxy to localhost:3000"
+	@NEXT_PUBLIC_BACKEND_URL=/api npm --prefix frontend run dev -- -H 0.0.0.0 -p 3001
+
+dev-up:
+	@echo "Daily inner-loop startup:"
+	@echo "  1) Terminal A: make dev-db-up"
+	@echo "  2) Terminal A: make dev-migrate"
+	@echo "  3) Terminal B: make dev-api"
+	@echo "  4) Terminal C: make dev-ui"
+	@echo "Then open: http://localhost:3001"
+
+dev-status:
+	@echo "Local backend status checks (expected 200):"
+	@echo -n "  /api/health: "
+	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/health
+	@echo -n "  /api/wholesalers/balances: "
+	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/wholesalers/balances
+	@echo -n "  /api/shows: "
+	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/shows
+	@echo -n "  /api/payments: "
+	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/payments
+
 ui-aws:
 	@echo "Preparing frontend/.env.local with NEXT_PUBLIC_BACKEND_URL=/api"
 	@mkdir -p frontend
@@ -145,30 +208,6 @@ dev-backend-wholesalers:
 	@echo "Checking dev backend wholesaler balances endpoint"
 	@terraform -chdir=infra workspace select dev >/dev/null
 	@curl -s -o /dev/null -w "%{http_code}\n" "$$(terraform -chdir=infra output -raw backend_api_base_url)/api/wholesalers/balances"
-
-dev-migrate:
-	@echo "Running dev DB migrations via ECS one-off task"
-	@if command -v gh >/dev/null 2>&1; then \
-	  echo "Triggering GitHub workflow: Run Migrations (dev)"; \
-	  gh workflow run "Run Migrations (dev)" -R $(REPO) --ref main; \
-	  run_id=$$(gh run list -R $(REPO) --workflow "Run Migrations (dev)" --limit 1 --json databaseId --jq '.[0].databaseId'); \
-	  echo "Watching workflow run $$run_id"; \
-	  gh run watch $$run_id -R $(REPO) --exit-status; \
-	else \
-	  echo "gh CLI not found; running migration task locally with AWS CLI"; \
-	  cluster=$$(terraform -chdir=infra workspace select dev >/dev/null 2>&1; terraform -chdir=infra output -raw backend_ecs_cluster_name); \
-	  service=$$(terraform -chdir=infra output -raw backend_ecs_service_name); \
-	  task_def_arn=$$(aws ecs describe-services --region $(AWS_REGION) --cluster "$$cluster" --services "$$service" --query 'services[0].taskDefinition' --output text); \
-	  subnets=$$(aws ecs describe-services --region $(AWS_REGION) --cluster "$$cluster" --services "$$service" --query 'services[0].networkConfiguration.awsvpcConfiguration.subnets' --output text | tr '\t' ','); \
-	  sgs=$$(aws ecs describe-services --region $(AWS_REGION) --cluster "$$cluster" --services "$$service" --query 'services[0].networkConfiguration.awsvpcConfiguration.securityGroups' --output text | tr '\t' ','); \
-	  assign_public_ip=$$(aws ecs describe-services --region $(AWS_REGION) --cluster "$$cluster" --services "$$service" --query 'services[0].networkConfiguration.awsvpcConfiguration.assignPublicIp' --output text); \
-	  task_arn=$$(aws ecs run-task --region $(AWS_REGION) --cluster "$$cluster" --launch-type FARGATE --task-definition "$$task_def_arn" --network-configuration "awsvpcConfiguration={subnets=[$$subnets],securityGroups=[$$sgs],assignPublicIp=$$assign_public_ip}" --overrides '{"containerOverrides":[{"name":"backend","command":["npm","run","migrate:up"]}]}' --query 'tasks[0].taskArn' --output text); \
-	  echo "Started task $$task_arn"; \
-	  aws ecs wait tasks-stopped --region $(AWS_REGION) --cluster "$$cluster" --tasks "$$task_arn"; \
-	  exit_code=$$(aws ecs describe-tasks --region $(AWS_REGION) --cluster "$$cluster" --tasks "$$task_arn" --query 'tasks[0].containers[0].exitCode' --output text); \
-	  echo "Migration task exit code: $$exit_code"; \
-	  test "$$exit_code" = "0"; \
-	fi
 
 test:
 	@echo "Running backend tests"
