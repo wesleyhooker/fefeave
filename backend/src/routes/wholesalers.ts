@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { getPool } from '../db';
+import { getWholesalerBalancesView } from '../services/balancesView';
 import { NotFoundError, ValidationError } from '../utils/errors';
 
 const uuidSchema = z.string().uuid();
@@ -120,35 +121,19 @@ export async function wholesalerRoutes(
     async (request, reply) => {
       const pool = getPool();
       try {
-        const result = await pool.query(
-          `SELECT w.id AS wholesaler_id, w.name,
-           (SELECT COALESCE(SUM(amount), 0)::numeric FROM owed_line_items WHERE wholesaler_id = w.id AND deleted_at IS NULL) AS owed_total,
-           (SELECT COALESCE(SUM(amount), 0)::numeric FROM payments WHERE wholesaler_id = w.id AND deleted_at IS NULL) AS paid_total,
-           (SELECT MAX(payment_date) FROM payments WHERE wholesaler_id = w.id AND deleted_at IS NULL) AS last_payment_date
-           FROM wholesalers w
-           WHERE w.deleted_at IS NULL`
-        );
-        const rows = result.rows as Array<{
-          wholesaler_id: string;
-          name: string;
-          owed_total: string;
-          paid_total: string;
-          last_payment_date: string | null;
-        }>;
+        const rows = await getWholesalerBalancesView(pool, {
+          sortKey: 'name',
+          sortDir: 'asc',
+        });
         return reply.send(
-          rows.map((r) => {
-            const owed = parseFloat(r.owed_total);
-            const paid = parseFloat(r.paid_total);
-            const balance = (owed - paid).toFixed(4);
-            return {
-              wholesaler_id: r.wholesaler_id,
-              name: r.name,
-              owed_total: r.owed_total,
-              paid_total: r.paid_total,
-              balance_owed: balance,
-              last_payment_date: r.last_payment_date ?? undefined,
-            };
-          })
+          rows.map((r) => ({
+            wholesaler_id: r.wholesaler_id,
+            name: r.wholesaler_name,
+            owed_total: r.owed_total,
+            paid_total: r.paid_total,
+            balance_owed: r.balance_owed,
+            last_payment_date: r.last_payment_date ?? undefined,
+          }))
         );
       } catch (error) {
         // During fresh env bootstrap, migrations may not be applied yet.

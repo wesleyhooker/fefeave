@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { downloadCsv, toCsv } from "@/lib/csv";
+import { downloadCsv } from "@/lib/csv";
 import { apiGetText } from "@/lib/api";
 
 export interface WholesalerBalanceRow {
@@ -32,7 +32,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
   const [owingOnly, setOwingOnly] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("balance_owed");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let list = data;
@@ -97,24 +97,6 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
     return `balances-${yyyy}-${mm}-${dd}.csv`;
   };
 
-  const doClientExport = () => {
-    const headers = [
-      "Wholesaler",
-      "Owed Total",
-      "Paid Total",
-      "Balance Owed",
-      "Last Payment Date",
-    ];
-    const rows: (string | number)[][] = sorted.map((r) => [
-      r.name,
-      parseNum(r.owed_total),
-      parseNum(r.paid_total),
-      parseNum(r.balance_owed),
-      r.last_payment_date ? r.last_payment_date.slice(0, 10) : "",
-    ]);
-    downloadCsv(getFilename(), toCsv(headers, rows), { includeBom: true });
-  };
-
   const handleDownloadCsv = async () => {
     try {
       const csvText = await apiGetText("exports/balances.csv", {
@@ -123,23 +105,14 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         sortKey,
         sortDir,
       });
-      setExportNotice(null);
+      setExportError(null);
       downloadCsv(getFilename(), csvText, { includeBom: false });
     } catch {
-      setExportNotice(
-        "Server export unavailable — downloaded a local export instead.",
+      setExportError(
+        "Export failed. Please retry. If this persists, check backend availability and permissions.",
       );
-      doClientExport();
     }
   };
-
-  useEffect(() => {
-    if (!exportNotice) return;
-    const timer = window.setTimeout(() => {
-      setExportNotice(null);
-    }, 6000);
-    return () => window.clearTimeout(timer);
-  }, [exportNotice]);
 
   return (
     <div>
@@ -167,12 +140,16 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         >
           Download CSV
         </button>
-        {exportNotice && (
-          <div
-            role="status"
-            className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
-          >
-            {exportNotice}
+        {exportError && (
+          <div className="flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">
+            <span role="alert">{exportError}</span>
+            <button
+              type="button"
+              onClick={handleDownloadCsv}
+              className="rounded border border-rose-300 bg-white px-2 py-1 text-[11px] font-medium text-rose-900 hover:bg-rose-100"
+            >
+              Retry
+            </button>
           </div>
         )}
       </div>
