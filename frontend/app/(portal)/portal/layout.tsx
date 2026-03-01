@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function PortalLayout({
   children,
 }: {
@@ -7,12 +9,24 @@ export default function PortalLayout({
     <>
       <header className="border-b border-gray-200 bg-white px-4 py-2">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <a href="/portal" className="text-sm font-medium text-gray-900">
+          <Link
+            href="/portal/statement"
+            className="text-sm font-medium text-gray-900"
+          >
             Portal
-          </a>
+          </Link>
           <div className="flex items-center gap-4">
-            <a href="/" className="text-sm text-gray-500 hover:text-gray-700">
-              Back to home
+            <Link
+              href="/portal/statement"
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Statement
+            </Link>
+            <a
+              href="/api/portal/statement.csv"
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Download CSV
             </a>
             <a
               href="/api/auth/logout"

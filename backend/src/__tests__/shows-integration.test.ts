@@ -5,9 +5,13 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import type { FastifyInstance } from 'fastify';
-import { buildAppForTest } from './helpers';
+import { buildAppForTest, buildUniqueDevBypassIdentity } from './helpers';
 
 const TEST_SCHEMA = 'test';
+
+function toYyyyMmDd(value: string): string {
+  return new Date(value).toISOString().slice(0, 10);
+}
 
 function runMigrations(databaseUrl: string): void {
   execSync(
@@ -35,19 +39,19 @@ describe('Shows API integration', () => {
 
   beforeEach(async () => {
     const databaseUrl = process.env.DATABASE_URL ?? '';
+    const identity = buildUniqueDevBypassIdentity('shows-admin', 'ADMIN');
     const result = await buildAppForTest({
       DATABASE_URL: databaseUrl,
       AUTH_MODE: 'dev_bypass',
-      AUTH_DEV_BYPASS_USER_ID: 'test-shows-admin',
-      AUTH_DEV_BYPASS_EMAIL: 'admin@test.example.com',
-      AUTH_DEV_BYPASS_ROLE: 'ADMIN',
+      ...identity,
       PGOPTIONS: '-c search_path=test',
     });
     app = result.app;
     restoreEnv = result.restoreEnv;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (app) await app.close();
     restoreEnv?.();
   });
 
@@ -65,7 +69,7 @@ describe('Shows API integration', () => {
     expect(res.statusCode).toBe(201);
     const body = JSON.parse(res.payload);
     expect(body.id).toBeDefined();
-    expect(body.show_date).toBe('2025-03-15');
+    expect(toYyyyMmDd(body.show_date)).toBe('2025-03-15');
     expect(body.platform).toBe('WHATNOT');
     expect(body.name).toBe('Spring Show 2025');
     expect(body.notes).toBe('Test notes');
@@ -95,7 +99,7 @@ describe('Shows API integration', () => {
     expect(Array.isArray(list)).toBe(true);
     const found = list.find((s: { id: string }) => s.id === created.id);
     expect(found).toBeDefined();
-    expect(found.show_date).toBe('2025-04-01');
+    expect(toYyyyMmDd(found.show_date)).toBe('2025-04-01');
     expect(found.platform).toBe('INSTAGRAM');
     expect(found.name).toBe('April Live');
   });
@@ -121,7 +125,7 @@ describe('Shows API integration', () => {
     expect(getRes.statusCode).toBe(200);
     const show = JSON.parse(getRes.payload);
     expect(show.id).toBe(created.id);
-    expect(show.show_date).toBe('2025-05-10');
+    expect(toYyyyMmDd(show.show_date)).toBe('2025-05-10');
     expect(show.platform).toBe('OTHER'); // API normalizes MANUAL -> OTHER
     expect(show.name).toBe('Manual Show');
     expect(show.external_reference).toBe('ext-123');

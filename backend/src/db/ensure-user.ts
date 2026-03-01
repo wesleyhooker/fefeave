@@ -13,7 +13,25 @@ export async function ensureUser(
   const user = request.user!;
   const cognitoSub = user.cognitoSub;
   const email = user.email?.trim() || `user-${cognitoSub}@fefeave.local`;
-  const role = user.roles?.includes('ADMIN') ? 'ADMIN' : 'OPERATOR';
+  const roles = user.roles ?? [];
+
+  // Role precedence is intentionally explicit and stable:
+  // ADMIN > WHOLESALER > OPERATOR.
+  // Rationale: writes/audits should never silently lose admin privileges if a token
+  // contains multiple groups during provisioning drift or temporary IdP misconfiguration.
+  // We still record a warning when multiple roles are present so this is observable.
+  if (roles.length > 1) {
+    request.log.warn(
+      { cognitoSub, roles },
+      'Multiple roles found in auth claims; applying precedence ADMIN > WHOLESALER > OPERATOR'
+    );
+  }
+
+  const role = roles.includes('ADMIN')
+    ? 'ADMIN'
+    : roles.includes('WHOLESALER')
+      ? 'WHOLESALER'
+      : 'OPERATOR';
 
   const placeholderEmail = `user-${cognitoSub}@fefeave.local`;
   const res = await client.query(

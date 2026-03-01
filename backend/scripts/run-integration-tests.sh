@@ -11,6 +11,41 @@ ROOT_DIR="$(cd "$BACKEND_DIR/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 DEFAULT_DATABASE_URL="postgres://fefeave:fefeave@localhost:5432/fefeave"
 USE_DOCKER=false
+POSTGRES_WAS_RUNNING=false
+
+reset_test_schema() {
+  DATABASE_URL="$DATABASE_URL" node <<'EOF'
+const { Client } = require('pg');
+
+async function main() {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  await client.query('DROP SCHEMA IF EXISTS test CASCADE');
+  await client.query('CREATE SCHEMA test');
+  await client.end();
+}
+
+main().catch((err) => {
+  console.error('Failed to reset test schema:', err.message);
+  process.exit(1);
+});
+EOF
+}
+
+teardown() {
+  if [ -n "${DATABASE_URL:-}" ]; then
+    echo "Cleaning up test schema..."
+    reset_test_schema || true
+  fi
+
+  # Only stop Postgres if we started it (it was not running before)
+  if [ "$USE_DOCKER" = true ] && [ "$POSTGRES_WAS_RUNNING" != true ]; then
+    echo "Stopping Postgres..."
+    docker compose -f "$COMPOSE_FILE" down
+  fi
+}
+
+trap teardown EXIT
 
 if [ -z "$DATABASE_URL" ]; then
   DATABASE_URL="$DEFAULT_DATABASE_URL"
@@ -34,15 +69,14 @@ if [ "$USE_DOCKER" = true ]; then
   done
 fi
 
+echo "Resetting integration test schema..."
+reset_test_schema
+
 echo "Running integration tests..."
 cd "$BACKEND_DIR"
-DATABASE_URL="$DATABASE_URL" npx jest --testPathPattern="(db-smoke|shows-integration|wholesalers-integration|owed-line-items-integration|settlement-ledger-integration)" --forceExit
+set +e
+DATABASE_URL="$DATABASE_URL" npx jest --runInBand --testPathPattern="(db-smoke|shows-integration|wholesalers-integration|owed-line-items-integration|settlement-ledger-integration)"
 EXIT_CODE=$?
-
-# Only stop Postgres if we started it (it was not running before)
-if [ "$USE_DOCKER" = true ] && [ "$POSTGRES_WAS_RUNNING" != true ]; then
-  echo "Stopping Postgres..."
-  docker compose -f "$COMPOSE_FILE" down
-fi
+set -e
 
 exit $EXIT_CODE

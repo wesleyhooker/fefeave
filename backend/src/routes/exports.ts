@@ -8,27 +8,10 @@ import {
   BALANCES_SORT_KEYS,
   getWholesalerBalancesView,
 } from '../services/balancesView';
+import { formatCurrency2dp, normalizeDateYyyyMmDd, toCsvText, todayFileDate } from '../utils/csv';
 import { ValidationError } from '../utils/errors';
 
 const yyyyMmDdSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be YYYY-MM-DD');
-
-function escapeCsv(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  const s = String(value);
-  if (/[,"\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
-function formatCurrency2dp(value: string): string {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '0.00';
-  return n.toFixed(2);
-}
-
-function normalizeDateYyyyMmDd(value?: string | null): string {
-  if (!value) return '';
-  return String(value).slice(0, 10);
-}
 
 function parseSortKey(raw?: string): (typeof BALANCES_SORT_KEYS)[number] {
   return BALANCES_SORT_KEYS.includes(raw as (typeof BALANCES_SORT_KEYS)[number])
@@ -40,22 +23,6 @@ function parseSortDir(raw?: string): (typeof BALANCES_SORT_DIRS)[number] {
   return BALANCES_SORT_DIRS.includes(raw as (typeof BALANCES_SORT_DIRS)[number])
     ? (raw as (typeof BALANCES_SORT_DIRS)[number])
     : 'desc';
-}
-
-function toCsvText(header: string[], rows: Array<Array<string | number>>): string {
-  const csvLines: string[] = [header.map(escapeCsv).join(',')];
-  for (const row of rows) {
-    csvLines.push(row.map(escapeCsv).join(','));
-  }
-  return csvLines.join('\n');
-}
-
-function todayFileDate(): string {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
 }
 
 export async function exportRoutes(

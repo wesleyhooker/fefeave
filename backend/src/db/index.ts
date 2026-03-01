@@ -20,6 +20,16 @@ export function getPool(): Pool {
 }
 
 /**
+ * Close and reset the singleton pool. Safe to call multiple times.
+ */
+export async function closePool(): Promise<void> {
+  if (!pool) return;
+  const current = pool;
+  pool = null;
+  await current.end();
+}
+
+/**
  * Execute a function within a database transaction. Automatically commits on success, rolls back on error.
  */
 export async function withTx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
