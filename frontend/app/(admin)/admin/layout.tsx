@@ -56,12 +56,20 @@ export default function AdminLayout({
             <span className="text-sm font-medium text-gray-700">
               Admin area
             </span>
-            <Link
-              href="/"
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              ← Back to site
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                ← Back to site
+              </Link>
+              <a
+                href="/api/auth/logout"
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Logout
+              </a>
+            </div>
           </div>
         </header>
         <main className="flex-1 p-6">{children}</main>

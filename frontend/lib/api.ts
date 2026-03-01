@@ -1,10 +1,10 @@
 /**
  * Minimal API client for backend calls.
- * Base URL: NEXT_PUBLIC_BACKEND_URL (default http://localhost:3001/api).
+ * Base URL: NEXT_PUBLIC_BACKEND_URL (default /api via BFF proxy).
  * Auth: When Cognito or another token source is added, set Authorization in getAuthHeaders().
  */
 
-const DEFAULT_BACKEND_URL = 'http://localhost:3001/api';
+const DEFAULT_BACKEND_URL = '/api';
 
 function getBaseUrl(): string {
   if (typeof window !== 'undefined') {

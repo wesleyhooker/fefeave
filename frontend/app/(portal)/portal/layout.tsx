@@ -10,9 +10,17 @@ export default function PortalLayout({
           <a href="/portal" className="text-sm font-medium text-gray-900">
             Portal
           </a>
-          <a href="/" className="text-sm text-gray-500 hover:text-gray-700">
-            Back to home
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="/" className="text-sm text-gray-500 hover:text-gray-700">
+              Back to home
+            </a>
+            <a
+              href="/api/auth/logout"
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Logout
+            </a>
+          </div>
         </div>
       </header>
       <main>{children}</main>

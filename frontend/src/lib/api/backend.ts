@@ -1,16 +1,10 @@
-const DEFAULT_BACKEND_URL = 'http://localhost:3001/api';
+const DEFAULT_BACKEND_URL = '/api';
 
 function getBackendBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
 
   if (configured) {
     return configured.replace(/\/$/, '');
-  }
-
-  if (process.env.NODE_ENV === 'development') {
-    throw new Error(
-      'NEXT_PUBLIC_BACKEND_URL is not set. Add it to frontend/.env.local (e.g. http://localhost:3001/api).',
-    );
   }
 
   return DEFAULT_BACKEND_URL;
