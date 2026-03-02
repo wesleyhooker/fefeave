@@ -27,7 +27,7 @@ resource "aws_cognito_user_pool_client" "dev" {
   supported_identity_providers         = ["COGNITO"]
 
   callback_urls = ["http://localhost:3001/api/auth/callback"]
-  logout_urls   = ["http://localhost:3001/"]
+  logout_urls   = ["http://localhost:3001/login"]
 }
 
 resource "aws_cognito_user_pool_domain" "dev" {
