@@ -53,7 +53,8 @@ describe('DB smoke test', () => {
       expect(wholesaler.name).toBe('Test Wholesaler');
 
       const showRes = await client.query(
-        `INSERT INTO shows (name, show_date, created_by) VALUES ($1, $2, $3) RETURNING id, name, show_date`,
+        `INSERT INTO shows (name, show_date, created_by) VALUES ($1, $2, $3)
+         RETURNING id, name, show_date::date::text AS show_date`,
         ['Test Show', '2025-03-15', userId]
       );
       const show = showRes.rows[0];
@@ -61,7 +62,9 @@ describe('DB smoke test', () => {
       expect(show.show_date).toBe('2025-03-15');
 
       const lineItemRes = await client.query(
-        `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, description, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING id, amount, description`,
+        `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, description, created_by)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, amount::numeric(12,2)::text AS amount, description`,
         [show.id, wholesaler.id, '1250.50', 'Booth rental', userId]
       );
       const lineItem = lineItemRes.rows[0];
@@ -73,13 +76,16 @@ describe('DB smoke test', () => {
       ]);
       expect(readWholesaler.rows[0].name).toBe('Test Wholesaler');
 
-      const readShow = await client.query(`SELECT id, name, show_date FROM shows WHERE id = $1`, [
-        show.id,
-      ]);
+      const readShow = await client.query(
+        `SELECT id, name, show_date::date::text AS show_date FROM shows WHERE id = $1`,
+        [show.id]
+      );
       expect(readShow.rows[0].name).toBe('Test Show');
 
       const readLineItem = await client.query(
-        `SELECT id, amount, description FROM owed_line_items WHERE id = $1`,
+        `SELECT id, amount::numeric(12,2)::text AS amount, description
+         FROM owed_line_items
+         WHERE id = $1`,
         [lineItem.id]
       );
       expect(readLineItem.rows[0]?.amount).toBe('1250.50');

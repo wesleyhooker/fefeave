@@ -2,7 +2,8 @@
 // Default sort semantics:
 // - JSON endpoint uses name asc
 // - CSV endpoint preserves its existing defaults via route-level sortKey/sortDir
-// This service enforces normalization only; callers define explicit intent.import { readWholesalerBalances, WholesalerBalanceReadRow } from '../read-models/balances';
+// This service enforces normalization only; callers define explicit intent.
+import { readWholesalerBalances, WholesalerBalanceReadRow } from '../read-models/balances';
 
 import { QueryableDb } from '../read-models/db';
 

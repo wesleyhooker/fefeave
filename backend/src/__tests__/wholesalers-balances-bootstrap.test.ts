@@ -8,6 +8,7 @@ const mockPool = {
 jest.mock('../db', () => ({
   getPool: jest.fn(() => mockPool),
   withTx: jest.fn(),
+  closePool: jest.fn(async () => {}),
 }));
 
 describe('GET /wholesalers/balances bootstrap behavior', () => {

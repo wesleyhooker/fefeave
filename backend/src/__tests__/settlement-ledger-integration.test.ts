@@ -6,7 +6,7 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import type { FastifyInstance } from 'fastify';
-import { buildAppForTest } from './helpers';
+import { buildAppForTest, buildUniqueDevBypassIdentity } from './helpers';
 
 const TEST_SCHEMA = 'test';
 
@@ -36,19 +36,19 @@ describe('Settlement and ledger integration', () => {
 
   beforeEach(async () => {
     const databaseUrl = process.env.DATABASE_URL ?? '';
+    const identity = buildUniqueDevBypassIdentity('settlement-admin', 'ADMIN');
     const result = await buildAppForTest({
       DATABASE_URL: databaseUrl,
       AUTH_MODE: 'dev_bypass',
-      AUTH_DEV_BYPASS_USER_ID: 'test-settlement-admin',
-      AUTH_DEV_BYPASS_EMAIL: 'admin@test.example.com',
-      AUTH_DEV_BYPASS_ROLE: 'ADMIN',
+      ...identity,
       PGOPTIONS: '-c search_path=test',
     });
     app = result.app;
     restoreEnv = result.restoreEnv;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (app) await app.close();
     restoreEnv?.();
   });
 
@@ -124,7 +124,7 @@ describe('Settlement and ledger integration', () => {
     expect(Number(bal.owed_total)).toBe(2500);
     expect(Number(bal.paid_total)).toBe(1000);
     expect(Number(bal.balance_owed)).toBe(1500);
-    expect(bal.last_payment_date).toBe('2025-08-15');
+    expect(new Date(bal.last_payment_date).toISOString().slice(0, 10)).toBe('2025-08-15');
 
     const statementRes = await app.inject({
       method: 'GET',

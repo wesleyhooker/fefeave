@@ -5,7 +5,7 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import type { FastifyInstance } from 'fastify';
-import { buildAppForTest } from './helpers';
+import { buildAppForTest, buildUniqueDevBypassIdentity } from './helpers';
 
 const TEST_SCHEMA = 'test';
 
@@ -35,19 +35,19 @@ describe('Wholesalers API integration', () => {
 
   beforeEach(async () => {
     const databaseUrl = process.env.DATABASE_URL ?? '';
+    const identity = buildUniqueDevBypassIdentity('wholesalers-admin', 'ADMIN');
     const result = await buildAppForTest({
       DATABASE_URL: databaseUrl,
       AUTH_MODE: 'dev_bypass',
-      AUTH_DEV_BYPASS_USER_ID: 'test-wholesalers-admin',
-      AUTH_DEV_BYPASS_EMAIL: 'admin@test.example.com',
-      AUTH_DEV_BYPASS_ROLE: 'ADMIN',
+      ...identity,
       PGOPTIONS: '-c search_path=test',
     });
     app = result.app;
     restoreEnv = result.restoreEnv;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (app) await app.close();
     restoreEnv?.();
   });
 

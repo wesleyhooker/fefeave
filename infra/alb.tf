@@ -9,7 +9,7 @@ resource "aws_security_group" "alb" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.env == "dev" ? var.alb_ingress_cidrs : ["0.0.0.0/0"]
     description = "HTTP"
   }
   egress {

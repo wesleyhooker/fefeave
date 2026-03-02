@@ -6,6 +6,7 @@ import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { loadEnv, getEnv } from './config/env';
+import { closePool } from './db';
 import { logger } from './utils/logger';
 import { errorHandler } from './utils/errors';
 import { requestIdPlugin } from './plugins/request-id';
@@ -21,6 +22,7 @@ import { paymentRoutes } from './routes/payments';
 import { adjustmentRoutes } from './routes/adjustments';
 import { attachmentRoutes } from './routes/attachments';
 import { exportRoutes } from './routes/exports';
+import { portalRoutes } from './routes/portal';
 
 async function buildApp() {
   // Load and validate environment variables (fail fast)
@@ -97,6 +99,11 @@ async function buildApp() {
   // Register error handler
   app.setErrorHandler(errorHandler);
 
+  // Ensure PG pool does not leak handles across app lifecycles (tests/dev restarts).
+  app.addHook('onClose', async () => {
+    await closePool();
+  });
+
   // Register routes
   await app.register(healthRoutes, { prefix: env.API_PREFIX });
   await app.register(authRoutes, { prefix: env.API_PREFIX });
@@ -109,6 +116,7 @@ async function buildApp() {
   await app.register(adjustmentRoutes, { prefix: env.API_PREFIX });
   await app.register(attachmentRoutes, { prefix: env.API_PREFIX });
   await app.register(exportRoutes, { prefix: env.API_PREFIX });
+  await app.register(portalRoutes, { prefix: env.API_PREFIX });
 
   return app;
 }

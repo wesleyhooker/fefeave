@@ -10,6 +10,18 @@ function getCognitoIssuer(region: string, userPoolId: string): string {
   return `${COGNITO_ISSUER_PREFIX}${region}.amazonaws.com/${userPoolId}`;
 }
 
+function decodeJwtClaimsNoVerify(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
+    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export async function authPlugin(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions
@@ -76,8 +88,40 @@ export async function authPlugin(
         const issuer = getCognitoIssuer(env.COGNITO_REGION!, env.COGNITO_USER_POOL_ID!);
         const { payload } = await jwtVerify(token, jwks, {
           issuer,
-          audience: env.COGNITO_APP_CLIENT_ID,
         });
+        const tokenUse = payload['token_use'];
+        if (tokenUse !== 'access') {
+          if (env.NODE_ENV !== 'production') {
+            request.log.warn(
+              {
+                expected_token_use: 'access',
+                received_token_use: tokenUse,
+                iss: payload.iss,
+                aud: payload.aud,
+                client_id: payload.client_id,
+                exp: payload.exp,
+              },
+              'Rejected Cognito token_use'
+            );
+          }
+          throw new UnauthorizedError('Invalid or expired token');
+        }
+        const clientId = payload.client_id as string | undefined;
+        if (!clientId || clientId !== env.COGNITO_APP_CLIENT_ID) {
+          if (env.NODE_ENV !== 'production') {
+            request.log.warn(
+              {
+                expected_client_id: env.COGNITO_APP_CLIENT_ID,
+                received_client_id: clientId,
+                token_use: tokenUse,
+                iss: payload.iss,
+                exp: payload.exp,
+              },
+              'Rejected Cognito client_id'
+            );
+          }
+          throw new UnauthorizedError('Invalid or expired token');
+        }
         const groups = (payload['cognito:groups'] as string[] | undefined) ?? [];
         const roles = groups.filter((r): r is AppRole =>
           (APP_ROLE_VALUES as readonly string[]).includes(r)
@@ -87,7 +131,22 @@ export async function authPlugin(
           email: (payload.email as string) ?? (payload['cognito:username'] as string) ?? '',
           roles: roles.length ? roles : ['OPERATOR'],
         };
-      } catch {
+      } catch (error) {
+        if (env.NODE_ENV !== 'production') {
+          const claims = decodeJwtClaimsNoVerify(token);
+          request.log.warn(
+            {
+              reason: error instanceof Error ? error.message : String(error),
+              expected_token_use: 'access',
+              received_token_use: claims?.token_use,
+              iss: claims?.iss,
+              aud: claims?.aud,
+              client_id: claims?.client_id,
+              exp: claims?.exp,
+            },
+            'Invalid Cognito bearer token'
+          );
+        }
         throw new UnauthorizedError('Invalid or expired token');
       }
     }

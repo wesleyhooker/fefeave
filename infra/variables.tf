@@ -85,6 +85,17 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
+variable "alb_ingress_cidrs" {
+  type        = list(string)
+  description = "Allowed IPv4 CIDRs for backend ALB HTTP ingress in dev. Must be explicitly set for dev when backend infra is enabled."
+  default     = []
+
+  validation {
+    condition     = var.env != "dev" || !var.create_backend_infra || length(var.alb_ingress_cidrs) > 0
+    error_message = "For dev, set alb_ingress_cidrs to at least one explicit CIDR (for example [\"X.X.X.X/32\"])."
+  }
+}
+
 # --- RDS (DEV) ---
 variable "create_rds" {
   type        = bool

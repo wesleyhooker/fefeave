@@ -5,9 +5,13 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import type { FastifyInstance } from 'fastify';
-import { buildAppForTest } from './helpers';
+import { buildAppForTest, buildUniqueDevBypassIdentity } from './helpers';
 
 const TEST_SCHEMA = 'test';
+
+function toYyyyMmDd(value: string): string {
+  return new Date(value).toISOString().slice(0, 10);
+}
 
 function runMigrations(databaseUrl: string): void {
   execSync(
@@ -35,19 +39,19 @@ describe('Owed line items API integration', () => {
 
   beforeEach(async () => {
     const databaseUrl = process.env.DATABASE_URL ?? '';
+    const identity = buildUniqueDevBypassIdentity('line-items-admin', 'ADMIN');
     const result = await buildAppForTest({
       DATABASE_URL: databaseUrl,
       AUTH_MODE: 'dev_bypass',
-      AUTH_DEV_BYPASS_USER_ID: 'test-line-items-admin',
-      AUTH_DEV_BYPASS_EMAIL: 'admin@test.example.com',
-      AUTH_DEV_BYPASS_ROLE: 'ADMIN',
+      ...identity,
       PGOPTIONS: '-c search_path=test',
     });
     app = result.app;
     restoreEnv = result.restoreEnv;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (app) await app.close();
     restoreEnv?.();
   });
 
@@ -93,7 +97,7 @@ describe('Owed line items API integration', () => {
     expect(Number(body.amount)).toBeCloseTo(1250.5, 4);
     expect(body.currency).toBe('USD');
     expect(body.description).toBe('Booth rental fee');
-    expect(body.due_date).toBe('2025-07-15');
+    expect(toYyyyMmDd(body.due_date)).toBe('2025-07-15');
     expect(body.status).toBe('PENDING');
     expect(body.created_at).toBeDefined();
     expect(body.updated_at).toBeDefined();

@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { getPool } from '../db';
 import { getWholesalerBalancesView } from '../services/balancesView';
-import { NotFoundError, ValidationError } from '../utils/errors';
+import { getWholesalerStatement } from '../services/wholesaler-statement';
+import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
 
 const uuidSchema = z.string().uuid();
 
@@ -15,6 +16,10 @@ const postWholesalerSchema = z.object({
   contact_email: z.union([z.string().email(), z.literal('')]).optional(),
   contact_phone: z.string().optional(),
   notes: z.string().optional(),
+});
+
+const postLinkUserSchema = z.object({
+  userId: z.string().min(1),
 });
 
 export async function wholesalerRoutes(
@@ -146,6 +151,124 @@ export async function wholesalerRoutes(
     }
   );
 
+  // ---------------------------------------------------------------------------
+  // Admin provisioning endpoints
+  // ---------------------------------------------------------------------------
+  // This endpoint lives in wholesaler routes (instead of a separate admin module)
+  // because it provisions identity linkage to a wholesaler domain object.
+  // API contract/guards are intentionally stable for compatibility.
+  fastify.post<{
+    Params: { id: string };
+    Body: z.infer<typeof postLinkUserSchema>;
+  }>(
+    '/admin/wholesalers/:id/link-user',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Link a user to a wholesaler for portal ownership',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string', format: 'uuid' } },
+        },
+        body: {
+          type: 'object',
+          required: ['userId'],
+          properties: { userId: { type: 'string' } },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean' },
+              wholesaler_id: { type: 'string' },
+              user_id: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const wholesalerIdParsed = uuidSchema.safeParse(request.params.id);
+      if (!wholesalerIdParsed.success) {
+        throw new ValidationError('Invalid wholesaler id', wholesalerIdParsed.error.errors);
+      }
+      const bodyParsed = postLinkUserSchema.safeParse(request.body);
+      if (!bodyParsed.success) {
+        throw new ValidationError('Invalid request body', bodyParsed.error.errors);
+      }
+
+      const wholesalerId = wholesalerIdParsed.data;
+      const userRef = bodyParsed.data.userId.trim();
+      const pool = getPool();
+
+      const wholesalerResult = await pool.query(
+        `SELECT id FROM wholesalers WHERE id = $1 AND deleted_at IS NULL`,
+        [wholesalerId]
+      );
+      if (wholesalerResult.rows.length === 0) {
+        throw new NotFoundError('Wholesaler', wholesalerId);
+      }
+
+      const userIdAsUuid = uuidSchema.safeParse(userRef);
+      const userResult = userIdAsUuid.success
+        ? await pool.query(
+            `SELECT id, cognito_user_id, wholesaler_id
+             FROM users
+             WHERE (id = $1 OR cognito_user_id = $2) AND deleted_at IS NULL
+             LIMIT 1`,
+            [userRef, userRef]
+          )
+        : await pool.query(
+            `SELECT id, cognito_user_id, wholesaler_id
+             FROM users
+             WHERE cognito_user_id = $1 AND deleted_at IS NULL
+             LIMIT 1`,
+            [userRef]
+          );
+      if (userResult.rows.length === 0) {
+        throw new NotFoundError('User', userRef);
+      }
+      const user = userResult.rows[0] as {
+        id: string;
+        cognito_user_id: string;
+        wholesaler_id: string | null;
+      };
+
+      if (user.wholesaler_id && user.wholesaler_id !== wholesalerId) {
+        throw new ConflictError('User is already linked to another wholesaler');
+      }
+
+      const existingWholesalerLink = await pool.query(
+        `SELECT id, cognito_user_id
+         FROM users
+         WHERE wholesaler_id = $1 AND deleted_at IS NULL AND id <> $2
+         LIMIT 1`,
+        [wholesalerId, user.id]
+      );
+      if (existingWholesalerLink.rows.length > 0) {
+        throw new ConflictError('Wholesaler is already linked to another user');
+      }
+
+      await pool.query(
+        `UPDATE users
+         SET wholesaler_id = $1, updated_at = NOW()
+         WHERE id = $2`,
+        [wholesalerId, user.id]
+      );
+
+      return reply.send({
+        ok: true,
+        wholesaler_id: wholesalerId,
+        user_id: user.id,
+      });
+    }
+  );
+
+  // ---------------------------------------------------------------------------
+  // Core wholesaler CRUD/read endpoints
+  // ---------------------------------------------------------------------------
   fastify.get(
     '/wholesalers',
     {
@@ -247,42 +370,7 @@ export async function wholesalerRoutes(
       if (whCheck.rows.length === 0) {
         throw new NotFoundError('Wholesaler', wholesalerId);
       }
-
-      const result = await pool.query(
-        `(SELECT 'OWED' AS type, oli.created_at::date AS date, oli.amount, oli.show_id, oli.created_at, oli.id AS entry_id
-          FROM owed_line_items oli
-          WHERE oli.wholesaler_id = $1 AND oli.deleted_at IS NULL)
-         UNION ALL
-         (SELECT 'PAYMENT' AS type, p.payment_date AS date, p.amount, NULL::uuid AS show_id, p.created_at, p.id AS entry_id
-          FROM payments p
-          WHERE p.wholesaler_id = $1 AND p.deleted_at IS NULL)
-         ORDER BY date ASC, created_at ASC, entry_id ASC`,
-        [wholesalerId]
-      );
-
-      const rows = result.rows as Array<{
-        type: string;
-        date: string;
-        amount: string;
-        show_id: string | null;
-        created_at: Date;
-        entry_id: string;
-      }>;
-
-      let running = 0;
-      const entries = rows.map((r) => {
-        const amt = parseFloat(r.amount);
-        if (r.type === 'OWED') running += amt;
-        else running -= amt;
-        return {
-          type: r.type as 'OWED' | 'PAYMENT',
-          date: r.date,
-          amount: r.amount,
-          show_id: r.show_id ?? undefined,
-          running_balance: running.toFixed(4),
-        };
-      });
-
+      const entries = await getWholesalerStatement(pool, wholesalerId);
       return reply.send(entries);
     }
   );

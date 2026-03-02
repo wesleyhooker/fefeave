@@ -12,6 +12,7 @@ export type TestEnvOverrides = Partial<{
   AUTH_DEV_BYPASS_USER_ID: string;
   AUTH_DEV_BYPASS_EMAIL: string;
   AUTH_DEV_BYPASS_ROLE: string;
+  AUTH_DEV_ALLOW_HEADER_OVERRIDE: string;
   COGNITO_REGION: string;
   COGNITO_USER_POOL_ID: string;
   COGNITO_APP_CLIENT_ID: string;
@@ -30,6 +31,26 @@ export type BuildAppResult = {
   app: FastifyInstance;
   restoreEnv: () => void;
 };
+
+function uniqueTestSuffix(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function buildUniqueDevBypassIdentity(
+  label: string,
+  role: 'ADMIN' | 'OPERATOR' | 'WHOLESALER'
+): Pick<
+  TestEnvOverrides,
+  'AUTH_DEV_BYPASS_USER_ID' | 'AUTH_DEV_BYPASS_EMAIL' | 'AUTH_DEV_BYPASS_ROLE'
+> {
+  const suffix = uniqueTestSuffix();
+  const userId = `${label}-${suffix}`;
+  return {
+    AUTH_DEV_BYPASS_USER_ID: userId,
+    AUTH_DEV_BYPASS_EMAIL: `${userId}@test.example.com`,
+    AUTH_DEV_BYPASS_ROLE: role,
+  };
+}
 
 /**
  * Build the Fastify app for tests without calling listen().

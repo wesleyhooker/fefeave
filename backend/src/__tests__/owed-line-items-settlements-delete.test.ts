@@ -13,6 +13,7 @@ const mockPool = {
 jest.mock('../db', () => ({
   getPool: jest.fn(() => mockPool),
   withTx: jest.fn((fn: (c: typeof mockClient) => Promise<unknown>) => fn(mockClient)),
+  closePool: jest.fn(async () => {}),
 }));
 
 describe('DELETE /shows/:showId/settlements/:settlementId', () => {
