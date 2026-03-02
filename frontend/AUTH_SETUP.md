@@ -13,6 +13,7 @@ Set these in `frontend/.env.local` for local dev:
 - `COGNITO_CLIENT_ID`
 - `COGNITO_CLIENT_SECRET`
 - `COGNITO_REDIRECT_URI` - should match Cognito app client callback URL exactly (example: `http://localhost:3001/api/auth/callback`)
+- `COGNITO_LOGOUT_URI` - should match Cognito app client sign-out URL exactly (example: `http://localhost:3001/login`)
 - `BACKEND_BASE_URL` - backend origin + API prefix used by auth callback server route (example: `http://localhost:3000/api`)
 - `NEXT_PUBLIC_BACKEND_URL` - **set to `/api`** so browser traffic goes through the frontend BFF proxy
 
@@ -30,6 +31,9 @@ Use Cognito User Pool app client + Hosted UI settings:
 - `COGNITO_REDIRECT_URI`
   - Must match app client callback URL exactly:
   - `http://localhost:3001/api/auth/callback`
+- `COGNITO_LOGOUT_URI`
+  - Must match app client sign-out URL exactly:
+  - `http://localhost:3001/login`
 - `AUTH_SESSION_SECRET`
   - Generate a long random value locally (used to sign session cookie)
 - `BACKEND_BASE_URL`
@@ -43,7 +47,14 @@ Use Cognito User Pool app client + Hosted UI settings:
 - Backend runs on `http://localhost:3000` (`make dev-api` / `make dev-api-cognito`)
 - Frontend runs on `http://localhost:3001` (`make dev-ui`)
 - OAuth callback route is frontend-owned: `http://localhost:3001/api/auth/callback`
+- Hosted UI logout landing route should be `http://localhost:3001/login`
 - Keep `BACKEND_BASE_URL=http://localhost:3000/api`
+
+## Hosted UI Logout
+
+- Allowed sign-out URL in Cognito should include `http://localhost:3001/login`.
+- App logout uses Cognito Hosted UI `/logout` for global sign-out, then returns to `COGNITO_LOGOUT_URI`.
+- This avoids stale Cognito browser sessions and reduces intermittent logout/login redirect flakiness.
 
 ## Deploy env guidance
 
