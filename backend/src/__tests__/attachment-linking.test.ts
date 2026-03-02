@@ -18,6 +18,7 @@ const mockPool = {
 jest.mock('../db', () => ({
   getPool: jest.fn(() => mockPool),
   withTx: jest.fn((fn: (c: typeof mockClient) => Promise<unknown>) => fn(mockClient)),
+  closePool: jest.fn(async () => {}),
 }));
 
 jest.mock('../lib/s3Presign', () => ({

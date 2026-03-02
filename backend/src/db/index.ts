@@ -23,10 +23,9 @@ export function getPool(): Pool {
  * Close and reset the singleton pool. Safe to call multiple times.
  */
 export async function closePool(): Promise<void> {
-  if (!pool) return;
   const current = pool;
   pool = null;
-  await current.end();
+  await current?.end();
 }
 
 /**
