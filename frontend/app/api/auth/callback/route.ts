@@ -15,6 +15,20 @@ function getPostLoginPath(roles: string[]): string {
   return '/403';
 }
 
+function decodeJwtClaimsNoVerify(
+  token?: string,
+): Record<string, unknown> | null {
+  if (!token) return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
+    return JSON.parse(payload) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 async function redirectAuthFailed(request: NextRequest): Promise<NextResponse> {
   await clearSessionCookie();
   return NextResponse.redirect(
@@ -74,6 +88,34 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       id_token?: string;
       expires_in?: number;
     };
+
+    if (process.env.NODE_ENV !== 'production') {
+      const accessClaims = decodeJwtClaimsNoVerify(tokenJson.access_token);
+      const idClaims = decodeJwtClaimsNoVerify(tokenJson.id_token);
+      // Dev-only claim metadata to diagnose token-use/audience mismatches.
+      // Never log raw token strings.
+      // eslint-disable-next-line no-console
+      console.info('Cognito callback token metadata', {
+        access: accessClaims
+          ? {
+              token_use: accessClaims.token_use,
+              iss: accessClaims.iss,
+              aud: accessClaims.aud,
+              client_id: accessClaims.client_id,
+              exp: accessClaims.exp,
+            }
+          : null,
+        id: idClaims
+          ? {
+              token_use: idClaims.token_use,
+              iss: idClaims.iss,
+              aud: idClaims.aud,
+              client_id: idClaims.client_id,
+              exp: idClaims.exp,
+            }
+          : null,
+      });
+    }
   } catch {
     return redirectAuthFailed(request);
   }

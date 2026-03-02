@@ -13,3 +13,6 @@ frontend_next_public_backend_url = "/api"
 create_rds                       = true
 db_name                          = "fefeave"
 db_username                      = "fefeave"
+
+# NOTE: Replace with your current public IP /32 before apply.
+alb_ingress_cidrs = ["203.0.113.10/32"]
