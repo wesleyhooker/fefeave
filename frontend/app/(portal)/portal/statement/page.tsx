@@ -85,11 +85,9 @@ export default function PortalStatementPage() {
       }
 
       if (meRes.status === 403) {
-        const body = (await meRes
-          .json()
-          .catch(() => ({
-            message: "Portal access is not provisioned yet.",
-          }))) as PortalErrorResponse;
+        const body = (await meRes.json().catch(() => ({
+          message: "Portal access is not provisioned yet.",
+        }))) as PortalErrorResponse;
         const message =
           body.message ??
           "Portal access is not provisioned yet. Ask an admin to link your wholesaler account.";
