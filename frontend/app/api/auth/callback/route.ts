@@ -8,6 +8,11 @@ function envOrThrow(name: string): string {
   return value;
 }
 
+function getAppOrigin(): string {
+  const redirectUri = process.env.COGNITO_REDIRECT_URI!;
+  return new URL(redirectUri).origin;
+}
+
 function getPostLoginPath(roles: string[]): string {
   if (roles.includes('ADMIN') || roles.includes('OPERATOR'))
     return '/admin/dashboard';
@@ -31,9 +36,8 @@ function decodeJwtClaimsNoVerify(
 
 async function redirectAuthFailed(request: NextRequest): Promise<NextResponse> {
   await clearSessionCookie();
-  return NextResponse.redirect(
-    new URL('/login?error=auth_failed', request.url),
-  );
+  const origin = getAppOrigin();
+  return NextResponse.redirect(new URL('/login?error=auth_failed', origin));
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -142,7 +146,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     });
     const destination = getPostLoginPath(me.roles ?? []);
-    return NextResponse.redirect(new URL(destination, request.url));
+    const origin = getAppOrigin();
+    return NextResponse.redirect(new URL(destination, origin));
   } catch {
     return redirectAuthFailed(request);
   }

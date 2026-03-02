@@ -23,7 +23,7 @@ LOCAL_AUTH_ROLE := ADMIN
 
 .DEFAULT_GOAL := help
 
-.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-db-up dev-db-down dev-db-reset dev-migrate check-cognito-env dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-up dev-cognito dev-status dev-backend-health dev-backend-wholesalers test
+.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-db-up dev-db-down dev-down dev-db-reset dev-migrate check-cognito-env dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-up dev-cognito dev-status dev-backend-health dev-backend-wholesalers test
 
 help:
 	@echo "Available targets:"
@@ -144,6 +144,12 @@ dev-db-down:
 	@echo "Stopping local Postgres"
 	@docker compose down
 
+dev-down:
+	@kill -9 $$(lsof -t -iTCP:3000 -sTCP:LISTEN) 2>/dev/null || true
+	@kill -9 $$(lsof -t -iTCP:3001 -sTCP:LISTEN) 2>/dev/null || true
+	@if command -v tmux >/dev/null 2>&1; then tmux kill-session -t fefeave-dev 2>/dev/null || true; fi
+	@echo "Dev cleanup done."
+
 dev-db-reset:
 	@echo "Resetting local Postgres volume and restarting"
 	@docker compose down -v
@@ -232,12 +238,20 @@ dev-ui:
 	@NEXT_PUBLIC_BACKEND_URL=/api npm --prefix frontend run dev -- -H 0.0.0.0 -p 3001
 
 dev-tmux:
-	@if tmux has-session -t fefeave-dev 2>/dev/null; then \
-	  tmux attach -t fefeave-dev; \
+	@if ! test -t 1 || ! command -v tmux >/dev/null 2>&1; then \
+	  echo "Non-interactive shell detected; starting dev services without tmux..."; \
+	  $(MAKE) dev-api & \
+	  api_pid=$$!; \
+	  trap 'kill $$api_pid 2>/dev/null || true' EXIT INT TERM; \
+	  $(MAKE) dev-ui; \
 	else \
-	  tmux new-session -d -s fefeave-dev "cd $(CURDIR) && bash -lc 'make dev-api; rc=\$$?; echo; echo \"backend exited \$$rc\"; read -n 1 -s -r -p \"press any key\"'"; \
-	  tmux split-window -h -t fefeave-dev "cd $(CURDIR) && make dev-ui"; \
-	  tmux attach -t fefeave-dev; \
+	  if tmux has-session -t fefeave-dev 2>/dev/null; then \
+	    tmux attach -t fefeave-dev; \
+	  else \
+	    tmux new-session -d -s fefeave-dev "cd $(CURDIR) && bash -lc 'make dev-api; rc=\$$?; echo; echo \"backend exited \$$rc\"; read -n 1 -s -r -p \"press any key\"'"; \
+	    tmux split-window -h -t fefeave-dev "cd $(CURDIR) && make dev-ui"; \
+	    tmux attach -t fefeave-dev; \
+	  fi; \
 	fi
 
 dev-tmux-cognito:
