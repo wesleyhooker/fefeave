@@ -108,7 +108,7 @@ function RecordPaymentForm() {
           ← Back to Payments
         </Link>
       </div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Record Payment</h1>
+      <h1 className="mb-6 text-2xl font-bold text-gray-900">Record payment</h1>
 
       {loadError && (
         <div
@@ -255,7 +255,7 @@ function RecordPaymentForm() {
             disabled={submitting || loadingWholesalers}
             className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
           >
-            {submitting ? "Saving..." : "Record Payment"}
+            {submitting ? "Saving..." : "Record payment"}
           </button>
           <Link
             href="/admin/payments"

@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session.node";
-
-function formatRoles(roles?: string[]): string {
-  if (!roles || roles.length === 0) return "none";
-  return roles.join(", ");
-}
+import { AdminHeaderUser } from "./AdminHeaderUser";
 
 export default async function AdminLayout({
   children,
@@ -12,7 +8,8 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  const envLabel = process.env.NODE_ENV === "production" ? "prod" : "dev";
+  const isProduction = process.env.NODE_ENV === "production";
+  const envLabel = isProduction ? "prod" : "dev";
 
   return (
     <div className="flex min-h-screen">
@@ -25,13 +22,7 @@ export default async function AdminLayout({
             href="/admin"
             className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
           >
-            Overview
-          </Link>
-          <Link
-            href="/admin/dashboard"
-            className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
-          >
-            Dashboard
+            Home
           </Link>
           <Link
             href="/admin/shows"
@@ -57,6 +48,12 @@ export default async function AdminLayout({
           >
             Payments
           </Link>
+          <Link
+            href="/admin/inventory"
+            className="rounded px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
+          >
+            Inventory
+          </Link>
         </nav>
       </aside>
       <div className="flex flex-1 flex-col">
@@ -65,24 +62,12 @@ export default async function AdminLayout({
             <span className="text-sm font-medium text-gray-700">
               Admin area
             </span>
-            <div className="flex items-center gap-4">
-              <div className="hidden rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 sm:block">
-                {session?.user?.email ?? "unknown user"} | roles:{" "}
-                {formatRoles(session?.roles)} | {envLabel}
-              </div>
-              <Link
-                href="/"
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                ← Back to site
-              </Link>
-              <a
-                href="/api/auth/logout"
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Logout
-              </a>
-            </div>
+            <AdminHeaderUser
+              email={session?.user?.email ?? null}
+              roles={session?.roles ?? []}
+              envLabel={envLabel}
+              isProduction={isProduction}
+            />
           </div>
         </header>
         <main className="flex-1 p-6">{children}</main>

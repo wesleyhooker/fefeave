@@ -86,27 +86,15 @@ export default function AdminShowsPage() {
               </th>
               <th
                 scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Payout After Fees
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                # of Settlements
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Profit Estimate
-              </th>
-              <th
-                scope="col"
                 className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
               >
                 Status
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Action
               </th>
             </tr>
           </thead>
@@ -114,7 +102,7 @@ export default function AdminShowsPage() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={4}
                   className="px-4 py-6 text-center text-sm text-gray-500"
                 >
                   Loading shows...
@@ -123,7 +111,7 @@ export default function AdminShowsPage() {
             ) : rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={4}
                   className="px-4 py-6 text-center text-sm text-gray-500"
                 >
                   No shows yet.
@@ -143,16 +131,34 @@ export default function AdminShowsPage() {
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                     {formatDate(show.date)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                    —
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <span
+                      className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                        show.status === "COMPLETED"
+                          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                          : "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
+                      }`}
+                    >
+                      {show.status === "COMPLETED" ? "Closed" : "Open"}
+                    </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                    —
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                    {show.status === "ACTIVE" ? (
+                      <Link
+                        href={`/admin/shows/${show.id}`}
+                        className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                      >
+                        Close out
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/admin/shows/${show.id}`}
+                        className="text-gray-600 hover:text-gray-900 hover:underline"
+                      >
+                        View
+                      </Link>
+                    )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                    —
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3">—</td>
                 </tr>
               ))
             )}

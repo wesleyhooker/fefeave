@@ -3,8 +3,9 @@ import type { FastifyRequest } from 'fastify';
 import type { AuthUser } from '../auth/types';
 
 /**
- * Upsert a users row by cognito_user_id. Sets email if available, role from request.user.roles.
+ * Upsert a users row by email. If email already exists, updates cognito_user_id and role.
  * Returns users.id for use as created_by. Transaction-safe; pass client from within a transaction.
+ * Uses ON CONFLICT (email) so duplicate key on users_email_key is avoided (e.g. same email, different cognito id in dev).
  */
 export async function ensureUser(
   client: PoolClient,
@@ -33,20 +34,15 @@ export async function ensureUser(
       ? 'WHOLESALER'
       : 'OPERATOR';
 
-  const placeholderEmail = `user-${cognitoSub}@fefeave.local`;
   const res = await client.query(
     `INSERT INTO users (cognito_user_id, email, role)
      VALUES ($1, $2, $3)
-     ON CONFLICT (cognito_user_id) DO UPDATE SET
-       email = CASE
-         WHEN trim(EXCLUDED.email) = '' THEN users.email
-         WHEN EXCLUDED.email = $4 THEN users.email
-         ELSE EXCLUDED.email
-       END,
+     ON CONFLICT (email) DO UPDATE SET
+       cognito_user_id = EXCLUDED.cognito_user_id,
        role = EXCLUDED.role,
        updated_at = NOW()
      RETURNING id`,
-    [cognitoSub, email, role, placeholderEmail]
+    [cognitoSub, email, role]
   );
   return res.rows[0].id;
 }

@@ -138,6 +138,7 @@ export async function showRoutes(
                 name: { type: 'string' },
                 notes: { type: 'string' },
                 external_reference: { type: 'string' },
+                status: { type: 'string' },
                 created_at: { type: 'string' },
                 updated_at: { type: 'string' },
               },
@@ -149,7 +150,7 @@ export async function showRoutes(
     async (_request, reply) => {
       const pool = getPool();
       const result = await pool.query(
-        `SELECT id, show_date, platform, name, notes, external_reference, created_at, updated_at
+        `SELECT id, show_date, platform, name, notes, external_reference, status, created_at, updated_at
          FROM shows
          WHERE deleted_at IS NULL
          ORDER BY show_date DESC, created_at DESC`
@@ -161,6 +162,7 @@ export async function showRoutes(
         name: string;
         notes: string | null;
         external_reference: string | null;
+        status: string;
         created_at: Date;
         updated_at: Date;
       }>;
@@ -172,6 +174,7 @@ export async function showRoutes(
           name: r.name,
           notes: r.notes ?? undefined,
           external_reference: r.external_reference ?? undefined,
+          status: r.status,
           created_at: r.created_at,
           updated_at: r.updated_at,
         }))
@@ -201,6 +204,7 @@ export async function showRoutes(
               name: { type: 'string' },
               notes: { type: 'string' },
               external_reference: { type: 'string' },
+              status: { type: 'string' },
               created_at: { type: 'string' },
               updated_at: { type: 'string' },
             },
@@ -217,7 +221,7 @@ export async function showRoutes(
 
       const pool = getPool();
       const result = await pool.query(
-        `SELECT id, show_date, platform, name, notes, external_reference, created_at, updated_at
+        `SELECT id, show_date, platform, name, notes, external_reference, status, created_at, updated_at
          FROM shows
          WHERE id = $1 AND deleted_at IS NULL`,
         [id]
@@ -230,6 +234,7 @@ export async function showRoutes(
             name: string;
             notes: string | null;
             external_reference: string | null;
+            status: string;
             created_at: Date;
             updated_at: Date;
           }
@@ -244,6 +249,94 @@ export async function showRoutes(
         name: row.name,
         notes: row.notes ?? undefined,
         external_reference: row.external_reference ?? undefined,
+        status: row.status,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      });
+    }
+  );
+
+  const patchShowSchema = z.object({
+    status: z.enum(['ACTIVE', 'COMPLETED']),
+  });
+
+  fastify.patch<{ Params: { id: string }; Body: z.infer<typeof patchShowSchema> }>(
+    '/shows/:id',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Update show (e.g. set status to COMPLETED to close show)',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string', format: 'uuid' } },
+        },
+        body: {
+          type: 'object',
+          required: ['status'],
+          properties: { status: { type: 'string', enum: ['ACTIVE', 'COMPLETED'] } },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              show_date: { type: 'string' },
+              platform: { type: 'string' },
+              name: { type: 'string' },
+              notes: { type: 'string' },
+              external_reference: { type: 'string' },
+              status: { type: 'string' },
+              created_at: { type: 'string' },
+              updated_at: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const parsedId = uuidSchema.safeParse(request.params.id);
+      if (!parsedId.success) {
+        throw new ValidationError('Invalid show id', parsedId.error.errors);
+      }
+      const bodyParsed = patchShowSchema.safeParse(request.body);
+      if (!bodyParsed.success) {
+        throw new ValidationError('Invalid request body', bodyParsed.error.errors);
+      }
+      const id = parsedId.data;
+      const { status } = bodyParsed.data;
+
+      const pool = getPool();
+      const result = await pool.query(
+        `UPDATE shows SET status = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL
+         RETURNING id, show_date, platform, name, notes, external_reference, status, created_at, updated_at`,
+        [status, id]
+      );
+      const row = result.rows[0] as
+        | {
+            id: string;
+            show_date: string;
+            platform: string;
+            name: string;
+            notes: string | null;
+            external_reference: string | null;
+            status: string;
+            created_at: Date;
+            updated_at: Date;
+          }
+        | undefined;
+      if (!row) {
+        throw new NotFoundError('Show', id);
+      }
+      return reply.send({
+        id: row.id,
+        show_date: row.show_date,
+        platform: toApiPlatform(row.platform),
+        name: row.name,
+        notes: row.notes ?? undefined,
+        external_reference: row.external_reference ?? undefined,
+        status: row.status,
         created_at: row.created_at,
         updated_at: row.updated_at,
       });

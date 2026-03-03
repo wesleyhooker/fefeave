@@ -163,7 +163,7 @@ export default function AdminWholesalersPage() {
                       href={`/admin/payments/new?wholesalerId=${w.id}`}
                       className="text-sm text-gray-600 underline hover:text-gray-900"
                     >
-                      Record Payment
+                      Record payment
                     </Link>
                   </td>
                 </tr>

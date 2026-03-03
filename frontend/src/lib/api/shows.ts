@@ -7,6 +7,7 @@ export interface ShowDTO {
   name: string;
   notes?: string;
   external_reference?: string;
+  status: string;
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +16,7 @@ export interface ShowViewModel {
   id: string;
   name: string;
   date: string;
+  status: string;
 }
 
 export interface CreateShowDTO {
@@ -82,6 +84,19 @@ export async function fetchShow(id: string): Promise<ShowDTO> {
   return backendGetJson<ShowDTO>(`/shows/${id}`);
 }
 
+export async function updateShowStatus(
+  showId: string,
+  status: 'ACTIVE' | 'COMPLETED',
+): Promise<ShowDTO> {
+  return backendGetJson<ShowDTO>(`/shows/${showId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  });
+}
+
 export async function fetchShowFinancials(
   showId: string,
 ): Promise<FinancialsDTO | null> {
@@ -143,5 +158,6 @@ export function mapShowToViewModel(show: ShowDTO): ShowViewModel {
     id: show.id,
     name: show.name,
     date: show.show_date,
+    status: show.status ?? 'PLANNED',
   };
 }
