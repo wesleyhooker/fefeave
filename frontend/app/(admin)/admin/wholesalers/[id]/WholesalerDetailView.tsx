@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDaysAgo } from "@/app/(admin)/admin/_components/timeAgo";
 import {
   fetchWholesalerBalances,
   fetchWholesalerStatement,
   mapBalanceRowToListView,
   mapStatementRowToDetailView,
+  updateWholesalerPaySchedule,
+  type PaySchedule,
   type WholesalerListRowView,
   type WholesalerStatementRowView,
 } from "@/src/lib/api/wholesalers";
@@ -20,6 +23,8 @@ export function WholesalerDetailView({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [savingCadence, setSavingCadence] = useState(false);
+  const [cadenceError, setCadenceError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,20 +126,68 @@ export function WholesalerDetailView({ id }: { id: string }) {
           href={`/admin/payments/new?wholesalerId=${id}`}
           className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
         >
-          Record Payment
+          Record payment
         </Link>
       </div>
 
       <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">{wholesaler.name}</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {wholesaler.name}
+          </h1>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Last payment: {formatDaysAgo(wholesaler.last_payment_date)}
+          </p>
+        </div>
         <p className="text-lg font-medium text-gray-700">
           Current balance: {formatCurrency(balance)}
         </p>
       </div>
 
+      <section className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+          Pay cadence
+        </h2>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <select
+            value={wholesaler.pay_schedule}
+            onChange={async (e) => {
+              const value = e.target.value as PaySchedule;
+              setSavingCadence(true);
+              setCadenceError(null);
+              try {
+                await updateWholesalerPaySchedule(id, value);
+                setReloadToken((t) => t + 1);
+              } catch (err) {
+                setCadenceError(
+                  err instanceof Error ? err.message : String(err),
+                );
+              } finally {
+                setSavingCadence(false);
+              }
+            }}
+            disabled={savingCadence}
+            className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 disabled:opacity-50"
+          >
+            <option value="AD_HOC">Ad hoc</option>
+            <option value="WEEKLY">Weekly</option>
+            <option value="BIWEEKLY">Biweekly</option>
+            <option value="MONTHLY">Monthly</option>
+          </select>
+          {savingCadence && (
+            <span className="text-sm text-gray-500">Saving…</span>
+          )}
+          {cadenceError && (
+            <span className="text-sm text-amber-700" role="alert">
+              {cadenceError}
+            </span>
+          )}
+        </div>
+      </section>
+
       <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
         <h2 className="border-b border-gray-200 px-4 py-3 text-lg font-semibold text-gray-900">
-          Statement (ledger)
+          Statement
         </h2>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -185,7 +238,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     colSpan={6}
                     className="px-4 py-6 text-center text-sm text-gray-500"
                   >
-                    No ledger entries yet.
+                    No statement entries yet.
                   </td>
                 </tr>
               ) : (

@@ -21,7 +21,7 @@ export default async function AdminShowDetailPage({
           href="/admin/payments/new"
           className="rounded bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
         >
-          Record Payment
+          Record payment
         </Link>
       </div>
       <ShowDetailView id={id} />

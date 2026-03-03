@@ -79,19 +79,16 @@ export default function AdminBalancesPage() {
           role="alert"
         >
           <p className="font-medium">Could not load balances</p>
-          <p className="mt-1 text-sm">{error}</p>
-          <p className="mt-2 text-sm">
-            Check that{" "}
-            <code className="rounded bg-amber-100 px-1 font-mono text-xs">
-              NEXT_PUBLIC_BACKEND_URL
-            </code>{" "}
-            points at your backend and that the backend auth mode allows this
-            request (e.g.{" "}
-            <code className="rounded bg-amber-100 px-1 font-mono text-xs">
-              AUTH_MODE=off
-            </code>{" "}
-            or valid credentials for ADMIN/OPERATOR).
+          <p className="mt-1 text-sm">
+            Check your connection and try again. If the problem continues,
+            contact your administrator.
           </p>
+          <details className="mt-2 text-sm">
+            <summary className="cursor-pointer font-medium text-amber-800">
+              Technical details
+            </summary>
+            <p className="mt-1 font-mono text-xs text-amber-900">{error}</p>
+          </details>
         </div>
       </div>
     );

@@ -23,7 +23,7 @@ LOCAL_AUTH_ROLE := ADMIN
 
 .DEFAULT_GOAL := help
 
-.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-db-up dev-db-down dev-down dev-db-reset dev-migrate check-cognito-env dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-up dev-cognito dev-status dev-backend-health dev-backend-wholesalers test
+.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-db-up dev-db-down dev-down dev-db-reset dev-migrate dev-seed check-cognito-env dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-up dev-cognito dev-status dev-backend-health dev-backend-wholesalers test
 
 help:
 	@echo "Available targets:"
@@ -31,6 +31,7 @@ help:
 	@echo "  dev-db-down              Stop local Postgres"
 	@echo "  dev-db-reset             Reset local Postgres volume and restart"
 	@echo "  dev-migrate              Run backend migrations against local Postgres"
+	@echo "  dev-seed                 Seed dev data (wholesalers, shows, payments); run after dev-migrate"
 	@echo "  dev-api                  Run backend locally on :3000 with dev_bypass"
 	@echo "  dev-api-cognito          Run backend locally on :3000 with AUTH_MODE=cognito"
 	@echo "  dev-ui                   Run frontend locally on :3001 (0.0.0.0)"
@@ -159,6 +160,10 @@ dev-db-reset:
 dev-migrate:
 	@echo "Running backend migrations against local DB"
 	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run migrate:up
+
+dev-seed:
+	@echo "Seeding dev data (wholesalers, shows, settlements, payments)"
+	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run seed:dev
 
 check-cognito-env:
 	@missing=""; \

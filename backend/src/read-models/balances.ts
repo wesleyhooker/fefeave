@@ -7,6 +7,7 @@ export interface WholesalerBalanceReadRow {
   paid_total: string;
   balance_owed: string;
   last_payment_date: string | null;
+  pay_schedule: string;
 }
 
 /**
@@ -18,6 +19,7 @@ export async function readWholesalerBalances(db: QueryableDb): Promise<Wholesale
     `SELECT
        w.id AS wholesaler_id,
        w.name AS wholesaler_name,
+       COALESCE(w.pay_schedule::text, 'AD_HOC') AS pay_schedule,
        COALESCE((
          SELECT SUM(oli.amount)::numeric
          FROM owed_line_items oli

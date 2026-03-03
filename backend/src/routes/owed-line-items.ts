@@ -326,11 +326,15 @@ export async function owedLineItemRoutes(
         const userId = await ensureUser(client, request);
 
         const showCheck = await client.query(
-          `SELECT id FROM shows WHERE id = $1 AND deleted_at IS NULL`,
+          `SELECT id, status FROM shows WHERE id = $1 AND deleted_at IS NULL`,
           [showId]
         );
         if (showCheck.rows.length === 0) {
           throw new NotFoundError('Show', showId);
+        }
+        const showStatus = (showCheck.rows[0] as { status: string }).status;
+        if (showStatus === 'COMPLETED') {
+          throw new ConflictError('Show is closed; reopen before editing.');
         }
 
         const wholesalerCheck = await client.query(
@@ -537,6 +541,17 @@ export async function owedLineItemRoutes(
       const settlementId = settlementIdParsed.data;
 
       const pool = getPool();
+      const showRow = await pool.query(
+        `SELECT status FROM shows WHERE id = $1 AND deleted_at IS NULL`,
+        [showId]
+      );
+      if (showRow.rows.length === 0) {
+        throw new NotFoundError('Show', showId);
+      }
+      if ((showRow.rows[0] as { status: string }).status === 'COMPLETED') {
+        throw new ConflictError('Show is closed; reopen before editing.');
+      }
+
       const settlementResult = await pool.query(
         `SELECT id, show_id, calculation_method, deleted_at
          FROM owed_line_items

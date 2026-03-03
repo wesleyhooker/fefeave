@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
-import { NotFoundError, ValidationError } from '../utils/errors';
+import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
 
 const uuidSchema = z.string().uuid();
 
@@ -84,11 +84,15 @@ export async function showFinancialsRoutes(
 
       const row = await withTx(async (client) => {
         const showCheck = await client.query(
-          `SELECT id FROM shows WHERE id = $1 AND deleted_at IS NULL`,
+          `SELECT id, status FROM shows WHERE id = $1 AND deleted_at IS NULL`,
           [showId]
         );
         if (showCheck.rows.length === 0) {
           throw new NotFoundError('Show', showId);
+        }
+        const showStatus = (showCheck.rows[0] as { status: string }).status;
+        if (showStatus === 'COMPLETED') {
+          throw new ConflictError('Show is closed; reopen before editing.');
         }
 
         const result = await client.query(
