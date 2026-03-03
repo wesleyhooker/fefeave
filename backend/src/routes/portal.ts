@@ -164,6 +164,49 @@ export async function portalRoutes(
     }
   );
 
+  fastify.get<{ Querystring: { format?: string } }>(
+    '/portal/statement/export',
+    {
+      preHandler: wholesalerPre,
+      schema: {
+        description:
+          'Portal statement CSV export for linked wholesaler (uses same ledger logic as GET /portal/statement)',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: { format: { type: 'string', enum: ['csv'] } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const format = request.query?.format ?? 'csv';
+      if (format !== 'csv') {
+        return reply.status(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Only format=csv is supported',
+        });
+      }
+      const context = await resolveLinkedWholesalerContext(fastify, request.user!.cognitoSub);
+      const entries = await getWholesalerStatement(getPool(), context.wholesaler_id);
+      const header = ['Date', 'Type', 'Show ID', 'Amount', 'Running Balance'];
+      const csvRows = entries.map((e) => [
+        normalizeDateYyyyMmDd(e.date),
+        e.type,
+        e.show_id ?? '',
+        formatCurrency2dp(e.amount),
+        formatCurrency2dp(e.running_balance),
+      ]);
+      const csvText = toCsvText(header, csvRows);
+      const body = '\uFEFF' + csvText;
+      const filename = `wholesaler-statement-${todayFileDate()}.csv`;
+      return reply
+        .header('Content-Type', 'text/csv; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .send(body);
+    }
+  );
+
   fastify.get(
     '/portal/statement.csv',
     {

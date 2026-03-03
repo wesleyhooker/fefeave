@@ -300,4 +300,170 @@ describe('Portal integration', () => {
     });
     expect(entries).toEqual(sorted);
   });
+
+  test('portal statement export is scoped to linked wholesaler only', async () => {
+    if (!databaseUrl) return;
+
+    const wholesalerARes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers`,
+      payload: { name: 'Export Scope Wholesaler A' },
+    });
+    expect(wholesalerARes.statusCode).toBe(201);
+    const wholesalerA = JSON.parse(wholesalerARes.payload) as { id: string; name: string };
+
+    const wholesalerBRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers`,
+      payload: { name: 'Export Scope Wholesaler B' },
+    });
+    expect(wholesalerBRes.statusCode).toBe(201);
+    const wholesalerB = JSON.parse(wholesalerBRes.payload) as { id: string; name: string };
+
+    const showARes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2099-03-01',
+        platform: 'WHATNOT',
+        name: 'Show for A',
+      },
+    });
+    expect(showARes.statusCode).toBe(201);
+    const showA = JSON.parse(showARes.payload) as { id: string };
+
+    const showBRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2099-03-02',
+        platform: 'WHATNOT',
+        name: 'Show for B',
+      },
+    });
+    expect(showBRes.statusCode).toBe(201);
+    const showB = JSON.parse(showBRes.payload) as { id: string };
+
+    const settleARes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${showA.id}/settlements`,
+      payload: { wholesaler_id: wholesalerA.id, method: 'MANUAL', amount: 100 },
+    });
+    expect(settleARes.statusCode).toBe(201);
+    const settleBRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${showB.id}/settlements`,
+      payload: { wholesaler_id: wholesalerB.id, method: 'MANUAL', amount: 200 },
+    });
+    expect(settleBRes.statusCode).toBe(201);
+
+    const pool = getPool();
+    await pool.query(
+      `INSERT INTO users (cognito_user_id, email, role)
+       VALUES ($1, $2, 'WHOLESALER')
+       ON CONFLICT (cognito_user_id) DO NOTHING`,
+      ['wh-export-scope', 'wh-export-scope@test.example.com']
+    );
+    const linkRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/admin/wholesalers/${wholesalerA.id}/link-user`,
+      payload: { userId: 'wh-export-scope' },
+    });
+    expect(linkRes.statusCode).toBe(200);
+
+    const exportRes = await app.inject({
+      method: 'GET',
+      url: `${prefix}/portal/statement/export?format=csv`,
+      headers: wholesalerHeader('wh-export-scope', 'wh-export-scope@test.example.com'),
+    });
+    expect(exportRes.statusCode).toBe(200);
+    const lines = parseCsvLines(exportRes.payload);
+    expect(lines[0]).toBe('Date,Type,Show ID,Amount,Running Balance');
+    const dataRows = lines.slice(1);
+    expect(dataRows.length).toBe(1);
+    const row = dataRows[0].split(',');
+    expect(row[1]).toBe('OWED');
+    expect(row[3]).toBe('100.00');
+    expect(row[4]).toBe('100.00');
+  });
+
+  test('portal statement export csv has expected headers and deterministic row order', async () => {
+    if (!databaseUrl) return;
+
+    const wholesalerRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers`,
+      payload: { name: 'Export Format Vendor' },
+    });
+    expect(wholesalerRes.statusCode).toBe(201);
+    const wholesaler = JSON.parse(wholesalerRes.payload) as { id: string };
+
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2099-04-01',
+        platform: 'WHATNOT',
+        name: 'Export Format Show',
+      },
+    });
+    expect(showRes.statusCode).toBe(201);
+    const show = JSON.parse(showRes.payload) as { id: string };
+
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: { wholesaler_id: wholesaler.id, method: 'MANUAL', amount: 50 },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/payments`,
+      payload: {
+        wholesaler_id: wholesaler.id,
+        amount: 10,
+        payment_date: '2099-04-02',
+        reference: 'Export-PMT',
+      },
+    });
+
+    const pool = getPool();
+    await pool.query(
+      `INSERT INTO users (cognito_user_id, email, role)
+       VALUES ($1, $2, 'WHOLESALER')
+       ON CONFLICT (cognito_user_id) DO NOTHING`,
+      ['wh-export-format', 'wh-export-format@test.example.com']
+    );
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/admin/wholesalers/${wholesaler.id}/link-user`,
+      payload: { userId: 'wh-export-format' },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `${prefix}/portal/statement/export?format=csv`,
+      headers: wholesalerHeader('wh-export-format', 'wh-export-format@test.example.com'),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv; charset=utf-8');
+    expect(res.headers['content-disposition']).toMatch(
+      /^attachment; filename="wholesaler-statement-\d{4}-\d{2}-\d{2}\.csv"$/
+    );
+
+    const lines = parseCsvLines(res.payload);
+    expect(lines[0]).toBe('Date,Type,Show ID,Amount,Running Balance');
+    expect(lines.length).toBeGreaterThanOrEqual(3);
+
+    const rows = lines.slice(1).map((line) => {
+      const [date, type, showId, amount, runningBalance] = line.split(',');
+      return { date, type, showId, amount, runningBalance };
+    });
+    const sorted = [...rows].sort((a, b) => {
+      const dateCmp = a.date.localeCompare(b.date);
+      if (dateCmp !== 0) return dateCmp;
+      const typeOrder = (t: string) => (t === 'OWED' ? 0 : 1);
+      return typeOrder(a.type) - typeOrder(b.type);
+    });
+    expect(rows).toEqual(sorted);
+  });
 });

@@ -141,7 +141,7 @@ export default function PortalStatementPage() {
     setDownloadError(null);
     setDownloading(true);
     try {
-      const response = await fetch("/api/portal/statement.csv", {
+      const response = await fetch("/api/portal/statement/export?format=csv", {
         method: "GET",
         cache: "no-store",
       });
