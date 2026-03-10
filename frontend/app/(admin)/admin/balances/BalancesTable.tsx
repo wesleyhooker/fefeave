@@ -158,9 +158,9 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
               <th
                 scope="col"
@@ -253,13 +253,13 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                   <td className="whitespace-nowrap px-4 py-3">
                     <PaymentStatusChip status={status} />
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
                     {formatCurrency(parseNum(r.owed_total))}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
                     {formatCurrency(parseNum(r.paid_total))}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
                     {formatCurrency(parseNum(r.balance_owed))}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
