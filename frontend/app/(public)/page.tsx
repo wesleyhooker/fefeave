@@ -1,4 +1,13 @@
-export default function HomePage() {
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session.node";
+
+export default async function HomePage() {
+  const session = await getSession();
+  const roles = session?.roles ?? [];
+  if (roles.includes("ADMIN") || roles.includes("OPERATOR")) {
+    redirect("/admin");
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 text-center">
       <h1 className="mb-4 text-3xl font-bold text-gray-900">

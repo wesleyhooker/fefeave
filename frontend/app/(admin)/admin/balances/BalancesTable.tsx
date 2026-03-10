@@ -5,6 +5,10 @@ import { useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import { apiGetText } from "@/lib/api";
+import {
+  getPaymentStatus,
+  PaymentStatusChip,
+} from "../_components/PaymentStatusChip";
 
 export interface WholesalerBalanceRow {
   wholesaler_id: string;
@@ -109,7 +113,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
       downloadCsv(getFilename(), csvText, { includeBom: false });
     } catch {
       setExportError(
-        "Export failed. Please retry. If this persists, check backend availability and permissions.",
+        "Export failed. Please retry. If this persists, contact your administrator.",
       );
     }
   };
@@ -173,6 +177,12 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
               </th>
               <th
                 scope="col"
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Status
+              </th>
+              <th
+                scope="col"
                 className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
               >
                 <button
@@ -226,30 +236,40 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
-            {sorted.map((r) => (
-              <tr key={r.wholesaler_id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap px-4 py-3">
-                  <Link
-                    href={`/admin/wholesalers/${r.wholesaler_id}`}
-                    className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
-                  >
-                    {r.name}
-                  </Link>
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                  {formatCurrency(parseNum(r.owed_total))}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                  {formatCurrency(parseNum(r.paid_total))}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
-                  {formatCurrency(parseNum(r.balance_owed))}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                  {r.last_payment_date ? formatDate(r.last_payment_date) : "—"}
-                </td>
-              </tr>
-            ))}
+            {sorted.map((r) => {
+              const balance = parseNum(r.balance_owed);
+              const paid = parseNum(r.paid_total);
+              const status = getPaymentStatus(balance, paid);
+              return (
+                <tr key={r.wholesaler_id} className="hover:bg-gray-50">
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <Link
+                      href={`/admin/wholesalers/${r.wholesaler_id}`}
+                      className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
+                    >
+                      {r.name}
+                    </Link>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <PaymentStatusChip status={status} />
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                    {formatCurrency(parseNum(r.owed_total))}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                    {formatCurrency(parseNum(r.paid_total))}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                    {formatCurrency(parseNum(r.balance_owed))}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    {r.last_payment_date
+                      ? formatDate(r.last_payment_date)
+                      : "—"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

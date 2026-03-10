@@ -37,7 +37,9 @@ describe('DELETE /shows/:showId/settlements/:settlementId', () => {
   });
 
   it('soft-deletes settlement and GET settlements no longer returns it', async () => {
+    // DELETE handler: 1) show status, 2) settlement by id, 3) update. Then GET list: 4) show check, 5) list settlements.
     mockPool.query
+      .mockResolvedValueOnce({ rows: [{ status: 'ACTIVE' }] })
       .mockResolvedValueOnce({
         rows: [
           {
@@ -48,7 +50,7 @@ describe('DELETE /shows/:showId/settlements/:settlementId', () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ id: showId }] })
       .mockResolvedValueOnce({ rows: [] });
 
@@ -79,7 +81,8 @@ describe('DELETE /shows/:showId/settlements/:settlementId', () => {
   });
 
   it('returns 404 when settlement belongs to another show', async () => {
-    mockPool.query.mockResolvedValueOnce({
+    // DELETE handler: 1) show (otherShowId exists), 2) settlement (belongs to showId, not otherShowId) -> 404.
+    mockPool.query.mockResolvedValueOnce({ rows: [{ status: 'ACTIVE' }] }).mockResolvedValueOnce({
       rows: [
         {
           id: settlementId,

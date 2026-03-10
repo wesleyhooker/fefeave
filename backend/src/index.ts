@@ -22,6 +22,7 @@ import { paymentRoutes } from './routes/payments';
 import { adjustmentRoutes } from './routes/adjustments';
 import { attachmentRoutes } from './routes/attachments';
 import { exportRoutes } from './routes/exports';
+import { inventoryPurchaseRoutes } from './routes/inventory-purchases';
 import { portalRoutes } from './routes/portal';
 
 async function buildApp() {
@@ -116,6 +117,7 @@ async function buildApp() {
   await app.register(adjustmentRoutes, { prefix: env.API_PREFIX });
   await app.register(attachmentRoutes, { prefix: env.API_PREFIX });
   await app.register(exportRoutes, { prefix: env.API_PREFIX });
+  await app.register(inventoryPurchaseRoutes, { prefix: env.API_PREFIX });
   await app.register(portalRoutes, { prefix: env.API_PREFIX });
 
   return app;

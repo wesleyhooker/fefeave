@@ -26,11 +26,17 @@ export async function authPlugin(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions
 ): Promise<void> {
-  const env = getEnv();
-
+  const envAtRegister = getEnv();
   let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
-  if (env.AUTH_MODE === 'cognito' && env.COGNITO_REGION && env.COGNITO_USER_POOL_ID) {
-    const issuer = getCognitoIssuer(env.COGNITO_REGION, env.COGNITO_USER_POOL_ID);
+  if (
+    envAtRegister.AUTH_MODE === 'cognito' &&
+    envAtRegister.COGNITO_REGION &&
+    envAtRegister.COGNITO_USER_POOL_ID
+  ) {
+    const issuer = getCognitoIssuer(
+      envAtRegister.COGNITO_REGION,
+      envAtRegister.COGNITO_USER_POOL_ID
+    );
     const jwksUrl = `${issuer}/.well-known/jwks.json`;
     jwks = createRemoteJWKSet(new URL(jwksUrl));
   }
@@ -38,6 +44,7 @@ export async function authPlugin(
   fastify.decorateRequest('user', undefined as AuthUser | undefined);
 
   fastify.addHook('onRequest', async (request: FastifyRequest, _reply: FastifyReply) => {
+    const env = getEnv();
     if (env.AUTH_MODE === 'off') {
       return;
     }

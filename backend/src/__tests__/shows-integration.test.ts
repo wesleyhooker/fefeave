@@ -129,5 +129,34 @@ describe('Shows API integration', () => {
     expect(show.platform).toBe('OTHER'); // API normalizes MANUAL -> OTHER
     expect(show.name).toBe('Manual Show');
     expect(show.external_reference).toBe('ext-123');
+    expect(show.status).toBeDefined();
+  });
+
+  test('PATCH /api/shows/:id updates status to COMPLETED then ACTIVE', async () => {
+    const postRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: { show_date: '2025-06-01', platform: 'WHATNOT', name: 'Close Test' },
+    });
+    expect(postRes.statusCode).toBe(201);
+    const { id } = JSON.parse(postRes.payload);
+
+    const patchClose = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${id}`,
+      payload: { status: 'COMPLETED' },
+    });
+    expect(patchClose.statusCode).toBe(200);
+    const closed = JSON.parse(patchClose.payload);
+    expect(closed.status).toBe('COMPLETED');
+
+    const patchReopen = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${id}`,
+      payload: { status: 'ACTIVE' },
+    });
+    expect(patchReopen.statusCode).toBe(200);
+    const reopened = JSON.parse(patchReopen.payload);
+    expect(reopened.status).toBe('ACTIVE');
   });
 });
