@@ -96,42 +96,37 @@ export default function AdminBalancesPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Balances</h1>
+      <h1 className="mb-2 text-2xl font-bold text-gray-900">Balances</h1>
+      <p className="mb-6 text-gray-600">
+        Wholesaler balances and payout workspace. Aligned with dashboard totals.
+      </p>
 
       {summary && (
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Total Outstanding
-            </p>
-            <p className="mt-1 text-xl font-semibold text-gray-900">
+        <div className="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-gray-200 bg-gray-50/80 px-4 py-3 pb-4">
+          <span className="text-sm text-gray-500">
+            Outstanding:{" "}
+            <strong className="text-gray-900">
               {formatCurrency(summary.totalOutstanding)}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Total Owed
-            </p>
-            <p className="mt-1 text-xl font-semibold text-gray-900">
+            </strong>
+          </span>
+          <span className="text-sm text-gray-500">
+            Owed:{" "}
+            <strong className="text-gray-900">
               {formatCurrency(summary.totalOwed)}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Total Paid
-            </p>
-            <p className="mt-1 text-xl font-semibold text-gray-900">
+            </strong>
+          </span>
+          <span className="text-sm text-gray-500">
+            Paid:{" "}
+            <strong className="text-gray-900">
               {formatCurrency(summary.totalPaid)}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Wholesalers Owing
-            </p>
-            <p className="mt-1 text-xl font-semibold text-gray-900">
+            </strong>
+          </span>
+          <span className="text-sm text-gray-500">
+            Wholesalers owing:{" "}
+            <strong className="text-gray-900">
               {summary.wholesalersOwing}
-            </p>
-          </div>
+            </strong>
+          </span>
         </div>
       )}
 

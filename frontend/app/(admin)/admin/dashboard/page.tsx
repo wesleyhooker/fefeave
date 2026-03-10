@@ -189,6 +189,15 @@ export default function AdminDashboardPage() {
 
   const netCashMovement = paymentsLast14DaysTotal + inventoryInvestedAmount;
 
+  const openShows = useMemo(() => {
+    return [...(shows ?? [])]
+      .filter((s) => (s.status ?? "").toUpperCase() === "ACTIVE")
+      .sort(
+        (a, b) =>
+          new Date(b.show_date).getTime() - new Date(a.show_date).getTime(),
+      );
+  }, [shows]);
+
   const recentShows = useMemo(() => {
     return [...(shows ?? [])]
       .sort(
@@ -226,10 +235,56 @@ export default function AdminDashboardPage() {
       <p className="mb-6 text-gray-600">
         {loading
           ? "Loading dashboard..."
-          : "Business summary and recent activity."}
+          : "Profit-first overview and operational workspace."}
       </p>
 
-      <section className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      {/* 1. Profit snapshot — unified financial header */}
+      <section
+        className="mb-6 rounded-lg border border-gray-200 bg-white"
+        aria-label="Financial summary"
+      >
+        <div className="border-b border-gray-100 px-4 py-3">
+          <h2 className="text-base font-semibold text-gray-900">
+            Financial summary
+          </h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Where things stand right now.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-3 sm:divide-y-0 sm:divide-x sm:divide-gray-200">
+          <div className="px-4 py-4 sm:py-5">
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+              Outstanding balance
+            </p>
+            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
+              {formatCurrency(totals.totalBalance)}
+            </p>
+          </div>
+          <div className="px-4 py-4 sm:py-5">
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+              Net paid vs obligated
+            </p>
+            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
+              {formatCurrency(netPaidVsObligated)}
+            </p>
+          </div>
+          <div className="px-4 py-4 sm:py-5">
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+              Cash out (14 days)
+            </p>
+            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
+              {inventoryInvestedError ? "—" : formatCurrency(netCashMovement)}
+            </p>
+          </div>
+        </div>
+        <p className="border-t border-gray-100 px-4 py-2 text-xs text-gray-500">
+          Outstanding = what you owe now. Net = payments minus obligations. Cash
+          out = payments + inventory in last 14 days.
+        </p>
+      </section>
+
+      {/* 2. Quick actions */}
+      <section className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
           Quick actions
         </h2>
@@ -261,95 +316,79 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <SummaryCard
-          label="Total Owed"
-          value={formatCurrency(totals.totalOwed)}
-        />
-        <SummaryCard
-          label="Total Paid"
-          value={formatCurrency(totals.totalPaid)}
-        />
-        <SummaryCard
-          label="Outstanding Balance"
-          value={formatCurrency(totals.totalBalance)}
-        />
-      </div>
-
-      <section className="mt-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-            Cash Snapshot
+      {/* 3. Open shows needing close-out */}
+      <section className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-4 py-3">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Open shows needing close-out
           </h2>
-          <p className="text-xs text-gray-500">
-            Quick view of what you owe, what you&apos;ve paid, and what
-            you&apos;ve spent recently.
+          <p className="mt-0.5 text-sm text-gray-500">
+            Active shows. Close out when payout and settlements are final.
           </p>
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                Payment progress
-              </p>
-              <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-600">
-                All-time
-              </span>
-            </div>
-            <p className="mt-1 text-lg font-semibold text-gray-900">
-              {formatCurrency(netPaidVsObligated)}
-            </p>
-            <p className="mt-1 text-xs text-gray-600">
-              Payments to wholesalers minus what you owe from settlements.
-              Negative = still owed.
-            </p>
+        {showsError ? (
+          <SectionErrorBody
+            title="Could not load shows."
+            message={showsError}
+            onRetry={() => setReloadToken((v) => v + 1)}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Show
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {openShows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="px-4 py-6 text-center text-sm text-gray-500"
+                    >
+                      {loading
+                        ? "Loading…"
+                        : "No open shows. Create a show or close-out is complete."}
+                    </td>
+                  </tr>
+                ) : (
+                  openShows.map((show) => (
+                    <tr key={show.id} className="hover:bg-gray-50">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        <Link
+                          href={`/admin/shows/${show.id}`}
+                          className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                        >
+                          {show.name}
+                        </Link>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                        {formatDate(show.show_date)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                        <Link
+                          href={`/admin/shows/${show.id}`}
+                          className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                        >
+                          Close out
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                Inventory invested
-              </p>
-              <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-600">
-                Last 14 days
-              </span>
-            </div>
-            <p className="mt-1 text-lg font-semibold text-gray-900">
-              {inventoryInvestedError ? (
-                <span className="text-sm text-amber-700">
-                  {inventoryInvestedError}
-                </span>
-              ) : inventoryInvested != null ? (
-                formatCurrency(inventoryInvestedAmount)
-              ) : (
-                <span className="text-sm text-gray-500">—</span>
-              )}
-            </p>
-            <p className="mt-1 text-xs text-gray-600">
-              Inventory purchases recorded in the last 14 days.
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                Cash out (tracked)
-              </p>
-              <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-600">
-                Last 14 days
-              </span>
-            </div>
-            <p className="mt-1 text-lg font-semibold text-gray-900">
-              {formatCurrency(netCashMovement)}
-            </p>
-            <p className="mt-1 text-xs text-gray-600">
-              Payments to wholesalers + inventory purchases logged in the last
-              14 days.
-            </p>
-          </div>
-        </div>
-        <p className="mt-3 text-xs text-gray-500">
-          Based only on what you log in FefeAve. Excludes refunds/chargebacks,
-          shipping, and taxes.
-        </p>
+        )}
       </section>
 
       {balancesError && (
@@ -360,11 +399,10 @@ export default function AdminDashboardPage() {
         />
       )}
 
-      <section className="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm">
+      {/* 4. Who you owe */}
+      <section className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Who you still owe
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900">Who you owe</h2>
           <p className="mt-0.5 text-sm text-gray-500">
             Outstanding by wholesaler. Record a payment when you send money.
           </p>
@@ -502,140 +540,134 @@ export default function AdminDashboardPage() {
         )}
       </section>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-200 px-4 py-3">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Recent Shows
-            </h2>
-          </div>
-          {showsError ? (
-            <SectionErrorBody
-              title="Could not load shows."
-              message={showsError}
-              onRetry={() => setReloadToken((v) => v + 1)}
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Show
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {recentShows.length === 0 ? (
+      {/* 5. Recent activity */}
+      <div className="mt-6">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+          Recent activity
+        </h2>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-gray-900">
+                Recent shows
+              </h3>
+            </div>
+            {showsError ? (
+              <SectionErrorBody
+                title="Could not load shows."
+                message={showsError}
+                onRetry={() => setReloadToken((v) => v + 1)}
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td
-                        colSpan={2}
-                        className="px-4 py-6 text-center text-sm text-gray-500"
-                      >
-                        {loading ? "Loading shows..." : "No shows yet."}
-                      </td>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Show
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Date
+                      </th>
                     </tr>
-                  ) : (
-                    recentShows.map((show) => (
-                      <tr key={show.id} className="hover:bg-gray-50">
-                        <td className="whitespace-nowrap px-4 py-3 text-sm">
-                          <Link
-                            href={`/admin/shows/${show.id}`}
-                            className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
-                          >
-                            {show.name}
-                          </Link>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                          {formatDate(show.show_date)}
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {recentShows.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={2}
+                          className="px-4 py-6 text-center text-sm text-gray-500"
+                        >
+                          {loading ? "Loading shows..." : "No shows yet."}
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      recentShows.map((show) => (
+                        <tr key={show.id} className="hover:bg-gray-50">
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            <Link
+                              href={`/admin/shows/${show.id}`}
+                              className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                            >
+                              {show.name}
+                            </Link>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                            {formatDate(show.show_date)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+          <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-gray-900">
+                Recent payments
+              </h3>
             </div>
-          )}
-        </section>
-
-        <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-200 px-4 py-3">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Recent Payments
-            </h2>
-          </div>
-          {paymentsAuthStatus ? (
-            <div className="px-4 py-4 text-sm text-amber-800">
-              You don&apos;t have permission to view payments. Sign in again or
-              contact your administrator.
-            </div>
-          ) : paymentsError ? (
-            <SectionErrorBody
-              title="Could not load payments."
-              message={paymentsError}
-              onRetry={() => setReloadToken((v) => v + 1)}
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Amount
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Reference
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {recentPayments.length === 0 ? (
+            {paymentsAuthStatus ? (
+              <div className="px-4 py-4 text-sm text-amber-800">
+                You don&apos;t have permission to view payments. Sign in again
+                or contact your administrator.
+              </div>
+            ) : paymentsError ? (
+              <SectionErrorBody
+                title="Could not load payments."
+                message={paymentsError}
+                onRetry={() => setReloadToken((v) => v + 1)}
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td
-                        colSpan={3}
-                        className="px-4 py-6 text-center text-sm text-gray-500"
-                      >
-                        {loading ? "Loading payments..." : "No payments yet."}
-                      </td>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Amount
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Reference
+                      </th>
                     </tr>
-                  ) : (
-                    recentPayments.map((payment) => (
-                      <tr key={payment.id} className="hover:bg-gray-50">
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                          {formatDate(payment.payment_date)}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900">
-                          {formatCurrency(parseAmount(payment.amount))}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                          {payment.reference ?? "—"}
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {recentPayments.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-4 py-6 text-center text-sm text-gray-500"
+                        >
+                          {loading ? "Loading payments..." : "No payments yet."}
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+                    ) : (
+                      recentPayments.map((payment) => (
+                        <tr key={payment.id} className="hover:bg-gray-50">
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                            {formatDate(payment.payment_date)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900">
+                            {formatCurrency(parseAmount(payment.amount))}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                            {payment.reference ?? "—"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-semibold text-gray-900">{value}</p>
     </div>
   );
 }

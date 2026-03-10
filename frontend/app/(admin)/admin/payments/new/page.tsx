@@ -143,26 +143,6 @@ function RecordPaymentForm() {
       >
         <div>
           <label
-            htmlFor="date"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Date <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="date"
-            type="date"
-            required
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-          />
-          {errors.date && (
-            <p className="mt-0.5 text-xs text-red-600">{errors.date}</p>
-          )}
-        </div>
-
-        <div>
-          <label
             htmlFor="wholesaler"
             className="mb-1 block text-sm font-medium text-gray-700"
           >
@@ -208,6 +188,26 @@ function RecordPaymentForm() {
           />
           {errors.amount && (
             <p className="mt-0.5 text-xs text-red-600">{errors.amount}</p>
+          )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="date"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
+            Date <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="date"
+            type="date"
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+          />
+          {errors.date && (
+            <p className="mt-0.5 text-xs text-red-600">{errors.date}</p>
           )}
         </div>
 
