@@ -47,11 +47,6 @@ function amountOwedFor(
   return roundToCents(settlement.fixedAmount);
 }
 
-function percentOrFixedDisplay(settlement: StructuredSettlement): string {
-  if (settlement.type === "PERCENT") return `${settlement.percent}%`;
-  return formatCurrency(settlement.fixedAmount);
-}
-
 function deriveStatusFromTotals(
   balanceRemaining: number,
   isClosed: boolean,
@@ -144,6 +139,15 @@ export function ShowDetailView({ id }: { id: string }) {
   const [closing, setClosing] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showReopenConfirm, setShowReopenConfirm] = useState(false);
+  const [newRowWholesalerId, setNewRowWholesalerId] = useState("");
+  const [newRowMode, setNewRowMode] = useState<
+    "PERCENT" | "FIXED" | "QTY_UNIT"
+  >("PERCENT");
+  const [newRowPercent, setNewRowPercent] = useState("");
+  const [newRowFixed, setNewRowFixed] = useState("");
+  const [newRowQty, setNewRowQty] = useState("");
+  const [newRowUnitPrice, setNewRowUnitPrice] = useState("");
+  const [newRowError, setNewRowError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,6 +201,35 @@ export function ShowDetailView({ id }: { id: string }) {
     [payoutAfterFees, settlements, closedAt],
   );
 
+  const newRowTotal = useMemo(() => {
+    if (newRowMode === "PERCENT") {
+      const rate = Number(newRowPercent);
+      if (!Number.isFinite(rate) || rate < 0 || rate > 100) return null;
+      return roundToCents((payoutAfterFees * rate) / 100);
+    }
+    if (newRowMode === "FIXED") {
+      const amt = Number(newRowFixed);
+      return Number.isFinite(amt) && amt > 0 ? roundToCents(amt) : null;
+    }
+    const qty = Number(newRowQty);
+    const unitPrice = Number(newRowUnitPrice);
+    if (
+      !Number.isFinite(qty) ||
+      qty <= 0 ||
+      !Number.isFinite(unitPrice) ||
+      unitPrice < 0
+    )
+      return null;
+    return roundToCents(qty * unitPrice);
+  }, [
+    newRowMode,
+    newRowPercent,
+    newRowFixed,
+    newRowQty,
+    newRowUnitPrice,
+    payoutAfterFees,
+  ]);
+
   const isClosed = Boolean(closedAt);
 
   const handleRetry = useCallback(() => {
@@ -240,12 +273,19 @@ export function ShowDetailView({ id }: { id: string }) {
     }): Promise<boolean> => {
       setCreatingSettlement(true);
       setCreateSettlementError(null);
+      setNewRowError(null);
       try {
         await createShowSettlement(id, payload);
         setReloadToken((v) => v + 1);
+        setNewRowWholesalerId("");
+        setNewRowPercent("");
+        setNewRowFixed("");
+        setNewRowQty("");
+        setNewRowUnitPrice("");
         return true;
       } catch (err) {
         setCreateSettlementError(toInlineWriteError(err));
+        setNewRowError(toInlineWriteError(err));
         return false;
       } finally {
         setCreatingSettlement(false);
@@ -253,6 +293,73 @@ export function ShowDetailView({ id }: { id: string }) {
     },
     [id, toInlineWriteError],
   );
+
+  const handleAddRow = useCallback(async () => {
+    if (isClosed) return;
+    setNewRowError(null);
+    if (!newRowWholesalerId) {
+      setNewRowError("Select a wholesaler.");
+      return;
+    }
+    if (newRowMode === "PERCENT") {
+      const rate = Number(newRowPercent);
+      if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+        setNewRowError("Percent must be between 0 and 100.");
+        return;
+      }
+      await handleCreateSettlement({
+        wholesaler_id: newRowWholesalerId,
+        method: "PERCENT_PAYOUT",
+        rate_percent: rate,
+      });
+      return;
+    }
+    if (newRowMode === "QTY_UNIT") {
+      const qty = Number(newRowQty);
+      const unitPrice = Number(newRowUnitPrice);
+      if (
+        !Number.isFinite(qty) ||
+        qty <= 0 ||
+        !Number.isFinite(unitPrice) ||
+        unitPrice < 0
+      ) {
+        setNewRowError(
+          "Enter quantity and unit price (both required, quantity > 0).",
+        );
+        return;
+      }
+      const amount = roundToCents(qty * unitPrice);
+      if (amount <= 0) {
+        setNewRowError("Quantity × unit price must be greater than 0.");
+        return;
+      }
+      await handleCreateSettlement({
+        wholesaler_id: newRowWholesalerId,
+        method: "MANUAL",
+        amount,
+      });
+      return;
+    }
+    const amount = Number(newRowFixed);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setNewRowError("Amount must be greater than 0.");
+      return;
+    }
+    await handleCreateSettlement({
+      wholesaler_id: newRowWholesalerId,
+      method: "MANUAL",
+      amount,
+    });
+  }, [
+    isClosed,
+    newRowWholesalerId,
+    newRowMode,
+    newRowPercent,
+    newRowFixed,
+    newRowQty,
+    newRowUnitPrice,
+    handleCreateSettlement,
+  ]);
 
   const handleDeleteSettlement = useCallback(
     async (settlementId: string) => {
@@ -367,7 +474,7 @@ export function ShowDetailView({ id }: { id: string }) {
         )}
       </section>
 
-      {/* 2. Settlements */}
+      {/* 2. Settlements — structured financial grid */}
       <section
         className={`border border-gray-200 ${
           isClosed ? "bg-gray-50/50" : "bg-white"
@@ -375,32 +482,44 @@ export function ShowDetailView({ id }: { id: string }) {
       >
         <div className="border-b border-gray-200 px-4 py-3">
           <h2 className="text-base font-semibold text-gray-900">Settlements</h2>
-          {isClosed && (
-            <p className="mt-0.5 text-xs text-gray-500">
-              Locked — reopen show to add or remove.
-            </p>
-          )}
+          <p className="mt-0.5 text-xs text-gray-500">
+            {isClosed
+              ? "Locked — reopen show to add or remove."
+              : "Add rows below. Percent and quantity×price are calculated; flat amount is what you enter."}
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="sticky top-0 z-10 bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Wholesaler
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Deal type
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Amount Owed
+                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Qty
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Amount Paid
+                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Unit price
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Balance Remaining
+                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Percent
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Amount
+                </th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Total
+                </th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Paid
+                </th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Balance
+                </th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                   Actions
                 </th>
               </tr>
@@ -409,10 +528,11 @@ export function ShowDetailView({ id }: { id: string }) {
               {settlements.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
-                    className="px-4 py-6 text-center text-sm text-gray-500"
+                    colSpan={10}
+                    className="px-4 py-4 text-center text-sm text-gray-500"
                   >
                     No settlements yet.
+                    {!isClosed && " Add a row below."}
                   </td>
                 </tr>
               ) : (
@@ -421,37 +541,44 @@ export function ShowDetailView({ id }: { id: string }) {
                   const balance = roundToCents(owed - row.amountPaid);
                   return (
                     <tr key={row.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sm font-medium text-gray-900">
                         {row.wholesaler}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                        {percentOrFixedDisplay(row)}
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sm text-gray-600">
+                        {row.type === "PERCENT" ? "Percent" : "Flat"}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-500 tabular-nums">
+                        —
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-500 tabular-nums">
+                        —
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-600 tabular-nums">
+                        {row.type === "PERCENT" ? `${row.percent}%` : "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-600 tabular-nums">
+                        {row.type === "FIXED"
+                          ? formatCurrency(row.fixedAmount)
+                          : "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-gray-900 tabular-nums">
                         {formatCurrency(owed)}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-600 tabular-nums">
                         {formatCurrency(row.amountPaid)}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-gray-900 tabular-nums">
                         {formatCurrency(balance)}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                        <button
-                          type="button"
-                          disabled
-                          className="mr-2 rounded border border-gray-300 px-2 py-1 text-xs text-gray-400"
-                        >
-                          Edit
-                        </button>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm">
                         <button
                           type="button"
                           disabled={isClosed || deletingSettlementId === row.id}
                           onClick={() => void handleDeleteSettlement(row.id)}
-                          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 disabled:cursor-not-allowed disabled:text-gray-400"
+                          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
                         >
                           {deletingSettlementId === row.id
-                            ? "Deleting..."
+                            ? "Deleting…"
                             : "Delete"}
                         </button>
                       </td>
@@ -459,33 +586,133 @@ export function ShowDetailView({ id }: { id: string }) {
                   );
                 })
               )}
+              {!isClosed && (
+                <tr className="bg-gray-50/70 hover:bg-gray-100">
+                  <td className="px-3 py-2.5">
+                    <select
+                      value={newRowWholesalerId}
+                      onChange={(e) => setNewRowWholesalerId(e.target.value)}
+                      className="w-full min-w-[120px] rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+                    >
+                      <option value="">Select</option>
+                      {wholesalers.map((w) => (
+                        <option key={w.wholesaler_id} value={w.wholesaler_id}>
+                          {w.name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <select
+                      value={newRowMode}
+                      onChange={(e) => {
+                        const v = e.target.value as
+                          | "PERCENT"
+                          | "FIXED"
+                          | "QTY_UNIT";
+                        setNewRowMode(
+                          v === "FIXED" || v === "QTY_UNIT" ? v : "PERCENT",
+                        );
+                      }}
+                      className="w-full min-w-[100px] rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+                    >
+                      <option value="PERCENT">Percent</option>
+                      <option value="FIXED">Flat</option>
+                      <option value="QTY_UNIT">Qty × unit</option>
+                    </select>
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    {newRowMode === "QTY_UNIT" ? (
+                      <input
+                        type="number"
+                        step="1"
+                        min={1}
+                        value={newRowQty}
+                        onChange={(e) => setNewRowQty(e.target.value)}
+                        className="w-16 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                        placeholder="0"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    {newRowMode === "QTY_UNIT" ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={newRowUnitPrice}
+                        onChange={(e) => setNewRowUnitPrice(e.target.value)}
+                        className="w-20 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                        placeholder="0"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    {newRowMode === "PERCENT" ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        max={100}
+                        value={newRowPercent}
+                        onChange={(e) => setNewRowPercent(e.target.value)}
+                        className="w-16 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                        placeholder="0"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    {newRowMode === "FIXED" ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={newRowFixed}
+                        onChange={(e) => setNewRowFixed(e.target.value)}
+                        className="w-24 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                        placeholder="0"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-gray-900 tabular-nums">
+                    {newRowTotal != null ? formatCurrency(newRowTotal) : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-right text-sm text-gray-400">
+                    —
+                  </td>
+                  <td className="px-3 py-2.5 text-right text-sm text-gray-400">
+                    —
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    <button
+                      type="button"
+                      disabled={
+                        creatingSettlement ||
+                        !newRowWholesalerId ||
+                        newRowTotal == null
+                      }
+                      onClick={() => void handleAddRow()}
+                      className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {creatingSettlement ? "Adding…" : "Add row"}
+                    </button>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-        {deleteSettlementError && (
-          <p className="px-4 pb-3 text-sm text-amber-700" role="alert">
-            {deleteSettlementError}
-          </p>
-        )}
-      </section>
-
-      <section className="border border-gray-200 bg-white p-4">
-        <h2 className="text-base font-semibold text-gray-900">
-          Add settlement
-        </h2>
-        <p className="mt-0.5 text-sm text-gray-500">
-          Add one at a time. Percent and quantity×price are calculated from your
-          entries; flat amount is the amount you enter.
-        </p>
-        <AddSettlementForm
-          wholesalers={wholesalers}
-          creating={creatingSettlement}
-          disabled={isClosed}
-          onSubmit={handleCreateSettlement}
-        />
-        {createSettlementError && (
-          <p className="mt-2 text-sm text-amber-700" role="alert">
-            {createSettlementError}
+        {(deleteSettlementError || createSettlementError || newRowError) && (
+          <p className="px-4 py-3 text-sm text-amber-700" role="alert">
+            {deleteSettlementError ?? createSettlementError ?? newRowError}
           </p>
         )}
       </section>
@@ -735,245 +962,5 @@ function EditablePayout({
         Cancel
       </button>
     </div>
-  );
-}
-
-type DealMode = "PERCENT" | "FIXED" | "QTY_UNIT";
-
-function AddSettlementForm({
-  wholesalers,
-  creating,
-  disabled,
-  onSubmit,
-}: {
-  wholesalers: BackendWholesalerBalanceRow[];
-  creating: boolean;
-  disabled?: boolean;
-  onSubmit: (payload: {
-    wholesaler_id: string;
-    method: "PERCENT_PAYOUT" | "MANUAL";
-    rate_percent?: number;
-    amount?: number;
-  }) => Promise<boolean>;
-}) {
-  const [wholesalerId, setWholesalerId] = useState("");
-  const [mode, setMode] = useState<DealMode>("PERCENT");
-  const [percentInput, setPercentInput] = useState("");
-  const [fixedInput, setFixedInput] = useState("");
-  const [qtyInput, setQtyInput] = useState("");
-  const [unitPriceInput, setUnitPriceInput] = useState("");
-  const [localError, setLocalError] = useState<string | null>(null);
-
-  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (disabled) return;
-    setLocalError(null);
-
-    if (!wholesalerId) {
-      setLocalError("Select a wholesaler.");
-      return;
-    }
-
-    if (mode === "PERCENT") {
-      const rate = Number(percentInput);
-      if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
-        setLocalError("Percent must be between 0 and 100.");
-        return;
-      }
-      const ok = await onSubmit({
-        wholesaler_id: wholesalerId,
-        method: "PERCENT_PAYOUT",
-        rate_percent: rate,
-      });
-      if (ok) setPercentInput("");
-      return;
-    }
-
-    if (mode === "QTY_UNIT") {
-      const qty = Number(qtyInput);
-      const unitPrice = Number(unitPriceInput);
-      if (
-        !Number.isFinite(qty) ||
-        qty <= 0 ||
-        !Number.isFinite(unitPrice) ||
-        unitPrice < 0
-      ) {
-        setLocalError(
-          "Enter quantity and unit price (both required, quantity > 0).",
-        );
-        return;
-      }
-      const amount = roundToCents(qty * unitPrice);
-      if (amount <= 0) {
-        setLocalError("Quantity × unit price must be greater than 0.");
-        return;
-      }
-      const ok = await onSubmit({
-        wholesaler_id: wholesalerId,
-        method: "MANUAL",
-        amount,
-      });
-      if (ok) {
-        setQtyInput("");
-        setUnitPriceInput("");
-      }
-      return;
-    }
-
-    const amount = Number(fixedInput);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setLocalError("Amount must be greater than 0.");
-      return;
-    }
-    const ok = await onSubmit({
-      wholesaler_id: wholesalerId,
-      method: "MANUAL",
-      amount,
-    });
-    if (ok) setFixedInput("");
-  };
-
-  const dealTypeHelper =
-    mode === "PERCENT"
-      ? "Software will calculate amount from payout after fees. Enter percent (e.g. 25 for 25%)."
-      : mode === "FIXED"
-        ? "Enter the flat amount you owe this wholesaler for this show."
-        : "Enter quantity and unit price; software will calculate total (no SKU required).";
-
-  return (
-    <form
-      className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2"
-      onSubmit={submit}
-    >
-      <div className="md:col-span-2">
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Wholesaler
-        </label>
-        <select
-          value={wholesalerId}
-          onChange={(e) => setWholesalerId(e.target.value)}
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
-        >
-          <option value="">Select wholesaler</option>
-          {wholesalers.map((w) => (
-            <option key={w.wholesaler_id} value={w.wholesaler_id}>
-              {w.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="md:col-span-2">
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Deal type
-        </label>
-        <select
-          value={mode}
-          onChange={(e) => {
-            const v = e.target.value as DealMode;
-            setMode(v === "FIXED" || v === "QTY_UNIT" ? v : "PERCENT");
-          }}
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
-        >
-          <option value="PERCENT">
-            Percent of payout (software calculates)
-          </option>
-          <option value="FIXED">Flat amount</option>
-          <option value="QTY_UNIT">
-            Quantity × unit price (software calculates)
-          </option>
-        </select>
-        <p className="mt-1 text-xs text-gray-500">{dealTypeHelper}</p>
-      </div>
-      {mode === "PERCENT" && (
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Percent of payout
-          </label>
-          <input
-            value={percentInput}
-            onChange={(e) => setPercentInput(e.target.value)}
-            type="number"
-            step="0.01"
-            min={0}
-            max={100}
-            placeholder="e.g. 50"
-            className="w-full max-w-xs rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
-      )}
-      {mode === "FIXED" && (
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Amount ($)
-          </label>
-          <input
-            value={fixedInput}
-            onChange={(e) => setFixedInput(e.target.value)}
-            type="number"
-            step="0.01"
-            min={0}
-            placeholder="e.g. 150.00"
-            className="w-full max-w-xs rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
-      )}
-      {mode === "QTY_UNIT" && (
-        <>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Quantity
-            </label>
-            <input
-              value={qtyInput}
-              onChange={(e) => setQtyInput(e.target.value)}
-              type="number"
-              step="1"
-              min={1}
-              placeholder="e.g. 10"
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Unit price ($)
-            </label>
-            <input
-              value={unitPriceInput}
-              onChange={(e) => setUnitPriceInput(e.target.value)}
-              type="number"
-              step="0.01"
-              min={0}
-              placeholder="e.g. 12.50"
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
-            />
-          </div>
-          {qtyInput &&
-            unitPriceInput &&
-            Number(qtyInput) > 0 &&
-            Number(unitPriceInput) >= 0 && (
-              <p className="md:col-span-2 text-xs text-gray-600">
-                Total:{" "}
-                {formatCurrency(
-                  roundToCents(Number(qtyInput) * Number(unitPriceInput)),
-                )}
-              </p>
-            )}
-        </>
-      )}
-      <div className="md:col-span-2">
-        <button
-          type="submit"
-          disabled={disabled || creating}
-          className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
-        >
-          {creating ? "Adding…" : "Add settlement"}
-        </button>
-        {localError && (
-          <p className="mt-2 text-sm text-amber-700" role="alert">
-            {localError}
-          </p>
-        )}
-      </div>
-    </form>
   );
 }

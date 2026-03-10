@@ -335,7 +335,7 @@ export default function AdminDashboardPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="sticky top-0 z-10 bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Show
@@ -414,7 +414,7 @@ export default function AdminDashboardPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="sticky top-0 z-10 bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Wholesaler
@@ -476,7 +476,7 @@ export default function AdminDashboardPage() {
                             Last payment: {formatDaysAgo(row.last_payment_date)}
                           </p>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900">
+                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900 tabular-nums">
                           {formatCurrency(outstanding)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
@@ -561,7 +561,7 @@ export default function AdminDashboardPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="sticky top-0 z-10 bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Show
@@ -623,7 +623,7 @@ export default function AdminDashboardPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="sticky top-0 z-10 bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Date
@@ -652,7 +652,7 @@ export default function AdminDashboardPage() {
                           <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                             {formatDate(payment.payment_date)}
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900">
+                          <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900 tabular-nums">
                             {formatCurrency(parseAmount(payment.amount))}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">

@@ -191,7 +191,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
         </h2>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="sticky top-0 z-10 bg-gray-50">
               <tr>
                 <th
                   scope="col"
@@ -203,13 +203,13 @@ export function WholesalerDetailView({ id }: { id: string }) {
                   scope="col"
                   className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                 >
-                  Type
+                  Show
                 </th>
                 <th
                   scope="col"
                   className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                 >
-                  Show
+                  Type
                 </th>
                 <th
                   scope="col"
@@ -227,7 +227,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                   scope="col"
                   className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
                 >
-                  Running Balance
+                  Balance
                 </th>
               </tr>
             </thead>
@@ -250,23 +250,23 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                       {formatDate(row.date)}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
-                      {row.type === "OWED" ? "Settlement" : "Payment"}
-                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                       {row.showName}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+                      {row.type === "OWED" ? "Settlement" : "Payment"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
                       {row.amountOwed !== null
                         ? formatCurrency(row.amountOwed)
                         : "—"}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
                       {row.amountPaid !== null
                         ? formatCurrency(row.amountPaid)
                         : "—"}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900 tabular-nums">
                       {formatCurrency(row.runningBalance)}
                     </td>
                   </tr>
