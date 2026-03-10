@@ -7,7 +7,16 @@ import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
 
 const uuidSchema = z.string().uuid();
 
-const SETTLEMENT_METHODS = ['PERCENT_PAYOUT', 'MANUAL'] as const;
+const SETTLEMENT_METHODS = ['PERCENT_PAYOUT', 'MANUAL', 'ITEMIZED'] as const;
+
+const settlementLineSchema = z.object({
+  itemName: z
+    .string()
+    .transform((s) => s.trim())
+    .pipe(z.string().min(1, 'itemName must not be empty')),
+  quantity: z.number().int().min(1, 'quantity must be at least 1'),
+  unitPrice: z.number().int().min(0, 'unitPrice must be non-negative (cents)'),
+});
 
 const postOwedLineItemSchema = z.object({
   wholesaler_id: z.string().uuid(),
@@ -44,15 +53,20 @@ const postSettlementSchema = z
         const n = typeof v === 'string' ? parseFloat(v) : v;
         return Number.isNaN(n) ? undefined : n;
       }),
+    lines: z.array(settlementLineSchema).optional(),
   })
   .refine(
     (data) => {
       if (data.method === 'PERCENT_PAYOUT')
         return data.rate_percent != null && data.rate_percent >= 0 && data.rate_percent <= 100;
       if (data.method === 'MANUAL') return data.amount != null && data.amount > 0;
+      if (data.method === 'ITEMIZED') return Array.isArray(data.lines) && data.lines.length >= 1;
       return false;
     },
-    { message: 'PERCENT_PAYOUT requires rate_percent 0-100; MANUAL requires amount > 0' }
+    {
+      message:
+        'PERCENT_PAYOUT requires rate_percent 0-100; MANUAL requires amount > 0; ITEMIZED requires at least one line',
+    }
   );
 
 export async function owedLineItemRoutes(
@@ -287,6 +301,18 @@ export async function owedLineItemRoutes(
             method: { type: 'string', enum: SETTLEMENT_METHODS },
             rate_percent: { type: 'number' },
             amount: { type: 'number' },
+            lines: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['itemName', 'quantity', 'unitPrice'],
+                properties: {
+                  itemName: { type: 'string' },
+                  quantity: { type: 'integer' },
+                  unitPrice: { type: 'integer' },
+                },
+              },
+            },
           },
         },
         response: {
@@ -304,6 +330,21 @@ export async function owedLineItemRoutes(
               status: { type: 'string' },
               created_at: { type: 'string' },
               updated_at: { type: 'string' },
+              lines: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    settlement_id: { type: 'string' },
+                    item_name: { type: 'string' },
+                    quantity: { type: 'integer' },
+                    unit_price_cents: { type: 'integer' },
+                    line_total_cents: { type: 'integer' },
+                    created_at: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -320,7 +361,13 @@ export async function owedLineItemRoutes(
       if (!bodyParsed.success) {
         throw new ValidationError('Invalid request body', bodyParsed.error.errors);
       }
-      const { wholesaler_id, method, rate_percent, amount: amountRaw } = bodyParsed.data;
+      const {
+        wholesaler_id,
+        method,
+        rate_percent,
+        amount: amountRaw,
+        lines: linesRaw,
+      } = bodyParsed.data;
 
       const row = await withTx(async (client) => {
         const userId = await ensureUser(client, request);
@@ -347,7 +394,11 @@ export async function owedLineItemRoutes(
 
         const rate_bps = method === 'PERCENT_PAYOUT' ? Math.round((rate_percent ?? 0) * 100) : null;
         const description =
-          method === 'PERCENT_PAYOUT' ? 'Settlement (percent)' : 'Settlement (manual)';
+          method === 'PERCENT_PAYOUT'
+            ? 'Settlement (percent)'
+            : method === 'ITEMIZED'
+              ? 'Settlement (itemized)'
+              : 'Settlement (manual)';
 
         if (method === 'PERCENT_PAYOUT') {
           const finCheck = await client.query(`SELECT 1 FROM show_financials WHERE show_id = $1`, [
@@ -366,6 +417,57 @@ export async function owedLineItemRoutes(
             [showId, wholesaler_id, rate_bps, description, userId]
           );
           return result.rows[0];
+        }
+
+        if (method === 'ITEMIZED') {
+          const lines = linesRaw ?? [];
+          const computed = lines.map((line) => {
+            const lineTotalCents = line.quantity * line.unitPrice;
+            return {
+              item_name: line.itemName.trim(),
+              quantity: line.quantity,
+              unit_price_cents: line.unitPrice,
+              line_total_cents: lineTotalCents,
+            };
+          });
+          const totalCents = computed.reduce((sum, l) => sum + l.line_total_cents, 0);
+          if (totalCents <= 0) {
+            throw new ValidationError('ITEMIZED settlement total must be greater than 0');
+          }
+          const amountDollars = Math.round(totalCents) / 100;
+          const result = await client.query(
+            `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
+             VALUES ($1, $2, $3, 'USD', $4, 'PENDING', $5, 'API', 'ITEMIZED', NULL, NULL)
+             RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at`,
+            [showId, wholesaler_id, amountDollars, description, userId]
+          );
+          const settlementRow = result.rows[0] as {
+            id: string;
+            show_id: string;
+            wholesaler_id: string;
+            amount: string;
+            currency: string;
+            calculation_method: string;
+            rate_bps: number | null;
+            base_amount: string | null;
+            status: string;
+            created_at: Date;
+            updated_at: Date;
+          };
+          for (const line of computed) {
+            await client.query(
+              `INSERT INTO settlement_lines (settlement_id, item_name, quantity, unit_price_cents, line_total_cents)
+               VALUES ($1, $2, $3, $4, $5)`,
+              [
+                settlementRow.id,
+                line.item_name,
+                line.quantity,
+                line.unit_price_cents,
+                line.line_total_cents,
+              ]
+            );
+          }
+          return settlementRow;
         }
 
         const amount =
@@ -396,7 +498,7 @@ export async function owedLineItemRoutes(
         updated_at: Date;
       };
 
-      return reply.status(201).send({
+      const payload: Record<string, unknown> = {
         id: r.id,
         show_id: r.show_id,
         wholesaler_id: r.wholesaler_id,
@@ -408,7 +510,27 @@ export async function owedLineItemRoutes(
         status: r.status,
         created_at: r.created_at,
         updated_at: r.updated_at,
-      });
+      };
+
+      if (method === 'ITEMIZED') {
+        const pool = getPool();
+        const linesResult = await pool.query(
+          `SELECT id, settlement_id, item_name, quantity, unit_price_cents, line_total_cents, created_at
+           FROM settlement_lines WHERE settlement_id = $1 ORDER BY created_at ASC`,
+          [r.id]
+        );
+        payload.lines = linesResult.rows.map((row) => ({
+          id: row.id,
+          settlement_id: row.settlement_id,
+          item_name: row.item_name,
+          quantity: row.quantity,
+          unit_price_cents: row.unit_price_cents,
+          line_total_cents: row.line_total_cents,
+          created_at: row.created_at,
+        }));
+      }
+
+      return reply.status(201).send(payload);
     }
   );
 
@@ -441,6 +563,21 @@ export async function owedLineItemRoutes(
                 status: { type: 'string' },
                 created_at: { type: 'string' },
                 updated_at: { type: 'string' },
+                lines: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      settlement_id: { type: 'string' },
+                      item_name: { type: 'string' },
+                      quantity: { type: 'integer' },
+                      unit_price_cents: { type: 'integer' },
+                      line_total_cents: { type: 'integer' },
+                      created_at: { type: 'string' },
+                    },
+                  },
+                },
               },
             },
           },
@@ -485,6 +622,38 @@ export async function owedLineItemRoutes(
         updated_at: Date;
       }>;
 
+      const itemizedIds = rows.filter((r) => r.calculation_method === 'ITEMIZED').map((r) => r.id);
+      let linesBySettlement: Record<string, Array<Record<string, unknown>>> = {};
+      if (itemizedIds.length > 0) {
+        const linesResult = await pool.query(
+          `SELECT id, settlement_id, item_name, quantity, unit_price_cents, line_total_cents, created_at
+           FROM settlement_lines WHERE settlement_id = ANY($1::uuid[]) ORDER BY settlement_id, created_at ASC`,
+          [itemizedIds]
+        );
+        for (const line of linesResult.rows as Array<{
+          id: string;
+          settlement_id: string;
+          item_name: string;
+          quantity: number;
+          unit_price_cents: number;
+          line_total_cents: number;
+          created_at: Date;
+        }>) {
+          if (!linesBySettlement[line.settlement_id]) {
+            linesBySettlement[line.settlement_id] = [];
+          }
+          linesBySettlement[line.settlement_id].push({
+            id: line.id,
+            settlement_id: line.settlement_id,
+            item_name: line.item_name,
+            quantity: line.quantity,
+            unit_price_cents: line.unit_price_cents,
+            line_total_cents: line.line_total_cents,
+            created_at: line.created_at,
+          });
+        }
+      }
+
       return reply.send(
         rows.map((r) => ({
           id: r.id,
@@ -498,6 +667,9 @@ export async function owedLineItemRoutes(
           status: r.status,
           created_at: r.created_at,
           updated_at: r.updated_at,
+          ...(r.calculation_method === 'ITEMIZED' && linesBySettlement[r.id]
+            ? { lines: linesBySettlement[r.id] }
+            : {}),
         }))
       );
     }

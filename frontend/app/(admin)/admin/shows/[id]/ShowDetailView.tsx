@@ -31,6 +31,13 @@ type StructuredSettlement =
       fixedAmount: number;
       wholesaler: string;
       amountPaid: number;
+    }
+  | {
+      id: string;
+      type: "ITEMIZED";
+      fixedAmount: number;
+      wholesaler: string;
+      amountPaid: number;
     };
 
 function roundToCents(amount: number): number {
@@ -96,6 +103,16 @@ function mapSettlementRow(
     };
   }
 
+  if (row.calculation_method === "ITEMIZED") {
+    return {
+      id: row.id,
+      type: "ITEMIZED",
+      fixedAmount: parsedAmount,
+      wholesaler,
+      amountPaid: 0,
+    };
+  }
+
   return {
     id: row.id,
     type: "FIXED",
@@ -147,6 +164,14 @@ export function ShowDetailView({ id }: { id: string }) {
   const [newRowFixed, setNewRowFixed] = useState("");
   const [newRowQty, setNewRowQty] = useState("");
   const [newRowUnitPrice, setNewRowUnitPrice] = useState("");
+  const [newRowItemizedLines, setNewRowItemizedLines] = useState<
+    Array<{
+      id: string;
+      itemName: string;
+      quantity: string;
+      unitPriceDollars: string;
+    }>
+  >([]);
   const [newRowError, setNewRowError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -211,22 +236,28 @@ export function ShowDetailView({ id }: { id: string }) {
       const amt = Number(newRowFixed);
       return Number.isFinite(amt) && amt > 0 ? roundToCents(amt) : null;
     }
-    const qty = Number(newRowQty);
-    const unitPrice = Number(newRowUnitPrice);
-    if (
-      !Number.isFinite(qty) ||
-      qty <= 0 ||
-      !Number.isFinite(unitPrice) ||
-      unitPrice < 0
-    )
-      return null;
-    return roundToCents(qty * unitPrice);
+    if (newRowMode === "QTY_UNIT") {
+      let total = 0;
+      for (const line of newRowItemizedLines) {
+        const qty = Number(line.quantity);
+        const unit = Number(line.unitPriceDollars);
+        if (
+          !Number.isFinite(qty) ||
+          qty <= 0 ||
+          !Number.isFinite(unit) ||
+          unit < 0
+        )
+          return null;
+        total += qty * unit;
+      }
+      return newRowItemizedLines.length > 0 ? roundToCents(total) : null;
+    }
+    return null;
   }, [
     newRowMode,
     newRowPercent,
     newRowFixed,
-    newRowQty,
-    newRowUnitPrice,
+    newRowItemizedLines,
     payoutAfterFees,
   ]);
 
@@ -267,9 +298,10 @@ export function ShowDetailView({ id }: { id: string }) {
   const handleCreateSettlement = useCallback(
     async (payload: {
       wholesaler_id: string;
-      method: "PERCENT_PAYOUT" | "MANUAL";
+      method: "PERCENT_PAYOUT" | "MANUAL" | "ITEMIZED";
       rate_percent?: number;
       amount?: number;
+      lines?: { itemName: string; quantity: number; unitPrice: number }[];
     }): Promise<boolean> => {
       setCreatingSettlement(true);
       setCreateSettlementError(null);
@@ -282,6 +314,7 @@ export function ShowDetailView({ id }: { id: string }) {
         setNewRowFixed("");
         setNewRowQty("");
         setNewRowUnitPrice("");
+        setNewRowItemizedLines([]);
         return true;
       } catch (err) {
         setCreateSettlementError(toInlineWriteError(err));
@@ -315,29 +348,42 @@ export function ShowDetailView({ id }: { id: string }) {
       return;
     }
     if (newRowMode === "QTY_UNIT") {
-      const qty = Number(newRowQty);
-      const unitPrice = Number(newRowUnitPrice);
-      if (
-        !Number.isFinite(qty) ||
-        qty <= 0 ||
-        !Number.isFinite(unitPrice) ||
-        unitPrice < 0
-      ) {
+      if (newRowItemizedLines.length === 0) {
         setNewRowError(
-          "Enter quantity and unit price (both required, quantity > 0).",
+          "Add at least one line (item name, quantity, unit price).",
         );
         return;
       }
-      const amount = roundToCents(qty * unitPrice);
-      if (amount <= 0) {
-        setNewRowError("Quantity × unit price must be greater than 0.");
-        return;
+      const lines: { itemName: string; quantity: number; unitPrice: number }[] =
+        [];
+      for (const line of newRowItemizedLines) {
+        const name = line.itemName.trim();
+        const qty = Number(line.quantity);
+        const unitDollars = Number(line.unitPriceDollars);
+        if (!name) {
+          setNewRowError("Every line needs an item name.");
+          return;
+        }
+        if (!Number.isFinite(qty) || qty <= 0) {
+          setNewRowError("Quantity must be a positive number for every line.");
+          return;
+        }
+        if (!Number.isFinite(unitDollars) || unitDollars < 0) {
+          setNewRowError("Unit price ($) must be 0 or more for every line.");
+          return;
+        }
+        lines.push({
+          itemName: name,
+          quantity: qty,
+          unitPrice: Math.round(unitDollars * 100),
+        });
       }
-      await handleCreateSettlement({
+      const ok = await handleCreateSettlement({
         wholesaler_id: newRowWholesalerId,
-        method: "MANUAL",
-        amount,
+        method: "ITEMIZED",
+        lines,
       });
+      if (ok) setNewRowItemizedLines([]);
       return;
     }
     const amount = Number(newRowFixed);
@@ -356,8 +402,7 @@ export function ShowDetailView({ id }: { id: string }) {
     newRowMode,
     newRowPercent,
     newRowFixed,
-    newRowQty,
-    newRowUnitPrice,
+    newRowItemizedLines,
     handleCreateSettlement,
   ]);
 
@@ -545,7 +590,11 @@ export function ShowDetailView({ id }: { id: string }) {
                         {row.wholesaler}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-sm text-gray-600">
-                        {row.type === "PERCENT" ? "Percent" : "Flat"}
+                        {row.type === "PERCENT"
+                          ? "Percent"
+                          : row.type === "ITEMIZED"
+                            ? "Itemized"
+                            : "Flat"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-500 tabular-nums">
                         —
@@ -594,7 +643,7 @@ export function ShowDetailView({ id }: { id: string }) {
                       onChange={(e) => setNewRowWholesalerId(e.target.value)}
                       className="w-full min-w-[120px] rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
                     >
-                      <option value="">Select</option>
+                      <option value="">Select wholesaler</option>
                       {wholesalers.map((w) => (
                         <option key={w.wholesaler_id} value={w.wholesaler_id}>
                           {w.name}
@@ -613,98 +662,245 @@ export function ShowDetailView({ id }: { id: string }) {
                         setNewRowMode(
                           v === "FIXED" || v === "QTY_UNIT" ? v : "PERCENT",
                         );
+                        if (
+                          v === "QTY_UNIT" &&
+                          newRowItemizedLines.length === 0
+                        ) {
+                          setNewRowItemizedLines([
+                            {
+                              id: crypto.randomUUID(),
+                              itemName: "",
+                              quantity: "",
+                              unitPriceDollars: "",
+                            },
+                          ]);
+                        }
                       }}
                       className="w-full min-w-[100px] rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
                     >
-                      <option value="PERCENT">Percent</option>
-                      <option value="FIXED">Flat</option>
-                      <option value="QTY_UNIT">Qty × unit</option>
+                      <option value="PERCENT">Percent of payout</option>
+                      <option value="FIXED">Flat amount ($)</option>
+                      <option value="QTY_UNIT">Qty × unit price</option>
                     </select>
                   </td>
-                  <td className="px-3 py-2.5 text-right">
-                    {newRowMode === "QTY_UNIT" ? (
-                      <input
-                        type="number"
-                        step="1"
-                        min={1}
-                        value={newRowQty}
-                        onChange={(e) => setNewRowQty(e.target.value)}
-                        className="w-16 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
-                        placeholder="0"
-                      />
-                    ) : (
-                      <span className="text-sm text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5 text-right">
-                    {newRowMode === "QTY_UNIT" ? (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        value={newRowUnitPrice}
-                        onChange={(e) => setNewRowUnitPrice(e.target.value)}
-                        className="w-20 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
-                        placeholder="0"
-                      />
-                    ) : (
-                      <span className="text-sm text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5 text-right">
-                    {newRowMode === "PERCENT" ? (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        max={100}
-                        value={newRowPercent}
-                        onChange={(e) => setNewRowPercent(e.target.value)}
-                        className="w-16 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
-                        placeholder="0"
-                      />
-                    ) : (
-                      <span className="text-sm text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5 text-right">
-                    {newRowMode === "FIXED" ? (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        value={newRowFixed}
-                        onChange={(e) => setNewRowFixed(e.target.value)}
-                        className="w-24 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
-                        placeholder="0"
-                      />
-                    ) : (
-                      <span className="text-sm text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-gray-900 tabular-nums">
-                    {newRowTotal != null ? formatCurrency(newRowTotal) : "—"}
-                  </td>
-                  <td className="px-3 py-2.5 text-right text-sm text-gray-400">
-                    —
-                  </td>
-                  <td className="px-3 py-2.5 text-right text-sm text-gray-400">
-                    —
-                  </td>
-                  <td className="px-3 py-2.5 text-right">
-                    <button
-                      type="button"
-                      disabled={
-                        creatingSettlement ||
-                        !newRowWholesalerId ||
-                        newRowTotal == null
-                      }
-                      onClick={() => void handleAddRow()}
-                      className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {creatingSettlement ? "Adding…" : "Add row"}
-                    </button>
-                  </td>
+                  {newRowMode === "QTY_UNIT" ? (
+                    <td colSpan={8} className="px-3 py-2.5 align-top">
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-gray-500">
+                          Itemized lines (item × qty × unit price $)
+                        </p>
+                        {newRowItemizedLines.map((line) => {
+                          const qty = Number(line.quantity);
+                          const unit = Number(line.unitPriceDollars);
+                          const lineTotal =
+                            Number.isFinite(qty) &&
+                            qty > 0 &&
+                            Number.isFinite(unit) &&
+                            unit >= 0
+                              ? roundToCents(qty * unit)
+                              : null;
+                          return (
+                            <div
+                              key={line.id}
+                              className="flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white px-2 py-1.5"
+                            >
+                              <input
+                                type="text"
+                                value={line.itemName}
+                                onChange={(e) =>
+                                  setNewRowItemizedLines((prev) =>
+                                    prev.map((l) =>
+                                      l.id === line.id
+                                        ? { ...l, itemName: e.target.value }
+                                        : l,
+                                    ),
+                                  )
+                                }
+                                placeholder="Item name"
+                                className="min-w-[120px] rounded border border-gray-300 px-2 py-1.5 text-sm"
+                              />
+                              <input
+                                type="number"
+                                step="1"
+                                min={1}
+                                value={line.quantity}
+                                onChange={(e) =>
+                                  setNewRowItemizedLines((prev) =>
+                                    prev.map((l) =>
+                                      l.id === line.id
+                                        ? { ...l, quantity: e.target.value }
+                                        : l,
+                                    ),
+                                  )
+                                }
+                                placeholder="Qty"
+                                className="w-16 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                              />
+                              <span className="text-sm text-gray-500">×</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min={0}
+                                value={line.unitPriceDollars}
+                                onChange={(e) =>
+                                  setNewRowItemizedLines((prev) =>
+                                    prev.map((l) =>
+                                      l.id === line.id
+                                        ? {
+                                            ...l,
+                                            unitPriceDollars: e.target.value,
+                                          }
+                                        : l,
+                                    ),
+                                  )
+                                }
+                                placeholder="Unit $"
+                                className="w-20 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                                title="Unit price ($)"
+                              />
+                              <span className="text-sm text-gray-500">=</span>
+                              <span className="w-20 text-right text-sm font-medium tabular-nums text-gray-900">
+                                {lineTotal != null
+                                  ? formatCurrency(lineTotal)
+                                  : "—"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setNewRowItemizedLines((prev) =>
+                                    prev.filter((l) => l.id !== line.id),
+                                  )
+                                }
+                                className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          );
+                        })}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setNewRowItemizedLines((prev) => [
+                                ...prev,
+                                {
+                                  id: crypto.randomUUID(),
+                                  itemName: "",
+                                  quantity: "",
+                                  unitPriceDollars: "",
+                                },
+                              ])
+                            }
+                            className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            + Add line
+                          </button>
+                          <span className="text-sm font-medium text-gray-700">
+                            Total settlement ={" "}
+                            {newRowTotal != null
+                              ? formatCurrency(newRowTotal)
+                              : "—"}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={
+                              creatingSettlement ||
+                              !newRowWholesalerId ||
+                              newRowTotal == null ||
+                              newRowItemizedLines.length === 0
+                            }
+                            onClick={() => void handleAddRow()}
+                            className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {creatingSettlement ? "Adding…" : "Add row"}
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  ) : (
+                    <>
+                      <td className="px-3 py-2.5 text-right">
+                        <span className="text-sm text-gray-400">—</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <span className="text-sm text-gray-400">—</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        {newRowMode === "PERCENT" ? (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              max={100}
+                              value={newRowPercent}
+                              onChange={(e) => setNewRowPercent(e.target.value)}
+                              className="w-16 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                              placeholder="0"
+                              aria-label="Percent of payout"
+                            />
+                            {payoutAfterFees <= 0 ? (
+                              <span className="text-xs text-amber-600">
+                                Save payout above first
+                              </span>
+                            ) : newRowTotal != null ? (
+                              <span className="text-xs text-gray-500">
+                                {newRowPercent || "0"}% of{" "}
+                                {formatCurrency(payoutAfterFees)} ={" "}
+                                {formatCurrency(newRowTotal)}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        {newRowMode === "FIXED" ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            min={0}
+                            value={newRowFixed}
+                            onChange={(e) => setNewRowFixed(e.target.value)}
+                            className="w-24 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                            placeholder="0.00"
+                            title="Amount (USD)"
+                            aria-label="Amount (USD)"
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-gray-900 tabular-nums">
+                        {newRowTotal != null
+                          ? formatCurrency(newRowTotal)
+                          : "—"}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-400">
+                        —
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-400">
+                        —
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <button
+                          type="button"
+                          disabled={
+                            creatingSettlement ||
+                            !newRowWholesalerId ||
+                            newRowTotal == null ||
+                            (newRowMode === "PERCENT" && payoutAfterFees <= 0)
+                          }
+                          onClick={() => void handleAddRow()}
+                          className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {creatingSettlement ? "Adding…" : "Add row"}
+                        </button>
+                      </td>
+                    </>
+                  )}
                 </tr>
               )}
             </tbody>
@@ -712,7 +908,13 @@ export function ShowDetailView({ id }: { id: string }) {
         </div>
         {(deleteSettlementError || createSettlementError || newRowError) && (
           <p className="px-4 py-3 text-sm text-amber-700" role="alert">
-            {deleteSettlementError ?? createSettlementError ?? newRowError}
+            {deleteSettlementError ??
+              (createSettlementError?.toLowerCase().includes("financials")
+                ? "Save payout after fees above, then try adding the settlement again."
+                : createSettlementError) ??
+              (newRowError?.toLowerCase().includes("financials")
+                ? "Save payout after fees above, then try adding the settlement again."
+                : newRowError)}
           </p>
         )}
       </section>

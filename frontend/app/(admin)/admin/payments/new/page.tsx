@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
+import { formatCurrency } from "@/lib/format";
 import { createPayment } from "@/src/lib/api/payments";
 import { fetchWholesalerBalances } from "@/src/lib/api/wholesalers";
 
@@ -14,13 +15,16 @@ function RecordPaymentForm() {
   const prefilledWholesalerId = searchParams.get("wholesalerId") ?? "";
 
   const [wholesalers, setWholesalers] = useState<
-    Array<{ id: string; name: string }>
+    Array<{ id: string; name: string; balanceOwed: number }>
   >([]);
   const [loadingWholesalers, setLoadingWholesalers] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  });
   const [wholesalerId, setWholesalerId] = useState("");
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<string>("Zelle");
@@ -36,7 +40,14 @@ function RecordPaymentForm() {
       .then((rows) => {
         if (cancelled) return;
         setWholesalers(
-          rows.map((row) => ({ id: row.wholesaler_id, name: row.name })),
+          rows.map((row) => ({
+            id: row.wholesaler_id,
+            name: row.name,
+            balanceOwed: (() => {
+              const n = Number(row.balance_owed);
+              return Number.isFinite(n) ? n : 0;
+            })(),
+          })),
         );
       })
       .catch((err) => {
@@ -166,6 +177,41 @@ function RecordPaymentForm() {
           {errors.wholesalerId && (
             <p className="mt-0.5 text-xs text-red-600">{errors.wholesalerId}</p>
           )}
+          {wholesalerId &&
+            (() => {
+              const w = wholesalers.find((x) => x.id === wholesalerId);
+              if (!w) return null;
+              const amt = amount === "" ? NaN : Number(amount);
+              const validAmount = Number.isFinite(amt) && amt > 0;
+              const projected = validAmount
+                ? Math.round((w.balanceOwed - amt) * 100) / 100
+                : null;
+              const isOverage = validAmount && amt > w.balanceOwed;
+              return (
+                <div className="mt-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  <p>
+                    Current balance owed:{" "}
+                    <strong className="text-gray-900">
+                      {formatCurrency(w.balanceOwed)}
+                    </strong>
+                  </p>
+                  {projected !== null && (
+                    <p className="mt-1">
+                      After this payment:{" "}
+                      <strong className="text-gray-900">
+                        {formatCurrency(projected)}
+                      </strong>
+                    </p>
+                  )}
+                  {isOverage && (
+                    <p className="mt-2 text-amber-700" role="alert">
+                      This payment exceeds the current balance and will create a
+                      credit.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
         </div>
 
         <div>

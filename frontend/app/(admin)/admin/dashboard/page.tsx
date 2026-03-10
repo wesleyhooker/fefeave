@@ -229,6 +229,8 @@ export default function AdminDashboardPage() {
     });
   }, [balances]);
 
+  const wholesalersOwingCount = safetyRows.length;
+
   return (
     <div>
       <h1 className="mb-2 text-2xl font-bold text-gray-900">Dashboard</h1>
@@ -251,15 +253,37 @@ export default function AdminDashboardPage() {
             Where things stand right now.
           </p>
         </div>
-        <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-3 sm:divide-y-0 sm:divide-x sm:divide-gray-200">
-          <div className="px-4 py-4 sm:py-5">
+        <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 lg:grid-cols-4 sm:divide-y-0 sm:divide-x sm:divide-gray-200">
+          <Link
+            href="/admin/balances"
+            className="px-4 py-4 sm:py-5 hover:bg-gray-50/80 focus:bg-gray-50/80 focus:outline-none"
+            aria-label="View outstanding balance in Balances"
+          >
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
               Outstanding balance
             </p>
             <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
               {formatCurrency(totals.totalBalance)}
             </p>
-          </div>
+            <span className="mt-1 inline-block text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-500">
+              View in Balances →
+            </span>
+          </Link>
+          <Link
+            href="/admin/balances"
+            className="px-4 py-4 sm:py-5 hover:bg-gray-50/80 focus:bg-gray-50/80 focus:outline-none"
+            aria-label="View wholesalers owing in Balances"
+          >
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+              Wholesalers owing
+            </p>
+            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
+              {wholesalersOwingCount}
+            </p>
+            <span className="mt-1 inline-block text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-500">
+              View in Balances →
+            </span>
+          </Link>
           <div className="px-4 py-4 sm:py-5">
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
               Net paid vs obligated
@@ -278,8 +302,9 @@ export default function AdminDashboardPage() {
           </div>
         </div>
         <p className="border-t border-gray-100 px-4 py-2 text-xs text-gray-500">
-          Outstanding = what you owe now. Net = payments minus obligations. Cash
-          out = payments + inventory in last 14 days.
+          Outstanding = what you owe now. Wholesalers owing = count with balance
+          &gt; 0. Net = payments minus obligations. Cash out = payments +
+          inventory in last 14 days.
         </p>
       </section>
 
@@ -296,10 +321,10 @@ export default function AdminDashboardPage() {
             New Show
           </Link>
           <Link
-            href="/admin/wholesalers"
+            href="/admin/balances"
             className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Wholesalers
+            Balances
           </Link>
           <Link
             href="/admin/payments/new"
@@ -643,7 +668,9 @@ export default function AdminDashboardPage() {
                           colSpan={3}
                           className="px-4 py-6 text-center text-sm text-gray-500"
                         >
-                          {loading ? "Loading payments..." : "No payments yet."}
+                          {loading
+                            ? "Loading payments..."
+                            : "No payments recorded yet."}
                         </td>
                       </tr>
                     ) : (

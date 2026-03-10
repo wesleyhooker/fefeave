@@ -8,7 +8,9 @@ import { createShow, upsertShowFinancials } from "@/src/lib/api/shows";
 export default function AdminShowsNewPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => {
+    return new Date().toISOString().slice(0, 10);
+  });
   const [payoutAfterFees, setPayoutAfterFees] = useState("");
   const [platform, setPlatform] = useState<"WHATNOT" | "INSTAGRAM" | "OTHER">(
     "WHATNOT",
@@ -36,7 +38,7 @@ export default function AdminShowsNewPage() {
         });
       }
 
-      router.push("/admin/shows");
+      router.push(`/admin/shows/${created.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

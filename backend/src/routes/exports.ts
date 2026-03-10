@@ -8,8 +8,9 @@ import {
   BALANCES_SORT_KEYS,
   getWholesalerBalancesView,
 } from '../services/balancesView';
+import { getWholesalerStatement } from '../services/wholesaler-statement';
 import { formatCurrency2dp, normalizeDateYyyyMmDd, toCsvText, todayFileDate } from '../utils/csv';
-import { ValidationError } from '../utils/errors';
+import { NotFoundError, ValidationError } from '../utils/errors';
 
 const yyyyMmDdSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be YYYY-MM-DD');
 
@@ -178,6 +179,60 @@ export async function exportRoutes(
       const csvText = toCsvText(header, csvRows);
       const body = '\uFEFF' + csvText;
       const filename = `ledger-${todayFileDate()}.csv`;
+
+      return reply
+        .header('Content-Type', 'text/csv; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .send(body);
+    }
+  );
+
+  fastify.get<{ Querystring: { wholesalerId?: string } }>(
+    '/exports/wholesaler-statement.csv',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Export wholesaler statement as CSV (same data as on-screen statement)',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            wholesalerId: { type: 'string', format: 'uuid' },
+          },
+          required: ['wholesalerId'],
+        },
+      },
+    },
+    async (request, reply) => {
+      const wholesalerIdRaw = request.query.wholesalerId;
+      const parsed = z.string().uuid().safeParse(wholesalerIdRaw);
+      if (!parsed.success) {
+        throw new ValidationError('Invalid wholesalerId', parsed.error.errors);
+      }
+      const wholesalerId = parsed.data;
+
+      const pool = getPool();
+      const whCheck = await pool.query(
+        'SELECT id FROM wholesalers WHERE id = $1 AND deleted_at IS NULL',
+        [wholesalerId]
+      );
+      if (whCheck.rows.length === 0) {
+        throw new NotFoundError('Wholesaler', wholesalerId);
+      }
+
+      const entries = await getWholesalerStatement(pool, wholesalerId);
+      const header = ['Date', 'Show', 'Type', 'Amount Owed', 'Amount Paid', 'Balance'];
+      const csvRows = entries.map((e) => [
+        normalizeDateYyyyMmDd(e.date),
+        e.show_name ?? '',
+        e.type === 'OWED' ? 'Settlement' : 'Payment',
+        e.type === 'OWED' ? formatCurrency2dp(e.amount) : '',
+        e.type === 'PAYMENT' ? formatCurrency2dp(e.amount) : '',
+        formatCurrency2dp(e.running_balance),
+      ]);
+      const csvText = toCsvText(header, csvRows);
+      const body = '\uFEFF' + csvText;
+      const filename = `wholesaler-statement-${todayFileDate()}.csv`;
 
       return reply
         .header('Content-Type', 'text/csv; charset=utf-8')
