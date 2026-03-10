@@ -558,7 +558,7 @@ export async function owedLineItemRoutes(
          WHERE id = $1`,
         [settlementId]
       );
-      if (settlementResult.rows.length === 0) {
+      if (!settlementResult?.rows || settlementResult.rows.length === 0) {
         throw new NotFoundError('Settlement', settlementId);
       }
 
