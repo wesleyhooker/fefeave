@@ -54,50 +54,52 @@ export default function AdminDashboardPage() {
     setPaymentsError(null);
     setPaymentsAuthStatus(null);
 
-    const balancesPromise = fetchWholesalerBalances()
-      .then((rows) => {
-        if (!cancelled) setBalances(rows);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setBalancesError(err instanceof Error ? err.message : String(err));
-          setBalances([]);
-        }
-      });
+    Promise.allSettled([
+      fetchWholesalerBalances(),
+      fetchShows(),
+      fetchPayments(),
+    ]).then(([balancesResult, showsResult, paymentsResult]) => {
+      if (cancelled) return;
 
-    const showsPromise = fetchShows()
-      .then((rows) => {
-        if (!cancelled) setShows(rows);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setShowsError(err instanceof Error ? err.message : String(err));
-          setShows([]);
-        }
-      });
+      if (balancesResult.status === "fulfilled") {
+        setBalances(balancesResult.value);
+      } else {
+        setBalancesError(
+          balancesResult.reason instanceof Error
+            ? balancesResult.reason.message
+            : String(balancesResult.reason),
+        );
+        setBalances([]);
+      }
 
-    const paymentsPromise = fetchPayments()
-      .then((rows) => {
-        if (!cancelled) setPayments(rows);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        const status = parseStatusCodeFromError(err);
+      if (showsResult.status === "fulfilled") {
+        setShows(showsResult.value);
+      } else {
+        setShowsError(
+          showsResult.reason instanceof Error
+            ? showsResult.reason.message
+            : String(showsResult.reason),
+        );
+        setShows([]);
+      }
+
+      if (paymentsResult.status === "fulfilled") {
+        setPayments(paymentsResult.value);
+      } else {
+        const status = parseStatusCodeFromError(paymentsResult.reason);
         if (status === 401 || status === 403) {
           setPaymentsAuthStatus(status);
-          setPayments([]);
-          return;
+        } else {
+          setPaymentsError(
+            paymentsResult.reason instanceof Error
+              ? paymentsResult.reason.message
+              : String(paymentsResult.reason),
+          );
         }
-        setPaymentsError(err instanceof Error ? err.message : String(err));
         setPayments([]);
-      });
+      }
 
-    Promise.allSettled([
-      balancesPromise,
-      showsPromise,
-      paymentsPromise,
-    ]).finally(() => {
-      if (!cancelled) setLoading(false);
+      setLoading(false);
     });
 
     return () => {

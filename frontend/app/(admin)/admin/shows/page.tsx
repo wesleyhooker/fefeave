@@ -52,7 +52,6 @@ export default function AdminShowsPage() {
   const [shows, setShows] = useState<ShowViewModel[] | null>(null);
   const [summaries, setSummaries] = useState<Record<string, ShowSummary>>({});
   const [loading, setLoading] = useState(true);
-  const [summariesLoading, setSummariesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -60,10 +59,54 @@ export default function AdminShowsPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
+
     fetchShows()
       .then((rows) => {
         if (cancelled) return;
-        setShows(rows.map(mapShowToViewModel));
+        const viewModels = rows.map(mapShowToViewModel);
+        if (viewModels.length === 0) {
+          setShows([]);
+          setSummaries({});
+          return;
+        }
+        return Promise.all(
+          viewModels.map(async (show) => {
+            const [financials, settlementRows] = await Promise.all([
+              fetchShowFinancials(show.id).catch(() => null),
+              fetchShowSettlements(show.id).catch(() => []),
+            ]);
+            const payout =
+              financials != null
+                ? Number(financials.payout_after_fees_amount)
+                : 0;
+            const payoutNum = Number.isFinite(payout) ? payout : 0;
+            const totalOwed = totalOwedFromSettlements(
+              payoutNum,
+              settlementRows,
+            );
+            const estimatedShowProfit = roundToCents(payoutNum - totalOwed);
+            return {
+              id: show.id,
+              payoutAfterFees: payoutNum,
+              totalOwed,
+              estimatedShowProfit,
+              settlementCount: settlementRows.length,
+            };
+          }),
+        ).then((results) => {
+          if (cancelled) return;
+          const next: Record<string, ShowSummary> = {};
+          for (const r of results) {
+            next[r.id] = {
+              payoutAfterFees: r.payoutAfterFees,
+              totalOwed: r.totalOwed,
+              estimatedShowProfit: r.estimatedShowProfit,
+              settlementCount: r.settlementCount,
+            };
+          }
+          setShows(viewModels);
+          setSummaries(next);
+        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -77,59 +120,6 @@ export default function AdminShowsPage() {
       cancelled = true;
     };
   }, [reloadToken]);
-
-  useEffect(() => {
-    const list = shows ?? [];
-    if (list.length === 0) {
-      setSummaries({});
-      return;
-    }
-    let cancelled = false;
-    setSummariesLoading(true);
-    Promise.all(
-      list.map(async (show) => {
-        const [financials, settlementRows] = await Promise.all([
-          fetchShowFinancials(show.id).catch(() => null),
-          fetchShowSettlements(show.id).catch(() => []),
-        ]);
-        const payout =
-          financials != null ? Number(financials.payout_after_fees_amount) : 0;
-        const payoutNum = Number.isFinite(payout) ? payout : 0;
-        const totalOwed = totalOwedFromSettlements(payoutNum, settlementRows);
-        const estimatedShowProfit = roundToCents(payoutNum - totalOwed);
-        return {
-          id: show.id,
-          payoutAfterFees: payoutNum,
-          totalOwed,
-          estimatedShowProfit,
-          settlementCount: settlementRows.length,
-        };
-      }),
-    )
-      .then((results) => {
-        if (cancelled) return;
-        const next: Record<string, ShowSummary> = {};
-        for (const r of results) {
-          next[r.id] = {
-            payoutAfterFees: r.payoutAfterFees,
-            totalOwed: r.totalOwed,
-            estimatedShowProfit: r.estimatedShowProfit,
-            settlementCount: r.settlementCount,
-          };
-        }
-        setSummaries(next);
-      })
-      .catch(() => {
-        if (!cancelled) setSummaries({});
-      })
-      .finally(() => {
-        if (!cancelled) setSummariesLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [shows]);
 
   const rows = useMemo(() => shows ?? [], [shows]);
 
@@ -269,7 +259,7 @@ export default function AdminShowsPage() {
                             </p>
                           )}
                         </div>
-                        {summariesLoading || summary == null ? (
+                        {summary == null ? (
                           <span className="shrink-0 text-sm text-gray-400">
                             —
                           </span>
