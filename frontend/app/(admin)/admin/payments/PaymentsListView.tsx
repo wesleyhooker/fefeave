@@ -93,12 +93,6 @@ export function PaymentsListView() {
                 scope="col"
                 className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
               >
-                Date
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
                 Wholesaler
               </th>
               <th
@@ -106,6 +100,12 @@ export function PaymentsListView() {
                 className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
               >
                 Amount
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Date
               </th>
               <th
                 scope="col"
@@ -145,19 +145,19 @@ export function PaymentsListView() {
                 const wholesalerName = wholesalerNameById[p.wholesalerId];
                 return (
                   <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                      {formatDate(p.date)}
-                    </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <Link
                         href={`/admin/wholesalers/${p.wholesalerId}`}
-                        className="font-medium text-gray-900 hover:underline"
+                        className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
                       >
                         {wholesalerName ?? "Unknown"}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums text-gray-900">
                       {formatCurrency(p.amount)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                      {formatDate(p.date)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                       {METHOD_LABELS[p.method] ?? p.method}

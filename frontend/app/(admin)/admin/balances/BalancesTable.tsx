@@ -185,10 +185,23 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
               >
                 <button
                   type="button"
+                  onClick={() => handleSort("balance_owed")}
+                  className="hover:text-gray-700"
+                >
+                  Balance owed
+                  <SortIndicator column="balance_owed" />
+                </button>
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                <button
+                  type="button"
                   onClick={() => handleSort("owed_total")}
                   className="hover:text-gray-700"
                 >
-                  Owed Total
+                  Total owed
                   <SortIndicator column="owed_total" />
                 </button>
               </th>
@@ -201,21 +214,8 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                   onClick={() => handleSort("paid_total")}
                   className="hover:text-gray-700"
                 >
-                  Paid Total
+                  Total paid
                   <SortIndicator column="paid_total" />
-                </button>
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleSort("balance_owed")}
-                  className="hover:text-gray-700"
-                >
-                  Balance Owed
-                  <SortIndicator column="balance_owed" />
                 </button>
               </th>
               <th
@@ -227,7 +227,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                   onClick={() => handleSort("last_payment_date")}
                   className="hover:text-gray-700"
                 >
-                  Last Payment Date
+                  Last payment
                   <SortIndicator column="last_payment_date" />
                 </button>
               </th>
@@ -267,14 +267,14 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                     <td className="whitespace-nowrap px-4 py-3">
                       <PaymentStatusChip status={status} />
                     </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums text-gray-900">
+                      {formatCurrency(parseNum(r.balance_owed))}
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
                       {formatCurrency(parseNum(r.owed_total))}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
                       {formatCurrency(parseNum(r.paid_total))}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
-                      {formatCurrency(parseNum(r.balance_owed))}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                       {r.last_payment_date

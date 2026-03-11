@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { HelpTooltip } from "@/app/(admin)/admin/_components/HelpTooltip";
 import {
   getPaymentStatus,
   PaymentStatusChip,
@@ -30,35 +29,6 @@ function parseStatusCodeFromError(err: unknown): number | null {
   if (!match) return null;
   const status = Number(match[1]);
   return Number.isFinite(status) ? status : null;
-}
-
-/** Freshness dot for "Last paid" based on pay_schedule window. AD_HOC = no dot. */
-function getPaymentFreshnessDot(
-  lastPaymentDate: string | undefined,
-  paySchedule: string | undefined,
-): "green" | "amber" | "red" | null {
-  const schedule = paySchedule ?? "AD_HOC";
-  if (schedule === "AD_HOC") return null;
-  const windowDays =
-    schedule === "WEEKLY"
-      ? 7
-      : schedule === "BIWEEKLY"
-        ? 14
-        : schedule === "MONTHLY"
-          ? 30
-          : 0;
-  if (windowDays === 0) return null;
-  if (!lastPaymentDate?.trim()) return "red";
-  const last = new Date(lastPaymentDate.slice(0, 10));
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  last.setHours(0, 0, 0, 0);
-  const daysSince = Math.floor(
-    (today.getTime() - last.getTime()) / (24 * 60 * 60 * 1000),
-  );
-  if (daysSince <= windowDays) return "green";
-  if (daysSince <= 2 * windowDays) return "amber";
-  return "red";
 }
 
 export default function AdminDashboardPage() {
@@ -348,15 +318,6 @@ export default function AdminDashboardPage() {
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">
                               <div>
                                 <span>{row.name}</span>
-                                {(row.pay_schedule ?? "AD_HOC") !==
-                                  "AD_HOC" && (
-                                  <span className="ml-2 inline-flex rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
-                                    {(row.pay_schedule ?? "AD_HOC").replace(
-                                      "_",
-                                      " ",
-                                    )}
-                                  </span>
-                                )}
                                 <span className="ml-2 inline-flex">
                                   <PaymentStatusChip status={status} />
                                 </span>
@@ -370,37 +331,9 @@ export default function AdminDashboardPage() {
                               {formatCurrency(outstanding)}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                              <span className="inline-flex items-center gap-1.5">
-                                {(() => {
-                                  const dot = getPaymentFreshnessDot(
-                                    row.last_payment_date,
-                                    row.pay_schedule,
-                                  );
-                                  const dotTitle =
-                                    dot === "green"
-                                      ? "Paid within schedule window"
-                                      : dot === "amber"
-                                        ? "Paid within 2× schedule window"
-                                        : "Overdue or never paid";
-                                  return dot ? (
-                                    <HelpTooltip content={dotTitle} side="top">
-                                      <span
-                                        className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-                                          dot === "green"
-                                            ? "bg-emerald-500"
-                                            : dot === "amber"
-                                              ? "bg-amber-500"
-                                              : "bg-red-500"
-                                        }`}
-                                        aria-hidden
-                                      />
-                                    </HelpTooltip>
-                                  ) : null;
-                                })()}
-                                {row.last_payment_date
-                                  ? formatDate(row.last_payment_date)
-                                  : "—"}
-                              </span>
+                              {row.last_payment_date
+                                ? formatDate(row.last_payment_date)
+                                : "—"}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
                               {(row.pay_schedule ?? "AD_HOC") !== "AD_HOC" && (
