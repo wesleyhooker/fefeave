@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { HelpTooltip } from "@/app/(admin)/admin/_components/HelpTooltip";
 import {
   getPaymentStatus,
   PaymentStatusChip,
@@ -14,7 +15,6 @@ import {
 } from "@/src/lib/api/wholesalers";
 import { fetchShows, type ShowDTO } from "@/src/lib/api/shows";
 import { fetchPayments, type PaymentDTO } from "@/src/lib/api/payments";
-import { fetchInventoryInvested } from "@/src/lib/api/inventory-purchases";
 
 const RECENT_SHOWS_LIMIT = 5;
 const RECENT_PAYMENTS_LIMIT = 5;
@@ -74,12 +74,6 @@ export default function AdminDashboardPage() {
   const [paymentsAuthStatus, setPaymentsAuthStatus] = useState<number | null>(
     null,
   );
-  const [inventoryInvested, setInventoryInvested] = useState<string | null>(
-    null,
-  );
-  const [inventoryInvestedError, setInventoryInvestedError] = useState<
-    string | null
-  >(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -89,7 +83,6 @@ export default function AdminDashboardPage() {
     setShowsError(null);
     setPaymentsError(null);
     setPaymentsAuthStatus(null);
-    setInventoryInvestedError(null);
 
     const balancesPromise = fetchWholesalerBalances()
       .then((rows) => {
@@ -129,24 +122,10 @@ export default function AdminDashboardPage() {
         setPayments([]);
       });
 
-    const inventoryInvestedPromise = fetchInventoryInvested(14)
-      .then((data) => {
-        if (!cancelled) setInventoryInvested(data.total);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setInventoryInvestedError(
-            err instanceof Error ? err.message : String(err),
-          );
-          setInventoryInvested(null);
-        }
-      });
-
     Promise.allSettled([
       balancesPromise,
       showsPromise,
       paymentsPromise,
-      inventoryInvestedPromise,
     ]).finally(() => {
       if (!cancelled) setLoading(false);
     });
@@ -170,24 +149,6 @@ export default function AdminDashboardPage() {
   }, [balances]);
 
   const netPaidVsObligated = totals.totalPaid - totals.totalOwed;
-
-  const paymentsLast14DaysTotal = useMemo(() => {
-    const rows = payments ?? [];
-    if (rows.length === 0) return 0;
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 14);
-    const cutoffTime = cutoff.getTime();
-    return rows.reduce((sum, payment) => {
-      const time = new Date(payment.payment_date).getTime();
-      if (Number.isNaN(time) || time < cutoffTime) return sum;
-      return sum + parseAmount(payment.amount);
-    }, 0);
-  }, [payments]);
-
-  const inventoryInvestedAmount =
-    inventoryInvested != null ? parseAmount(inventoryInvested) : 0;
-
-  const netCashMovement = paymentsLast14DaysTotal + inventoryInvestedAmount;
 
   const openShows = useMemo(() => {
     return [...(shows ?? [])]
@@ -233,94 +194,13 @@ export default function AdminDashboardPage() {
 
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p className="mb-6 text-gray-600">
-        {loading
-          ? "Loading dashboard..."
-          : "Profit-first overview and operational workspace."}
-      </p>
+      <h1 className="mb-6 text-2xl font-bold text-gray-900">Dashboard</h1>
 
-      {/* 1. Profit snapshot — unified financial header */}
-      <section
-        className="mb-6 rounded-lg border border-gray-200 bg-white"
-        aria-label="Financial summary"
-      >
-        <div className="flex items-center gap-1.5 border-b border-gray-100 px-4 py-3">
-          <h2 className="text-base font-semibold text-gray-900">
-            Financial summary
-          </h2>
-          <span
-            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-            title="Outstanding = what you owe now. Wholesalers owing = count with balance > 0. Net = payments minus obligations. Cash out = payments plus inventory invested in last 14 days."
-            aria-label="Help"
-          >
-            i
-          </span>
-        </div>
-        <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 lg:grid-cols-4 sm:divide-y-0 sm:divide-x sm:divide-gray-200">
-          <Link
-            href="/admin/balances"
-            className="px-4 py-4 sm:py-5 hover:bg-gray-50/80 focus:bg-gray-50/80 focus:outline-none"
-            aria-label="View outstanding balance in Balances"
-          >
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Outstanding balance
-            </p>
-            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
-              {formatCurrency(totals.totalBalance)}
-            </p>
-            <span className="mt-1 inline-block text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-500">
-              View in Balances →
-            </span>
-          </Link>
-          <Link
-            href="/admin/balances"
-            className="px-4 py-4 sm:py-5 hover:bg-gray-50/80 focus:bg-gray-50/80 focus:outline-none"
-            aria-label="View wholesalers owing in Balances"
-          >
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Wholesalers owing
-            </p>
-            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
-              {wholesalersOwingCount}
-            </p>
-            <span className="mt-1 inline-block text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-500">
-              View in Balances →
-            </span>
-          </Link>
-          <div className="px-4 py-4 sm:py-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Net paid vs obligated
-            </p>
-            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
-              {formatCurrency(netPaidVsObligated)}
-            </p>
-          </div>
-          <div className="px-4 py-4 sm:py-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Cash out (14 days)
-            </p>
-            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
-              {inventoryInvestedError ? "—" : formatCurrency(netCashMovement)}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. Primary workflow — Add Show first; Record Payment secondary */}
+      {/* 1. Workflow */}
       <section className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <div className="mb-3 flex items-center gap-1.5">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-            Workflow
-          </h2>
-          <span
-            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-            title="Start with a show, then close it out when payout and settlements are final. Record payments from Payments or Balances when you send money."
-            aria-label="Help"
-          >
-            i
-          </span>
-        </div>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+          Workflow
+        </h2>
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/admin/shows/new"
@@ -339,17 +219,10 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* 3. Open shows needing close-out */}
+      {/* 2. Open shows */}
       <section className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center gap-1.5 border-b border-gray-200 px-4 py-3">
+        <div className="border-b border-gray-200 px-4 py-3">
           <h2 className="text-lg font-semibold text-gray-900">Open shows</h2>
-          <span
-            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-            title="Close out when payout and settlements are final. Closing locks financial entry; the show stays visible and you can still record payments."
-            aria-label="Help"
-          >
-            i
-          </span>
         </div>
         {showsError ? (
           <SectionErrorBody
@@ -424,13 +297,12 @@ export default function AdminDashboardPage() {
         />
       )}
 
-      {/* 4. Who you owe */}
+      {/* 3. Outstanding balances */}
       <section className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-900">Who you owe</h2>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Outstanding by wholesaler. Record a payment when you send money.
-          </p>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Outstanding balances
+          </h2>
         </div>
         {balancesError ? (
           <div className="px-4 py-4 text-sm text-amber-700">
@@ -511,24 +383,25 @@ export default function AdminDashboardPage() {
                                 row.last_payment_date,
                                 row.pay_schedule,
                               );
+                              const dotTitle =
+                                dot === "green"
+                                  ? "Paid within schedule window"
+                                  : dot === "amber"
+                                    ? "Paid within 2× schedule window"
+                                    : "Overdue or never paid";
                               return dot ? (
-                                <span
-                                  className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-                                    dot === "green"
-                                      ? "bg-emerald-500"
-                                      : dot === "amber"
-                                        ? "bg-amber-500"
-                                        : "bg-red-500"
-                                  }`}
-                                  title={
-                                    dot === "green"
-                                      ? "Paid within schedule window"
-                                      : dot === "amber"
-                                        ? "Paid within 2× schedule window"
-                                        : "Overdue or never paid"
-                                  }
-                                  aria-hidden
-                                />
+                                <HelpTooltip content={dotTitle} side="top">
+                                  <span
+                                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+                                      dot === "green"
+                                        ? "bg-emerald-500"
+                                        : dot === "amber"
+                                          ? "bg-amber-500"
+                                          : "bg-red-500"
+                                    }`}
+                                    aria-hidden
+                                  />
+                                </HelpTooltip>
                               ) : null;
                             })()}
                             {row.last_payment_date
@@ -563,6 +436,58 @@ export default function AdminDashboardPage() {
             </table>
           </div>
         )}
+      </section>
+
+      {/* 4. Financial summary */}
+      <section
+        className="mb-6 rounded-lg border border-gray-200 bg-white"
+        aria-label="Financial summary"
+      >
+        <div className="border-b border-gray-100 px-4 py-3">
+          <h2 className="text-base font-semibold text-gray-900">
+            Financial summary
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 lg:grid-cols-3 sm:divide-y-0 sm:divide-x sm:divide-gray-200">
+          <Link
+            href="/admin/balances"
+            className="px-4 py-4 sm:py-5 hover:bg-gray-50/80 focus:bg-gray-50/80 focus:outline-none"
+            aria-label="View outstanding balance in Balances"
+          >
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+              Outstanding balance
+            </p>
+            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
+              {formatCurrency(totals.totalBalance)}
+            </p>
+            <span className="mt-1 inline-block text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-500">
+              View in Balances →
+            </span>
+          </Link>
+          <Link
+            href="/admin/balances"
+            className="px-4 py-4 sm:py-5 hover:bg-gray-50/80 focus:bg-gray-50/80 focus:outline-none"
+            aria-label="View wholesalers owing in Balances"
+          >
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+              Wholesalers owing
+            </p>
+            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
+              {wholesalersOwingCount}
+            </p>
+            <span className="mt-1 inline-block text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-500">
+              View in Balances →
+            </span>
+          </Link>
+          <div className="px-4 py-4 sm:py-5">
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+              Net paid vs obligated
+            </p>
+            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
+              {formatCurrency(netPaidVsObligated)}
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* 5. Recent activity */}

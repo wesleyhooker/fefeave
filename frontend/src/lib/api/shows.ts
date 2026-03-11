@@ -17,6 +17,7 @@ export interface ShowViewModel {
   name: string;
   date: string;
   status: string;
+  updated_at?: string;
 }
 
 export interface CreateShowDTO {
@@ -177,5 +178,6 @@ export function mapShowToViewModel(show: ShowDTO): ShowViewModel {
     name: show.name,
     date: show.show_date,
     status: show.status ?? 'PLANNED',
+    updated_at: show.updated_at,
   };
 }

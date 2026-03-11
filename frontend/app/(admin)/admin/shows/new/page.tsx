@@ -3,25 +3,40 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useEffect, useState } from "react";
-import { createShow, upsertShowFinancials } from "@/src/lib/api/shows";
+import {
+  createShow,
+  fetchShows,
+  upsertShowFinancials,
+} from "@/src/lib/api/shows";
 
-/** Format YYYY-MM-DD as friendly show name, e.g. "Mar 10, 2025". */
-function showNameFromDate(dateStr: string): string {
-  if (!dateStr || dateStr.length < 10) return "";
-  const d = new Date(dateStr + "T12:00:00");
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+/** Default show name: YYYY-MM-DD, or YYYY-MM-DD #2, #3 if same date exists. */
+function defaultShowNameForDate(
+  dateStr: string,
+  existingShowsOnDate: { name: string }[],
+): string {
+  if (!dateStr || dateStr.length < 10) return dateStr || "";
+  const base = dateStr;
+  const prefix = base + " #";
+  const withSuffix = existingShowsOnDate.filter(
+    (s) => s.name === base || s.name.startsWith(prefix),
+  );
+  const maxSuffix = withSuffix.reduce((max, s) => {
+    if (s.name === base) return Math.max(max, 1);
+    const num = parseInt(s.name.slice(prefix.length), 10);
+    return Number.isFinite(num) ? Math.max(max, num) : max;
+  }, 0);
+  if (maxSuffix === 0) return base;
+  return `${base} #${maxSuffix + 1}`;
 }
 
 export default function AdminShowsNewPage() {
   const router = useRouter();
   const defaultDate = () => new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(defaultDate);
-  const [name, setName] = useState(() => showNameFromDate(defaultDate()));
+  const [existingShows, setExistingShows] = useState<
+    { show_date: string; name: string }[]
+  >([]);
+  const [name, setName] = useState(date);
   const nameManuallyEdited = useRef(false);
   const [payoutAfterFees, setPayoutAfterFees] = useState("");
   const [platform, setPlatform] = useState<"WHATNOT" | "INSTAGRAM" | "OTHER">(
@@ -30,12 +45,31 @@ export default function AdminShowsNewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const prefilledName = showNameFromDate(date);
+  useEffect(() => {
+    let cancelled = false;
+    fetchShows()
+      .then((rows) => {
+        if (!cancelled)
+          setExistingShows(
+            rows.map((r) => ({ show_date: r.show_date, name: r.name })),
+          );
+      })
+      .catch(() => {
+        if (!cancelled) setExistingShows([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const showsOnSelectedDate = existingShows.filter((s) => s.show_date === date);
+  const suggestedName = defaultShowNameForDate(date, showsOnSelectedDate);
+
   useEffect(() => {
     if (!nameManuallyEdited.current) {
-      setName(prefilledName);
+      setName(suggestedName);
     }
-  }, [prefilledName]);
+  }, [suggestedName]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,14 +108,14 @@ export default function AdminShowsNewPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <p className="mb-2">
         <Link
           href="/admin/shows"
           className="text-sm text-gray-500 hover:text-gray-700"
         >
-          ← Back to Shows
+          ← Shows
         </Link>
-      </div>
+      </p>
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Create Show</h1>
 
       {error && (
@@ -100,6 +134,23 @@ export default function AdminShowsNewPage() {
       >
         <div>
           <label
+            htmlFor="date"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
+            Date <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="date"
+            type="date"
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+          />
+        </div>
+
+        <div>
+          <label
             htmlFor="name"
             className="mb-1 block text-sm font-medium text-gray-700"
           >
@@ -115,7 +166,7 @@ export default function AdminShowsNewPage() {
               setName(e.target.value);
             }}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            placeholder="e.g. Mar 10, 2025"
+            placeholder="e.g. 2026-03-10"
           />
         </div>
 
@@ -138,23 +189,6 @@ export default function AdminShowsNewPage() {
             <option value="INSTAGRAM">INSTAGRAM</option>
             <option value="OTHER">OTHER</option>
           </select>
-        </div>
-
-        <div>
-          <label
-            htmlFor="date"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Date <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="date"
-            type="date"
-            required
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-          />
         </div>
 
         <div>
@@ -185,7 +219,7 @@ export default function AdminShowsNewPage() {
                 if (parts[1]?.length > 2) return;
                 setPayoutAfterFees(v);
               }}
-              className="w-full rounded-md border border-gray-300 py-2 pl-7 pr-3 text-sm tabular-nums shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="w-full max-w-[8rem] rounded-md border border-gray-300 py-2 pl-7 pr-3 text-sm tabular-nums shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
               placeholder="0.00"
               aria-label="Payout after fees in dollars"
             />

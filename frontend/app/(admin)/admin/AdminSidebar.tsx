@@ -28,11 +28,6 @@ const NAV_ITEMS: {
     label: "Payments",
     match: (p) => p.startsWith("/admin/payments"),
   },
-  {
-    href: "/admin/inventory",
-    label: "Inventory",
-    match: (p) => p.startsWith("/admin/inventory"),
-  },
 ];
 
 export function AdminSidebar() {

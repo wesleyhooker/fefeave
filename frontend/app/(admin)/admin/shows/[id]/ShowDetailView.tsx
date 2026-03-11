@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { HelpTooltip } from "@/app/(admin)/admin/_components/HelpTooltip";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   fetchWholesalerBalances,
@@ -128,6 +129,12 @@ const STATUS_STYLES: Record<string, string> = {
   Unpaid: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
 };
 
+const STATUS_DOT: Record<string, string> = {
+  Open: "bg-blue-500",
+  Paid: "bg-emerald-500",
+  Unpaid: "bg-amber-500",
+};
+
 export function ShowDetailView({ id }: { id: string }) {
   const [showName, setShowName] = useState("");
   const [showDate, setShowDate] = useState("");
@@ -156,6 +163,7 @@ export function ShowDetailView({ id }: { id: string }) {
   const [closing, setClosing] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showReopenConfirm, setShowReopenConfirm] = useState(false);
+  const closeOutSectionRef = useRef<HTMLDivElement>(null);
   const [newRowWholesalerId, setNewRowWholesalerId] = useState("");
   const [newRowMode, setNewRowMode] = useState<
     "PERCENT" | "FIXED" | "QTY_UNIT"
@@ -483,7 +491,7 @@ export function ShowDetailView({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Header: title, date, closed note — minimal chrome */}
+      {/* Header: title, date, status, primary action when open */}
       <div className="border-b border-gray-200 pb-4">
         <h1 className="text-2xl font-bold text-gray-900">
           {showName || "Show"}
@@ -491,6 +499,40 @@ export function ShowDetailView({ id }: { id: string }) {
         <p className="mt-1 text-sm text-gray-600">
           Date: {showDate ? formatDate(showDate) : "—"}
         </p>
+        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-gray-600">
+          Status:{" "}
+          <span
+            className={`inline-flex items-center gap-1.5 font-medium ${
+              isClosed ? "text-emerald-600" : "text-blue-600"
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                isClosed ? "bg-emerald-500" : "bg-blue-500"
+              }`}
+              aria-hidden
+            />
+            {isClosed ? "Closed" : "Open"}
+          </span>
+        </p>
+        {!isClosed && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowCloseConfirm(true);
+                closeOutSectionRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }}
+              disabled={closing}
+              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            >
+              Close out show
+            </button>
+          </div>
+        )}
         {isClosed && (
           <p className="mt-3 text-sm text-gray-600">
             This show is closed. Payout and settlements are locked; you can
@@ -534,15 +576,6 @@ export function ShowDetailView({ id }: { id: string }) {
       >
         <div className="flex items-center gap-1.5 border-b border-gray-200 px-4 py-3">
           <h2 className="text-base font-semibold text-gray-900">Settlements</h2>
-          {!isClosed && (
-            <span
-              className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-              title="Add rows below. Percent and quantity×price are calculated; flat amount is what you enter."
-              aria-label="Help"
-            >
-              i
-            </span>
-          )}
           {isClosed && (
             <p className="text-xs text-gray-500">
               Locked — reopen show to add or remove.
@@ -874,17 +907,29 @@ export function ShowDetailView({ id }: { id: string }) {
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         {newRowMode === "FIXED" ? (
-                          <input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            value={newRowFixed}
-                            onChange={(e) => setNewRowFixed(e.target.value)}
-                            className="w-24 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
-                            placeholder="0.00"
-                            title="Amount (USD)"
-                            aria-label="Amount (USD)"
-                          />
+                          <div className="inline-flex items-center rounded border border-gray-300 bg-white">
+                            <span className="pl-2 text-sm text-gray-500">
+                              $
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={newRowFixed}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(
+                                  /[^0-9.]/g,
+                                  "",
+                                );
+                                const parts = v.split(".");
+                                if (parts.length > 2) return;
+                                if (parts[1]?.length > 2) return;
+                                setNewRowFixed(v);
+                              }}
+                              className="w-20 rounded py-1.5 pr-2 text-right text-sm tabular-nums"
+                              placeholder="0.00"
+                              aria-label="Amount (USD)"
+                            />
+                          </div>
                         ) : (
                           <span className="text-sm text-gray-400">—</span>
                         )}
@@ -942,84 +987,80 @@ export function ShowDetailView({ id }: { id: string }) {
         )}
       </section>
 
-      {/* 3. Review / profit — structured row, not cards */}
+      {/* 3. Review & profit */}
       <section className="border border-gray-200 bg-white p-4">
-        <div className="flex items-center gap-1.5">
-          <h2 className="text-base font-semibold text-gray-900">
-            Review & profit
-          </h2>
-          <span
-            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-            title="Totals and profit. Close out when final."
-            aria-label="Help"
-          >
-            i
-          </span>
-        </div>
+        <h2 className="text-base font-semibold text-gray-900">
+          Review & profit
+        </h2>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full border-collapse text-sm">
             <tbody className="divide-y divide-gray-100">
               <tr>
-                <td className="py-2 pr-6 font-medium text-gray-500">
+                <td className="py-2 pr-4 font-medium text-gray-500">
                   Payout after fees
                 </td>
-                <td className="py-2 text-right text-gray-900">
+                <td className="w-28 py-2 text-right tabular-nums text-gray-900">
                   {formatCurrency(payoutAfterFees)}
                 </td>
               </tr>
               <tr>
-                <td className="py-2 pr-6 font-medium text-gray-500">
+                <td className="py-2 pr-4 font-medium text-gray-500">
                   Total owed
                 </td>
-                <td className="py-2 text-right text-gray-900">
+                <td className="w-28 py-2 text-right tabular-nums text-gray-900">
                   {formatCurrency(totals.totalOwed)}
                 </td>
               </tr>
               <tr>
-                <td className="py-2 pr-6 font-medium text-gray-500">
+                <td className="py-2 pr-4 font-medium text-gray-500">
                   Total paid
                 </td>
-                <td className="py-2 text-right text-gray-900">
+                <td className="w-28 py-2 text-right tabular-nums text-gray-900">
                   {formatCurrency(totals.totalPaid)}
                 </td>
               </tr>
               <tr>
-                <td className="py-2 pr-6 font-medium text-gray-500">
+                <td className="py-2 pr-4 font-medium text-gray-500">
                   Balance remaining
                 </td>
-                <td className="py-2 text-right text-gray-900">
+                <td className="w-28 py-2 text-right tabular-nums text-gray-900">
                   {formatCurrency(totals.balanceRemaining)}
                 </td>
               </tr>
               <tr>
-                <td className="py-2 pr-6 font-medium text-gray-500">Status</td>
-                <td className="py-2 text-right">
+                <td className="py-2 pr-4 font-medium text-gray-500">Status</td>
+                <td className="w-28 py-2 text-right">
                   <span
-                    className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                    className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${
                       STATUS_STYLES[totals.status] ??
                       "bg-gray-100 text-gray-700"
                     }`}
                   >
+                    {STATUS_DOT[totals.status] && (
+                      <span
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[totals.status]}`}
+                        aria-hidden
+                      />
+                    )}
                     {totals.status}
                   </span>
                 </td>
               </tr>
               <tr className="border-t border-gray-200">
-                <td className="py-3 pr-6 font-medium text-gray-700">
-                  <span
-                    className="inline-flex cursor-help items-center gap-1"
-                    title="Profit = payout after fees − settlements owed to wholesalers"
-                  >
-                    Profit
-                    <span
-                      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-                      aria-hidden
-                    >
-                      i
+                <td className="py-3 pr-4 font-medium text-gray-700">
+                  <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
+                    <span className="inline-flex items-center gap-1">
+                      Profit
+                      <span
+                        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
+                        aria-hidden
+                      >
+                        i
+                      </span>
                     </span>
-                  </span>
+                  </HelpTooltip>
                 </td>
-                <td className="py-3 text-right font-semibold text-gray-900">
+                <td className="w-28 py-3 text-right font-semibold tabular-nums text-gray-900">
                   {formatCurrency(totals.profitEstimate)}
                 </td>
               </tr>
@@ -1029,19 +1070,13 @@ export function ShowDetailView({ id }: { id: string }) {
       </section>
 
       {/* 4. Close / Reopen */}
-      <section className="border border-gray-200 bg-white p-4">
-        <div className="flex items-center gap-1.5">
-          <h2 className="text-base font-semibold text-gray-900">
-            Close out show
-          </h2>
-          <span
-            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-            title="Closing means financial entry is finished and locked. The show stays visible and you can still record payments against it."
-            aria-label="Help"
-          >
-            i
-          </span>
-        </div>
+      <section
+        ref={closeOutSectionRef}
+        className="border border-gray-200 bg-white p-4"
+      >
+        <h2 className="text-base font-semibold text-gray-900">
+          Close out show
+        </h2>
         {totals.status === "Open" ? (
           showCloseConfirm ? (
             <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -1176,24 +1211,40 @@ function EditablePayout({
     );
   }
 
-  const parsed = Number(input);
+  const parsed = Number(input.replace(/,/g, ""));
   const canSave = Number.isFinite(parsed) && parsed >= 0;
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
-      <input
-        type="number"
-        step="0.01"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        disabled={disabled}
-        className="w-44 rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 disabled:opacity-50"
-      />
+      <div className="relative">
+        <span
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+          aria-hidden
+        >
+          $
+        </span>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={input}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^0-9.]/g, "");
+            const parts = v.split(".");
+            if (parts.length > 2) return;
+            if (parts[1]?.length > 2) return;
+            setInput(v);
+          }}
+          disabled={disabled}
+          className="w-28 rounded border border-gray-300 py-2 pl-7 pr-3 text-sm tabular-nums text-gray-900 disabled:opacity-50"
+          placeholder="0.00"
+          aria-label="Payout amount in dollars"
+        />
+      </div>
       <button
         type="button"
         onClick={async () => {
           if (!canSave || saving || disabled) return;
-          const ok = await onSave(roundToCents(parsed));
+          const ok = await onSave(roundToCents(Number(parsed)));
           if (ok) setEditing(false);
         }}
         disabled={disabled || !canSave || saving}

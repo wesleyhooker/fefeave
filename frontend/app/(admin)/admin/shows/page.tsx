@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { formatTimeAgo } from "@/app/(admin)/admin/_components/timeAgo";
+
+function isToday(dateStr: string): boolean {
+  if (!dateStr || dateStr.length < 10) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return dateStr === today;
+}
+import { HelpTooltip } from "@/app/(admin)/admin/_components/HelpTooltip";
 import {
   fetchShows,
   fetchShowFinancials,
@@ -16,6 +24,7 @@ type ShowSummary = {
   payoutAfterFees: number;
   totalOwed: number;
   estimatedShowProfit: number;
+  settlementCount: number;
 };
 
 function roundToCents(n: number): number {
@@ -93,6 +102,7 @@ export default function AdminShowsPage() {
           payoutAfterFees: payoutNum,
           totalOwed,
           estimatedShowProfit,
+          settlementCount: settlementRows.length,
         };
       }),
     )
@@ -104,6 +114,7 @@ export default function AdminShowsPage() {
             payoutAfterFees: r.payoutAfterFees,
             totalOwed: r.totalOwed,
             estimatedShowProfit: r.estimatedShowProfit,
+            settlementCount: r.settlementCount,
           };
         }
         setSummaries(next);
@@ -177,30 +188,17 @@ export default function AdminShowsPage() {
                 scope="col"
                 className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
               >
-                Payout
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Total owed
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                <span
-                  className="inline-flex cursor-help items-center gap-1"
-                  title="Profit = payout after fees − settlements owed to wholesalers"
-                >
-                  Profit
-                  <span
-                    className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-                    aria-hidden
-                  >
-                    i
+                <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
+                  <span className="inline-flex items-center gap-1">
+                    Financials
+                    <span
+                      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
+                      aria-hidden
+                    >
+                      i
+                    </span>
                   </span>
-                </span>
+                </HelpTooltip>
               </th>
               <th
                 scope="col"
@@ -214,7 +212,7 @@ export default function AdminShowsPage() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={5}
                   className="px-4 py-6 text-center text-sm text-gray-500"
                 >
                   Loading shows...
@@ -223,7 +221,7 @@ export default function AdminShowsPage() {
             ) : rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={5}
                   className="px-4 py-6 text-center text-sm text-gray-500"
                 >
                   No shows yet.
@@ -232,44 +230,89 @@ export default function AdminShowsPage() {
             ) : (
               rows.map((show) => {
                 const summary = summaries[show.id];
+                const today = isToday(show.date);
                 return (
-                  <tr key={show.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <Link
-                        href={`/admin/shows/${show.id}`}
-                        className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
-                      >
-                        {show.name}
-                      </Link>
+                  <tr
+                    key={show.id}
+                    className={
+                      today
+                        ? "bg-sky-50/60 hover:bg-sky-50"
+                        : "hover:bg-gray-50"
+                    }
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/shows/${show.id}`}
+                            className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
+                          >
+                            {show.name}
+                          </Link>
+                          {today && (
+                            <span className="rounded bg-sky-100 px-1.5 py-0.5 text-xs font-medium text-sky-700">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                        {(summary != null || show.updated_at) && (
+                          <p className="text-xs text-gray-500">
+                            {summary != null &&
+                              summary.settlementCount >= 0 && (
+                                <span>
+                                  {summary.settlementCount === 1
+                                    ? "1 settlement"
+                                    : `${summary.settlementCount} settlements`}
+                                </span>
+                              )}
+                            {show.updated_at && (
+                              <span>
+                                {summary != null && summary.settlementCount >= 0
+                                  ? " · "
+                                  : ""}
+                                Updated {formatTimeAgo(show.updated_at)}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                       {formatDate(show.date)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <span
-                        className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                        className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${
                           show.status === "COMPLETED"
                             ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
                             : "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
                         }`}
                       >
+                        <span
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                            show.status === "COMPLETED"
+                              ? "bg-emerald-500"
+                              : "bg-blue-500"
+                          }`}
+                          aria-hidden
+                        />
                         {show.status === "COMPLETED" ? "Closed" : "Open"}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-gray-900">
-                      {summariesLoading || summary == null
-                        ? "—"
-                        : formatCurrency(summary.payoutAfterFees)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-gray-900">
-                      {summariesLoading || summary == null
-                        ? "—"
-                        : formatCurrency(summary.totalOwed)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-gray-900">
-                      {summariesLoading || summary == null
-                        ? "—"
-                        : formatCurrency(summary.estimatedShowProfit)}
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                      {summariesLoading || summary == null ? (
+                        "—"
+                      ) : (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-sm font-semibold tabular-nums text-gray-900">
+                            Profit {formatCurrency(summary.estimatedShowProfit)}
+                          </span>
+                          <span className="text-xs tabular-nums text-gray-500">
+                            {formatCurrency(summary.payoutAfterFees)} payout ·{" "}
+                            {formatCurrency(summary.totalOwed)} owed
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
                       {show.status === "ACTIVE" ? (
