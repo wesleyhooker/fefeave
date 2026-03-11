@@ -2,15 +2,27 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { createShow, upsertShowFinancials } from "@/src/lib/api/shows";
+
+/** Format YYYY-MM-DD as friendly show name, e.g. "Mar 10, 2025". */
+function showNameFromDate(dateStr: string): string {
+  if (!dateStr || dateStr.length < 10) return "";
+  const d = new Date(dateStr + "T12:00:00");
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default function AdminShowsNewPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [date, setDate] = useState(() => {
-    return new Date().toISOString().slice(0, 10);
-  });
+  const defaultDate = () => new Date().toISOString().slice(0, 10);
+  const [date, setDate] = useState(defaultDate);
+  const [name, setName] = useState(() => showNameFromDate(defaultDate()));
+  const nameManuallyEdited = useRef(false);
   const [payoutAfterFees, setPayoutAfterFees] = useState("");
   const [platform, setPlatform] = useState<"WHATNOT" | "INSTAGRAM" | "OTHER">(
     "WHATNOT",
@@ -18,9 +30,28 @@ export default function AdminShowsNewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const prefilledName = showNameFromDate(date);
+  useEffect(() => {
+    if (!nameManuallyEdited.current) {
+      setName(prefilledName);
+    }
+  }, [prefilledName]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const payoutNum =
+      payoutAfterFees.trim() === ""
+        ? NaN
+        : Number(payoutAfterFees.replace(/,/g, ""));
+    if (
+      payoutAfterFees.trim() === "" ||
+      !Number.isFinite(payoutNum) ||
+      payoutNum < 0
+    ) {
+      setError("Enter a valid payout amount (0 or more).");
+      return;
+    }
     setSubmitting(true);
     try {
       const created = await createShow({
@@ -29,14 +60,9 @@ export default function AdminShowsNewPage() {
         name: name.trim() || undefined,
       });
 
-      const payout = payoutAfterFees.trim()
-        ? Number(payoutAfterFees)
-        : undefined;
-      if (payout !== undefined && Number.isFinite(payout)) {
-        await upsertShowFinancials(created.id, {
-          payout_after_fees_amount: payout,
-        });
-      }
+      await upsertShowFinancials(created.id, {
+        payout_after_fees_amount: payoutNum,
+      });
 
       router.push(`/admin/shows/${created.id}`);
     } catch (err) {
@@ -84,9 +110,12 @@ export default function AdminShowsNewPage() {
             type="text"
             required
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              nameManuallyEdited.current = true;
+              setName(e.target.value);
+            }}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            placeholder="e.g. Spring Pop-Up 2025"
+            placeholder="e.g. Mar 10, 2025"
           />
         </div>
 
@@ -133,19 +162,34 @@ export default function AdminShowsNewPage() {
             htmlFor="payoutAfterFees"
             className="mb-1 block text-sm font-medium text-gray-700"
           >
-            Payout After Fees <span className="text-red-500">*</span>
+            Payout after fees ($) <span className="text-red-500">*</span>
           </label>
-          <input
-            id="payoutAfterFees"
-            type="number"
-            required
-            min="0"
-            step="0.01"
-            value={payoutAfterFees}
-            onChange={(e) => setPayoutAfterFees(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            placeholder="0.00"
-          />
+          <div className="relative">
+            <span
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+              aria-hidden
+            >
+              $
+            </span>
+            <input
+              id="payoutAfterFees"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              required
+              value={payoutAfterFees}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9.]/g, "");
+                const parts = v.split(".");
+                if (parts.length > 2) return;
+                if (parts[1]?.length > 2) return;
+                setPayoutAfterFees(v);
+              }}
+              className="w-full rounded-md border border-gray-300 py-2 pl-7 pr-3 text-sm tabular-nums shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              placeholder="0.00"
+              aria-label="Payout after fees in dollars"
+            />
+          </div>
         </div>
 
         <div className="flex gap-3 pt-2">

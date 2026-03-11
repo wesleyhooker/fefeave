@@ -226,6 +226,13 @@ export function ShowDetailView({ id }: { id: string }) {
     [payoutAfterFees, settlements, closedAt],
   );
 
+  const isPercentValueValid =
+    newRowMode !== "PERCENT" ||
+    (newRowPercent.trim() !== "" &&
+      Number.isFinite(Number(newRowPercent)) &&
+      Number(newRowPercent) >= 0 &&
+      Number(newRowPercent) <= 100);
+
   const newRowTotal = useMemo(() => {
     if (newRowMode === "PERCENT") {
       const rate = Number(newRowPercent);
@@ -525,13 +532,22 @@ export function ShowDetailView({ id }: { id: string }) {
           isClosed ? "bg-gray-50/50" : "bg-white"
         }`}
       >
-        <div className="border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center gap-1.5 border-b border-gray-200 px-4 py-3">
           <h2 className="text-base font-semibold text-gray-900">Settlements</h2>
-          <p className="mt-0.5 text-xs text-gray-500">
-            {isClosed
-              ? "Locked — reopen show to add or remove."
-              : "Add rows below. Percent and quantity×price are calculated; flat amount is what you enter."}
-          </p>
+          {!isClosed && (
+            <span
+              className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
+              title="Add rows below. Percent and quantity×price are calculated; flat amount is what you enter."
+              aria-label="Help"
+            >
+              i
+            </span>
+          )}
+          {isClosed && (
+            <p className="text-xs text-gray-500">
+              Locked — reopen show to add or remove.
+            </p>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -891,10 +907,17 @@ export function ShowDetailView({ id }: { id: string }) {
                             creatingSettlement ||
                             !newRowWholesalerId ||
                             newRowTotal == null ||
-                            (newRowMode === "PERCENT" && payoutAfterFees <= 0)
+                            (newRowMode === "PERCENT" &&
+                              payoutAfterFees <= 0) ||
+                            !isPercentValueValid
                           }
                           onClick={() => void handleAddRow()}
                           className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          title={
+                            newRowMode === "PERCENT" && !isPercentValueValid
+                              ? "Enter a percent (0–100) to add row"
+                              : undefined
+                          }
                         >
                           {creatingSettlement ? "Adding…" : "Add row"}
                         </button>
@@ -921,12 +944,18 @@ export function ShowDetailView({ id }: { id: string }) {
 
       {/* 3. Review / profit — structured row, not cards */}
       <section className="border border-gray-200 bg-white p-4">
-        <h2 className="text-base font-semibold text-gray-900">
-          Review & profit
-        </h2>
-        <p className="mt-0.5 text-sm text-gray-500">
-          Totals and profit estimate. Close out when final.
-        </p>
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-base font-semibold text-gray-900">
+            Review & profit
+          </h2>
+          <span
+            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
+            title="Totals and profit. Close out when final."
+            aria-label="Help"
+          >
+            i
+          </span>
+        </div>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full border-collapse text-sm">
             <tbody className="divide-y divide-gray-100">
@@ -977,7 +1006,18 @@ export function ShowDetailView({ id }: { id: string }) {
               </tr>
               <tr className="border-t border-gray-200">
                 <td className="py-3 pr-6 font-medium text-gray-700">
-                  Profit estimate (payout − owed)
+                  <span
+                    className="inline-flex cursor-help items-center gap-1"
+                    title="Profit = payout after fees − settlements owed to wholesalers"
+                  >
+                    Profit
+                    <span
+                      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
+                      aria-hidden
+                    >
+                      i
+                    </span>
+                  </span>
                 </td>
                 <td className="py-3 text-right font-semibold text-gray-900">
                   {formatCurrency(totals.profitEstimate)}
@@ -990,9 +1030,18 @@ export function ShowDetailView({ id }: { id: string }) {
 
       {/* 4. Close / Reopen */}
       <section className="border border-gray-200 bg-white p-4">
-        <h2 className="text-base font-semibold text-gray-900">
-          Close out show
-        </h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-base font-semibold text-gray-900">
+            Close out show
+          </h2>
+          <span
+            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
+            title="Closing means financial entry is finished and locked. The show stays visible and you can still record payments against it."
+            aria-label="Help"
+          >
+            i
+          </span>
+        </div>
         {totals.status === "Open" ? (
           showCloseConfirm ? (
             <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -1025,8 +1074,7 @@ export function ShowDetailView({ id }: { id: string }) {
           ) : (
             <div>
               <p className="mt-1 text-sm text-gray-600">
-                Lock payout and settlements so they can't be changed. You can
-                still record payments from Payments.
+                Lock payout and settlements so they can&apos;t be changed.
               </p>
               <button
                 type="button"

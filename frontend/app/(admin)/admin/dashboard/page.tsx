@@ -245,13 +245,17 @@ export default function AdminDashboardPage() {
         className="mb-6 rounded-lg border border-gray-200 bg-white"
         aria-label="Financial summary"
       >
-        <div className="border-b border-gray-100 px-4 py-3">
+        <div className="flex items-center gap-1.5 border-b border-gray-100 px-4 py-3">
           <h2 className="text-base font-semibold text-gray-900">
             Financial summary
           </h2>
-          <p className="mt-0.5 text-xs text-gray-500">
-            Where things stand right now.
-          </p>
+          <span
+            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
+            title="Outstanding = what you owe now. Wholesalers owing = count with balance > 0. Net = payments minus obligations. Cash out = payments plus inventory invested in last 14 days."
+            aria-label="Help"
+          >
+            i
+          </span>
         </div>
         <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 lg:grid-cols-4 sm:divide-y-0 sm:divide-x sm:divide-gray-200">
           <Link
@@ -301,55 +305,51 @@ export default function AdminDashboardPage() {
             </p>
           </div>
         </div>
-        <p className="border-t border-gray-100 px-4 py-2 text-xs text-gray-500">
-          Outstanding = what you owe now. Wholesalers owing = count with balance
-          &gt; 0. Net = payments minus obligations. Cash out = payments +
-          inventory in last 14 days.
-        </p>
       </section>
 
-      {/* 2. Quick actions */}
+      {/* 2. Primary workflow — Add Show first; Record Payment secondary */}
       <section className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-          Quick actions
-        </h2>
-        <div className="flex flex-wrap gap-3">
+        <div className="mb-3 flex items-center gap-1.5">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+            Workflow
+          </h2>
+          <span
+            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
+            title="Start with a show, then close it out when payout and settlements are final. Record payments from Payments or Balances when you send money."
+            aria-label="Help"
+          >
+            i
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/admin/shows/new"
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+            className="rounded bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+            aria-label="Create a new show"
           >
-            New Show
+            Add Show
           </Link>
-          <Link
-            href="/admin/balances"
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Balances
-          </Link>
+          <span className="text-sm text-gray-400">|</span>
           <Link
             href="/admin/payments/new"
             className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Record payment
           </Link>
-          <Link
-            href="/admin/inventory"
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Inventory
-          </Link>
         </div>
       </section>
 
       {/* 3. Open shows needing close-out */}
       <section className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Open shows needing close-out
-          </h2>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Active shows. Close out when payout and settlements are final.
-          </p>
+        <div className="flex items-center gap-1.5 border-b border-gray-200 px-4 py-3">
+          <h2 className="text-lg font-semibold text-gray-900">Open shows</h2>
+          <span
+            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
+            title="Close out when payout and settlements are final. Closing locks financial entry; the show stays visible and you can still record payments."
+            aria-label="Help"
+          >
+            i
+          </span>
         </div>
         {showsError ? (
           <SectionErrorBody
