@@ -111,14 +111,13 @@ function RecordPaymentForm() {
 
   return (
     <div>
-      <div className="mb-6">
-        <Link
-          href="/admin/payments"
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Back to Payments
+      <nav className="mb-2 text-sm text-gray-500" aria-label="Breadcrumb">
+        <Link href="/admin/payments" className="hover:text-gray-700">
+          Payments
         </Link>
-      </div>
+        <span className="mx-1.5">/</span>
+        <span aria-current="page">Record payment</span>
+      </nav>
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Record payment</h1>
 
       {loadError && (
@@ -221,17 +220,32 @@ function RecordPaymentForm() {
           >
             Amount <span className="text-red-500">*</span>
           </label>
-          <input
-            id="amount"
-            type="number"
-            required
-            min="0.01"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            placeholder="0.00"
-          />
+          <div className="relative">
+            <span
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+              aria-hidden
+            >
+              $
+            </span>
+            <input
+              id="amount"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              required
+              value={amount}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9.]/g, "");
+                const parts = v.split(".");
+                if (parts.length > 2) return;
+                if (parts[1]?.length > 2) return;
+                setAmount(v);
+              }}
+              className="w-full max-w-[8rem] rounded-md border border-gray-300 py-2 pl-7 pr-3 text-sm tabular-nums shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              placeholder="0.00"
+              aria-label="Amount in dollars"
+            />
+          </div>
           {errors.amount && (
             <p className="mt-0.5 text-xs text-red-600">{errors.amount}</p>
           )}

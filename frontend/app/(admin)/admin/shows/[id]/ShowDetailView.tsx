@@ -516,22 +516,20 @@ export function ShowDetailView({ id }: { id: string }) {
           </span>
         </p>
         {!isClosed && (
-          <div className="mt-3">
+          <p className="mt-2">
             <button
               type="button"
               onClick={() => {
-                setShowCloseConfirm(true);
                 closeOutSectionRef.current?.scrollIntoView({
                   behavior: "smooth",
                   block: "start",
                 });
               }}
-              disabled={closing}
-              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+              className="text-sm font-medium text-gray-600 underline decoration-gray-400 underline-offset-2 hover:text-gray-900 hover:decoration-gray-600"
             >
-              Close out show
+              Go to close out →
             </button>
-          </div>
+          </p>
         )}
         {isClosed && (
           <p className="mt-3 text-sm text-gray-600">

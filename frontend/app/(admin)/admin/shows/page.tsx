@@ -170,7 +170,14 @@ export default function AdminShowsPage() {
                 scope="col"
                 className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
               >
-                Show Name
+                <span className="inline-flex items-center gap-1.5">
+                  Show
+                  <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
+                    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500">
+                      i
+                    </span>
+                  </HelpTooltip>
+                </span>
               </th>
               <th
                 scope="col"
@@ -188,22 +195,6 @@ export default function AdminShowsPage() {
                 scope="col"
                 className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
               >
-                <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
-                  <span className="inline-flex items-center gap-1">
-                    Financials
-                    <span
-                      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-                      aria-hidden
-                    >
-                      i
-                    </span>
-                  </span>
-                </HelpTooltip>
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
                 Action
               </th>
             </tr>
@@ -212,7 +203,7 @@ export default function AdminShowsPage() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={4}
                   className="px-4 py-6 text-center text-sm text-gray-500"
                 >
                   Loading shows...
@@ -221,7 +212,7 @@ export default function AdminShowsPage() {
             ) : rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={4}
                   className="px-4 py-6 text-center text-sm text-gray-500"
                 >
                   No shows yet.
@@ -236,44 +227,63 @@ export default function AdminShowsPage() {
                     key={show.id}
                     className={
                       today
-                        ? "bg-sky-50/60 hover:bg-sky-50"
+                        ? "border-l-4 border-l-sky-400 bg-sky-50 hover:bg-sky-50/90"
                         : "hover:bg-gray-50"
                     }
                   >
                     <td className="px-4 py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/admin/shows/${show.id}`}
-                            className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
-                          >
-                            {show.name}
-                          </Link>
-                          {today && (
-                            <span className="rounded bg-sky-100 px-1.5 py-0.5 text-xs font-medium text-sky-700">
-                              Today
-                            </span>
-                          )}
-                        </div>
-                        {(summary != null || show.updated_at) && (
-                          <p className="text-xs text-gray-500">
-                            {summary != null &&
-                              summary.settlementCount >= 0 && (
-                                <span>
-                                  {summary.settlementCount === 1
-                                    ? "1 settlement"
-                                    : `${summary.settlementCount} settlements`}
-                                </span>
-                              )}
-                            {show.updated_at && (
-                              <span>
-                                {summary != null && summary.settlementCount >= 0
-                                  ? " · "
-                                  : ""}
-                                Updated {formatTimeAgo(show.updated_at)}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/admin/shows/${show.id}`}
+                              className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
+                            >
+                              {show.name}
+                            </Link>
+                            {today && (
+                              <span className="rounded bg-sky-100 px-1.5 py-0.5 text-xs font-medium text-sky-700">
+                                Today
                               </span>
                             )}
-                          </p>
+                          </div>
+                          {(summary != null || show.updated_at) && (
+                            <p className="mt-0.5 text-xs text-gray-500">
+                              {summary != null &&
+                                summary.settlementCount >= 0 && (
+                                  <span>
+                                    {summary.settlementCount === 1
+                                      ? "1 settlement"
+                                      : `${summary.settlementCount} settlements`}
+                                  </span>
+                                )}
+                              {show.updated_at && (
+                                <span>
+                                  {summary != null &&
+                                  summary.settlementCount >= 0
+                                    ? " · "
+                                    : ""}
+                                  Updated {formatTimeAgo(show.updated_at)}
+                                </span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                        {summariesLoading || summary == null ? (
+                          <span className="shrink-0 text-sm text-gray-400">
+                            —
+                          </span>
+                        ) : (
+                          <div className="shrink-0 text-right">
+                            <span className="text-sm font-semibold tabular-nums text-gray-900">
+                              Profit{" "}
+                              {formatCurrency(summary.estimatedShowProfit)}
+                            </span>
+                            <span className="block text-xs tabular-nums text-gray-500">
+                              {formatCurrency(summary.payoutAfterFees)} payout ·{" "}
+                              {formatCurrency(summary.totalOwed)} owed
+                            </span>
+                          </div>
                         )}
                       </div>
                     </td>
@@ -298,21 +308,6 @@ export default function AdminShowsPage() {
                         />
                         {show.status === "COMPLETED" ? "Closed" : "Open"}
                       </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right">
-                      {summariesLoading || summary == null ? (
-                        "—"
-                      ) : (
-                        <div className="flex flex-col items-end gap-0.5">
-                          <span className="text-sm font-semibold tabular-nums text-gray-900">
-                            Profit {formatCurrency(summary.estimatedShowProfit)}
-                          </span>
-                          <span className="text-xs tabular-nums text-gray-500">
-                            {formatCurrency(summary.payoutAfterFees)} payout ·{" "}
-                            {formatCurrency(summary.totalOwed)} owed
-                          </span>
-                        </div>
-                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
                       {show.status === "ACTIVE" ? (

@@ -148,8 +148,6 @@ export default function AdminDashboardPage() {
     );
   }, [balances]);
 
-  const netPaidVsObligated = totals.totalPaid - totals.totalOwed;
-
   const openShows = useMemo(() => {
     return [...(shows ?? [])]
       .filter((s) => (s.status ?? "").toUpperCase() === "ACTIVE")
@@ -196,10 +194,257 @@ export default function AdminDashboardPage() {
     <div>
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Dashboard</h1>
 
-      {/* 1. Workflow */}
+      {/* 1. Needs attention — open shows + outstanding balances */}
+      <section className="mb-6">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+          Needs attention
+        </h2>
+        <div className="space-y-4">
+          {/* Open shows */}
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-gray-900">
+                Open shows
+              </h3>
+            </div>
+            {showsError ? (
+              <SectionErrorBody
+                title="Could not load shows."
+                message={showsError}
+                onRetry={() => setReloadToken((v) => v + 1)}
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="sticky top-0 z-10 bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Show
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {openShows.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-4 py-8 text-center text-sm text-gray-500"
+                        >
+                          {loading ? (
+                            "Loading…"
+                          ) : (
+                            <span>
+                              No open shows.
+                              <br />
+                              <span className="font-normal text-gray-400">
+                                Add a show or all shows are closed.
+                              </span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ) : (
+                      openShows.map((show) => (
+                        <tr key={show.id} className="hover:bg-gray-50">
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            <Link
+                              href={`/admin/shows/${show.id}`}
+                              className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                            >
+                              {show.name}
+                            </Link>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                            {formatDate(show.show_date)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                            <Link
+                              href={`/admin/shows/${show.id}`}
+                              className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                            >
+                              Close out
+                            </Link>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Balances owed */}
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-gray-900">
+                Balances owed
+              </h3>
+            </div>
+            {balancesError ? (
+              <div className="px-4 py-4 text-sm text-amber-700">
+                Could not load balances. Use the Retry button above.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="sticky top-0 z-10 bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Wholesaler
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Owed
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Last paid
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {safetyRows.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="px-4 py-8 text-center text-sm text-gray-500"
+                        >
+                          {loading ? (
+                            "Loading…"
+                          ) : (
+                            <span>
+                              No balances due.
+                              <br />
+                              <span className="font-normal text-gray-400">
+                                All vendor balances are settled.
+                              </span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ) : (
+                      safetyRows.map((row) => {
+                        const outstanding = parseAmount(row.balance_owed);
+                        const paid = parseAmount(row.paid_total);
+                        const status = getPaymentStatus(outstanding, paid);
+                        const hasOutstanding = outstanding > 0;
+                        return (
+                          <tr
+                            key={row.wholesaler_id}
+                            className={
+                              hasOutstanding
+                                ? "bg-amber-50/50 hover:bg-amber-50"
+                                : "hover:bg-gray-50"
+                            }
+                          >
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                              <div>
+                                <span>{row.name}</span>
+                                {(row.pay_schedule ?? "AD_HOC") !==
+                                  "AD_HOC" && (
+                                  <span className="ml-2 inline-flex rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
+                                    {(row.pay_schedule ?? "AD_HOC").replace(
+                                      "_",
+                                      " ",
+                                    )}
+                                  </span>
+                                )}
+                                <span className="ml-2 inline-flex">
+                                  <PaymentStatusChip status={status} />
+                                </span>
+                              </div>
+                              <p className="mt-0.5 text-xs font-normal text-gray-500">
+                                Last payment:{" "}
+                                {formatDaysAgo(row.last_payment_date)}
+                              </p>
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900 tabular-nums">
+                              {formatCurrency(outstanding)}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                              <span className="inline-flex items-center gap-1.5">
+                                {(() => {
+                                  const dot = getPaymentFreshnessDot(
+                                    row.last_payment_date,
+                                    row.pay_schedule,
+                                  );
+                                  const dotTitle =
+                                    dot === "green"
+                                      ? "Paid within schedule window"
+                                      : dot === "amber"
+                                        ? "Paid within 2× schedule window"
+                                        : "Overdue or never paid";
+                                  return dot ? (
+                                    <HelpTooltip content={dotTitle} side="top">
+                                      <span
+                                        className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+                                          dot === "green"
+                                            ? "bg-emerald-500"
+                                            : dot === "amber"
+                                              ? "bg-amber-500"
+                                              : "bg-red-500"
+                                        }`}
+                                        aria-hidden
+                                      />
+                                    </HelpTooltip>
+                                  ) : null;
+                                })()}
+                                {row.last_payment_date
+                                  ? formatDate(row.last_payment_date)
+                                  : "—"}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                              {(row.pay_schedule ?? "AD_HOC") !== "AD_HOC" && (
+                                <>
+                                  <Link
+                                    href={`/admin/wholesalers/${row.wholesaler_id}/batch-pay`}
+                                    className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                                  >
+                                    View balance breakdown
+                                  </Link>
+                                  <span className="mx-2 text-gray-300">|</span>
+                                </>
+                              )}
+                              <Link
+                                href={`/admin/payments/new?wholesalerId=${encodeURIComponent(row.wholesaler_id)}`}
+                                className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                              >
+                                Record payment
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {balancesError && (
+        <SectionError
+          title="Could not load balance totals."
+          message={balancesError}
+          onRetry={() => setReloadToken((v) => v + 1)}
+        />
+      )}
+
+      {/* 2. Quick actions */}
       <section className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-          Workflow
+          Quick actions
         </h2>
         <div className="flex flex-wrap items-center gap-3">
           <Link
@@ -219,226 +464,7 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* 2. Open shows */}
-      <section className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-900">Open shows</h2>
-        </div>
-        {showsError ? (
-          <SectionErrorBody
-            title="Could not load shows."
-            message={showsError}
-            onRetry={() => setReloadToken((v) => v + 1)}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="sticky top-0 z-10 bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Show
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {openShows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={3}
-                      className="px-4 py-6 text-center text-sm text-gray-500"
-                    >
-                      {loading
-                        ? "Loading…"
-                        : "No open shows. Create a show or close-out is complete."}
-                    </td>
-                  </tr>
-                ) : (
-                  openShows.map((show) => (
-                    <tr key={show.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <Link
-                          href={`/admin/shows/${show.id}`}
-                          className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
-                        >
-                          {show.name}
-                        </Link>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                        {formatDate(show.show_date)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                        <Link
-                          href={`/admin/shows/${show.id}`}
-                          className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
-                        >
-                          Close out
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {balancesError && (
-        <SectionError
-          title="Could not load balance totals."
-          message={balancesError}
-          onRetry={() => setReloadToken((v) => v + 1)}
-        />
-      )}
-
-      {/* 3. Outstanding balances */}
-      <section className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Outstanding balances
-          </h2>
-        </div>
-        {balancesError ? (
-          <div className="px-4 py-4 text-sm text-amber-700">
-            Could not load balances. Use the Retry button above.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="sticky top-0 z-10 bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Wholesaler
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Outstanding
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Last paid
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {safetyRows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-6 text-center text-sm text-gray-500"
-                    >
-                      {loading
-                        ? "Loading…"
-                        : "No outstanding wholesaler balances right now."}
-                    </td>
-                  </tr>
-                ) : (
-                  safetyRows.map((row) => {
-                    const outstanding = parseAmount(row.balance_owed);
-                    const paid = parseAmount(row.paid_total);
-                    const status = getPaymentStatus(outstanding, paid);
-                    const hasOutstanding = outstanding > 0;
-                    return (
-                      <tr
-                        key={row.wholesaler_id}
-                        className={
-                          hasOutstanding
-                            ? "bg-amber-50/50 hover:bg-amber-50"
-                            : "hover:bg-gray-50"
-                        }
-                      >
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                          <div>
-                            <span>{row.name}</span>
-                            {(row.pay_schedule ?? "AD_HOC") !== "AD_HOC" && (
-                              <span className="ml-2 inline-flex rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
-                                {(row.pay_schedule ?? "AD_HOC").replace(
-                                  "_",
-                                  " ",
-                                )}
-                              </span>
-                            )}
-                            <span className="ml-2 inline-flex">
-                              <PaymentStatusChip status={status} />
-                            </span>
-                          </div>
-                          <p className="mt-0.5 text-xs font-normal text-gray-500">
-                            Last payment: {formatDaysAgo(row.last_payment_date)}
-                          </p>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900 tabular-nums">
-                          {formatCurrency(outstanding)}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                          <span className="inline-flex items-center gap-1.5">
-                            {(() => {
-                              const dot = getPaymentFreshnessDot(
-                                row.last_payment_date,
-                                row.pay_schedule,
-                              );
-                              const dotTitle =
-                                dot === "green"
-                                  ? "Paid within schedule window"
-                                  : dot === "amber"
-                                    ? "Paid within 2× schedule window"
-                                    : "Overdue or never paid";
-                              return dot ? (
-                                <HelpTooltip content={dotTitle} side="top">
-                                  <span
-                                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-                                      dot === "green"
-                                        ? "bg-emerald-500"
-                                        : dot === "amber"
-                                          ? "bg-amber-500"
-                                          : "bg-red-500"
-                                    }`}
-                                    aria-hidden
-                                  />
-                                </HelpTooltip>
-                              ) : null;
-                            })()}
-                            {row.last_payment_date
-                              ? formatDate(row.last_payment_date)
-                              : "—"}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                          {(row.pay_schedule ?? "AD_HOC") !== "AD_HOC" && (
-                            <>
-                              <Link
-                                href={`/admin/wholesalers/${row.wholesaler_id}/batch-pay`}
-                                className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
-                              >
-                                View balance breakdown
-                              </Link>
-                              <span className="mx-2 text-gray-300">|</span>
-                            </>
-                          )}
-                          <Link
-                            href={`/admin/payments/new?wholesalerId=${encodeURIComponent(row.wholesaler_id)}`}
-                            className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
-                          >
-                            Record payment
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* 4. Financial summary */}
+      {/* 3. Financial summary */}
       <section
         className="mb-6 rounded-lg border border-gray-200 bg-white"
         aria-label="Financial summary"
@@ -448,7 +474,7 @@ export default function AdminDashboardPage() {
             Financial summary
           </h2>
         </div>
-        <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 lg:grid-cols-3 sm:divide-y-0 sm:divide-x sm:divide-gray-200">
+        <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-y-0 sm:divide-x sm:divide-gray-200">
           <Link
             href="/admin/balances"
             className="px-4 py-4 sm:py-5 hover:bg-gray-50/80 focus:bg-gray-50/80 focus:outline-none"
@@ -467,10 +493,10 @@ export default function AdminDashboardPage() {
           <Link
             href="/admin/balances"
             className="px-4 py-4 sm:py-5 hover:bg-gray-50/80 focus:bg-gray-50/80 focus:outline-none"
-            aria-label="View wholesalers owing in Balances"
+            aria-label="View vendors with balance in Balances"
           >
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Wholesalers owing
+              Vendors with balance
             </p>
             <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
               {wholesalersOwingCount}
@@ -479,14 +505,6 @@ export default function AdminDashboardPage() {
               View in Balances →
             </span>
           </Link>
-          <div className="px-4 py-4 sm:py-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              Net paid vs obligated
-            </p>
-            <p className="mt-1 text-xl font-semibold text-gray-900 tabular-nums">
-              {formatCurrency(netPaidVsObligated)}
-            </p>
-          </div>
         </div>
       </section>
 

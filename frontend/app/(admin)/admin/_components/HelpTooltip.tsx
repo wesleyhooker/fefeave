@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+
+type Position = { top: number; left: number };
 
 /**
  * Lightweight help tooltip: fast appearance, minimal styling.
- * Use for inline help (e.g. "Profit" explanation). Not for complex content.
+ * Renders in a portal to avoid clipping by overflow/containers.
  */
 export function HelpTooltip({
   content,
@@ -16,11 +19,34 @@ export function HelpTooltip({
   side?: "top" | "bottom";
 }) {
   const [visible, setVisible] = useState(false);
+  const [position, setPosition] = useState<Position | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+
+  const updatePosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const gap = 6;
+    if (side === "top") {
+      setPosition({
+        left: rect.left + rect.width / 2,
+        top: rect.top - gap,
+      });
+    } else {
+      setPosition({
+        left: rect.left + rect.width / 2,
+        top: rect.bottom + gap,
+      });
+    }
+  }, [side]);
 
   const show = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setVisible(true), 80);
+    timeoutRef.current = setTimeout(() => {
+      setVisible(true);
+      updatePosition();
+    }, 80);
   };
 
   const hide = () => {
@@ -29,7 +55,16 @@ export function HelpTooltip({
       timeoutRef.current = null;
     }
     setVisible(false);
+    setPosition(null);
   };
+
+  useEffect(() => {
+    if (!visible) return;
+    updatePosition();
+    const onScroll = () => updatePosition();
+    window.addEventListener("scroll", onScroll, true);
+    return () => window.removeEventListener("scroll", onScroll, true);
+  }, [visible, updatePosition]);
 
   useEffect(
     () => () => {
@@ -38,25 +73,36 @@ export function HelpTooltip({
     [],
   );
 
+  const tooltipEl =
+    visible && content && position && typeof document !== "undefined"
+      ? createPortal(
+          <span
+            role="tooltip"
+            className="fixed z-[100] max-w-[260px] rounded border border-gray-200 bg-gray-900 px-2.5 py-1.5 text-xs font-normal leading-snug text-white shadow-lg"
+            style={{
+              left: position.left,
+              top: position.top,
+              transform:
+                side === "top" ? "translate(-50%, -100%)" : "translateX(-50%)",
+            }}
+          >
+            {content}
+          </span>,
+          document.body,
+        )
+      : null;
+
   return (
-    <span
-      className="relative inline-flex cursor-help items-center gap-1"
-      onMouseEnter={show}
-      onMouseLeave={hide}
-    >
-      {children}
-      {visible && content && (
-        <span
-          role="tooltip"
-          className={`absolute z-50 max-w-[220px] rounded border border-gray-200 bg-gray-900 px-2.5 py-1.5 text-xs font-normal text-white shadow-md ${
-            side === "top"
-              ? "bottom-full left-1/2 mb-1.5 -translate-x-1/2"
-              : "left-1/2 top-full mt-1.5 -translate-x-1/2"
-          }`}
-        >
-          {content}
-        </span>
-      )}
-    </span>
+    <>
+      <span
+        ref={triggerRef}
+        className="relative inline-flex cursor-help items-center gap-1"
+        onMouseEnter={show}
+        onMouseLeave={hide}
+      >
+        {children}
+      </span>
+      {tooltipEl}
+    </>
   );
 }

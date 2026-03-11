@@ -108,14 +108,13 @@ export default function AdminShowsNewPage() {
 
   return (
     <div>
-      <p className="mb-2">
-        <Link
-          href="/admin/shows"
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Shows
+      <nav className="mb-2 text-sm text-gray-500" aria-label="Breadcrumb">
+        <Link href="/admin/shows" className="hover:text-gray-700">
+          Shows
         </Link>
-      </p>
+        <span className="mx-1.5">/</span>
+        <span aria-current="page">Create</span>
+      </nav>
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Create Show</h1>
 
       {error && (
