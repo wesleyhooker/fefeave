@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BalancesPageSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import { formatCurrency } from "@/lib/format";
 import { apiGet } from "@/lib/api";
 import { BalancesTable, type WholesalerBalanceRow } from "./BalancesTable";
@@ -97,12 +98,7 @@ export default function AdminBalancesPage() {
   }, [data]);
 
   if (loading) {
-    return (
-      <div>
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">Balances</h1>
-        <p className="text-gray-600">Loading…</p>
-      </div>
-    );
+    return <BalancesPageSkeleton />;
   }
 
   if (error) {

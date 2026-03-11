@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { DashboardSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
   getPaymentStatus,
   PaymentStatusChip,
 } from "@/app/(admin)/admin/_components/PaymentStatusChip";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { formatDaysAgo } from "@/app/(admin)/admin/_components/timeAgo";
 import {
   fetchWholesalerBalances,
@@ -161,6 +162,10 @@ export default function AdminDashboardPage() {
   }, [balances]);
 
   const wholesalersOwingCount = safetyRows.length;
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div>
