@@ -17,6 +17,7 @@ export interface ShowViewModel {
   name: string;
   date: string;
   status: string;
+  updated_at?: string;
 }
 
 export interface CreateShowDTO {
@@ -41,6 +42,16 @@ export interface UpsertFinancialsDTO {
   gross_sales_amount?: number;
 }
 
+export interface SettlementLineDTO {
+  id: string;
+  settlement_id: string;
+  item_name: string;
+  quantity: number;
+  unit_price_cents: number;
+  line_total_cents: number;
+  created_at: string;
+}
+
 export interface ShowSettlementDTO {
   id: string;
   show_id: string;
@@ -53,13 +64,21 @@ export interface ShowSettlementDTO {
   status: string;
   created_at: string;
   updated_at: string;
+  lines?: SettlementLineDTO[];
+}
+
+export interface CreateShowSettlementLineDTO {
+  itemName: string;
+  quantity: number;
+  unitPrice: number;
 }
 
 export interface CreateShowSettlementDTO {
   wholesaler_id: string;
-  method: 'PERCENT_PAYOUT' | 'MANUAL';
+  method: 'PERCENT_PAYOUT' | 'MANUAL' | 'ITEMIZED';
   rate_percent?: number;
   amount?: number;
+  lines?: CreateShowSettlementLineDTO[];
 }
 
 export interface DeleteShowSettlementResult {
@@ -159,5 +178,6 @@ export function mapShowToViewModel(show: ShowDTO): ShowViewModel {
     name: show.name,
     date: show.show_date,
     status: show.status ?? 'PLANNED',
+    updated_at: show.updated_at,
   };
 }

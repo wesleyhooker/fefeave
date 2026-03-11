@@ -43,3 +43,7 @@ jobs:
       - name: Build application
         run: npm run build
         working-directory: frontend
+      - name: CI failure hint
+        if: failure()
+        run: |
+          echo "Frontend check failed. Run: make check to reproduce locally."

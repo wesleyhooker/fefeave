@@ -539,6 +539,21 @@ export async function wholesalerRoutes(
                 amount: { type: 'string' },
                 show_id: { type: 'string' },
                 running_balance: { type: 'string' },
+                entry_id: { type: 'string' },
+                calculation_method: { type: 'string' },
+                show_name: { type: 'string' },
+                lines: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      item_name: { type: 'string' },
+                      quantity: { type: 'integer' },
+                      unit_price_cents: { type: 'integer' },
+                      line_total_cents: { type: 'integer' },
+                    },
+                  },
+                },
               },
             },
           },

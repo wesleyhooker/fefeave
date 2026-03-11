@@ -33,12 +33,21 @@ jobs:
         run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
         working-directory: .
       - name: Check formatting
-        run: npm run format:check
+        run: |
+          npm run format:check || (echo "Formatting check failed. Run: make format"; exit 1)
         working-directory: .
       - name: Test PROJECT HEAD tooling
-        run: npm run test:project-head
+        run: |
+          npm run test:project-head || (echo "Project-head check failed. Run: make check"; exit 1)
         working-directory: .
       - run: npm ci
       - name: Lint backend
-        run: npm run lint
-      - run: npm test --if-present
+        run: |
+          npm run lint || (echo "Lint failed. Run: make lint"; exit 1)
+      - name: Test backend
+        run: |
+          npm test --if-present || (echo "Tests failed. Run: make check"; exit 1)
+      - name: CI failure hint
+        if: failure()
+        run: |
+          echo "One or more checks failed. Run: make check to reproduce locally."

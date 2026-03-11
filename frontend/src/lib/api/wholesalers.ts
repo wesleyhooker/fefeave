@@ -20,12 +20,24 @@ export interface ClosedShowInBalanceRow {
   owed_total: string;
 }
 
+/** Line item for ITEMIZED settlements (from settlement_lines). */
+export interface BackendStatementSettlementLine {
+  item_name: string;
+  quantity: number;
+  unit_price_cents: number;
+  line_total_cents: number;
+}
+
 export interface BackendWholesalerStatementRow {
   type: 'OWED' | 'PAYMENT';
   date: string;
   amount: string;
   show_id?: string;
   running_balance: string;
+  entry_id: string;
+  calculation_method?: string;
+  show_name?: string;
+  lines?: BackendStatementSettlementLine[];
 }
 
 export interface WholesalerListRowView {
@@ -38,6 +50,13 @@ export interface WholesalerListRowView {
   last_payment_date?: string | null;
 }
 
+export interface StatementSettlementLineView {
+  itemName: string;
+  quantity: number;
+  unitPriceCents: number;
+  lineTotalCents: number;
+}
+
 export interface WholesalerStatementRowView {
   date: string;
   type: 'OWED' | 'PAYMENT';
@@ -45,6 +64,9 @@ export interface WholesalerStatementRowView {
   amountOwed: number | null;
   amountPaid: number | null;
   runningBalance: number;
+  entryId: string;
+  calculationMethod?: string;
+  lines?: StatementSettlementLineView[];
 }
 
 function parseAmount(value: string): number {
@@ -110,9 +132,18 @@ export function mapStatementRowToDetailView(
   return {
     date: row.date,
     type: row.type,
-    showName: '—',
+    showName: row.show_name ?? '—',
     amountOwed: row.type === 'OWED' ? amount : null,
     amountPaid: row.type === 'PAYMENT' ? amount : null,
     runningBalance: parseAmount(row.running_balance),
+    entryId: row.entry_id,
+    calculationMethod: row.calculation_method,
+    lines:
+      row.lines?.map((l) => ({
+        itemName: l.item_name,
+        quantity: l.quantity,
+        unitPriceCents: l.unit_price_cents,
+        lineTotalCents: l.line_total_cents,
+      })) ?? undefined,
   };
 }

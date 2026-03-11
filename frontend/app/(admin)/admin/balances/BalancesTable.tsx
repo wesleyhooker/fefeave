@@ -112,9 +112,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
       setExportError(null);
       downloadCsv(getFilename(), csvText, { includeBom: false });
     } catch {
-      setExportError(
-        "Export failed. Please retry. If this persists, contact your administrator.",
-      );
+      setExportError("Balances export failed. Please retry.");
     }
   };
 
@@ -142,7 +140,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
           onClick={handleDownloadCsv}
           className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
-          Download CSV
+          Download Balances CSV
         </button>
         {exportError && (
           <div className="flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">
@@ -187,10 +185,23 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
               >
                 <button
                   type="button"
+                  onClick={() => handleSort("balance_owed")}
+                  className="hover:text-gray-700"
+                >
+                  Balance owed
+                  <SortIndicator column="balance_owed" />
+                </button>
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                <button
+                  type="button"
                   onClick={() => handleSort("owed_total")}
                   className="hover:text-gray-700"
                 >
-                  Owed Total
+                  Total owed
                   <SortIndicator column="owed_total" />
                 </button>
               </th>
@@ -203,21 +214,8 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                   onClick={() => handleSort("paid_total")}
                   className="hover:text-gray-700"
                 >
-                  Paid Total
+                  Total paid
                   <SortIndicator column="paid_total" />
-                </button>
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleSort("balance_owed")}
-                  className="hover:text-gray-700"
-                >
-                  Balance Owed
-                  <SortIndicator column="balance_owed" />
                 </button>
               </th>
               <th
@@ -229,47 +227,72 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                   onClick={() => handleSort("last_payment_date")}
                   className="hover:text-gray-700"
                 >
-                  Last Payment Date
+                  Last payment
                   <SortIndicator column="last_payment_date" />
                 </button>
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Actions
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
-            {sorted.map((r) => {
-              const balance = parseNum(r.balance_owed);
-              const paid = parseNum(r.paid_total);
-              const status = getPaymentStatus(balance, paid);
-              return (
-                <tr key={r.wholesaler_id} className="hover:bg-gray-50">
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <Link
-                      href={`/admin/wholesalers/${r.wholesaler_id}`}
-                      className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
-                    >
-                      {r.name}
-                    </Link>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <PaymentStatusChip status={status} />
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
-                    {formatCurrency(parseNum(r.owed_total))}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
-                    {formatCurrency(parseNum(r.paid_total))}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
-                    {formatCurrency(parseNum(r.balance_owed))}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                    {r.last_payment_date
-                      ? formatDate(r.last_payment_date)
-                      : "—"}
-                  </td>
-                </tr>
-              );
-            })}
+            {sorted.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-4 py-6 text-center text-sm text-gray-500"
+                >
+                  No balances yet.
+                </td>
+              </tr>
+            ) : (
+              sorted.map((r) => {
+                const balance = parseNum(r.balance_owed);
+                const paid = parseNum(r.paid_total);
+                const status = getPaymentStatus(balance, paid);
+                return (
+                  <tr key={r.wholesaler_id} className="hover:bg-gray-50">
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <Link
+                        href={`/admin/wholesalers/${r.wholesaler_id}`}
+                        className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
+                      >
+                        {r.name}
+                      </Link>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <PaymentStatusChip status={status} />
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums text-gray-900">
+                      {formatCurrency(parseNum(r.balance_owed))}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
+                      {formatCurrency(parseNum(r.owed_total))}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
+                      {formatCurrency(parseNum(r.paid_total))}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                      {r.last_payment_date
+                        ? formatDate(r.last_payment_date)
+                        : "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                      <Link
+                        href={`/admin/payments/new?wholesalerId=${r.wholesaler_id}`}
+                        className="text-sm font-medium text-gray-900 hover:text-gray-600 hover:underline"
+                      >
+                        Record payment
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>

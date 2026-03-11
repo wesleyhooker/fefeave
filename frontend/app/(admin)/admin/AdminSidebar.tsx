@@ -9,7 +9,7 @@ const NAV_ITEMS: {
   match: (path: string) => boolean;
 }[] = [
   {
-    href: "/admin/dashboard",
+    href: "/admin",
     label: "Home",
     match: (p) => p === "/admin" || p === "/admin/dashboard",
   },
@@ -19,24 +19,14 @@ const NAV_ITEMS: {
     match: (p) => p.startsWith("/admin/shows"),
   },
   {
-    href: "/admin/wholesalers",
-    label: "Wholesalers",
-    match: (p) => p.startsWith("/admin/wholesalers"),
-  },
-  {
     href: "/admin/balances",
     label: "Balances",
-    match: (p) => p.startsWith("/admin/balances"),
+    match: (p) => p === "/admin/balances" || p.startsWith("/admin/wholesalers"),
   },
   {
     href: "/admin/payments",
     label: "Payments",
     match: (p) => p.startsWith("/admin/payments"),
-  },
-  {
-    href: "/admin/inventory",
-    label: "Inventory",
-    match: (p) => p.startsWith("/admin/inventory"),
   },
 ];
 

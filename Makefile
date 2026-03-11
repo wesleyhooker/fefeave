@@ -1,11 +1,5 @@
-# --- Project shortcuts for Terraform + GitHub Actions ---
-# Usage examples:
-#   make init
-#   make plan-dev   | make apply-dev
-#   make plan-prod  | make apply-prod
-#   make output-dev | make output-prod
-#   make gh-sync-dev | make gh-sync-prod
-#   make deploy-dev | make deploy-prod
+# FefeAve monorepo Makefile
+# Default: make help
 
 TF_DIR := infra
 DEV_VARS := dev.tfvars
@@ -23,38 +17,144 @@ LOCAL_AUTH_ROLE := ADMIN
 
 .DEFAULT_GOAL := help
 
-.PHONY: help init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-db-up dev-db-down dev-down dev-db-reset dev-migrate dev-seed check-cognito-env dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-up dev-cognito dev-status dev-backend-health dev-backend-wholesalers test
+.PHONY: help format format-check lint test build check doctor
+.PHONY: backend-lint backend-test backend-build backend-check
+.PHONY: frontend-lint frontend-build frontend-check
+.PHONY: dev dev-up dev-down dev-status dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-cognito
+.PHONY: dev-db-up dev-db-down dev-db-reset dev-migrate dev-seed check-cognito-env
+.PHONY: init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-backend-health dev-backend-wholesalers
 
+# ------------------------------------------------------------------------------
+# Help
+# ------------------------------------------------------------------------------
 help:
-	@echo "Available targets:"
-	@echo "  dev-db-up                Start local Postgres (docker compose)"
-	@echo "  dev-db-down              Stop local Postgres"
-	@echo "  dev-db-reset             Reset local Postgres volume and restart"
-	@echo "  dev-migrate              Run backend migrations against local Postgres"
-	@echo "  dev-seed                 Seed dev data (wholesalers, shows, payments); run after dev-migrate"
-	@echo "  dev-api                  Run backend locally on :3000 with dev_bypass"
-	@echo "  dev-api-cognito          Run backend locally on :3000 with AUTH_MODE=cognito"
-	@echo "  dev-ui                   Run frontend locally on :3001 (0.0.0.0)"
-	@echo "  dev-tmux                 Run dev-api + dev-ui in tmux split panes"
-	@echo "  dev-tmux-cognito         Run dev-api-cognito + dev-ui in tmux split panes"
-	@echo "  dev-up                   Print daily inner-loop startup steps"
-	@echo "  dev-cognito              Bring up db+migrations and run cognito backend + frontend in tmux"
-	@echo "  dev-status               Check local backend endpoint status codes"
-	@echo "  test                     Run backend tests and frontend build"
-	@echo "  NOTE                     make dev uses AUTH_MODE=dev_bypass (fast local). Use make dev-cognito for real Hosted UI testing."
+	@echo "FefeAve — day-to-day workflow"
 	@echo ""
-	@echo "Outer-loop / AWS helper targets:"
-	@echo "  dev-plan dev-apply ui-aws dev-backend-health dev-backend-wholesalers"
+	@echo "  Pre-push (run before pushing):"
+	@echo "    make check              Format check, lint, tests, frontend build (mirrors CI)"
 	@echo ""
-	@echo "Legacy targets:"
-	@echo "  init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod"
-	@echo "  gh-sync-dev gh-sync-prod deploy-dev deploy-prod"
+	@echo "  Repo hygiene:"
+	@echo "    make format             Apply Prettier formatting across repo"
+	@echo "    make format-check       Check formatting only (no write)"
+	@echo "    make lint               Lint whole repo (backend + frontend if configured)"
+	@echo "    make test               Backend tests + frontend build"
+	@echo "    make build              Backend build + frontend build"
+	@echo "    make doctor             Print tooling versions / env health"
+	@echo ""
+	@echo "  Backend-only:"
+	@echo "    make backend-lint       Lint backend"
+	@echo "    make backend-test       Run backend tests"
+	@echo "    make backend-build      Build backend (tsc)"
+	@echo "    make backend-check      backend-lint + backend-test + backend-build"
+	@echo ""
+	@echo "  Frontend-only:"
+	@echo "    make frontend-lint      Lint frontend (Next.js ESLint)"
+	@echo "    make frontend-build     Build frontend"
+	@echo "    make frontend-check     frontend-lint + frontend-build"
+	@echo ""
+	@echo "  Local dev (inner loop):"
+	@echo "    make dev                DB up, migrate, backend + frontend in tmux (dev_bypass auth)"
+	@echo "    make dev-up             Print startup steps"
+	@echo "    make dev-api            Backend on :3000 (dev_bypass)"
+	@echo "    make dev-api-cognito    Backend on :3000 (Cognito)"
+	@echo "    make dev-ui             Frontend on :3001"
+	@echo "    make dev-tmux           dev-api + dev-ui in tmux"
+	@echo "    make dev-tmux-cognito   dev-api-cognito + dev-ui in tmux"
+	@echo "    make dev-cognito        DB + migrate + tmux with Cognito"
+	@echo "    make dev-status         Hit local backend endpoints"
+	@echo "    make dev-down           Kill dev processes on 3000/3001 and tmux session"
+	@echo ""
+	@echo "  Database / migrations:"
+	@echo "    make dev-db-up          Start local Postgres (docker compose)"
+	@echo "    make dev-db-down        Stop Postgres"
+	@echo "    make dev-db-reset       Reset Postgres volume and restart"
+	@echo "    make dev-migrate        Run migrations against local DB"
+	@echo "    make dev-seed           Seed dev data (after dev-migrate)"
+	@echo ""
+	@echo "  Outer-loop / AWS:"
+	@echo "    make dev-plan, dev-apply, ui-aws, dev-backend-health, dev-backend-wholesalers"
+	@echo "    init, plan-dev, apply-dev, output-dev, gh-sync-dev, deploy-dev (and prod variants)"
 
-# One-time (or after provider/module changes)
+# ------------------------------------------------------------------------------
+# Repo hygiene (whole-repo)
+# ------------------------------------------------------------------------------
+format:
+	@echo "[repo] Applying format fixes (Prettier)"
+	@npm run format
+
+format-check:
+	@echo "[repo] Checking formatting (Prettier)"
+	@npm run format:check
+
+lint: backend-lint
+	@echo "[repo] Frontend lint"
+	@npm --prefix frontend run lint
+
+test:
+	@echo "[repo] Backend tests"
+	@npm --prefix backend run test
+	@echo "[repo] Frontend build"
+	@npm --prefix frontend run build
+
+build: backend-build
+	@echo "[repo] Frontend build"
+	@npm --prefix frontend run build
+
+check: format-check
+	@echo "[repo] Project-head tooling"
+	@npm run test:project-head
+	@$(MAKE) lint
+	@echo "[repo] Backend tests"
+	@npm --prefix backend run test --if-present
+	@echo "[repo] Frontend build"
+	@npm --prefix frontend run build
+	@echo "All checks passed."
+
+doctor:
+	@echo "Node:  $$(node -v 2>/dev/null || echo 'not found')"
+	@echo "npm:   $$(npm -v 2>/dev/null || echo 'not found')"
+	@echo "Docker: $$(docker --version 2>/dev/null || echo 'not found')"
+	@echo "Backend deps: $$(test -d backend/node_modules && echo 'installed' || echo 'missing')"
+	@echo "Frontend deps: $$(test -d frontend/node_modules && echo 'installed' || echo 'missing')"
+
+# ------------------------------------------------------------------------------
+# Backend checks
+# ------------------------------------------------------------------------------
+backend-lint:
+	@echo "[backend] Lint"
+	@npm --prefix backend run lint
+
+backend-test:
+	@echo "[backend] Test"
+	@npm --prefix backend run test
+
+backend-build:
+	@echo "[backend] Build"
+	@npm --prefix backend run build
+
+backend-check: backend-lint backend-test backend-build
+	@echo "[backend] Check done."
+
+# ------------------------------------------------------------------------------
+# Frontend checks
+# ------------------------------------------------------------------------------
+frontend-lint:
+	@echo "[frontend] Lint"
+	@npm --prefix frontend run lint
+
+frontend-build:
+	@echo "[frontend] Build"
+	@npm --prefix frontend run build
+
+frontend-check: frontend-lint frontend-build
+	@echo "[frontend] Check done."
+
+# ------------------------------------------------------------------------------
+# Terraform / outer-loop
+# ------------------------------------------------------------------------------
 init:
 	$(TF) init
 
-# Workspaces (idempotent)
 ws-dev:
 	@$(TF) workspace select dev >/dev/null 2>&1 || $(TF) workspace new dev >/dev/null
 ws-prod:
@@ -113,7 +213,6 @@ gh-sync-prod: ws-prod
 	  gh variable set -R $(REPO) --env prod AWS_REGION --body "$(AWS_REGION)"; \
 	  echo "Synced prod env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_ROLE_ARN=$$ROLE"
 
-# Kick off deploy workflows (uses the display names you set)
 deploy-dev:
 	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)
 	gh workflow run "Frontend Deploy (dev)" -R $(REPO)
@@ -122,19 +221,9 @@ deploy-prod:
 	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)
 	gh workflow run "Frontend Deploy (prod)" -R $(REPO)
 
-# --- Centralized dev command surface ---
-dev-plan:
-	@echo "Selecting Terraform workspace: dev"
-	@terraform -chdir=infra workspace select dev
-	@echo "Running Terraform plan (dev.tfvars)"
-	@terraform -chdir=infra plan -var-file=dev.tfvars
-
-dev-apply:
-	@echo "Selecting Terraform workspace: dev"
-	@terraform -chdir=infra workspace select dev
-	@echo "Running Terraform apply (dev.tfvars)"
-	@terraform -chdir=infra apply -var-file=dev.tfvars
-
+# ------------------------------------------------------------------------------
+# Database / migrations
+# ------------------------------------------------------------------------------
 dev-db-up:
 	@echo "Starting local Postgres on port 5432"
 	@docker compose up -d postgres
@@ -144,12 +233,6 @@ dev-db-up:
 dev-db-down:
 	@echo "Stopping local Postgres"
 	@docker compose down
-
-dev-down:
-	@kill -9 $$(lsof -t -iTCP:3000 -sTCP:LISTEN) 2>/dev/null || true
-	@kill -9 $$(lsof -t -iTCP:3001 -sTCP:LISTEN) 2>/dev/null || true
-	@if command -v tmux >/dev/null 2>&1; then tmux kill-session -t fefeave-dev 2>/dev/null || true; fi
-	@echo "Dev cleanup done."
 
 dev-db-reset:
 	@echo "Resetting local Postgres volume and restarting"
@@ -165,28 +248,19 @@ dev-seed:
 	@echo "Seeding dev data (wholesalers, shows, settlements, payments)"
 	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run seed:dev
 
+# ------------------------------------------------------------------------------
+# Local dev / app run
+# ------------------------------------------------------------------------------
 check-cognito-env:
 	@missing=""; \
 	read_frontend_var() { \
-	  key="$$1"; \
-	  env_val="$$2"; \
-	  if [ -n "$$env_val" ]; then \
-	    printf '%s' "$$env_val"; \
-	    return; \
-	  fi; \
+	  key="$$1"; env_val="$$2"; \
+	  if [ -n "$$env_val" ]; then printf '%s' "$$env_val"; return; fi; \
 	  [ -f frontend/.env.local ] || return; \
 	  awk -v k="$$key" ' \
-	    /^[[:space:]]*#/ { next } \
-	    /^[[:space:]]*$$/ { next } \
-	    { \
-	      line=$$0; \
-	      if (line ~ "^[[:space:]]*" k "[[:space:]]*=") { \
-	        sub("^[[:space:]]*" k "[[:space:]]*=[[:space:]]*", "", line); \
-	        sub(/\r$$/, "", line); \
-	        print line; \
-	        exit; \
-	      } \
-	    } \
+	    /^[[:space:]]*#/ { next } /^[[:space:]]*$$/ { next } \
+	    { line=$$0; if (line ~ "^[[:space:]]*" k "[[:space:]]*=") { \
+	      sub("^[[:space:]]*" k "[[:space:]]*=[[:space:]]*", "", line); sub(/\r$$/, "", line); print line; exit } } \
 	  ' frontend/.env.local; \
 	}; \
 	[ -n "$$COGNITO_REGION" ] || missing="$$missing COGNITO_REGION"; \
@@ -207,18 +281,14 @@ check-cognito-env:
 	if [ -n "$$missing" ]; then \
 	  echo "Missing required Cognito env vars:$$missing"; \
 	  echo "Set backend vars in shell env and frontend vars in shell env or frontend/.env.local."; \
-	  if [ -f scripts/dev/print-cognito-env-help.sh ]; then \
-	    sh scripts/dev/print-cognito-env-help.sh; \
-	  fi; \
+	  if [ -f scripts/dev/print-cognito-env-help.sh ]; then sh scripts/dev/print-cognito-env-help.sh; fi; \
 	  exit 1; \
 	fi; \
 	if [ "$$frontend_redirect_uri" != "http://localhost:3001/api/auth/callback" ]; then \
-	  echo "COGNITO_REDIRECT_URI must be http://localhost:3001/api/auth/callback for make dev-cognito."; \
-	  exit 1; \
+	  echo "COGNITO_REDIRECT_URI must be http://localhost:3001/api/auth/callback for make dev-cognito."; exit 1; \
 	fi; \
 	if [ "$$frontend_backend_base" != "http://localhost:3000/api" ]; then \
-	  echo "BACKEND_BASE_URL must be http://localhost:3000/api for make dev-cognito."; \
-	  exit 1; \
+	  echo "BACKEND_BASE_URL must be http://localhost:3000/api for make dev-cognito."; exit 1; \
 	fi
 
 dev-api:
@@ -245,13 +315,9 @@ dev-ui:
 dev-tmux:
 	@if ! test -t 1 || ! command -v tmux >/dev/null 2>&1; then \
 	  echo "Non-interactive shell detected; starting dev services without tmux..."; \
-	  $(MAKE) dev-api & \
-	  api_pid=$$!; \
-	  trap 'kill $$api_pid 2>/dev/null || true' EXIT INT TERM; \
-	  $(MAKE) dev-ui; \
+	  $(MAKE) dev-api & api_pid=$$!; trap 'kill $$api_pid 2>/dev/null || true' EXIT INT TERM; $(MAKE) dev-ui; \
 	else \
-	  if tmux has-session -t fefeave-dev 2>/dev/null; then \
-	    tmux attach -t fefeave-dev; \
+	  if tmux has-session -t fefeave-dev 2>/dev/null; then tmux attach -t fefeave-dev; \
 	  else \
 	    tmux new-session -d -s fefeave-dev "cd $(CURDIR) && bash -lc 'make dev-api; rc=\$$?; echo; echo \"backend exited \$$rc\"; read -n 1 -s -r -p \"press any key\"'"; \
 	    tmux split-window -h -t fefeave-dev "cd $(CURDIR) && make dev-ui"; \
@@ -260,8 +326,7 @@ dev-tmux:
 	fi
 
 dev-tmux-cognito:
-	@if tmux has-session -t fefeave-dev 2>/dev/null; then \
-	  tmux attach -t fefeave-dev; \
+	@if tmux has-session -t fefeave-dev 2>/dev/null; then tmux attach -t fefeave-dev; \
 	else \
 	  tmux new-session -d -s fefeave-dev "cd $(CURDIR) && bash -lc 'make dev-api-cognito; rc=\$$?; echo; echo \"backend exited \$$rc\"; read -n 1 -s -r -p \"press any key\"'"; \
 	  tmux split-window -h -t fefeave-dev "cd $(CURDIR) && make dev-ui"; \
@@ -286,6 +351,12 @@ dev-status:
 	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/shows
 	@echo -n "  /api/payments: "
 	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/payments
+
+dev-down:
+	@kill -9 $$(lsof -t -iTCP:3000 -sTCP:LISTEN) 2>/dev/null || true
+	@kill -9 $$(lsof -t -iTCP:3001 -sTCP:LISTEN) 2>/dev/null || true
+	@if command -v tmux >/dev/null 2>&1; then tmux kill-session -t fefeave-dev 2>/dev/null || true; fi
+	@echo "Dev cleanup done."
 
 ui-aws:
 	@echo "Preparing frontend/.env.local with NEXT_PUBLIC_BACKEND_URL=/api"
@@ -314,11 +385,17 @@ dev-backend-wholesalers:
 	@terraform -chdir=infra workspace select dev >/dev/null
 	@curl -s -o /dev/null -w "%{http_code}\n" "$$(terraform -chdir=infra output -raw backend_api_base_url)/api/wholesalers/balances"
 
-test:
-	@echo "Running backend tests"
-	@cd backend && npm test
-	@echo "Running frontend build"
-	@cd frontend && npm run build
+dev-plan:
+	@echo "Selecting Terraform workspace: dev"
+	@terraform -chdir=infra workspace select dev
+	@echo "Running Terraform plan (dev.tfvars)"
+	@terraform -chdir=infra plan -var-file=dev.tfvars
+
+dev-apply:
+	@echo "Selecting Terraform workspace: dev"
+	@terraform -chdir=infra workspace select dev
+	@echo "Running Terraform apply (dev.tfvars)"
+	@terraform -chdir=infra apply -var-file=dev.tfvars
 
 dev:
 	@$(MAKE) dev-db-up

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BalancesPageSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import { formatCurrency } from "@/lib/format";
 import { apiGet } from "@/lib/api";
 import { BalancesTable, type WholesalerBalanceRow } from "./BalancesTable";
@@ -14,29 +15,64 @@ export default function AdminBalancesPage() {
   const [data, setData] = useState<WholesalerBalanceRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const visibilityRef = useRef<string | null>(null);
+  const dataRef = useRef<WholesalerBalanceRow[] | null>(null);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
+    dataRef.current = data;
+  }, [data]);
+
+  const fetchBalances = useCallback(() => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    const isInitial = dataRef.current === null;
+    if (isInitial) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     setError(null);
+    setRefreshError(null);
+
     apiGet<WholesalerBalanceRow[]>("wholesalers/balances")
       .then((rows) => {
-        if (!cancelled) {
-          setData(rows);
-        }
+        setData(rows);
       })
       .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : String(err));
+        const message = err instanceof Error ? err.message : String(err);
+        if (dataRef.current !== null) {
+          setRefreshError(message);
+        } else {
+          setError(message);
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
+        setRefreshing(false);
+        isFetchingRef.current = false;
       });
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    fetchBalances();
+  }, [fetchBalances]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      const next = document.visibilityState;
+      if (visibilityRef.current === "hidden" && next === "visible") {
+        fetchBalances();
+      }
+      visibilityRef.current = next;
+    };
+    visibilityRef.current = document.visibilityState;
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
+  }, [fetchBalances]);
 
   const summary = useMemo(() => {
     if (!data) return null;
@@ -62,12 +98,7 @@ export default function AdminBalancesPage() {
   }, [data]);
 
   if (loading) {
-    return (
-      <div>
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">Balances</h1>
-        <p className="text-gray-600">Loading…</p>
-      </div>
-    );
+    return <BalancesPageSkeleton />;
   }
 
   if (error) {
@@ -96,10 +127,38 @@ export default function AdminBalancesPage() {
 
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-bold text-gray-900">Balances</h1>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-gray-900">Balances</h1>
+        <button
+          type="button"
+          onClick={() => fetchBalances()}
+          disabled={refreshing}
+          className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label="Refresh balances"
+        >
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
       <p className="mb-6 text-gray-600">
         Wholesaler balances and payout workspace. Aligned with dashboard totals.
       </p>
+
+      {refreshError && (
+        <div
+          className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="alert"
+        >
+          <span>Refresh failed. {refreshError}</span>
+          <button
+            type="button"
+            onClick={() => fetchBalances()}
+            disabled={refreshing}
+            className="rounded border border-amber-400 bg-white px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+          >
+            Try again
+          </button>
+        </div>
+      )}
 
       {summary && (
         <div className="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-gray-200 bg-gray-50/80 px-4 py-3 pb-4">

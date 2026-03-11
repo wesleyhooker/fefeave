@@ -10,13 +10,14 @@ export default async function AdminShowDetailPage({
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <Link
-          href="/admin/shows"
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Back to Shows
+      <nav className="mb-2 text-sm text-gray-500" aria-label="Breadcrumb">
+        <Link href="/admin/shows" className="hover:text-gray-700">
+          Shows
         </Link>
+        <span className="mx-1.5">/</span>
+        <span aria-current="page">Show</span>
+      </nav>
+      <div className="mb-4 flex justify-end">
         <Link
           href="/admin/payments/new"
           className="rounded bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"

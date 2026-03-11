@@ -122,10 +122,10 @@ export default function BatchPayPage() {
     return (
       <div>
         <Link
-          href="/admin/wholesalers"
+          href="/admin/balances"
           className="text-sm text-gray-500 hover:text-gray-700"
         >
-          ← Back to Wholesalers
+          ← Back to Balances
         </Link>
         <p className="mt-4 text-gray-600">Invalid wholesaler.</p>
       </div>
@@ -136,10 +136,10 @@ export default function BatchPayPage() {
     return (
       <div>
         <Link
-          href="/admin/wholesalers"
+          href="/admin/balances"
           className="text-sm text-gray-500 hover:text-gray-700"
         >
-          ← Back to Wholesalers
+          ← Back to Balances
         </Link>
         <p className="mt-4 text-gray-600">Loading closed shows…</p>
       </div>
@@ -150,10 +150,10 @@ export default function BatchPayPage() {
     return (
       <div>
         <Link
-          href="/admin/wholesalers"
+          href="/admin/balances"
           className="text-sm text-gray-500 hover:text-gray-700"
         >
-          ← Back to Wholesalers
+          ← Back to Balances
         </Link>
         <p className="mt-4 text-amber-700">{error}</p>
       </div>
@@ -163,10 +163,10 @@ export default function BatchPayPage() {
   return (
     <div>
       <Link
-        href="/admin/wholesalers"
+        href="/admin/balances"
         className="text-sm text-gray-500 hover:text-gray-700"
       >
-        ← Back to Wholesalers
+        ← Back to Balances
       </Link>
       <h1 className="mt-4 text-2xl font-bold text-gray-900">
         Balance breakdown — {name ?? id}
