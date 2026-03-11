@@ -623,7 +623,7 @@ export async function owedLineItemRoutes(
       }>;
 
       const itemizedIds = rows.filter((r) => r.calculation_method === 'ITEMIZED').map((r) => r.id);
-      let linesBySettlement: Record<string, Array<Record<string, unknown>>> = {};
+      const linesBySettlement: Record<string, Array<Record<string, unknown>>> = {};
       if (itemizedIds.length > 0) {
         const linesResult = await pool.query(
           `SELECT id, settlement_id, item_name, quantity, unit_price_cents, line_total_cents, created_at

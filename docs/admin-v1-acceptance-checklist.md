@@ -103,5 +103,5 @@ Use this checklist to verify the full financial workflow end-to-end before treat
 | 12. Export balances CSV                  |             |
 | 13. Export ledger CSV                    |             |
 
-**Date:** ******\_\_\_******  
-**Tester:** ******\_\_\_******
+**Date:** **\*\***\_\_\_**\*\***  
+**Tester:** **\*\***\_\_\_**\*\***

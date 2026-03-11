@@ -50,12 +50,12 @@ export function AdminHeaderUser({
       <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
         ← Back to site
       </Link>
-      <a
+      <Link
         href="/api/auth/logout"
         className="text-sm text-gray-500 hover:text-gray-700"
       >
         Logout
-      </a>
+      </Link>
     </div>
   );
 }

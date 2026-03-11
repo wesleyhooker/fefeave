@@ -41,12 +41,12 @@ export default async function PortalLayout({
               {session?.user?.email ?? "unknown user"} | roles:{" "}
               {formatRoles(session?.roles)} | {envLabel}
             </div>
-            <a
+            <Link
               href="/api/auth/logout"
               className="text-sm text-gray-500 hover:text-gray-700"
             >
               Logout
-            </a>
+            </Link>
           </div>
         </div>
       </header>
