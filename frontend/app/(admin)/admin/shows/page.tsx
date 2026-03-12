@@ -126,7 +126,7 @@ export default function AdminShowsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Shows</h1>
         <Link
           href="/admin/shows/new"
@@ -156,168 +156,278 @@ export default function AdminShowsPage() {
       {loading ? (
         <ShowsTableSkeleton />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    Show
-                    <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
-                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500">
-                        i
-                      </span>
-                    </HelpTooltip>
-                  </span>
-                </th>
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-                >
-                  Date
-                </th>
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-                >
-                  Status
-                </th>
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-                >
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {rows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-4 py-6 text-center text-sm text-gray-500"
+        <>
+          {/* Mobile: card/list view */}
+          <div className="space-y-3 md:hidden">
+            {rows.length === 0 ? (
+              <p className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                No shows yet.
+              </p>
+            ) : (
+              rows.map((show) => {
+                const summary = summaries[show.id];
+                const today = isToday(show.date);
+                return (
+                  <div
+                    key={show.id}
+                    className={`rounded-lg border border-gray-200 bg-white p-4 shadow-sm ${
+                      today ? "ring-1 ring-sky-300" : ""
+                    }`}
                   >
-                    No shows yet.
-                  </td>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <Link
+                        href={`/admin/shows/${show.id}`}
+                        className="text-sm font-semibold text-gray-900 hover:text-gray-700 hover:underline"
+                      >
+                        {show.name}
+                      </Link>
+                      {today && (
+                        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-xs font-medium text-sky-700">
+                          Today
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      {formatDate(show.date)} ·{" "}
+                      <span
+                        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                          show.status === "COMPLETED"
+                            ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                            : "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                            show.status === "COMPLETED"
+                              ? "bg-emerald-500"
+                              : "bg-blue-500"
+                          }`}
+                          aria-hidden
+                        />
+                        {show.status === "COMPLETED" ? "Closed" : "Open"}
+                      </span>
+                    </p>
+                    {summary != null && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-gray-700">
+                          Profit{" "}
+                          <span className="tabular-nums text-gray-900">
+                            {formatCurrency(summary.estimatedShowProfit)}
+                          </span>
+                        </p>
+                        <p className="mt-0.5 text-xs tabular-nums text-gray-500">
+                          {formatCurrency(summary.payoutAfterFees)} payout ·{" "}
+                          {formatCurrency(summary.totalOwed)} owed
+                        </p>
+                      </div>
+                    )}
+                    {(summary != null || show.updated_at) && (
+                      <p className="mt-1 text-[11px] text-gray-500">
+                        {summary != null && summary.settlementCount >= 0 && (
+                          <span>
+                            {summary.settlementCount === 1
+                              ? "1 settlement"
+                              : `${summary.settlementCount} settlements`}
+                          </span>
+                        )}
+                        {show.updated_at && (
+                          <span>
+                            {summary != null && summary.settlementCount >= 0
+                              ? " · "
+                              : ""}
+                            Updated {formatTimeAgo(show.updated_at)}
+                          </span>
+                        )}
+                      </p>
+                    )}
+                    <div className="mt-3">
+                      {show.status === "ACTIVE" ? (
+                        <Link
+                          href={`/admin/shows/${show.id}`}
+                          className="inline-flex w-full items-center justify-center rounded-md bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-800"
+                        >
+                          Close out
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/admin/shows/${show.id}`}
+                          className="inline-flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          View
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop: table view */}
+          <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm md:block">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      Show
+                      <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
+                        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500">
+                          i
+                        </span>
+                      </HelpTooltip>
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                  >
+                    Date
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                  >
+                    Status
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+                  >
+                    Action
+                  </th>
                 </tr>
-              ) : (
-                rows.map((show) => {
-                  const summary = summaries[show.id];
-                  const today = isToday(show.date);
-                  return (
-                    <tr
-                      key={show.id}
-                      className={
-                        today
-                          ? "border-l-4 border-l-sky-400 bg-sky-50 hover:bg-sky-50/90"
-                          : "hover:bg-gray-50"
-                      }
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {rows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-4 py-6 text-center text-sm text-gray-500"
                     >
-                      <td className="px-4 py-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <Link
-                                href={`/admin/shows/${show.id}`}
-                                className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
-                              >
-                                {show.name}
-                              </Link>
-                              {today && (
-                                <span className="rounded bg-sky-100 px-1.5 py-0.5 text-xs font-medium text-sky-700">
-                                  Today
-                                </span>
-                              )}
-                            </div>
-                            {(summary != null || show.updated_at) && (
-                              <p className="mt-0.5 text-xs text-gray-500">
-                                {summary != null &&
-                                  summary.settlementCount >= 0 && (
-                                    <span>
-                                      {summary.settlementCount === 1
-                                        ? "1 settlement"
-                                        : `${summary.settlementCount} settlements`}
-                                    </span>
-                                  )}
-                                {show.updated_at && (
-                                  <span>
-                                    {summary != null &&
-                                    summary.settlementCount >= 0
-                                      ? " · "
-                                      : ""}
-                                    Updated {formatTimeAgo(show.updated_at)}
+                      No shows yet.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((show) => {
+                    const summary = summaries[show.id];
+                    const today = isToday(show.date);
+                    return (
+                      <tr
+                        key={show.id}
+                        className={
+                          today
+                            ? "border-l-4 border-l-sky-400 bg-sky-50 hover:bg-sky-50/90"
+                            : "hover:bg-gray-50"
+                        }
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  href={`/admin/shows/${show.id}`}
+                                  className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
+                                >
+                                  {show.name}
+                                </Link>
+                                {today && (
+                                  <span className="rounded bg-sky-100 px-1.5 py-0.5 text-xs font-medium text-sky-700">
+                                    Today
                                   </span>
                                 )}
-                              </p>
+                              </div>
+                              {(summary != null || show.updated_at) && (
+                                <p className="mt-0.5 text-xs text-gray-500">
+                                  {summary != null &&
+                                    summary.settlementCount >= 0 && (
+                                      <span>
+                                        {summary.settlementCount === 1
+                                          ? "1 settlement"
+                                          : `${summary.settlementCount} settlements`}
+                                      </span>
+                                    )}
+                                  {show.updated_at && (
+                                    <span>
+                                      {summary != null &&
+                                      summary.settlementCount >= 0
+                                        ? " · "
+                                        : ""}
+                                      Updated {formatTimeAgo(show.updated_at)}
+                                    </span>
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                            {summary == null ? (
+                              <span className="shrink-0 text-sm text-gray-400">
+                                —
+                              </span>
+                            ) : (
+                              <div className="shrink-0 text-right">
+                                <span className="text-sm font-semibold tabular-nums text-gray-900">
+                                  Profit{" "}
+                                  {formatCurrency(summary.estimatedShowProfit)}
+                                </span>
+                                <span className="block text-xs tabular-nums text-gray-500">
+                                  {formatCurrency(summary.payoutAfterFees)}{" "}
+                                  payout · {formatCurrency(summary.totalOwed)}{" "}
+                                  owed
+                                </span>
+                              </div>
                             )}
                           </div>
-                          {summary == null ? (
-                            <span className="shrink-0 text-sm text-gray-400">
-                              —
-                            </span>
-                          ) : (
-                            <div className="shrink-0 text-right">
-                              <span className="text-sm font-semibold tabular-nums text-gray-900">
-                                Profit{" "}
-                                {formatCurrency(summary.estimatedShowProfit)}
-                              </span>
-                              <span className="block text-xs tabular-nums text-gray-500">
-                                {formatCurrency(summary.payoutAfterFees)} payout
-                                · {formatCurrency(summary.totalOwed)} owed
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                        {formatDate(show.date)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${
-                            show.status === "COMPLETED"
-                              ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                              : "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
-                          }`}
-                        >
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                          {formatDate(show.date)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">
                           <span
-                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                            className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${
                               show.status === "COMPLETED"
-                                ? "bg-emerald-500"
-                                : "bg-blue-500"
+                                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                                : "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
                             }`}
-                            aria-hidden
-                          />
-                          {show.status === "COMPLETED" ? "Closed" : "Open"}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                        {show.status === "ACTIVE" ? (
-                          <Link
-                            href={`/admin/shows/${show.id}`}
-                            className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
                           >
-                            Close out
-                          </Link>
-                        ) : (
-                          <Link
-                            href={`/admin/shows/${show.id}`}
-                            className="text-gray-600 hover:text-gray-900 hover:underline"
-                          >
-                            View
-                          </Link>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                            <span
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                show.status === "COMPLETED"
+                                  ? "bg-emerald-500"
+                                  : "bg-blue-500"
+                              }`}
+                              aria-hidden
+                            />
+                            {show.status === "COMPLETED" ? "Closed" : "Open"}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                          {show.status === "ACTIVE" ? (
+                            <Link
+                              href={`/admin/shows/${show.id}`}
+                              className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                            >
+                              Close out
+                            </Link>
+                          ) : (
+                            <Link
+                              href={`/admin/shows/${show.id}`}
+                              className="text-gray-600 hover:text-gray-900 hover:underline"
+                            >
+                              View
+                            </Link>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

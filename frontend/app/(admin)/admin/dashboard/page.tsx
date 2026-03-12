@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DashboardSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
   getPaymentStatus,
@@ -46,8 +46,10 @@ export default function AdminDashboardPage() {
     null,
   );
   const [reloadToken, setReloadToken] = useState(0);
+  const effectRunIdRef = useRef(0);
 
   useEffect(() => {
+    const runId = ++effectRunIdRef.current;
     let cancelled = false;
     setLoading(true);
     setBalancesError(null);
@@ -60,44 +62,47 @@ export default function AdminDashboardPage() {
       fetchShows(),
       fetchPayments(),
     ]).then(([balancesResult, showsResult, paymentsResult]) => {
-      if (cancelled) return;
+      const isLatestRun = effectRunIdRef.current === runId;
+      if (!isLatestRun) return;
 
-      if (balancesResult.status === "fulfilled") {
-        setBalances(balancesResult.value);
-      } else {
-        setBalancesError(
-          balancesResult.reason instanceof Error
-            ? balancesResult.reason.message
-            : String(balancesResult.reason),
-        );
-        setBalances([]);
-      }
-
-      if (showsResult.status === "fulfilled") {
-        setShows(showsResult.value);
-      } else {
-        setShowsError(
-          showsResult.reason instanceof Error
-            ? showsResult.reason.message
-            : String(showsResult.reason),
-        );
-        setShows([]);
-      }
-
-      if (paymentsResult.status === "fulfilled") {
-        setPayments(paymentsResult.value);
-      } else {
-        const status = parseStatusCodeFromError(paymentsResult.reason);
-        if (status === 401 || status === 403) {
-          setPaymentsAuthStatus(status);
+      if (!cancelled) {
+        if (balancesResult.status === "fulfilled") {
+          setBalances(balancesResult.value);
         } else {
-          setPaymentsError(
-            paymentsResult.reason instanceof Error
-              ? paymentsResult.reason.message
-              : String(paymentsResult.reason),
+          setBalancesError(
+            balancesResult.reason instanceof Error
+              ? balancesResult.reason.message
+              : String(balancesResult.reason),
           );
+          setBalances([]);
         }
-        setPayments([]);
+
+        if (showsResult.status === "fulfilled") {
+          setShows(showsResult.value);
+        } else {
+          setShowsError(
+            showsResult.reason instanceof Error
+              ? showsResult.reason.message
+              : String(showsResult.reason),
+          );
+          setShows([]);
+        }
+
+        if (paymentsResult.status === "fulfilled") {
+          setPayments(paymentsResult.value);
+        } else {
+          const status = parseStatusCodeFromError(paymentsResult.reason);
+          if (status === 401 || status === 403) {
+            setPaymentsAuthStatus(status);
+          } else {
+            setPaymentsError(
+              paymentsResult.reason instanceof Error
+                ? paymentsResult.reason.message
+                : String(paymentsResult.reason),
+            );
+          }
+          setPayments([]);
+        }
       }
 
       setLoading(false);
@@ -169,7 +174,72 @@ export default function AdminDashboardPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Dashboard</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      </div>
+
+      {/* Mobile at-a-glance summary */}
+      <section className="mb-6 space-y-3 md:hidden">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Open shows
+            </p>
+            <span className="text-xs text-gray-500">
+              {openShows.length > 0 ? "Tap to close out" : "None"}
+            </span>
+          </div>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
+            {openShows.length}
+          </p>
+          <Link
+            href="/admin/shows"
+            className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            View shows
+          </Link>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Outstanding balance
+            </p>
+            <span className="text-xs text-gray-500">
+              {wholesalersOwingCount} wholesalers owing
+            </span>
+          </div>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
+            {formatCurrency(totals.totalBalance)}
+          </p>
+          <Link
+            href="/admin/balances"
+            className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            View balances
+          </Link>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Recent payments
+            </p>
+            <span className="text-xs text-gray-500">
+              {recentPayments.length > 0 ? "Last 5 shown" : "None yet"}
+            </span>
+          </div>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
+            {formatCurrency(
+              recentPayments.reduce((sum, p) => sum + parseAmount(p.amount), 0),
+            )}
+          </p>
+          <Link
+            href="/admin/payments"
+            className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            View payments
+          </Link>
+        </div>
+      </section>
 
       {/* 1. Needs attention — open shows + outstanding balances */}
       <section className="mb-6">

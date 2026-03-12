@@ -1,27 +1,20 @@
-import Link from "next/link";
+import { getSession } from "@/lib/auth/session.node";
+import { PublicHeader } from "../_components/headers/PublicHeader";
 
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getSession();
+  const roles = session?.roles ?? [];
+  const isStaff = roles.includes("ADMIN") || roles.includes("OPERATOR");
+  const isLoggedIn = !!session;
+  const email = session?.user?.email ?? null;
+
   return (
     <>
-      <header className="border-b border-gray-200 bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-gray-900">
-            Fefe Ave
-          </Link>
-          <nav className="flex gap-4 text-sm text-gray-600">
-            <Link href="/" className="hover:text-gray-900">
-              Home
-            </Link>
-            <Link href="/portal" className="hover:text-gray-900">
-              Portal
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <PublicHeader isLoggedIn={isLoggedIn} isStaff={isStaff} email={email} />
       <main>{children}</main>
     </>
   );

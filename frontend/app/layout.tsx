@@ -3,7 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Fefe Ave",
-  description: "Curated finds, amazing prices.",
+  description:
+    "Live sales. Fabulous finds in clothes and shoes from Felicia's Fefe Ave — started on Instagram Live, now mainly on Whatnot.",
 };
 
 export default function RootLayout({

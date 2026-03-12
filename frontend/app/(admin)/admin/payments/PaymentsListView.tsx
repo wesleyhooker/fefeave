@@ -58,7 +58,7 @@ export function PaymentsListView() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
         <Link
           href="/admin/payments/new"
@@ -85,7 +85,58 @@ export function PaymentsListView() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+      {/* Mobile: card/list view */}
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <p className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+            Loading payments...
+          </p>
+        ) : rows.length === 0 ? (
+          <p className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+            No payments recorded yet.
+          </p>
+        ) : (
+          rows.map((p) => {
+            const wholesalerName = wholesalerNameById[p.wholesalerId];
+            const methodLabel = METHOD_LABELS[p.method] ?? p.method;
+            return (
+              <div
+                key={p.id}
+                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+              >
+                <div className="mb-2 flex items-baseline justify-between gap-3">
+                  <p className="text-lg font-semibold tabular-nums text-gray-900">
+                    {formatCurrency(p.amount)}
+                  </p>
+                  <p className="text-xs text-gray-500">{formatDate(p.date)}</p>
+                </div>
+                <p className="text-sm font-medium text-gray-900">
+                  {wholesalerName ?? "Unknown"}
+                </p>
+                <p className="mt-1 text-xs text-gray-600">
+                  Method: <span className="font-medium">{methodLabel}</span>
+                </p>
+                {p.reference && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Reference: {p.reference}
+                  </p>
+                )}
+                <div className="mt-3">
+                  <Link
+                    href={`/admin/wholesalers/${p.wholesalerId}`}
+                    className="text-xs font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                  >
+                    View wholesaler
+                  </Link>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop: table view */}
+      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm md:block">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
