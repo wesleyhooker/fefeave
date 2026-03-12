@@ -27,6 +27,7 @@ export async function backendGetJson<T>(
   const res = await fetch(toAbsoluteUrl(path), {
     method: 'GET',
     cache: 'no-store',
+    credentials: 'include',
     ...init,
   });
 

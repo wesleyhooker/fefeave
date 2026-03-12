@@ -118,30 +118,32 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-4">
+      <div className="mb-4 space-y-3">
         <input
           type="search"
           placeholder="Search wholesalers..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 md:max-w-xs"
         />
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={owingOnly}
-            onChange={(e) => setOwingOnly(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-          />
-          Owing only
-        </label>
-        <button
-          type="button"
-          onClick={handleDownloadCsv}
-          className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Download Balances CSV
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={owingOnly}
+              onChange={(e) => setOwingOnly(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+            />
+            Owing only
+          </label>
+          <button
+            type="button"
+            onClick={handleDownloadCsv}
+            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Download Balances CSV
+          </button>
+        </div>
         {exportError && (
           <div className="flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">
             <span role="alert">{exportError}</span>
@@ -156,7 +158,85 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         )}
       </div>
 
-      <div className="overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+      {/* Mobile: card list */}
+      <div className="space-y-3 md:hidden">
+        {sorted.length === 0 ? (
+          <p className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+            No balances yet.
+          </p>
+        ) : (
+          sorted.map((r) => {
+            const balance = parseNum(r.balance_owed);
+            const paid = parseNum(r.paid_total);
+            const status = getPaymentStatus(balance, paid);
+            const totalOwed = parseNum(r.owed_total);
+            const totalPaid = parseNum(r.paid_total);
+            return (
+              <div
+                key={r.wholesaler_id}
+                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+              >
+                <div className="mb-2 flex items-start justify-between gap-3">
+                  <div>
+                    <Link
+                      href={`/admin/wholesalers/${r.wholesaler_id}`}
+                      className="block text-sm font-semibold text-gray-900 hover:text-gray-700 hover:underline"
+                    >
+                      {r.name}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Last payment:{" "}
+                      {r.last_payment_date
+                        ? formatDate(r.last_payment_date)
+                        : "—"}
+                    </p>
+                  </div>
+                  <PaymentStatusChip status={status} />
+                </div>
+                <div className="mb-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Balance owed
+                  </p>
+                  <p className="text-lg font-semibold tabular-nums text-gray-900">
+                    {formatCurrency(balance)}
+                  </p>
+                </div>
+                <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                  <span>
+                    Owed:{" "}
+                    <span className="tabular-nums font-medium text-gray-900">
+                      {formatCurrency(totalOwed)}
+                    </span>
+                  </span>
+                  <span>
+                    Paid:{" "}
+                    <span className="tabular-nums font-medium text-gray-900">
+                      {formatCurrency(totalPaid)}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/admin/payments/new?wholesalerId=${r.wholesaler_id}`}
+                    className="flex-1 rounded-md bg-gray-900 px-3 py-2 text-center text-xs font-medium text-white hover:bg-gray-800"
+                  >
+                    Record payment
+                  </Link>
+                  <Link
+                    href={`/admin/wholesalers/${r.wholesaler_id}`}
+                    className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-center text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    View details
+                  </Link>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm md:block">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
