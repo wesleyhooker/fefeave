@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { PaymentsTableSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   fetchPayments,
@@ -56,13 +57,17 @@ export function PaymentsListView() {
 
   const rows = useMemo(() => payments ?? [], [payments]);
 
+  if (loading) {
+    return <PaymentsTableSkeleton />;
+  }
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
         <Link
           href="/admin/payments/new"
-          className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
         >
           Record payment
         </Link>
@@ -70,7 +75,7 @@ export function PaymentsListView() {
 
       {error && (
         <div
-          className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           role="alert"
         >
           <p className="font-medium">Could not load payments.</p>
@@ -87,11 +92,7 @@ export function PaymentsListView() {
 
       {/* Mobile: card/list view */}
       <div className="space-y-3 md:hidden">
-        {loading ? (
-          <p className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
-            Loading payments...
-          </p>
-        ) : rows.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
             No payments recorded yet.
           </p>
@@ -173,16 +174,7 @@ export function PaymentsListView() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
-            {loading ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-6 text-center text-sm text-gray-500"
-                >
-                  Loading payments...
-                </td>
-              </tr>
-            ) : rows.length === 0 ? (
+            {rows.length === 0 ? (
               <tr>
                 <td
                   colSpan={5}

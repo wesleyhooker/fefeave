@@ -4,10 +4,18 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { formatCurrency } from "@/lib/format";
+import {
+  uploadFile,
+  linkAttachmentToPayment,
+  isAllowedContentType,
+  getMaxUploadBytes,
+} from "@/src/lib/api/attachments";
 import { createPayment } from "@/src/lib/api/payments";
 import { fetchWholesalerBalances } from "@/src/lib/api/wholesalers";
 
 const METHODS = ["Cash", "Zelle", "Venmo", "Check", "Other"] as const;
+const ACCEPT_RECEIPT = ".pdf,image/png,image/jpeg,image/jpg";
+const MAX_MB = Math.round(getMaxUploadBytes() / 1024 / 1024);
 
 function RecordPaymentForm() {
   const router = useRouter();
@@ -29,6 +37,8 @@ function RecordPaymentForm() {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<string>("Zelle");
   const [reference, setReference] = useState("");
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -99,14 +109,54 @@ function RecordPaymentForm() {
       notes: composeNotesFromMethod(undefined, method),
     };
     setSubmitting(true);
+    setSubmitError(null);
+    setReceiptError(null);
     try {
-      await createPayment(payload);
+      const payment = await createPayment(payload);
+      if (receiptFile) {
+        try {
+          const attachmentId = await uploadFile(receiptFile);
+          await linkAttachmentToPayment(payment.id, attachmentId);
+        } catch (attachErr) {
+          const msg =
+            attachErr instanceof Error ? attachErr.message : String(attachErr);
+          setReceiptError(
+            `Payment saved. Receipt upload failed: ${msg}. Redirecting…`,
+          );
+          setTimeout(() => {
+            router.push(`/admin/wholesalers/${wholesalerId}`);
+          }, 3000);
+          return;
+        }
+      }
       router.push(`/admin/wholesalers/${wholesalerId}`);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : String(error));
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleReceiptChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setReceiptError(null);
+    const file = e.target.files?.[0];
+    if (!file) {
+      setReceiptFile(null);
+      return;
+    }
+    if (!isAllowedContentType(file.type)) {
+      setReceiptError("Use PDF or image (PNG/JPEG).");
+      setReceiptFile(null);
+      e.target.value = "";
+      return;
+    }
+    if (file.size > getMaxUploadBytes()) {
+      setReceiptError(`File must be under ${MAX_MB} MB.`);
+      setReceiptFile(null);
+      e.target.value = "";
+      return;
+    }
+    setReceiptFile(file);
   }
 
   return (
@@ -122,7 +172,7 @@ function RecordPaymentForm() {
 
       {loadError && (
         <div
-          className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           role="alert"
         >
           <p className="font-medium">Could not load wholesalers.</p>
@@ -139,7 +189,7 @@ function RecordPaymentForm() {
 
       {submitError && (
         <div
-          className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           role="alert"
         >
           <p className="font-medium">Could not record payment.</p>
@@ -309,17 +359,61 @@ function RecordPaymentForm() {
           />
         </div>
 
+        <div>
+          <label
+            htmlFor="receipt"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
+            Receipt (optional)
+          </label>
+          <p className="mb-2 text-xs text-gray-500">
+            PDF or image (PNG/JPEG), max {MAX_MB} MB.
+          </p>
+          <input
+            id="receipt"
+            type="file"
+            accept={ACCEPT_RECEIPT}
+            onChange={handleReceiptChange}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            aria-describedby={
+              receiptError
+                ? "receipt-error"
+                : receiptFile
+                  ? "receipt-name"
+                  : undefined
+            }
+          />
+          {receiptError && (
+            <p
+              id="receipt-error"
+              role="alert"
+              className={
+                receiptError.startsWith("Payment saved")
+                  ? "mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+                  : "mt-2 text-xs text-red-600"
+              }
+            >
+              {receiptError}
+            </p>
+          )}
+          {receiptFile && !receiptError && (
+            <p id="receipt-name" className="mt-2 text-xs text-gray-600">
+              {receiptFile.name}
+            </p>
+          )}
+        </div>
+
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
             disabled={submitting || loadingWholesalers}
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 disabled:opacity-60"
           >
             {submitting ? "Saving..." : "Record payment"}
           </button>
           <Link
             href="/admin/payments"
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
           >
             Cancel
           </Link>

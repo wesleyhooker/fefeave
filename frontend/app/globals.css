@@ -1,3 +1,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * FefeAve visual system (restrained, productized)
+ *
+ * Public
+ * - Sections: py-14 sm:py-16, border-b border-gray-100, alternating bg (white / gray-50/50 / gray-50/80)
+ * - Headings: h1 text-3xl sm:text-4xl font-semibold tracking-tight text-gray-900; h2 text-xl font-semibold text-gray-900
+ * - Body: text-gray-600; secondary text-gray-500
+ * - Links: underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900; focus-visible:outline-2 outline-offset-2 outline-gray-400
+ * - Cards: rounded-lg border border-gray-200 bg-white shadow-sm (e.g. contact list)
+ *
+ * Admin
+ * - Buttons: primary rounded-lg bg-gray-900; secondary rounded-lg border border-gray-300 bg-white; focus-visible:outline-2 outline-offset-2
+ * - Cards/panels: rounded-lg border border-gray-200 shadow-sm
+ * - Alerts: rounded-lg border border-amber-200 bg-amber-50 text-amber-900
+ * - Inputs: rounded-lg border border-gray-300, focus:ring-1 focus:ring-gray-900
+ *
+ * Icons: inline SVG, h-4 w-4 or h-5 w-5, text-gray-500 for hierarchy
+ */
