@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
+import { Container, Nav, NavLink } from "@/system";
 import { PublicAccountDropdown } from "./PublicAccountDropdown";
 
 export type PublicHeaderProps = {
@@ -13,16 +15,37 @@ export type PublicHeaderProps = {
 
 const MAIN_NAV_LINKS = [
   { href: "/", label: "Home" },
+  { href: "/live", label: "Live Shows" },
+  { href: "/how-it-works", label: "How It Works" },
   { href: "/about", label: "About" },
-  { href: "/shop", label: "Shop" },
-  { href: "/contact", label: "Contact" },
 ] as const;
+
+const primaryButtonClasses =
+  "inline-flex items-center justify-center gap-fefe-1 rounded-fefe-button font-medium font-fefe px-5 py-2.5 text-base bg-fefe-gold text-white border-transparent hover:bg-fefe-gold-hover transition-colors focus-visible:ring-2 focus-visible:ring-fefe-gold focus-visible:ring-offset-2";
+
+const LogoFallback = () => (
+  <span
+    className="flex h-8 w-8 items-center justify-center rounded-full bg-fefe-gold/15 text-fefe-gold"
+    aria-hidden
+  >
+    <svg
+      className="h-5 w-5"
+      fill="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden
+    >
+      <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+    </svg>
+  </span>
+);
 
 export function PublicHeader({
   isLoggedIn,
   isStaff,
   email,
 }: PublicHeaderProps) {
+  const pathname = usePathname();
+  const [logoError, setLogoError] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -43,42 +66,46 @@ export function PublicHeader({
   return (
     <header
       ref={headerRef}
-      className="relative border-b border-gray-200 bg-white px-4 py-3"
+      className="relative border-b border-fefe-stone bg-white"
     >
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2.5">
-          <Image
-            src="/fefe-ave-logo.png"
-            alt="Fefe Ave logo"
-            width={40}
-            height={40}
-            className="h-10 w-10 shrink-0"
-          />
-          <span className="truncate text-lg font-semibold text-gray-900">
-            Fefe Ave
-          </span>
+      <Container className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-fefe-2">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-fefe-2 font-fefe text-lg font-semibold text-fefe-charcoal hover:text-fefe-charcoal/90"
+        >
+          {logoError ? (
+            <LogoFallback />
+          ) : (
+            <Image
+              src="/fefe-ave-logo.png"
+              alt="Fefe Ave"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+              unoptimized
+              onError={() => setLogoError(true)}
+            />
+          )}
+          <span>Fefe Ave</span>
         </Link>
 
-        {/* Desktop: main nav + account dropdown */}
-        <div className="hidden items-center gap-x-5 md:flex">
-          <nav
-            className="flex items-center justify-end gap-x-5"
-            aria-label="Main"
-          >
+
+        <div className="hidden items-center gap-fefe-5 md:flex">
+          <Nav direction="row">
             {MAIN_NAV_LINKS.map(({ href, label }) => (
-              <Link
+              <NavLink
                 key={href}
                 href={href}
-                className={
-                  href === "/"
-                    ? "font-medium text-gray-900 hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 rounded"
-                    : "text-gray-600 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 rounded"
-                }
+                active={href === "/" ? pathname === "/" : pathname.startsWith(href)}
               >
                 {label}
-              </Link>
+              </NavLink>
             ))}
-          </nav>
+          </Nav>
+
+          <Link href="/contact" className={primaryButtonClasses}>
+            Contact Us
+          </Link>
           <PublicAccountDropdown
             isLoggedIn={isLoggedIn}
             isStaff={isStaff}
@@ -86,8 +113,13 @@ export function PublicHeader({
           />
         </div>
 
-        {/* Mobile: hamburger + account dropdown */}
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-fefe-2 md:hidden">
+          <Link
+            href="/contact"
+            className={`${primaryButtonClasses} px-3 py-1.5 text-sm`}
+          >
+            Contact Us
+          </Link>
           <PublicAccountDropdown
             isLoggedIn={isLoggedIn}
             isStaff={isStaff}
@@ -96,11 +128,12 @@ export function PublicHeader({
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-fefe-button font-fefe text-fefe-charcoal hover:bg-fefe-cream focus-visible:ring-2 focus-visible:ring-fefe-stone focus-visible:ring-offset-2"
             aria-expanded={mobileOpen}
             aria-controls="public-mobile-nav"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
           >
+
             {mobileOpen ? (
               <svg
                 className="h-5 w-5"
@@ -134,35 +167,30 @@ export function PublicHeader({
             )}
           </button>
         </div>
-      </div>
+      </Container>
 
-      {/* Mobile nav panel: main nav links only */}
       {mobileOpen && (
         <div
           id="public-mobile-nav"
-          className="absolute left-0 right-0 top-full z-50 border-b border-gray-200 bg-white shadow-md md:hidden"
+          className="absolute left-0 right-0 top-full z-50 border-b border-fefe-stone bg-white shadow-fefe-card md:hidden"
         >
-          <nav
-            className="mx-auto flex max-w-6xl flex-col gap-0 px-4 py-3"
-            aria-label="Main"
-          >
-            {MAIN_NAV_LINKS.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMobileOpen(false)}
-                className={
-                  href === "/"
-                    ? "rounded-lg px-3 py-2.5 font-medium text-gray-900 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
-                    : "rounded-lg px-3 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
-                }
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <Container className="flex flex-col gap-0 py-fefe-2">
+            <Nav direction="column">
+              {MAIN_NAV_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-fefe-button px-fefe-3 py-2.5 font-fefe text-fefe-charcoal hover:bg-fefe-cream hover:text-fefe-charcoal"
+                >
+                  {label}
+                </Link>
+              ))}
+            </Nav>
+          </Container>
         </div>
       )}
+
     </header>
   );
 }

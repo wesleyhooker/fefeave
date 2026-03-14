@@ -1,15 +1,19 @@
-import { PublicSectionAbout } from "./_components/PublicSectionAbout";
-import { PublicSectionContact } from "./_components/PublicSectionContact";
-import { PublicSectionHero } from "./_components/PublicSectionHero";
-import { PublicSectionLiveSales } from "./_components/PublicSectionLiveSales";
+import { HomeFooter } from "./_components/HomeFooter";
+import { HomeHeroSection } from "./_components/HomeHeroSection";
+import { HomeHowItWorks } from "./_components/HomeHowItWorks";
+import { HomeMeetFelicia } from "./_components/HomeMeetFelicia";
+import { HomeTrustBar } from "./_components/HomeTrustBar";
+import { HomeUpcomingShows } from "./_components/HomeUpcomingShows";
 
 export default function HomePage() {
   return (
     <>
-      <PublicSectionHero />
-      <PublicSectionAbout />
-      <PublicSectionLiveSales />
-      <PublicSectionContact />
+      <HomeHeroSection />
+      <HomeTrustBar />
+      <HomeUpcomingShows />
+      <HomeHowItWorks />
+      <HomeMeetFelicia />
+      <HomeFooter />
     </>
   );
 }
