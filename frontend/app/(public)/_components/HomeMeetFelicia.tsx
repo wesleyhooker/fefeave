@@ -1,42 +1,34 @@
 import Link from "next/link";
 import { Container, Heading, Prose } from "@/system";
-import { HomeSectionImage } from "../_components/HomeSectionImage";
-import { TERTIARY_LINK_CLASSES } from "../_components/homeCtaClasses";
+import { HomeSectionImage } from "./HomeSectionImage";
+import { TERTIARY_LINK_CLASSES } from "./homeCtaClasses";
 
+/** Add public/images/felicia.jpg (or .webp) for the Meet Felicia portrait. */
 const FELICIA_IMAGE_SRC = "/images/felicia.jpg";
 
-export default function AboutPage() {
+export function HomeMeetFelicia() {
   return (
-    <main className="bg-fefe-cream py-fefe-6 md:py-fefe-7">
+    <section className="bg-fefe-cream py-fefe-6 md:py-fefe-7">
       <Container className="flex flex-col gap-fefe-5 md:flex-row md:items-center md:gap-fefe-6">
         <div className="min-w-0 flex-1">
-          <Heading level={1} className="mb-fefe-3">
-            About Fefe Ave
+          <Heading level={2} className="mb-fefe-3">
+            Meet Felicia
           </Heading>
           <Prose>
             <p>
-              Fefe Ave is a small, owner-led shop run by Felicia. She started it
-              in May 2024 on Instagram Live and has grown it into a live-sale
-              shop that now runs primarily on Whatnot.
-            </p>
-            <p>
-              The focus is simple: fabulous clothes and shoes at fair prices,
-              with clear, kind communication for both shoppers and wholesale
-              partners. Felicia curates premium resale drops in a warm, inviting
-              space so you feel like you&apos;re stepping into her boutique, not
-              a big-box store.
+              Felicia started Fefe Ave in May 2024 as a live-sale shop—first on
+              Instagram, now mainly on Whatnot. She curates premium resale drops
+              in a warm, inviting space so you feel like you&apos;re stepping
+              into her boutique, not a big-box store.
             </p>
             <p>
               Whether you&apos;re a reseller hunting for great lots or a shopper
-              looking for that perfect find, she keeps things clear, kind, and
-              community-driven.
+              looking for fabulous clothes and shoes at fair prices, she keeps
+              things clear, kind, and community-driven.
             </p>
           </Prose>
-          <Link
-            href="/contact"
-            className={`mt-fefe-4 ${TERTIARY_LINK_CLASSES}`}
-          >
-            Get in touch
+          <Link href="/about" className={`mt-fefe-4 ${TERTIARY_LINK_CLASSES}`}>
+            Read our story
             <svg
               className="h-4 w-4"
               fill="none"
@@ -62,6 +54,6 @@ export default function AboutPage() {
           />
         </div>
       </Container>
-    </main>
+    </section>
   );
 }

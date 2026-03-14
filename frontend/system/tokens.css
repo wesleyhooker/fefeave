@@ -1,0 +1,38 @@
+/**
+ * Fefe Ave design tokens — source: /design (colors, spacing, typography).
+ * Use via Tailwind theme or var(--fefe-*) in custom CSS.
+ */
+
+:root {
+  /* Neutral palette */
+  --fefe-cream: #f6f2ec;
+  --fefe-warm-sand: #ebded2;
+  --fefe-stone: #d1c5b8;
+  --fefe-charcoal: #2c2c2c;
+
+  /* Accents */
+  --fefe-gold: #b8a060;
+  --fefe-gold-hover: #a69050;
+  --fefe-blush: #e5d4d4;
+  --fefe-sage: #9caf88;
+
+  /* Spacing (8px grid) */
+  --fefe-space-1: 8px;
+  --fefe-space-2: 16px;
+  --fefe-space-3: 24px;
+  --fefe-space-4: 32px;
+  --fefe-space-5: 48px;
+  --fefe-space-6: 64px;
+  --fefe-space-7: 80px;
+
+  /* Component */
+  --fefe-card-radius: 12px;
+  --fefe-card-padding: 24px;
+  --fefe-button-radius: 12px;
+  --fefe-container-max: 1200px;
+  --fefe-container-narrow: 640px;
+
+  /* Typography — set by next/font in layout (fallbacks for non-App usage) */
+  --fefe-font-heading: "Playfair Display", serif;
+  --fefe-font-body: "Inter", ui-sans-serif, sans-serif;
+}
