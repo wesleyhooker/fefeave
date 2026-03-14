@@ -169,11 +169,11 @@ export function DashboardSkeleton() {
 export function BalancesPageSkeleton() {
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Balances</h1>
         <SkeletonBar className="h-9 w-20" />
       </div>
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <SkeletonBar className="w-80 max-w-full" />
       </div>
       <div className="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-gray-200 bg-gray-50/80 px-4 py-3 pb-4">
@@ -196,6 +196,89 @@ export function BalancesPageSkeleton() {
             "Actions",
           ]}
         />
+      </div>
+    </div>
+  );
+}
+
+/** Payments page: header + table skeleton. */
+export function PaymentsTableSkeleton() {
+  return (
+    <div>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
+        <SkeletonBar className="h-10 w-32" />
+      </div>
+      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm md:block">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Wholesaler
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Amount
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Date
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Method
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Reference
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {Array.from({ length: 5 }, (_, i) => (
+              <tr key={i}>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <SkeletonBar className="w-28" />
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right">
+                  <SkeletonBar className="ml-auto w-16" />
+                </td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <SkeletonBar className="w-24" />
+                </td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <SkeletonBar className="w-14" />
+                </td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <SkeletonBar className="w-20" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="space-y-3 md:hidden">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div
+            key={i}
+            className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+          >
+            <SkeletonBar className="mb-2 w-24" />
+            <SkeletonBar className="mb-2 w-32" />
+            <SkeletonBar className="w-full" />
+          </div>
+        ))}
       </div>
     </div>
   );

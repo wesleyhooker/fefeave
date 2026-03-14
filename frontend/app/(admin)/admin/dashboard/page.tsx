@@ -247,198 +247,331 @@ export default function AdminDashboardPage() {
           Needs attention
         </h2>
         <div className="space-y-4">
-          {/* Open shows */}
-          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-200 px-4 py-3">
-              <h3 className="text-base font-semibold text-gray-900">
-                Open shows
-              </h3>
-            </div>
+          {/* Open shows — mobile card list */}
+          <div className="space-y-2 md:hidden">
+            <h3 className="px-1 text-sm font-semibold text-gray-900">
+              Open shows
+            </h3>
             {showsError ? (
-              <SectionErrorBody
-                title="Could not load shows."
-                message={showsError}
-                onRetry={() => setReloadToken((v) => v + 1)}
-              />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="sticky top-0 z-10 bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Show
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Date
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {openShows.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={3}
-                          className="px-4 py-8 text-center text-sm text-gray-500"
-                        >
-                          {loading ? (
-                            "Loading…"
-                          ) : (
-                            <span>
-                              No open shows.
-                              <br />
-                              <span className="font-normal text-gray-400">
-                                Add a show or all shows are closed.
-                              </span>
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ) : (
-                      openShows.map((show) => (
-                        <tr key={show.id} className="hover:bg-gray-50">
-                          <td className="whitespace-nowrap px-4 py-3 text-sm">
-                            <Link
-                              href={`/admin/shows/${show.id}`}
-                              className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
-                            >
-                              {show.name}
-                            </Link>
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                            {formatDate(show.show_date)}
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                            <Link
-                              href={`/admin/shows/${show.id}`}
-                              className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
-                            >
-                              Close out
-                            </Link>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <div
+                className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                role="alert"
+              >
+                <p className="font-medium">Could not load shows.</p>
+                <p className="mt-1">{showsError}</p>
+                <button
+                  type="button"
+                  onClick={() => setReloadToken((v) => v + 1)}
+                  className="mt-3 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  Retry
+                </button>
               </div>
+            ) : openShows.length === 0 ? (
+              <p className="rounded-lg border border-gray-200 bg-white px-4 py-4 text-center text-sm text-gray-500">
+                No open shows. Add a show or all shows are closed.
+              </p>
+            ) : (
+              openShows.map((show) => (
+                <div
+                  key={show.id}
+                  className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <Link
+                      href={`/admin/shows/${show.id}`}
+                      className="min-w-0 flex-1 font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                    >
+                      {show.name}
+                    </Link>
+                    <span className="shrink-0 text-sm text-gray-500">
+                      {formatDate(show.show_date)}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/admin/shows/${show.id}`}
+                    className="inline-flex w-full items-center justify-center rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                  >
+                    Close out
+                  </Link>
+                </div>
+              ))
+            )}
+          </div>
+          {/* Balances owed — mobile card list */}
+          <div className="space-y-2 md:hidden">
+            <h3 className="px-1 text-sm font-semibold text-gray-900">
+              Balances owed
+            </h3>
+            {balancesError ? (
+              <div
+                className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                role="alert"
+              >
+                <p className="font-medium">Could not load balances.</p>
+                <p className="mt-1">{balancesError}</p>
+                <button
+                  type="button"
+                  onClick={() => setReloadToken((v) => v + 1)}
+                  className="mt-3 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : safetyRows.length === 0 ? (
+              <p className="rounded-lg border border-gray-200 bg-white px-4 py-4 text-center text-sm text-gray-500">
+                No balances due. All vendor balances are settled.
+              </p>
+            ) : (
+              safetyRows.map((row) => {
+                const outstanding = parseAmount(row.balance_owed);
+                const paid = parseAmount(row.paid_total);
+                const status = getPaymentStatus(outstanding, paid);
+                return (
+                  <div
+                    key={row.wholesaler_id}
+                    className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <span className="min-w-0 truncate font-medium text-gray-900">
+                        {row.name}
+                      </span>
+                      <span className="shrink-0">
+                        <PaymentStatusChip status={status} />
+                      </span>
+                    </div>
+                    <p className="mb-2 text-sm tabular-nums text-gray-900">
+                      {formatCurrency(outstanding)} owed
+                    </p>
+                    <p className="mb-3 text-xs text-gray-500">
+                      Last payment:{" "}
+                      {row.last_payment_date
+                        ? formatDaysAgo(row.last_payment_date)
+                        : "—"}
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Link
+                        href={`/admin/payments/new?wholesalerId=${encodeURIComponent(row.wholesaler_id)}`}
+                        className="inline-flex flex-1 items-center justify-center rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                      >
+                        Record payment
+                      </Link>
+                      {(row.pay_schedule ?? "AD_HOC") !== "AD_HOC" && (
+                        <Link
+                          href={`/admin/wholesalers/${row.wholesaler_id}/batch-pay`}
+                          className="inline-flex flex-1 items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          View breakdown
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
 
-          {/* Balances owed */}
-          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-200 px-4 py-3">
-              <h3 className="text-base font-semibold text-gray-900">
-                Balances owed
-              </h3>
-            </div>
-            {balancesError ? (
-              <div className="px-4 py-4 text-sm text-amber-700">
-                Could not load balances. Use the Retry button above.
+          {/* Open shows — desktop table */}
+          <div className="hidden md:block">
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-200 px-4 py-3">
+                <h3 className="text-base font-semibold text-gray-900">
+                  Open shows
+                </h3>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="sticky top-0 z-10 bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Wholesaler
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Owed
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Last paid
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {safetyRows.length === 0 ? (
+              {showsError ? (
+                <SectionErrorBody
+                  title="Could not load shows."
+                  message={showsError}
+                  onRetry={() => setReloadToken((v) => v + 1)}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="sticky top-0 z-10 bg-gray-50">
                       <tr>
-                        <td
-                          colSpan={4}
-                          className="px-4 py-8 text-center text-sm text-gray-500"
-                        >
-                          {loading ? (
-                            "Loading…"
-                          ) : (
-                            <span>
-                              No balances due.
-                              <br />
-                              <span className="font-normal text-gray-400">
-                                All vendor balances are settled.
-                              </span>
-                            </span>
-                          )}
-                        </td>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                          Show
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                          Date
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                          Action
+                        </th>
                       </tr>
-                    ) : (
-                      safetyRows.map((row) => {
-                        const outstanding = parseAmount(row.balance_owed);
-                        const paid = parseAmount(row.paid_total);
-                        const status = getPaymentStatus(outstanding, paid);
-                        const hasOutstanding = outstanding > 0;
-                        return (
-                          <tr
-                            key={row.wholesaler_id}
-                            className={
-                              hasOutstanding
-                                ? "bg-amber-50/50 hover:bg-amber-50"
-                                : "hover:bg-gray-50"
-                            }
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {openShows.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={3}
+                            className="px-4 py-8 text-center text-sm text-gray-500"
                           >
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                              <div>
-                                <span>{row.name}</span>
-                                <span className="ml-2 inline-flex">
-                                  <PaymentStatusChip status={status} />
+                            {loading ? (
+                              "Loading…"
+                            ) : (
+                              <span>
+                                No open shows.
+                                <br />
+                                <span className="font-normal text-gray-400">
+                                  Add a show or all shows are closed.
                                 </span>
-                              </div>
-                              <p className="mt-0.5 text-xs font-normal text-gray-500">
-                                Last payment:{" "}
-                                {formatDaysAgo(row.last_payment_date)}
-                              </p>
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900 tabular-nums">
-                              {formatCurrency(outstanding)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                              {row.last_payment_date
-                                ? formatDate(row.last_payment_date)
-                                : "—"}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                              {(row.pay_schedule ?? "AD_HOC") !== "AD_HOC" && (
-                                <>
-                                  <Link
-                                    href={`/admin/wholesalers/${row.wholesaler_id}/batch-pay`}
-                                    className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
-                                  >
-                                    View balance breakdown
-                                  </Link>
-                                  <span className="mx-2 text-gray-300">|</span>
-                                </>
-                              )}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ) : (
+                        openShows.map((show) => (
+                          <tr key={show.id} className="hover:bg-gray-50">
+                            <td className="whitespace-nowrap px-4 py-3 text-sm">
                               <Link
-                                href={`/admin/payments/new?wholesalerId=${encodeURIComponent(row.wholesaler_id)}`}
+                                href={`/admin/shows/${show.id}`}
                                 className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
                               >
-                                Record payment
+                                {show.name}
+                              </Link>
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                              {formatDate(show.show_date)}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                              <Link
+                                href={`/admin/shows/${show.id}`}
+                                className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                              >
+                                Close out
                               </Link>
                             </td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Balances owed — desktop table */}
+          <div className="hidden md:block">
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-200 px-4 py-3">
+                <h3 className="text-base font-semibold text-gray-900">
+                  Balances owed
+                </h3>
               </div>
-            )}
+              {balancesError ? (
+                <SectionErrorBody
+                  title="Could not load balances."
+                  message={balancesError}
+                  onRetry={() => setReloadToken((v) => v + 1)}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="sticky top-0 z-10 bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                          Wholesaler
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                          Owed
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                          Last paid
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {safetyRows.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={4}
+                            className="px-4 py-8 text-center text-sm text-gray-500"
+                          >
+                            {loading ? (
+                              "Loading…"
+                            ) : (
+                              <span>
+                                No balances due.
+                                <br />
+                                <span className="font-normal text-gray-400">
+                                  All vendor balances are settled.
+                                </span>
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ) : (
+                        safetyRows.map((row) => {
+                          const outstanding = parseAmount(row.balance_owed);
+                          const paid = parseAmount(row.paid_total);
+                          const status = getPaymentStatus(outstanding, paid);
+                          const hasOutstanding = outstanding > 0;
+                          return (
+                            <tr
+                              key={row.wholesaler_id}
+                              className={
+                                hasOutstanding
+                                  ? "bg-amber-50/50 hover:bg-amber-50"
+                                  : "hover:bg-gray-50"
+                              }
+                            >
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                <div>
+                                  <span>{row.name}</span>
+                                  <span className="ml-2 inline-flex">
+                                    <PaymentStatusChip status={status} />
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 text-xs font-normal text-gray-500">
+                                  Last payment:{" "}
+                                  {formatDaysAgo(row.last_payment_date)}
+                                </p>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900 tabular-nums">
+                                {formatCurrency(outstanding)}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                                {row.last_payment_date
+                                  ? formatDate(row.last_payment_date)
+                                  : "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                                {(row.pay_schedule ?? "AD_HOC") !==
+                                  "AD_HOC" && (
+                                  <>
+                                    <Link
+                                      href={`/admin/wholesalers/${row.wholesaler_id}/batch-pay`}
+                                      className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                                    >
+                                      View balance breakdown
+                                    </Link>
+                                    <span className="mx-2 text-gray-300">
+                                      |
+                                    </span>
+                                  </>
+                                )}
+                                <Link
+                                  href={`/admin/payments/new?wholesalerId=${encodeURIComponent(row.wholesaler_id)}`}
+                                  className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                                >
+                                  Record payment
+                                </Link>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -456,18 +589,17 @@ export default function AdminDashboardPage() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
           Quick actions
         </h2>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
           <Link
             href="/admin/shows/new"
-            className="rounded bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+            className="inline-flex w-full items-center justify-center rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 sm:w-auto"
             aria-label="Create a new show"
           >
             Add Show
           </Link>
-          <span className="text-sm text-gray-400">|</span>
           <Link
             href="/admin/payments/new"
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="inline-flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 sm:w-auto"
           >
             Record payment
           </Link>
@@ -524,7 +656,97 @@ export default function AdminDashboardPage() {
           Recent activity
         </h2>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
+          {/* Recent shows — mobile card list */}
+          <section className="md:hidden">
+            <h3 className="mb-2 px-1 text-sm font-semibold text-gray-900">
+              Recent shows
+            </h3>
+            {showsError ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-medium">Could not load shows.</p>
+                <button
+                  type="button"
+                  onClick={() => setReloadToken((v) => v + 1)}
+                  className="mt-2 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : recentShows.length === 0 ? (
+              <p className="rounded-lg border border-gray-200 bg-white px-4 py-4 text-center text-sm text-gray-500">
+                No shows yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {recentShows.map((show) => (
+                  <Link
+                    key={show.id}
+                    href={`/admin/shows/${show.id}`}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:bg-gray-50"
+                  >
+                    <span className="min-w-0 flex-1 font-medium text-gray-900">
+                      {show.name}
+                    </span>
+                    <span className="shrink-0 text-sm text-gray-500">
+                      {formatDate(show.show_date)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+          {/* Recent payments — mobile card list */}
+          <section className="md:hidden">
+            <h3 className="mb-2 px-1 text-sm font-semibold text-gray-900">
+              Recent payments
+            </h3>
+            {paymentsAuthStatus ? (
+              <div
+                className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                role="alert"
+              >
+                <p className="font-medium">No permission to view payments</p>
+                <p className="mt-1">
+                  Sign in again or contact your administrator.
+                </p>
+              </div>
+            ) : paymentsError ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-medium">Could not load payments.</p>
+                <button
+                  type="button"
+                  onClick={() => setReloadToken((v) => v + 1)}
+                  className="mt-2 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : recentPayments.length === 0 ? (
+              <p className="rounded-lg border border-gray-200 bg-white px-4 py-4 text-center text-sm text-gray-500">
+                No payments recorded yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {recentPayments.map((payment) => (
+                  <Link
+                    key={payment.id}
+                    href="/admin/payments"
+                    className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:bg-gray-50"
+                  >
+                    <span className="font-semibold tabular-nums text-gray-900">
+                      {formatCurrency(parseAmount(payment.amount))}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {formatDate(payment.payment_date)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Recent shows — desktop table */}
+          <section className="hidden rounded-lg border border-gray-200 bg-white shadow-sm md:block">
             <div className="border-b border-gray-200 px-4 py-3">
               <h3 className="text-base font-semibold text-gray-900">
                 Recent shows
@@ -581,16 +803,22 @@ export default function AdminDashboardPage() {
               </div>
             )}
           </section>
-          <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
+          {/* Recent payments — desktop table */}
+          <section className="hidden rounded-lg border border-gray-200 bg-white shadow-sm md:block">
             <div className="border-b border-gray-200 px-4 py-3">
               <h3 className="text-base font-semibold text-gray-900">
                 Recent payments
               </h3>
             </div>
             {paymentsAuthStatus ? (
-              <div className="px-4 py-4 text-sm text-amber-800">
-                You don&apos;t have permission to view payments. Sign in again
-                or contact your administrator.
+              <div
+                className="mx-4 mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                role="alert"
+              >
+                <p className="font-medium">No permission to view payments</p>
+                <p className="mt-1">
+                  Sign in again or contact your administrator.
+                </p>
               </div>
             ) : paymentsError ? (
               <SectionErrorBody
@@ -663,7 +891,7 @@ function SectionError({
 }) {
   return (
     <div
-      className="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+      className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
       role="alert"
     >
       <p className="font-medium">{title}</p>
@@ -689,7 +917,10 @@ function SectionErrorBody({
   onRetry: () => void;
 }) {
   return (
-    <div className="px-4 py-4 text-sm text-amber-900" role="alert">
+    <div
+      className="mx-4 mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+      role="alert"
+    >
       <p className="font-medium">{title}</p>
       <p className="mt-1">{message}</p>
       <button

@@ -124,13 +124,48 @@ export default function AdminShowsPage() {
 
   const rows = useMemo(() => shows ?? [], [shows]);
 
+  const analytics = useMemo(() => {
+    const closed = rows.filter(
+      (s) => (s.status ?? "").toUpperCase() === "COMPLETED",
+    );
+    if (closed.length === 0)
+      return {
+        closedCount: 0,
+        totalPayout: 0,
+        avgProfit: 0,
+        bestShow: null as { name: string; profit: number } | null,
+        worstShow: null as { name: string; profit: number } | null,
+      };
+    let totalPayout = 0;
+    let totalProfit = 0;
+    let best: { name: string; profit: number } | null = null;
+    let worst: { name: string; profit: number } | null = null;
+    for (const show of closed) {
+      const s = summaries[show.id];
+      if (s == null) continue;
+      totalPayout += s.payoutAfterFees;
+      totalProfit += s.estimatedShowProfit;
+      if (best === null || s.estimatedShowProfit > best.profit)
+        best = { name: show.name, profit: s.estimatedShowProfit };
+      if (worst === null || s.estimatedShowProfit < worst.profit)
+        worst = { name: show.name, profit: s.estimatedShowProfit };
+    }
+    return {
+      closedCount: closed.length,
+      totalPayout,
+      avgProfit: totalProfit / closed.length,
+      bestShow: best,
+      worstShow: worst,
+    };
+  }, [rows, summaries]);
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Shows</h1>
         <Link
           href="/admin/shows/new"
-          className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
         >
           + Create Show
         </Link>
@@ -138,7 +173,7 @@ export default function AdminShowsPage() {
 
       {error && (
         <div
-          className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           role="alert"
         >
           <p className="font-medium">Could not load shows.</p>
@@ -157,6 +192,60 @@ export default function AdminShowsPage() {
         <ShowsTableSkeleton />
       ) : (
         <>
+          {/* Show performance summary (closed shows only) */}
+          {analytics.closedCount > 0 && (
+            <section
+              className="mb-6 rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-3"
+              aria-label="Show performance summary"
+            >
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+                Show performance
+              </h2>
+              <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-baseline sm:gap-x-6 sm:gap-y-2">
+                <span className="text-sm text-gray-600">
+                  Closed shows:{" "}
+                  <strong className="text-gray-900">
+                    {analytics.closedCount}
+                  </strong>
+                </span>
+                <span className="text-sm text-gray-600">
+                  Total payout (closed):{" "}
+                  <strong className="tabular-nums text-gray-900">
+                    {formatCurrency(analytics.totalPayout)}
+                  </strong>
+                </span>
+                <span className="text-sm text-gray-600">
+                  Avg profit (closed):{" "}
+                  <strong className="tabular-nums text-gray-900">
+                    {formatCurrency(roundToCents(analytics.avgProfit))}
+                  </strong>
+                </span>
+                {analytics.bestShow && (
+                  <span className="text-sm text-gray-600">
+                    Best:{" "}
+                    <strong className="tabular-nums text-gray-900">
+                      {formatCurrency(analytics.bestShow.profit)}
+                    </strong>
+                    <span className="ml-1 max-w-[120px] truncate text-gray-500 sm:max-w-none">
+                      ({analytics.bestShow.name})
+                    </span>
+                  </span>
+                )}
+                {analytics.worstShow && (
+                  <span className="text-sm text-gray-600">
+                    Worst:{" "}
+                    <strong className="tabular-nums text-gray-900">
+                      {formatCurrency(analytics.worstShow.profit)}
+                    </strong>
+                    <span className="ml-1 max-w-[120px] truncate text-gray-500 sm:max-w-none">
+                      ({analytics.worstShow.name})
+                    </span>
+                  </span>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* Mobile: card/list view */}
           <div className="space-y-3 md:hidden">
             {rows.length === 0 ? (

@@ -41,7 +41,7 @@ export function ProfileDropdown({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300"
+        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
         aria-expanded={open}
         aria-haspopup="true"
         id="profile-menu-button"
@@ -82,7 +82,7 @@ export function ProfileDropdown({
       </button>
       {open && (
         <div
-          className="absolute right-0 z-50 mt-1 w-56 origin-top-right rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-50 mt-1 w-56 origin-top-right rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
           role="menu"
           aria-orientation="vertical"
           aria-labelledby="profile-menu-button"
@@ -97,28 +97,28 @@ export function ProfileDropdown({
           )}
           <Link
             href="/"
-            className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 rounded"
             role="menuitem"
             onClick={() => setOpen(false)}
           >
-            View site
+            Open Fefe Ave site
           </Link>
           <Link
             href="/portal"
-            className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 rounded"
             role="menuitem"
             onClick={() => setOpen(false)}
           >
-            Portal
+            Wholesaler portal
           </Link>
           <div className="border-t border-gray-100">
             <Link
               href="/api/auth/logout"
-              className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 rounded"
               role="menuitem"
               onClick={() => setOpen(false)}
             >
-              Logout
+              Sign out
             </Link>
           </div>
         </div>

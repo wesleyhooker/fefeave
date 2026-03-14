@@ -4,6 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HelpTooltip } from "@/app/(admin)/admin/_components/HelpTooltip";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
+  fetchShowAttachments,
+  getAttachmentDownloadUrl,
+  getMaxUploadBytes,
+  isAllowedContentType,
+  linkAttachmentToShow,
+  uploadFile,
+  type ShowAttachmentItem,
+} from "@/src/lib/api/attachments";
+import {
   fetchWholesalerBalances,
   type BackendWholesalerBalanceRow,
 } from "@/src/lib/api/wholesalers";
@@ -181,6 +190,12 @@ export function ShowDetailView({ id }: { id: string }) {
     }>
   >([]);
   const [newRowError, setNewRowError] = useState<string | null>(null);
+  const [showAttachments, setShowAttachments] = useState<ShowAttachmentItem[]>(
+    [],
+  );
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -192,8 +207,9 @@ export function ShowDetailView({ id }: { id: string }) {
       fetchShowFinancials(id),
       fetchShowSettlements(id),
       fetchWholesalerBalances(),
+      fetchShowAttachments(id),
     ])
-      .then(([show, financials, settlementRows, balances]) => {
+      .then(([show, financials, settlementRows, balances, attachments]) => {
         if (cancelled) return;
         const nameByWholesalerId = balances.reduce<Record<string, string>>(
           (acc, row) => {
@@ -215,6 +231,7 @@ export function ShowDetailView({ id }: { id: string }) {
           ),
         );
         setWholesalers(balances);
+        setShowAttachments(attachments);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -281,6 +298,61 @@ export function ShowDetailView({ id }: { id: string }) {
   const handleRetry = useCallback(() => {
     setReloadToken((v) => v + 1);
   }, []);
+
+  const handleAttachReceipt = useCallback(async () => {
+    if (!receiptFile) return;
+    setReceiptError(null);
+    setUploadingReceipt(true);
+    try {
+      const attachmentId = await uploadFile(receiptFile);
+      await linkAttachmentToShow(id, attachmentId);
+      setReceiptFile(null);
+      setReloadToken((v) => v + 1);
+    } catch (err) {
+      setReceiptError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUploadingReceipt(false);
+    }
+  }, [id, receiptFile]);
+
+  const handleReceiptFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setReceiptError(null);
+      const file = e.target.files?.[0];
+      if (!file) {
+        setReceiptFile(null);
+        return;
+      }
+      if (!isAllowedContentType(file.type)) {
+        setReceiptError("Use PDF or image (PNG/JPEG).");
+        setReceiptFile(null);
+        e.target.value = "";
+        return;
+      }
+      if (file.size > getMaxUploadBytes()) {
+        setReceiptError(
+          `File must be under ${Math.round(getMaxUploadBytes() / 1024 / 1024)} MB.`,
+        );
+        setReceiptFile(null);
+        e.target.value = "";
+        return;
+      }
+      setReceiptFile(file);
+    },
+    [],
+  );
+
+  const handleDownloadAttachment = useCallback(
+    async (att: ShowAttachmentItem) => {
+      try {
+        const { downloadUrl } = await getAttachmentDownloadUrl(att.id);
+        window.open(downloadUrl, "_blank", "noopener,noreferrer");
+      } catch {
+        // ignore
+      }
+    },
+    [],
+  );
 
   const toInlineWriteError = useCallback((err: unknown): string => {
     const message = err instanceof Error ? err.message : String(err);
@@ -539,9 +611,62 @@ export function ShowDetailView({ id }: { id: string }) {
         )}
       </div>
 
+      {/* Show receipt (e.g. Whatnot payout screenshot) */}
+      <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-base font-semibold text-gray-900">Show receipt</h2>
+        <p className="mt-0.5 text-xs text-gray-500">
+          Attach a PDF or image (e.g. Whatnot payout screenshot), max{" "}
+          {Math.round(getMaxUploadBytes() / 1024 / 1024)} MB.
+        </p>
+        {showAttachments.length > 0 && (
+          <ul className="mt-3 space-y-1.5">
+            {showAttachments.map((att) => (
+              <li key={att.id} className="flex items-center gap-2 text-sm">
+                <span className="min-w-0 truncate text-gray-700">
+                  {att.filename}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadAttachment(att)}
+                  className="shrink-0 rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
+                >
+                  Download
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <input
+            type="file"
+            accept=".pdf,image/png,image/jpeg,image/jpg"
+            onChange={handleReceiptFileChange}
+            className="w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 sm:max-w-xs"
+            aria-describedby={receiptError ? "show-receipt-error" : undefined}
+          />
+          <button
+            type="button"
+            onClick={handleAttachReceipt}
+            disabled={!receiptFile || uploadingReceipt}
+            className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
+          >
+            {uploadingReceipt ? "Uploading…" : "Attach"}
+          </button>
+        </div>
+        {receiptError && (
+          <p
+            id="show-receipt-error"
+            className="mt-2 text-xs text-red-600"
+            role="alert"
+          >
+            {receiptError}
+          </p>
+        )}
+      </section>
+
       {/* 1. Payout after fees */}
       <section
-        className={`border border-gray-200 p-4 ${
+        className={`rounded-lg border border-gray-200 p-4 shadow-sm ${
           isClosed ? "bg-gray-50/50" : "bg-white"
         }`}
       >
@@ -568,7 +693,7 @@ export function ShowDetailView({ id }: { id: string }) {
 
       {/* 2. Settlements — structured financial grid */}
       <section
-        className={`border border-gray-200 ${
+        className={`rounded-lg border border-gray-200 shadow-sm ${
           isClosed ? "bg-gray-50/50" : "bg-white"
         }`}
       >

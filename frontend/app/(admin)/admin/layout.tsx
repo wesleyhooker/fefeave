@@ -1,6 +1,5 @@
 import { getSession } from "@/lib/auth/session.node";
-import { WorkspaceHeader } from "@/app/_components/headers/WorkspaceHeader";
-import { AdminSidebar } from "./AdminSidebar";
+import { AdminLayoutClient } from "./AdminLayoutClient";
 
 export default async function AdminLayout({
   children,
@@ -12,18 +11,14 @@ export default async function AdminLayout({
   const envLabel = isProduction ? "prod" : "dev";
 
   return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
-      <div className="flex flex-1 flex-col">
-        <WorkspaceHeader
-          title="Workspace"
-          email={session?.user?.email ?? null}
-          roles={session?.roles ?? []}
-          envLabel={envLabel}
-          isProduction={isProduction}
-        />
-        <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
+    <AdminLayoutClient
+      title="Workspace"
+      email={session?.user?.email ?? null}
+      roles={session?.roles ?? []}
+      envLabel={envLabel}
+      isProduction={isProduction}
+    >
+      {children}
+    </AdminLayoutClient>
   );
 }

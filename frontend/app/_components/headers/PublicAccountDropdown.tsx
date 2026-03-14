@@ -64,24 +64,14 @@ export function PublicAccountDropdown({
           aria-labelledby="public-account-menu-button"
         >
           {!isLoggedIn && (
-            <>
-              <Link
-                href="/login"
-                className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                role="menuitem"
-                onClick={() => setOpen(false)}
-              >
-                Login
-              </Link>
-              <Link
-                href="/portal"
-                className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                role="menuitem"
-                onClick={() => setOpen(false)}
-              >
-                Portal
-              </Link>
-            </>
+            <Link
+              href="/login"
+              className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              Login
+            </Link>
           )}
           {isLoggedIn && isStaff && (
             <>
@@ -92,14 +82,6 @@ export function PublicAccountDropdown({
                 onClick={() => setOpen(false)}
               >
                 Workspace
-              </Link>
-              <Link
-                href="/portal"
-                className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                role="menuitem"
-                onClick={() => setOpen(false)}
-              >
-                Portal
               </Link>
               <div className="border-t border-gray-100">
                 <Link
@@ -114,26 +96,14 @@ export function PublicAccountDropdown({
             </>
           )}
           {isLoggedIn && !isStaff && (
-            <>
-              <Link
-                href="/portal"
-                className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                role="menuitem"
-                onClick={() => setOpen(false)}
-              >
-                Portal
-              </Link>
-              <div className="border-t border-gray-100">
-                <Link
-                  href="/api/auth/logout"
-                  className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  role="menuitem"
-                  onClick={() => setOpen(false)}
-                >
-                  Logout
-                </Link>
-              </div>
-            </>
+            <Link
+              href="/api/auth/logout"
+              className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              Logout
+            </Link>
           )}
         </div>
       )}
