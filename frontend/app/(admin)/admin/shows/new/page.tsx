@@ -8,6 +8,10 @@ import {
   fetchShows,
   upsertShowFinancials,
 } from "@/src/lib/api/shows";
+import {
+  workspaceActionCompleteMd,
+  workspaceActionSecondaryMd,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 
 /** Default show name: YYYY-MM-DD, or YYYY-MM-DD #2, #3 if same date exists. */
 function defaultShowNameForDate(
@@ -115,7 +119,7 @@ export default function AdminShowsNewPage() {
         <span className="mx-1.5">/</span>
         <span aria-current="page">Create</span>
       </nav>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Create Show</h1>
+      <h1 className="mb-6 text-2xl font-semibold text-gray-900">Create Show</h1>
 
       {error && (
         <div
@@ -129,7 +133,7 @@ export default function AdminShowsNewPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="max-w-xl space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+        className="max-w-xl space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-workspace-surface"
       >
         <div>
           <label
@@ -144,7 +148,7 @@ export default function AdminShowsNewPage() {
             required
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
           />
         </div>
 
@@ -164,7 +168,7 @@ export default function AdminShowsNewPage() {
               nameManuallyEdited.current = true;
               setName(e.target.value);
             }}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
             placeholder="e.g. 2026-03-10"
           />
         </div>
@@ -182,7 +186,7 @@ export default function AdminShowsNewPage() {
             onChange={(e) =>
               setPlatform(e.target.value as "WHATNOT" | "INSTAGRAM" | "OTHER")
             }
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
           >
             <option value="WHATNOT">WHATNOT</option>
             <option value="INSTAGRAM">INSTAGRAM</option>
@@ -218,7 +222,7 @@ export default function AdminShowsNewPage() {
                 if (parts[1]?.length > 2) return;
                 setPayoutAfterFees(v);
               }}
-              className="w-full max-w-[8rem] rounded-md border border-gray-300 py-2 pl-7 pr-3 text-sm tabular-nums shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="w-full max-w-[8rem] rounded-md border border-gray-200 py-2 pl-7 pr-3 text-sm tabular-nums shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
               placeholder="0.00"
               aria-label="Payout after fees in dollars"
             />
@@ -229,14 +233,11 @@ export default function AdminShowsNewPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+            className={`${workspaceActionCompleteMd} disabled:opacity-60`}
           >
             {submitting ? "Submitting..." : "Submit"}
           </button>
-          <Link
-            href="/admin/shows"
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
+          <Link href="/admin/shows" className={workspaceActionSecondaryMd}>
             Cancel
           </Link>
         </div>

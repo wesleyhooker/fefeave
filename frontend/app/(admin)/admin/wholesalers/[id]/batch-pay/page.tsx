@@ -10,6 +10,14 @@ import {
   type ClosedShowInBalanceRow,
   type PaySchedule,
 } from "@/src/lib/api/wholesalers";
+import {
+  workspaceActionSecondaryMd,
+  workspaceMoneyClassForLiability,
+  workspaceMoneyTabular,
+  workspaceRowTitleLink,
+  workspaceTableRowInteractive,
+  workspaceTheadSticky,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 
 function parseAmount(value: string): number {
   const n = Number(value);
@@ -168,7 +176,7 @@ export default function BatchPayPage() {
       >
         ← Back to Balances
       </Link>
-      <h1 className="mt-4 text-2xl font-bold text-gray-900">
+      <h1 className="mt-4 text-2xl font-semibold text-gray-900">
         Balance breakdown — {name ?? id}
       </h1>
       <p className="mt-1 text-sm text-gray-500">
@@ -185,7 +193,7 @@ export default function BatchPayPage() {
               const v = e.target.value;
               setDateWindow(v === "all" ? "all" : (Number(v) as 7 | 14 | 30));
             }}
-            className="ml-2 rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900"
+            className="ml-2 rounded border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900"
           >
             {WINDOW_OPTIONS.map((opt) => (
               <option key={String(opt.value)} value={opt.value}>
@@ -197,7 +205,7 @@ export default function BatchPayPage() {
         <span className="text-sm text-gray-500">{dateWindowNote}</span>
       </div>
 
-      <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+      <div className="mt-4 rounded-lg border border-gray-200 bg-[#F9FAFB] px-4 py-3">
         <p className="text-sm font-medium text-gray-700">
           Total for displayed shows:{" "}
           <span className="text-lg text-gray-900">
@@ -206,8 +214,8 @@ export default function BatchPayPage() {
         </p>
       </div>
 
-      <div className="mt-4 rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-4 py-3">
+      <div className="mt-4 rounded-lg border border-gray-200 bg-white shadow-workspace-surface">
+        <div className="border-b border-gray-100 px-4 py-3">
           <h2 className="text-lg font-semibold text-gray-900">Closed shows</h2>
         </div>
         {filteredShows.length === 0 ? (
@@ -218,8 +226,8 @@ export default function BatchPayPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="sticky top-0 z-10 bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className={workspaceTheadSticky}>
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Show
@@ -232,25 +240,33 @@ export default function BatchPayPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredShows.map((row) => (
-                  <tr key={row.show_id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <Link
-                        href={`/admin/shows/${row.show_id}`}
-                        className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {filteredShows.map((row) => {
+                  const owed = parseAmount(row.owed_total);
+                  return (
+                    <tr
+                      key={row.show_id}
+                      className={workspaceTableRowInteractive}
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        <Link
+                          href={`/admin/shows/${row.show_id}`}
+                          className={workspaceRowTitleLink}
+                        >
+                          {row.show_name}
+                        </Link>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                        {formatDate(row.show_date)}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap px-4 py-3 text-right text-sm ${workspaceMoneyTabular} ${workspaceMoneyClassForLiability(owed)}`}
                       >
-                        {row.show_name}
-                      </Link>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                      {formatDate(row.show_date)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900 tabular-nums">
-                      {formatCurrency(parseAmount(row.owed_total))}
-                    </td>
-                  </tr>
-                ))}
+                        {formatCurrency(owed)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -260,7 +276,7 @@ export default function BatchPayPage() {
       <div className="mt-6">
         <Link
           href={`/admin/payments/new?wholesalerId=${encodeURIComponent(id)}`}
-          className="inline-flex rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          className={workspaceActionSecondaryMd}
         >
           Record payment
         </Link>

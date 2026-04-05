@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HelpTooltip } from "@/app/(admin)/admin/_components/HelpTooltip";
+import { ShowStatusPill } from "@/app/(admin)/admin/_components/ShowStatusPill";
+import {
+  WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS,
+  WORKSPACE_DETAIL_SETTLEMENT_STATUS_STYLES,
+  workspaceActionCompleteMd,
+  workspaceActionCompleteSm,
+  workspaceActionSecondaryMd,
+  workspaceMoneyClassForLiability,
+  workspaceMoneyClassForSigned,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   fetchShowAttachments,
@@ -131,18 +141,6 @@ function mapSettlementRow(
     amountPaid: 0,
   };
 }
-
-const STATUS_STYLES: Record<string, string> = {
-  Open: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-  Paid: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-  Unpaid: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-};
-
-const STATUS_DOT: Record<string, string> = {
-  Open: "bg-blue-500",
-  Paid: "bg-emerald-500",
-  Unpaid: "bg-amber-500",
-};
 
 export function ShowDetailView({ id }: { id: string }) {
   const [showName, setShowName] = useState("");
@@ -564,28 +562,15 @@ export function ShowDetailView({ id }: { id: string }) {
   return (
     <div className="space-y-6">
       {/* Header: title, date, status, primary action when open */}
-      <div className="border-b border-gray-200 pb-4">
-        <h1 className="text-2xl font-bold text-gray-900">
+      <div className="border-b border-gray-100 pb-4">
+        <h1 className="text-2xl font-semibold text-gray-900">
           {showName || "Show"}
         </h1>
         <p className="mt-1 text-sm text-gray-600">
           Date: {showDate ? formatDate(showDate) : "—"}
         </p>
-        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-gray-600">
-          Status:{" "}
-          <span
-            className={`inline-flex items-center gap-1.5 font-medium ${
-              isClosed ? "text-emerald-600" : "text-blue-600"
-            }`}
-          >
-            <span
-              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                isClosed ? "bg-emerald-500" : "bg-blue-500"
-              }`}
-              aria-hidden
-            />
-            {isClosed ? "Closed" : "Open"}
-          </span>
+        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm text-gray-600">
+          Status: <ShowStatusPill status={isClosed ? "COMPLETED" : "ACTIVE"} />
         </p>
         {!isClosed && (
           <p className="mt-2">
@@ -612,7 +597,7 @@ export function ShowDetailView({ id }: { id: string }) {
       </div>
 
       {/* Show receipt (e.g. Whatnot payout screenshot) */}
-      <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <section className="rounded-lg border border-gray-200 bg-white shadow-workspace-surface p-4">
         <h2 className="text-base font-semibold text-gray-900">Show receipt</h2>
         <p className="mt-0.5 text-xs text-gray-500">
           Attach a PDF or image (e.g. Whatnot payout screenshot), max{" "}
@@ -628,7 +613,7 @@ export function ShowDetailView({ id }: { id: string }) {
                 <button
                   type="button"
                   onClick={() => handleDownloadAttachment(att)}
-                  className="shrink-0 rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
+                  className="shrink-0 rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
                 >
                   Download
                 </button>
@@ -641,14 +626,14 @@ export function ShowDetailView({ id }: { id: string }) {
             type="file"
             accept=".pdf,image/png,image/jpeg,image/jpg"
             onChange={handleReceiptFileChange}
-            className="w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 sm:max-w-xs"
+            className="w-full min-w-0 rounded-lg border border-gray-100 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 sm:max-w-xs"
             aria-describedby={receiptError ? "show-receipt-error" : undefined}
           />
           <button
             type="button"
             onClick={handleAttachReceipt}
             disabled={!receiptFile || uploadingReceipt}
-            className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
+            className={`${workspaceActionCompleteMd} disabled:opacity-60`}
           >
             {uploadingReceipt ? "Uploading…" : "Attach"}
           </button>
@@ -666,7 +651,7 @@ export function ShowDetailView({ id }: { id: string }) {
 
       {/* 1. Payout after fees */}
       <section
-        className={`rounded-lg border border-gray-200 p-4 shadow-sm ${
+        className={`rounded-lg border border-gray-200 p-4 shadow-workspace-surface ${
           isClosed ? "bg-gray-50/50" : "bg-white"
         }`}
       >
@@ -693,11 +678,11 @@ export function ShowDetailView({ id }: { id: string }) {
 
       {/* 2. Settlements — structured financial grid */}
       <section
-        className={`rounded-lg border border-gray-200 shadow-sm ${
+        className={`rounded-lg border border-gray-200 shadow-workspace-surface ${
           isClosed ? "bg-gray-50/50" : "bg-white"
         }`}
       >
-        <div className="flex items-center gap-1.5 border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center gap-1.5 border-b border-gray-200 bg-gray-50/40 px-4 py-3">
           <h2 className="text-base font-semibold text-gray-900">Settlements</h2>
           {isClosed && (
             <p className="text-xs text-gray-500">
@@ -706,8 +691,8 @@ export function ShowDetailView({ id }: { id: string }) {
           )}
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="sticky top-0 z-10 bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="sticky top-0 z-10 bg-[#F3F4F6]">
               <tr>
                 <th className="px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Wholesaler
@@ -741,7 +726,7 @@ export function ShowDetailView({ id }: { id: string }) {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="divide-y divide-gray-100 bg-white">
               {settlements.length === 0 ? (
                 <tr>
                   <td
@@ -757,7 +742,10 @@ export function ShowDetailView({ id }: { id: string }) {
                   const owed = amountOwedFor(payoutAfterFees, row);
                   const balance = roundToCents(owed - row.amountPaid);
                   return (
-                    <tr key={row.id} className="hover:bg-gray-50">
+                    <tr
+                      key={row.id}
+                      className="transition-colors duration-200 ease-out hover:bg-gray-200/45"
+                    >
                       <td className="whitespace-nowrap px-3 py-2.5 text-sm font-medium text-gray-900">
                         {row.wholesaler}
                       </td>
@@ -796,7 +784,7 @@ export function ShowDetailView({ id }: { id: string }) {
                           type="button"
                           disabled={isClosed || deletingSettlementId === row.id}
                           onClick={() => void handleDeleteSettlement(row.id)}
-                          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+                          className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35 disabled:cursor-not-allowed disabled:text-gray-400"
                         >
                           {deletingSettlementId === row.id
                             ? "Deleting…"
@@ -808,12 +796,12 @@ export function ShowDetailView({ id }: { id: string }) {
                 })
               )}
               {!isClosed && (
-                <tr className="bg-gray-50/70 hover:bg-gray-100">
+                <tr className="bg-gray-50/70 transition-colors duration-200 ease-out hover:bg-gray-200/40">
                   <td className="px-3 py-2.5">
                     <select
                       value={newRowWholesalerId}
                       onChange={(e) => setNewRowWholesalerId(e.target.value)}
-                      className="w-full min-w-[120px] rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+                      className="w-full min-w-[120px] rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
                     >
                       <option value="">Select wholesaler</option>
                       {wholesalers.map((w) => (
@@ -848,7 +836,7 @@ export function ShowDetailView({ id }: { id: string }) {
                           ]);
                         }
                       }}
-                      className="w-full min-w-[100px] rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+                      className="w-full min-w-[100px] rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
                     >
                       <option value="PERCENT">Percent of payout</option>
                       <option value="FIXED">Flat amount ($)</option>
@@ -874,7 +862,7 @@ export function ShowDetailView({ id }: { id: string }) {
                           return (
                             <div
                               key={line.id}
-                              className="flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white px-2 py-1.5"
+                              className="flex flex-wrap items-center gap-2 rounded border border-gray-100 bg-white px-2 py-1.5"
                             >
                               <input
                                 type="text"
@@ -889,7 +877,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                   )
                                 }
                                 placeholder="Item name"
-                                className="min-w-[120px] rounded border border-gray-300 px-2 py-1.5 text-sm"
+                                className="min-w-[120px] rounded border border-gray-200 px-2 py-1.5 text-sm"
                               />
                               <input
                                 type="number"
@@ -906,7 +894,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                   )
                                 }
                                 placeholder="Qty"
-                                className="w-16 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                                className="w-16 rounded border border-gray-200 px-2 py-1.5 text-right text-sm tabular-nums"
                               />
                               <span className="text-sm text-gray-500">×</span>
                               <input
@@ -927,7 +915,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                   )
                                 }
                                 placeholder="Unit $"
-                                className="w-20 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                                className="w-20 rounded border border-gray-200 px-2 py-1.5 text-right text-sm tabular-nums"
                                 title="Unit price ($)"
                               />
                               <span className="text-sm text-gray-500">=</span>
@@ -943,7 +931,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                     prev.filter((l) => l.id !== line.id),
                                   )
                                 }
-                                className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+                                className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200/55 active:bg-gray-300/35"
                               >
                                 Remove
                               </button>
@@ -964,7 +952,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                 },
                               ])
                             }
-                            className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            className="rounded border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35"
                           >
                             + Add line
                           </button>
@@ -983,7 +971,7 @@ export function ShowDetailView({ id }: { id: string }) {
                               newRowItemizedLines.length === 0
                             }
                             onClick={() => void handleAddRow()}
-                            className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            className={`${workspaceActionCompleteSm} disabled:cursor-not-allowed disabled:opacity-50`}
                           >
                             {creatingSettlement ? "Adding…" : "Add row"}
                           </button>
@@ -1008,7 +996,7 @@ export function ShowDetailView({ id }: { id: string }) {
                               max={100}
                               value={newRowPercent}
                               onChange={(e) => setNewRowPercent(e.target.value)}
-                              className="w-16 rounded border border-gray-300 px-2 py-1.5 text-right text-sm tabular-nums"
+                              className="w-16 rounded border border-gray-200 px-2 py-1.5 text-right text-sm tabular-nums"
                               placeholder="0"
                               aria-label="Percent of payout"
                             />
@@ -1030,7 +1018,7 @@ export function ShowDetailView({ id }: { id: string }) {
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         {newRowMode === "FIXED" ? (
-                          <div className="inline-flex items-center rounded border border-gray-300 bg-white">
+                          <div className="inline-flex items-center rounded border border-gray-200 bg-white">
                             <span className="pl-2 text-sm text-gray-500">
                               $
                             </span>
@@ -1080,7 +1068,7 @@ export function ShowDetailView({ id }: { id: string }) {
                             !isPercentValueValid
                           }
                           onClick={() => void handleAddRow()}
-                          className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          className={`${workspaceActionCompleteSm} disabled:cursor-not-allowed disabled:opacity-50`}
                           title={
                             newRowMode === "PERCENT" && !isPercentValueValid
                               ? "Enter a percent (0–100) to add row"
@@ -1111,7 +1099,7 @@ export function ShowDetailView({ id }: { id: string }) {
       </section>
 
       {/* 3. Review & profit */}
-      <section className="border border-gray-200 bg-white p-4">
+      <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-workspace-surface">
         <h2 className="text-base font-semibold text-gray-900">
           Review & profit
         </h2>
@@ -1146,7 +1134,9 @@ export function ShowDetailView({ id }: { id: string }) {
                 <td className="py-2 pr-4 font-medium text-gray-500">
                   Balance remaining
                 </td>
-                <td className="w-28 py-2 text-right tabular-nums text-gray-900">
+                <td
+                  className={`w-28 py-2 text-right tabular-nums ${workspaceMoneyClassForLiability(totals.balanceRemaining)}`}
+                >
                   {formatCurrency(totals.balanceRemaining)}
                 </td>
               </tr>
@@ -1155,13 +1145,14 @@ export function ShowDetailView({ id }: { id: string }) {
                 <td className="w-28 py-2 text-right">
                   <span
                     className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${
-                      STATUS_STYLES[totals.status] ??
-                      "bg-gray-100 text-gray-700"
+                      WORKSPACE_DETAIL_SETTLEMENT_STATUS_STYLES[
+                        totals.status
+                      ] ?? "border border-gray-200/80 bg-gray-50 text-gray-700"
                     }`}
                   >
-                    {STATUS_DOT[totals.status] && (
+                    {WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS[totals.status] && (
                       <span
-                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[totals.status]}`}
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS[totals.status]}`}
                         aria-hidden
                       />
                     )}
@@ -1169,7 +1160,7 @@ export function ShowDetailView({ id }: { id: string }) {
                   </span>
                 </td>
               </tr>
-              <tr className="border-t border-gray-200">
+              <tr className="border-t border-gray-100">
                 <td className="py-3 pr-4 font-medium text-gray-700">
                   <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
                     <span className="inline-flex items-center gap-1">
@@ -1183,7 +1174,9 @@ export function ShowDetailView({ id }: { id: string }) {
                     </span>
                   </HelpTooltip>
                 </td>
-                <td className="w-28 py-3 text-right font-semibold tabular-nums text-gray-900">
+                <td
+                  className={`w-28 py-3 text-right font-semibold tabular-nums ${workspaceMoneyClassForSigned(totals.profitEstimate)}`}
+                >
                   {formatCurrency(totals.profitEstimate)}
                 </td>
               </tr>
@@ -1195,7 +1188,7 @@ export function ShowDetailView({ id }: { id: string }) {
       {/* 4. Close / Reopen */}
       <section
         ref={closeOutSectionRef}
-        className="border border-gray-200 bg-white p-4"
+        className="rounded-lg border border-gray-200 bg-white p-4 shadow-workspace-surface"
       >
         <h2 className="text-base font-semibold text-gray-900">
           Close out show
@@ -1215,7 +1208,7 @@ export function ShowDetailView({ id }: { id: string }) {
                     void handleCloseShow();
                   }}
                   disabled={closing}
-                  className="rounded border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                  className={`${workspaceActionCompleteMd} disabled:opacity-50`}
                 >
                   {closing ? "Closing…" : "Close out show"}
                 </button>
@@ -1223,7 +1216,7 @@ export function ShowDetailView({ id }: { id: string }) {
                   type="button"
                   onClick={() => setShowCloseConfirm(false)}
                   disabled={closing}
-                  className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className={`${workspaceActionSecondaryMd} disabled:opacity-50`}
                 >
                   Cancel
                 </button>
@@ -1238,14 +1231,14 @@ export function ShowDetailView({ id }: { id: string }) {
                 type="button"
                 onClick={() => setShowCloseConfirm(true)}
                 disabled={closing}
-                className="mt-3 rounded border border-gray-700 bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                className={`${workspaceActionCompleteMd} mt-3 disabled:opacity-50`}
               >
                 Close out show
               </button>
             </div>
           )
         ) : showReopenConfirm ? (
-          <div className="mt-3 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800">
+          <div className="mt-3 rounded border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-800">
             <p className="font-medium">
               Reopening will allow you to edit payout and settlements again.
             </p>
@@ -1257,7 +1250,7 @@ export function ShowDetailView({ id }: { id: string }) {
                   void handleReopenShow();
                 }}
                 disabled={closing}
-                className="rounded border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                className={`${workspaceActionCompleteMd} disabled:opacity-50`}
               >
                 {closing
                   ? "Reopening…"
@@ -1267,7 +1260,7 @@ export function ShowDetailView({ id }: { id: string }) {
                 type="button"
                 onClick={() => setShowReopenConfirm(false)}
                 disabled={closing}
-                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className={`${workspaceActionSecondaryMd} disabled:opacity-50`}
               >
                 Cancel
               </button>
@@ -1282,7 +1275,7 @@ export function ShowDetailView({ id }: { id: string }) {
               type="button"
               onClick={() => setShowReopenConfirm(true)}
               disabled={closing}
-              className="mt-3 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className={`${workspaceActionSecondaryMd} mt-3 disabled:opacity-50`}
             >
               Reopen show (unlocks payout and settlements)
             </button>
@@ -1326,7 +1319,7 @@ function EditablePayout({
           type="button"
           disabled={disabled}
           onClick={() => setEditing(true)}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Edit
         </button>
@@ -1358,7 +1351,7 @@ function EditablePayout({
             setInput(v);
           }}
           disabled={disabled}
-          className="w-28 rounded border border-gray-300 py-2 pl-7 pr-3 text-sm tabular-nums text-gray-900 disabled:opacity-50"
+          className="w-28 rounded border border-gray-200 py-2 pl-7 pr-3 text-sm tabular-nums text-gray-900 disabled:opacity-50"
           placeholder="0.00"
           aria-label="Payout amount in dollars"
         />
@@ -1371,7 +1364,7 @@ function EditablePayout({
           if (ok) setEditing(false);
         }}
         disabled={disabled || !canSave || saving}
-        className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {saving ? "Saving..." : "Save"}
       </button>
@@ -1381,7 +1374,7 @@ function EditablePayout({
           setInput(String(payoutAfterFees));
           setEditing(false);
         }}
-        className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+        className="rounded border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35"
       >
         Cancel
       </button>

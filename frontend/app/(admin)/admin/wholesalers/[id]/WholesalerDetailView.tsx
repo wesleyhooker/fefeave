@@ -14,6 +14,10 @@ import {
   type WholesalerListRowView,
   type WholesalerStatementRowView,
 } from "@/src/lib/api/wholesalers";
+import {
+  workspaceActionSecondaryMd,
+  workspaceMoneyClassForLiability,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 
 export function WholesalerDetailView({ id }: { id: string }) {
   const [wholesaler, setWholesaler] = useState<WholesalerListRowView | null>(
@@ -141,7 +145,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/admin/payments/new?wholesalerId=${id}`}
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+            className={workspaceActionSecondaryMd}
           >
             Record payment
           </Link>
@@ -163,7 +167,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                 );
               }
             }}
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className={workspaceActionSecondaryMd}
           >
             Download Statement CSV
           </button>
@@ -185,7 +189,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                 setLedgerExportError("Ledger export failed. Please retry.");
               }
             }}
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className={workspaceActionSecondaryMd}
           >
             Download Ledger CSV
           </button>
@@ -199,25 +203,30 @@ export function WholesalerDetailView({ id }: { id: string }) {
 
       <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-semibold text-gray-900">
             {wholesaler.name}
           </h1>
           <p className="mt-0.5 text-xs text-gray-500">
             Last payment: {formatDaysAgo(wholesaler.last_payment_date)}
           </p>
         </div>
-        <p className="text-lg font-medium text-gray-700">
-          Current balance: {formatCurrency(balance)}
+        <p className="text-lg font-semibold text-gray-900">
+          Current balance:{" "}
+          <span
+            className={`tabular-nums ${workspaceMoneyClassForLiability(balance)}`}
+          >
+            {formatCurrency(balance)}
+          </span>
         </p>
       </div>
 
-      <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
-        <h2 className="border-b border-gray-200 px-4 py-3 text-lg font-semibold text-gray-900">
+      <section className="rounded-lg border border-gray-200 bg-white shadow-workspace-surface">
+        <h2 className="border-b border-gray-100 px-4 py-3 text-lg font-semibold text-gray-900">
           Statement
         </h2>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="sticky top-0 z-10 bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="sticky top-0 z-10 bg-[#F3F4F6]">
               <tr>
                 <th
                   scope="col"
@@ -257,7 +266,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="divide-y divide-gray-100 bg-white">
               {statement.length === 0 ? (
                 <tr>
                   <td
@@ -276,7 +285,10 @@ export function WholesalerDetailView({ id }: { id: string }) {
                   const isExpanded = expandedEntryIds.has(row.entryId);
 
                   const mainRow = (
-                    <tr key={row.entryId} className="hover:bg-gray-50">
+                    <tr
+                      key={row.entryId}
+                      className="transition-colors duration-200 ease-out hover:bg-gray-200/45"
+                    >
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                         {formatDate(row.date)}
                       </td>
@@ -320,10 +332,10 @@ export function WholesalerDetailView({ id }: { id: string }) {
                   const detailRow = (
                     <tr key={`${row.entryId}-lines`} className="bg-gray-50">
                       <td colSpan={6} className="px-4 py-3">
-                        <div className="rounded border border-gray-200 bg-white py-2 shadow-sm">
+                        <div className="rounded border border-gray-200 bg-white py-2 shadow-workspace-surface-sm">
                           <table className="min-w-full text-sm">
                             <thead>
-                              <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                              <tr className="border-b border-gray-100 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                 <th className="px-4 py-2">Item</th>
                                 <th className="px-4 py-2 text-right">Qty</th>
                                 <th className="px-4 py-2 text-right">

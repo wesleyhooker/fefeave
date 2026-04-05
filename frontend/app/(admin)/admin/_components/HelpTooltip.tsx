@@ -78,7 +78,7 @@ export function HelpTooltip({
       ? createPortal(
           <span
             role="tooltip"
-            className="fixed z-[100] max-w-[260px] rounded border border-gray-200 bg-gray-900 px-2.5 py-1.5 text-xs font-normal leading-snug text-white shadow-lg"
+            className="fixed z-[100] max-w-[260px] rounded border border-gray-100 bg-gray-900 px-2.5 py-1.5 text-xs font-normal leading-snug text-white shadow-lg"
             style={{
               left: position.left,
               top: position.top,

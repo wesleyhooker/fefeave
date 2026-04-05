@@ -8,6 +8,7 @@ import {
   createInventoryPurchase,
   type InventoryPurchaseDTO,
 } from "@/src/lib/api/inventory-purchases";
+import { workspaceActionCompleteMd } from "@/app/(admin)/admin/_components/workspaceUi";
 
 function parseAmount(value: string): number {
   const n = Number(value);
@@ -91,14 +92,14 @@ export default function AdminInventoryPage() {
           ← Dashboard
         </Link>
       </div>
-      <h1 className="mb-2 text-2xl font-bold text-gray-900">
+      <h1 className="mb-2 text-2xl font-semibold text-gray-900">
         Inventory purchases
       </h1>
       <p className="mb-6 text-gray-600">
         Record pallet or lump-sum inventory buys (cash-based, no SKU).
       </p>
 
-      <section className="mb-8 rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <section className="mb-8 rounded-lg border border-gray-200 bg-white p-4 shadow-workspace-surface">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
           Add purchase
         </h2>
@@ -109,7 +110,7 @@ export default function AdminInventoryPage() {
               type="date"
               value={purchaseDate}
               onChange={(e) => setPurchaseDate(e.target.value)}
-              className="rounded border border-gray-300 px-3 py-2 text-gray-900"
+              className="rounded border border-gray-200 px-3 py-2 text-gray-900"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -120,7 +121,7 @@ export default function AdminInventoryPage() {
               min="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-28 rounded border border-gray-300 px-3 py-2 text-gray-900"
+              className="w-28 rounded border border-gray-200 px-3 py-2 text-gray-900"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -130,14 +131,14 @@ export default function AdminInventoryPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Pallet #3"
-              className="min-w-[12rem] rounded border border-gray-300 px-3 py-2 text-gray-900"
+              className="min-w-[12rem] rounded border border-gray-200 px-3 py-2 text-gray-900"
             />
           </label>
           <div className="flex items-end">
             <button
               type="submit"
               disabled={submitting}
-              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+              className={`${workspaceActionCompleteMd} disabled:opacity-50`}
             >
               {submitting ? "Saving…" : "Add"}
             </button>
@@ -150,8 +151,8 @@ export default function AdminInventoryPage() {
         )}
       </section>
 
-      <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-4 py-3">
+      <section className="rounded-lg border border-gray-200 bg-white shadow-workspace-surface">
+        <div className="border-b border-gray-100 px-4 py-3">
           <h2 className="text-lg font-semibold text-gray-900">
             Recent purchases (last 30 days)
           </h2>
@@ -175,8 +176,8 @@ export default function AdminInventoryPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-[#F3F4F6]">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Date
@@ -189,9 +190,12 @@ export default function AdminInventoryPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
+              <tbody className="divide-y divide-gray-100 bg-white">
                 {purchases.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50">
+                  <tr
+                    key={row.id}
+                    className="transition-colors duration-200 ease-out hover:bg-gray-200/45"
+                  >
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
                       {formatDate(row.purchase_date)}
                     </td>

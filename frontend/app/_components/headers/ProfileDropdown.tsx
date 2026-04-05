@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
+import { workspaceChromeHover } from "@/app/(admin)/admin/_components/workspaceUi";
 
 function formatRoles(roles: string[]): string {
   if (roles.length === 0) return "none";
@@ -41,7 +42,7 @@ export function ProfileDropdown({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
+        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${workspaceChromeHover}`}
         aria-expanded={open}
         aria-haspopup="true"
         id="profile-menu-button"
@@ -82,14 +83,14 @@ export function ProfileDropdown({
       </button>
       {open && (
         <div
-          className="absolute right-0 z-50 mt-1 w-56 origin-top-right rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-50 mt-1 w-56 origin-top-right rounded-lg border border-gray-200 bg-white/95 py-1 shadow-lg backdrop-blur-sm"
           role="menu"
           aria-orientation="vertical"
           aria-labelledby="profile-menu-button"
         >
           {!isProduction && (
             <div
-              className="border-b border-gray-100 px-3 py-2 text-xs text-gray-500"
+              className="border-b border-gray-200 px-3 py-2 text-xs text-gray-500"
               role="status"
             >
               roles: {formatRoles(roles)} | {envLabel}
@@ -97,7 +98,7 @@ export function ProfileDropdown({
           )}
           <Link
             href="/"
-            className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 rounded"
+            className={`block rounded px-3 py-2 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${workspaceChromeHover}`}
             role="menuitem"
             onClick={() => setOpen(false)}
           >
@@ -105,16 +106,16 @@ export function ProfileDropdown({
           </Link>
           <Link
             href="/portal"
-            className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 rounded"
+            className={`block rounded px-3 py-2 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${workspaceChromeHover}`}
             role="menuitem"
             onClick={() => setOpen(false)}
           >
             Wholesaler portal
           </Link>
-          <div className="border-t border-gray-100">
+          <div className="border-t border-gray-200">
             <Link
               href="/api/auth/logout"
-              className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 rounded"
+              className={`block rounded px-3 py-2 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${workspaceChromeHover}`}
               role="menuitem"
               onClick={() => setOpen(false)}
             >

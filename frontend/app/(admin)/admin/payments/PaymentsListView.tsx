@@ -3,6 +3,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PaymentsTableSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
+import {
+  workspaceActionSecondaryMd,
+  workspaceActionSecondarySm,
+  workspaceMoneyNeutral,
+  workspaceMoneyTabular,
+  workspacePageTitle,
+  workspaceRowTitleLink,
+  workspaceTableRowInteractive,
+  workspaceTheadSticky,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   fetchPayments,
@@ -64,11 +74,8 @@ export function PaymentsListView() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
-        <Link
-          href="/admin/payments/new"
-          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
-        >
+        <h1 className={workspacePageTitle}>Payments</h1>
+        <Link href="/admin/payments/new" className={workspaceActionSecondaryMd}>
           Record payment
         </Link>
       </div>
@@ -83,7 +90,7 @@ export function PaymentsListView() {
           <button
             type="button"
             onClick={() => setReloadToken((v) => v + 1)}
-            className="mt-3 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+            className={`${workspaceActionSecondarySm} mt-3`}
           >
             Retry
           </button>
@@ -93,7 +100,7 @@ export function PaymentsListView() {
       {/* Mobile: card/list view */}
       <div className="space-y-3 md:hidden">
         {rows.length === 0 ? (
-          <p className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+          <p className="rounded-lg border border-gray-100 bg-white px-4 py-6 text-center text-sm text-gray-500">
             No payments recorded yet.
           </p>
         ) : (
@@ -103,16 +110,23 @@ export function PaymentsListView() {
             return (
               <div
                 key={p.id}
-                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                className="rounded-lg border border-gray-200 bg-white shadow-workspace-surface p-4"
               >
                 <div className="mb-2 flex items-baseline justify-between gap-3">
-                  <p className="text-lg font-semibold tabular-nums text-gray-900">
+                  <p
+                    className={`text-lg font-semibold ${workspaceMoneyTabular} ${workspaceMoneyNeutral}`}
+                  >
                     {formatCurrency(p.amount)}
                   </p>
                   <p className="text-xs text-gray-500">{formatDate(p.date)}</p>
                 </div>
                 <p className="text-sm font-medium text-gray-900">
-                  {wholesalerName ?? "Unknown"}
+                  <Link
+                    href={`/admin/wholesalers/${p.wholesalerId}`}
+                    className={workspaceRowTitleLink}
+                  >
+                    {wholesalerName ?? "Unknown"}
+                  </Link>
                 </p>
                 <p className="mt-1 text-xs text-gray-600">
                   Method: <span className="font-medium">{methodLabel}</span>
@@ -125,7 +139,7 @@ export function PaymentsListView() {
                 <div className="mt-3">
                   <Link
                     href={`/admin/wholesalers/${p.wholesalerId}`}
-                    className="text-xs font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                    className={workspaceActionSecondarySm}
                   >
                     View wholesaler
                   </Link>
@@ -137,9 +151,9 @@ export function PaymentsListView() {
       </div>
 
       {/* Desktop: table view */}
-      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm md:block">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-workspace-surface md:block">
+        <table className="min-w-full divide-y divide-gray-100">
+          <thead className={workspaceTheadSticky}>
             <tr>
               <th
                 scope="col"
@@ -173,7 +187,7 @@ export function PaymentsListView() {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-100 bg-white">
             {rows.length === 0 ? (
               <tr>
                 <td
@@ -187,16 +201,18 @@ export function PaymentsListView() {
               rows.map((p) => {
                 const wholesalerName = wholesalerNameById[p.wholesalerId];
                 return (
-                  <tr key={p.id} className="hover:bg-gray-50">
+                  <tr key={p.id} className={workspaceTableRowInteractive}>
                     <td className="whitespace-nowrap px-4 py-3">
                       <Link
                         href={`/admin/wholesalers/${p.wholesalerId}`}
-                        className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                        className={workspaceRowTitleLink}
                       >
                         {wholesalerName ?? "Unknown"}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums text-gray-900">
+                    <td
+                      className={`whitespace-nowrap px-4 py-3 text-right text-sm font-semibold ${workspaceMoneyTabular} ${workspaceMoneyNeutral}`}
+                    >
                       {formatCurrency(p.amount)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">

@@ -9,6 +9,15 @@ import {
   getPaymentStatus,
   PaymentStatusChip,
 } from "../_components/PaymentStatusChip";
+import {
+  workspaceActionRecordPaymentSm,
+  workspaceActionSecondaryMd,
+  workspaceActionSecondarySm,
+  workspaceMoneyClassForLiability,
+  workspaceRowTitleLink,
+  workspaceTableRowInteractive,
+  workspaceTheadSticky,
+} from "../_components/workspaceUi";
 
 export interface WholesalerBalanceRow {
   wholesaler_id: string;
@@ -139,7 +148,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
           <button
             type="button"
             onClick={handleDownloadCsv}
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className={workspaceActionSecondaryMd}
           >
             Download Balances CSV
           </button>
@@ -150,7 +159,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
             <button
               type="button"
               onClick={handleDownloadCsv}
-              className="rounded border border-rose-300 bg-white px-2 py-1 text-[11px] font-medium text-rose-900 hover:bg-rose-100"
+              className={workspaceActionSecondarySm}
             >
               Retry
             </button>
@@ -161,7 +170,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
       {/* Mobile: card list */}
       <div className="space-y-3 md:hidden">
         {sorted.length === 0 ? (
-          <p className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+          <p className="rounded-lg border border-gray-100 bg-white px-4 py-6 text-center text-sm text-gray-500">
             No balances yet.
           </p>
         ) : (
@@ -174,13 +183,13 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
             return (
               <div
                 key={r.wholesaler_id}
-                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                className="rounded-lg border border-gray-200 bg-white shadow-workspace-surface p-4"
               >
                 <div className="mb-2 flex items-start justify-between gap-3">
                   <div>
                     <Link
                       href={`/admin/wholesalers/${r.wholesaler_id}`}
-                      className="block text-sm font-semibold text-gray-900 hover:text-gray-700 hover:underline"
+                      className={`block text-sm font-semibold ${workspaceRowTitleLink}`}
                     >
                       {r.name}
                     </Link>
@@ -197,7 +206,9 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                   <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
                     Balance owed
                   </p>
-                  <p className="text-lg font-semibold tabular-nums text-gray-900">
+                  <p
+                    className={`text-lg font-semibold tabular-nums ${workspaceMoneyClassForLiability(balance)}`}
+                  >
                     {formatCurrency(balance)}
                   </p>
                 </div>
@@ -218,13 +229,13 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href={`/admin/payments/new?wholesalerId=${r.wholesaler_id}`}
-                    className="flex-1 rounded-md bg-gray-900 px-3 py-2 text-center text-xs font-medium text-white hover:bg-gray-800"
+                    className={`${workspaceActionRecordPaymentSm} flex-1 px-3 py-2 text-center`}
                   >
                     Record payment
                   </Link>
                   <Link
                     href={`/admin/wholesalers/${r.wholesaler_id}`}
-                    className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-center text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    className={`${workspaceActionSecondarySm} flex-1 px-3 py-2 text-center`}
                   >
                     View details
                   </Link>
@@ -236,9 +247,9 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
       </div>
 
       {/* Desktop: table */}
-      <div className="hidden overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm md:block">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="sticky top-0 z-10 bg-gray-50">
+      <div className="hidden overflow-auto rounded-lg border border-gray-200 bg-white shadow-workspace-surface md:block">
+        <table className="min-w-full divide-y divide-gray-100">
+          <thead className={workspaceTheadSticky}>
             <tr>
               <th
                 scope="col"
@@ -319,7 +330,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-100 bg-white">
             {sorted.length === 0 ? (
               <tr>
                 <td
@@ -335,11 +346,14 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                 const paid = parseNum(r.paid_total);
                 const status = getPaymentStatus(balance, paid);
                 return (
-                  <tr key={r.wholesaler_id} className="hover:bg-gray-50">
+                  <tr
+                    key={r.wholesaler_id}
+                    className={workspaceTableRowInteractive}
+                  >
                     <td className="whitespace-nowrap px-4 py-3">
                       <Link
                         href={`/admin/wholesalers/${r.wholesaler_id}`}
-                        className="font-medium text-gray-900 hover:text-gray-600 hover:underline"
+                        className={workspaceRowTitleLink}
                       >
                         {r.name}
                       </Link>
@@ -347,7 +361,9 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                     <td className="whitespace-nowrap px-4 py-3">
                       <PaymentStatusChip status={status} />
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums text-gray-900">
+                    <td
+                      className={`whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums ${workspaceMoneyClassForLiability(parseNum(r.balance_owed))}`}
+                    >
                       {formatCurrency(parseNum(r.balance_owed))}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
@@ -364,7 +380,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       <Link
                         href={`/admin/payments/new?wholesalerId=${r.wholesaler_id}`}
-                        className="text-sm font-medium text-gray-900 hover:text-gray-600 hover:underline"
+                        className={workspaceActionRecordPaymentSm}
                       >
                         Record payment
                       </Link>

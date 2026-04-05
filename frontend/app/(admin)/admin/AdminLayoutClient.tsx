@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { WorkspaceHeader } from "@/app/_components/headers/WorkspaceHeader";
 import { AdminSidebar } from "./AdminSidebar";
+import {
+  workspaceShellBg,
+  workspaceShellColumn,
+} from "./_components/workspaceUi";
 
 export type AdminLayoutClientProps = {
   title: string;
@@ -24,12 +28,12 @@ export function AdminLayoutClient({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
+    <div className={`flex min-h-screen ${workspaceShellBg}`}>
       <AdminSidebar
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
       />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className={workspaceShellColumn}>
         <WorkspaceHeader
           title={title}
           email={email}

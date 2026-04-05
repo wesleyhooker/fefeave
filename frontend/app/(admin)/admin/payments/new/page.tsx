@@ -12,6 +12,10 @@ import {
 } from "@/src/lib/api/attachments";
 import { createPayment } from "@/src/lib/api/payments";
 import { fetchWholesalerBalances } from "@/src/lib/api/wholesalers";
+import {
+  workspaceActionCompleteMd,
+  workspaceActionSecondaryMd,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 
 const METHODS = ["Cash", "Zelle", "Venmo", "Check", "Other"] as const;
 const ACCEPT_RECEIPT = ".pdf,image/png,image/jpeg,image/jpg";
@@ -168,7 +172,9 @@ function RecordPaymentForm() {
         <span className="mx-1.5">/</span>
         <span aria-current="page">Record payment</span>
       </nav>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Record payment</h1>
+      <h1 className="mb-6 text-2xl font-semibold text-gray-900">
+        Record payment
+      </h1>
 
       {loadError && (
         <div
@@ -199,7 +205,7 @@ function RecordPaymentForm() {
 
       <form
         onSubmit={handleSubmit}
-        className="max-w-xl space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+        className="max-w-xl space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-workspace-surface"
       >
         <div>
           <label
@@ -214,7 +220,7 @@ function RecordPaymentForm() {
             value={wholesalerId}
             onChange={(e) => setWholesalerId(e.target.value)}
             disabled={loadingWholesalers || wholesalers.length === 0}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
           >
             <option value="">Select wholesaler</option>
             {wholesalers.map((w) => (
@@ -237,7 +243,7 @@ function RecordPaymentForm() {
                 : null;
               const isOverage = validAmount && amt > w.balanceOwed;
               return (
-                <div className="mt-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                <div className="mt-2 rounded border border-gray-200 bg-[#F9FAFB] px-3 py-2 text-sm text-gray-700">
                   <p>
                     Current balance owed:{" "}
                     <strong className="text-gray-900">
@@ -291,7 +297,7 @@ function RecordPaymentForm() {
                 if (parts[1]?.length > 2) return;
                 setAmount(v);
               }}
-              className="w-full max-w-[8rem] rounded-md border border-gray-300 py-2 pl-7 pr-3 text-sm tabular-nums shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="w-full max-w-[8rem] rounded-md border border-gray-200 py-2 pl-7 pr-3 text-sm tabular-nums shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
               placeholder="0.00"
               aria-label="Amount in dollars"
             />
@@ -314,7 +320,7 @@ function RecordPaymentForm() {
             required
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
           />
           {errors.date && (
             <p className="mt-0.5 text-xs text-red-600">{errors.date}</p>
@@ -332,7 +338,7 @@ function RecordPaymentForm() {
             id="method"
             value={method}
             onChange={(e) => setMethod(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
           >
             {METHODS.map((m) => (
               <option key={m} value={m}>
@@ -354,7 +360,7 @@ function RecordPaymentForm() {
             type="text"
             value={reference}
             onChange={(e) => setReference(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
             placeholder="Optional"
           />
         </div>
@@ -374,7 +380,7 @@ function RecordPaymentForm() {
             type="file"
             accept={ACCEPT_RECEIPT}
             onChange={handleReceiptChange}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full rounded-lg border border-gray-100 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
             aria-describedby={
               receiptError
                 ? "receipt-error"
@@ -407,14 +413,11 @@ function RecordPaymentForm() {
           <button
             type="submit"
             disabled={submitting || loadingWholesalers}
-            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 disabled:opacity-60"
+            className={`${workspaceActionCompleteMd} disabled:opacity-60`}
           >
             {submitting ? "Saving..." : "Record payment"}
           </button>
-          <Link
-            href="/admin/payments"
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
-          >
+          <Link href="/admin/payments" className={workspaceActionSecondaryMd}>
             Cancel
           </Link>
         </div>

@@ -43,6 +43,11 @@ const config: Config = {
       },
       boxShadow: {
         'fefe-card': '0 2px 12px rgba(44, 44, 44, 0.06)',
+        /** Admin workspace — soft lift for white surfaces on gray shell */
+        'workspace-surface':
+          '0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 28px -8px rgba(15, 23, 42, 0.1)',
+        'workspace-surface-sm':
+          '0 1px 2px rgba(15, 23, 42, 0.05), 0 5px 16px -4px rgba(15, 23, 42, 0.08)',
       },
     },
   },

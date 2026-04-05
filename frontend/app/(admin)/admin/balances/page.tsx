@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BalancesPageSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
+import {
+  workspaceActionSecondaryMd,
+  workspaceActionSecondarySm,
+  workspaceMoneyClassForLiability,
+  workspaceMoneyTabular,
+  workspacePageTitle,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 import { formatCurrency } from "@/lib/format";
 import { apiGet } from "@/lib/api";
 import { BalancesTable, type WholesalerBalanceRow } from "./BalancesTable";
@@ -105,17 +112,14 @@ export default function AdminBalancesPage() {
     return (
       <div>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Balances</h1>
+          <h1 className={workspacePageTitle}>Balances</h1>
         </div>
         <div
           className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           role="alert"
         >
           <p className="font-medium">Could not load balances</p>
-          <p className="mt-1">
-            Check your connection and try again. If the problem continues,
-            contact your administrator.
-          </p>
+          <p className="mt-1">Check your connection and retry.</p>
           <details className="mt-2 text-sm">
             <summary className="cursor-pointer font-medium text-amber-800">
               Technical details
@@ -126,7 +130,7 @@ export default function AdminBalancesPage() {
             type="button"
             onClick={() => fetchBalances()}
             disabled={loading}
-            className="mt-3 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+            className={`${workspaceActionSecondarySm} mt-3 disabled:opacity-60`}
           >
             Retry
           </button>
@@ -138,19 +142,19 @@ export default function AdminBalancesPage() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Balances</h1>
+        <h1 className={workspacePageTitle}>Balances</h1>
         <button
           type="button"
           onClick={() => fetchBalances()}
           disabled={refreshing}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
+          className={`${workspaceActionSecondaryMd} disabled:cursor-not-allowed disabled:opacity-60`}
           aria-label="Refresh balances"
         >
           {refreshing ? "Refreshing…" : "Refresh"}
         </button>
       </div>
       <p className="mb-4 text-sm text-gray-600 md:mb-6">
-        Wholesaler balances and payout workspace. Aligned with dashboard totals.
+        Per-vendor balances; dashboard totals use the same figures.
       </p>
 
       {refreshError && (
@@ -163,7 +167,7 @@ export default function AdminBalancesPage() {
             type="button"
             onClick={() => fetchBalances()}
             disabled={refreshing}
-            className="rounded border border-amber-400 bg-white px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+            className={`${workspaceActionSecondarySm} disabled:opacity-60`}
           >
             Retry
           </button>
@@ -171,10 +175,12 @@ export default function AdminBalancesPage() {
       )}
 
       {summary && (
-        <div className="mb-4 grid grid-cols-2 gap-3 border-b border-gray-200 bg-gray-50/80 px-4 py-3 pb-4 sm:flex sm:flex-wrap sm:items-baseline sm:gap-x-6 sm:gap-y-2">
+        <div className="mb-4 grid grid-cols-2 gap-3 border-b border-gray-200 bg-[#F9FAFB] px-4 py-3 pb-4 sm:flex sm:flex-wrap sm:items-baseline sm:gap-x-6 sm:gap-y-2">
           <span className="text-sm text-gray-500">
             Outstanding:{" "}
-            <strong className="text-gray-900">
+            <strong
+              className={`${workspaceMoneyTabular} ${workspaceMoneyClassForLiability(summary.totalOutstanding)}`}
+            >
               {formatCurrency(summary.totalOutstanding)}
             </strong>
           </span>

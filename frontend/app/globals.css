@@ -12,9 +12,16 @@
  * - Links: underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900; focus-visible:outline-2 outline-offset-2 outline-gray-400
  * - Cards: rounded-lg border border-gray-200 bg-white shadow-sm (e.g. contact list)
  *
- * Admin
- * - Buttons: primary rounded-lg bg-gray-900; secondary rounded-lg border border-gray-300 bg-white; focus-visible:outline-2 outline-offset-2
- * - Cards/panels: rounded-lg border border-gray-200 shadow-sm
+ * Admin (workspace)
+ * - Shell: page bg #F3F4F6; inset strips #F9FAFB; sidebar white, border-gray-100
+ * - Source of truth: `app/(admin)/admin/_components/workspaceUi.ts` (file header documents the full map;
+ *   dashboard `/admin/dashboard` is the interaction reference for lists/tables)
+ *   — money semantics on values only; action meanings (primary / Pay / Close out / row vs page size);
+ *   row hover + title link pattern; panels vs flat lists; section toolbars
+ * - Show Open/Closed: `ShowStatusPill.tsx` + `workspaceShowStatus*` in workspaceUi
+ * - Payment chips: `PaymentStatusChip.tsx` + `WORKSPACE_PAYMENT_STATUS_CHIP_STYLES`
+ * - Sidebar/header control hover: `workspaceChromeHover` in workspaceUi
+ * - Cards: border-gray-200 + theme shadow-workspace-surface (see tailwind.config.ts)
  * - Alerts: rounded-lg border border-amber-200 bg-amber-50 text-amber-900
  * - Inputs: rounded-lg border border-gray-300, focus:ring-1 focus:ring-gray-900
  *

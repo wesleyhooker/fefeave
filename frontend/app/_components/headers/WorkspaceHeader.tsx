@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { workspaceChromeHover } from "@/app/(admin)/admin/_components/workspaceUi";
 import { ProfileDropdown } from "./ProfileDropdown";
 
 export type WorkspaceHeaderProps = {
@@ -24,14 +25,14 @@ export function WorkspaceHeader({
   onMenuClick,
 }: WorkspaceHeaderProps) {
   return (
-    <header className="border-b border-gray-200 bg-white px-4 py-3 md:px-6">
+    <header className="relative z-10 border-b border-gray-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur-sm md:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
           {onMenuClick && (
             <button
               type="button"
               onClick={onMenuClick}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:hidden"
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:hidden ${workspaceChromeHover}`}
               aria-label="Open menu"
             >
               <svg
@@ -53,7 +54,7 @@ export function WorkspaceHeader({
             <Link
               href="/"
               aria-label="Go to Fefe Ave site"
-              className="flex shrink-0 items-center gap-2 rounded-lg py-1 pr-1 text-lg font-semibold text-gray-900 hover:text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:py-0.5 md:pr-1.5"
+              className={`flex shrink-0 items-center gap-2 rounded-lg py-1 pr-1 text-lg font-semibold text-gray-900 hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:py-0.5 md:pr-1.5 ${workspaceChromeHover}`}
             >
               <Image
                 src="/fefe-bird-icon.png"
