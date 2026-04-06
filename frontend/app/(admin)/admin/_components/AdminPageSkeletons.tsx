@@ -3,6 +3,22 @@
  * Layout-matching, one cohesive skeleton per page. Uses animate-pulse and neutral gray.
  */
 import {
+  DASHBOARD_CONTENT,
+  DASHBOARD_PRIMARY_SECONDARY_GRID,
+} from "@/app/(admin)/admin/dashboard/constants";
+import {
+  dashboardModulePanel,
+  dashboardModulePanelHeader,
+  dashboardPadX,
+  dashboardPrimaryListShell,
+  dashboardRowList,
+  dashboardRowPad,
+  dashboardWeeklyHeaderBand,
+  dashboardWeeklyHeroInsetWrapper,
+  dashboardWeeklyShowsToolbar,
+  dashboardWeeklyStatusCard,
+} from "@/app/(admin)/admin/dashboard/_components/dashboardStructure";
+import {
   workspaceCard,
   workspaceCardHeader,
   workspaceMutedStrip,
@@ -69,94 +85,106 @@ export function TableSkeleton({
   );
 }
 
-/** Dashboard: full layout-matching skeleton. */
+/** Dashboard: mirrors live `page.tsx` composition (header → stats → This week → Notifications). */
 export function DashboardSkeleton() {
   return (
-    <div>
-      <header className="mb-3 border-b border-gray-100 pb-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-            <SkeletonBar className="mt-1.5 w-72 max-w-full" />
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end sm:pt-0.5">
-            <SkeletonBar className="h-9 w-[7.25rem]" />
-            <SkeletonBar className="h-9 w-32" />
-          </div>
-        </div>
-      </header>
-
-      <section className="mb-5 rounded-md border border-gray-200/70 bg-gray-50/80">
-        <div className="grid grid-cols-1 divide-y divide-gray-200/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="px-3 py-2 sm:px-4 sm:py-2.5">
-              <SkeletonBar className="h-2.5 w-16" />
-              <SkeletonBar className="mt-1.5 h-6 w-20" />
+    <div className="min-w-0">
+      <div className={DASHBOARD_CONTENT}>
+        <header className="border-b border-gray-100 pb-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <SkeletonBar className="h-8 w-52 max-w-full" />
+              <SkeletonBar className="mt-2 h-4 w-64 max-w-full" />
             </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="mb-4 grid grid-cols-1 gap-5 lg:mb-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-6">
-        <section className={`min-w-0 ${workspaceCard}`}>
-          <div className="p-5">
-            <SkeletonBar className="w-28" />
-            <SkeletonBar className="mt-2 w-48 max-w-full" />
-            <SkeletonBar className="mt-4 h-10 w-36" />
-            <SkeletonBar className="mt-2 w-32" />
-            <div className="mt-5 border-t border-gray-200 pt-5">
-              <SkeletonBar className="h-2.5 w-24" />
-              <SkeletonBar className="mt-3 h-10 w-full max-w-md" />
-            </div>
+            <SkeletonBar className="h-9 w-24 shrink-0 rounded-lg" />
           </div>
-        </section>
+        </header>
 
-        <section
-          className={`flex min-w-0 flex-col overflow-hidden ${workspaceCard}`}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-gray-50/40 px-3 py-2.5">
-            <span className="text-sm font-semibold text-gray-900">
-              Shows this week
-            </span>
-            <SkeletonBar className="h-4 w-16" />
-          </div>
-          <div className="space-y-1.5 px-3 pb-3 pt-2">
+        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08),0_1px_2px_rgba(15,23,42,0.04)]">
+          <div className="grid grid-cols-1 gap-2.5 p-2.5 sm:grid-cols-3 sm:gap-3 sm:p-3">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="flex flex-col overflow-hidden rounded-lg border border-gray-200/90 bg-white md:flex-row"
+                className="relative overflow-hidden rounded-xl border border-gray-100/95 bg-white px-4 py-4 pl-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.08)] sm:px-5 sm:py-5"
               >
-                <div className="grid flex-1 grid-cols-1 gap-2 p-3 md:grid-cols-[minmax(0,1fr)_6.5rem_auto_7rem_2rem] md:items-center md:gap-3 md:py-2.5 md:pl-4 md:pr-2">
-                  <SkeletonBar className="w-full max-w-[12rem]" />
-                  <SkeletonBar className="h-4 w-14 justify-self-end" />
-                  <SkeletonBar className="h-6 w-16 justify-self-start md:justify-self-center" />
-                  <SkeletonBar className="h-4 w-20" />
-                  <SkeletonBar className="h-4 w-4 justify-self-end" />
-                </div>
+                <span className="absolute left-0 top-1/2 h-[68%] w-[3px] -translate-y-1/2 rounded-full bg-gray-200" />
+                <SkeletonBar className="h-2.5 w-20" />
+                <SkeletonBar className="mt-2 h-7 w-28" />
               </div>
             ))}
           </div>
         </section>
-      </div>
 
-      <section className="mb-6 rounded-md border border-gray-200/80 bg-gray-50/50 shadow-sm">
-        <div className="border-b border-gray-200/70 px-3 py-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Notifications
-          </span>
-        </div>
-        <div className="space-y-2 px-3 py-2">
-          <div className="rounded border border-gray-200/70 bg-white/80 px-2.5 py-2">
-            <SkeletonBar className="h-3.5 w-44 max-w-full" />
-            <div className="mt-1.5 space-y-1 border-l-2 border-gray-200/90 pl-2.5">
-              <SkeletonBar className="h-3 w-36" />
-            </div>
+        <div className={DASHBOARD_PRIMARY_SECONDARY_GRID}>
+          <div className="min-w-0">
+            <section className={dashboardWeeklyStatusCard}>
+              <div className={dashboardWeeklyHeaderBand}>
+                <SkeletonBar className="h-5 w-32 max-w-full" />
+              </div>
+              <div
+                className={`${dashboardWeeklyHeroInsetWrapper} rounded-xl bg-gray-50/50 p-1 sm:p-1.5`}
+              >
+                <div className="overflow-hidden rounded-[0.65rem] border border-gray-200/90 bg-white p-6 shadow-sm sm:p-7">
+                  <SkeletonBar className="h-2.5 w-28" />
+                  <div className="mt-3 flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 flex-1 items-end gap-3">
+                      <SkeletonBar className="h-10 w-44 max-w-[65%]" />
+                      <SkeletonBar className="h-[2.35rem] w-12 shrink-0 rounded-md border border-gray-200/80" />
+                    </div>
+                    <div className="flex shrink-0 rounded-lg bg-gray-100/90 p-1 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]">
+                      <SkeletonBar className="h-6 w-6 shrink-0 rounded-md border border-gray-200" />
+                    </div>
+                  </div>
+                  <SkeletonBar className="mt-3 h-2.5 w-40 max-w-full" />
+                </div>
+              </div>
+              <div className={dashboardWeeklyShowsToolbar}>
+                <SkeletonBar className="h-2 w-16" />
+              </div>
+              <ul
+                className={`${dashboardPrimaryListShell} ${dashboardRowList}`}
+              >
+                {[0, 1, 2].map((i) => (
+                  <li key={i}>
+                    <div
+                      className={`flex min-w-0 items-center gap-3 ${dashboardRowPad}`}
+                    >
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-200" />
+                        <SkeletonBar className="h-3 w-full max-w-[11rem]" />
+                      </span>
+                      <SkeletonBar className="h-2 w-12 shrink-0" />
+                      <SkeletonBar className="h-3 w-16 shrink-0" />
+                      <SkeletonBar className="h-3.5 w-3.5 shrink-0" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
-          <div className="rounded border border-gray-200/70 bg-white/80 px-2.5 py-2">
-            <SkeletonBar className="h-3.5 w-48 max-w-full" />
+          <div className="min-w-0">
+            <aside className={dashboardModulePanel} aria-hidden>
+              <div className={dashboardModulePanelHeader}>
+                <SkeletonBar className="h-2 w-20" />
+              </div>
+              <ul className={dashboardRowList}>
+                {[0, 1].map((i) => (
+                  <li key={i}>
+                    <div
+                      className={`flex min-w-0 items-center gap-1.5 ${dashboardRowPad}`}
+                    >
+                      <SkeletonBar className="h-2 w-2 shrink-0 rounded-sm" />
+                      <SkeletonBar className="h-2.5 w-full max-w-[9rem]" />
+                      <SkeletonBar className="h-2.5 w-5 shrink-0" />
+                      <SkeletonBar className="h-3.5 w-3.5 shrink-0" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </aside>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

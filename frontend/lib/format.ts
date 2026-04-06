@@ -6,6 +6,11 @@ export function formatCurrency(n: number): string {
   }).format(n);
 }
 
+/** Currency magnitude only — pair with semantic color for negative vs positive. */
+export function formatCurrencyAbs(n: number): string {
+  return formatCurrency(Math.abs(n));
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
     year: 'numeric',

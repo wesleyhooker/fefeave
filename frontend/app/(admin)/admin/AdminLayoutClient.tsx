@@ -7,6 +7,7 @@ import {
   workspaceShellBg,
   workspaceShellColumn,
 } from "./_components/workspaceUi";
+import { AdminWorkspaceProvider } from "./AdminWorkspaceContext";
 
 export type AdminLayoutClientProps = {
   title: string;
@@ -42,7 +43,11 @@ export function AdminLayoutClient({
           isProduction={isProduction}
           onMenuClick={() => setMobileSidebarOpen(true)}
         />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="flex-1 p-4 md:p-6">
+          <AdminWorkspaceProvider email={email}>
+            {children}
+          </AdminWorkspaceProvider>
+        </main>
       </div>
     </div>
   );
