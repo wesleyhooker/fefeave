@@ -15,6 +15,7 @@ import {
   dashboardModulePanel,
   dashboardModulePanelHeader,
   dashboardPadX,
+  dashboardPageIntroStrip,
   dashboardPrimaryListShell,
   dashboardRowList,
   dashboardRowPad,
@@ -96,25 +97,28 @@ export function DashboardSkeleton() {
     <div className="min-w-0">
       <div className={DASHBOARD_CONTENT}>
         <div className={DASHBOARD_TOP_STACK}>
-          <header className="rounded-xl border border-stone-200/85 bg-gradient-to-b from-stone-50/45 to-white px-4 py-4 shadow-[0_1px_2px_rgba(120,113,108,0.05)] sm:px-5 sm:py-4">
+          <header className={dashboardPageIntroStrip}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-              <div className="min-w-0">
+              <div className="min-w-0 border-l-2 border-rose-400/45 pl-3.5 sm:pl-4">
                 <SkeletonBar className="h-8 w-52 max-w-full" />
                 <SkeletonBar className="mt-2 h-4 w-64 max-w-full" />
               </div>
-              <SkeletonBar className="h-9 w-full shrink-0 rounded-lg sm:w-24" />
+              <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-28" />
             </div>
           </header>
 
-          <section className="overflow-hidden rounded-2xl border border-stone-200/90 bg-white shadow-[0_2px_12px_-4px_rgba(120,113,108,0.07),0_1px_2px_rgba(120,113,108,0.04)]">
-            <div className="grid grid-cols-1 gap-3 bg-stone-50/40 p-3 sm:grid-cols-3 sm:gap-3 sm:p-3.5">
+          <section aria-hidden>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3">
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-stone-200/85 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(120,113,108,0.05)] sm:px-5 sm:py-5"
+                  className="flex min-h-[7.75rem] flex-col rounded-xl border border-stone-200/80 bg-white px-4 py-4 shadow-[0_1px_3px_rgba(120,113,108,0.06)] sm:min-h-[8rem] sm:px-5 sm:py-5"
                 >
-                  <SkeletonBar className="h-2.5 w-20" />
-                  <SkeletonBar className="mt-2 h-7 w-28" />
+                  <div className="flex items-start justify-between gap-2">
+                    <SkeletonBar className="h-2.5 w-24" />
+                    <span className="h-9 w-9 shrink-0 rounded-full bg-stone-100" />
+                  </div>
+                  <SkeletonBar className="mt-4 h-7 w-28" />
                 </div>
               ))}
             </div>
@@ -132,11 +136,9 @@ export function DashboardSkeleton() {
               >
                 <div className="overflow-hidden rounded-[0.65rem] border border-stone-200/90 bg-white p-6 shadow-sm sm:p-7">
                   <SkeletonBar className="h-2.5 w-28" />
-                  <div className="mt-3 flex items-center justify-between gap-4">
-                    <SkeletonBar className="h-10 w-44 max-w-[75%]" />
-                    <div className="flex shrink-0 rounded-lg bg-stone-100/90 p-1 shadow-[inset_0_0_0_1px_rgba(120,113,108,0.08)]">
-                      <SkeletonBar className="h-6 w-6 shrink-0 rounded-md border border-stone-200" />
-                    </div>
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <SkeletonBar className="h-10 w-44 max-w-full sm:max-w-[75%]" />
+                    <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-36" />
                   </div>
                   <SkeletonBar className="mt-3 h-2.5 w-40 max-w-full" />
                 </div>

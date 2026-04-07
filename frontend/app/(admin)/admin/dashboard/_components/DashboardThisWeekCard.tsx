@@ -10,6 +10,7 @@ import {
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyMuted,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import { DashboardMarkPaidDialog } from "./DashboardMarkPaidDialog";
 import { DashboardRetryBanner } from "./DashboardRetryBanner";
 import { DashboardShowRow } from "./DashboardShowRow";
 import {
@@ -80,7 +81,7 @@ export function DashboardThisWeekCard({
   const moreThanPreview = Math.max(0, showsThisWeekTotal - showsLimit);
 
   const [weeklyShowsOpen, setWeeklyShowsOpen] = useState(!selfPaid);
-  const [checkPop, setCheckPop] = useState(false);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const prevPaidRef = useRef(selfPaid);
 
   useEffect(() => {
@@ -94,9 +95,7 @@ export function DashboardThisWeekCard({
   useEffect(() => {
     if (prevPaidRef.current !== selfPaid) {
       prevPaidRef.current = selfPaid;
-      setCheckPop(true);
-      const t = window.setTimeout(() => setCheckPop(false), 260);
-      return () => window.clearTimeout(t);
+      setMarkPaidOpen(false);
     }
   }, [selfPaid]);
 
@@ -108,20 +107,16 @@ export function DashboardThisWeekCard({
     weekProfitError == null && weekProfitDisplay !== null;
 
   const summaryPaidComplete = Boolean(selfPaid && hasProfitSummary);
-  const disabledMark = !selfPaid && weekProfitError != null;
 
-  const paidTitle =
+  const paidAtLabel =
     selfPay?.paidAt != null
-      ? new Date(selfPay.paidAt).toLocaleString()
-      : undefined;
-
-  const togglePaid = () => {
-    if (selfPaid) {
-      onMarkUndone();
-    } else {
-      onMarkDone();
-    }
-  };
+      ? new Date(selfPay.paidAt).toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : null;
 
   return (
     <div className="space-y-3">
@@ -146,80 +141,85 @@ export function DashboardThisWeekCard({
               </p>
             </div>
           ) : weekProfitDisplay !== null ? (
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={selfPaid}
-              aria-label={
-                selfPaid
-                  ? "Week marked paid to yourself. Press to undo."
-                  : "Weekly payout: press to mark this week as paid to yourself."
-              }
-              title={paidTitle}
-              disabled={disabledMark}
-              onClick={togglePaid}
-              className={`group/weekly w-full overflow-hidden rounded-[0.65rem] border text-left shadow-sm transition-[border-color,background-color,box-shadow] duration-300 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/40 enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 ${
-                summaryPaidComplete
-                  ? "border-emerald-400/35 bg-emerald-50/22 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.75),0_2px_14px_-6px_rgba(5,100,78,0.06)]"
-                  : "border-stone-200/95 bg-white hover:border-stone-300/90 hover:shadow-md"
-              }`}
-            >
-              <div className="px-6 pb-6 pt-6 sm:px-7 sm:pb-7 sm:pt-7">
-                <div className={dashboardEyebrow}>Est. week profit</div>
-                <div className="mt-3 flex min-w-0 items-center justify-between gap-x-4 gap-y-2">
-                  <p
-                    className={`min-w-0 flex-1 text-3xl leading-none tracking-tight sm:text-[2.35rem] ${workspaceListPrimaryMoneyAmountClass(weekProfitDisplay)}`}
-                  >
-                    {formatCurrency(weekProfitDisplay)}
-                  </p>
-                  <div
-                    className={`flex shrink-0 rounded-lg p-1 transition-[background-color,box-shadow] duration-200 ${
-                      summaryPaidComplete
-                        ? "bg-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)]"
-                        : "bg-stone-100/90 shadow-[inset_0_0_0_1px_rgba(120,113,108,0.08)] group-hover/weekly:bg-stone-100"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-md border-2 transition-transform duration-200 ease-out ${
-                        checkPop
-                          ? "scale-110"
-                          : "scale-100 group-hover/weekly:scale-[1.04]"
-                      } ${
-                        selfPaid
-                          ? "border-emerald-700/95 bg-emerald-700/95 text-white shadow-[0_1px_2px_rgba(5,95,72,0.2)]"
-                          : "border-stone-400/75 bg-white shadow-[0_1px_2px_rgba(120,113,108,0.06)]"
-                      }`}
-                      aria-hidden
+            <>
+              <div
+                className={`w-full overflow-hidden rounded-[0.65rem] border text-left shadow-sm transition-[border-color,background-color,box-shadow] duration-300 ease-out ${
+                  summaryPaidComplete
+                    ? "border-emerald-400/40 bg-emerald-50/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8),0_2px_14px_-6px_rgba(5,100,78,0.07)]"
+                    : "border-stone-200/95 bg-white"
+                }`}
+              >
+                <div className="px-6 pb-6 pt-6 sm:px-7 sm:pb-7 sm:pt-7">
+                  <div className={dashboardEyebrow}>Est. week profit</div>
+                  <div className="mt-3 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-x-4">
+                    <p
+                      className={`min-w-0 text-3xl leading-none tracking-tight sm:text-[2.35rem] ${workspaceListPrimaryMoneyAmountClass(weekProfitDisplay)}`}
                     >
-                      {selfPaid ? (
-                        <svg
-                          className="h-3.5 w-3.5"
-                          viewBox="0 0 12 12"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
+                      {formatCurrency(weekProfitDisplay)}
+                    </p>
+                    <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+                      {summaryPaidComplete ? (
+                        <>
+                          <span className="inline-flex items-center justify-center gap-1.5 self-stretch rounded-lg bg-emerald-100/85 px-3 py-2 text-center text-xs font-semibold text-emerald-900 shadow-[inset_0_0_0_1px_rgba(5,95,72,0.08)] sm:self-end sm:py-1.5">
+                            <svg
+                              className="h-3.5 w-3.5 shrink-0 text-emerald-800"
+                              viewBox="0 0 12 12"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.2"
+                              aria-hidden
+                            >
+                              <path
+                                d="M2 6l3 3 5-5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            Marked paid
+                          </span>
+                          {paidAtLabel ? (
+                            <p className="text-center text-[11px] font-medium tabular-nums text-emerald-800/75 sm:text-right">
+                              Confirmed {paidAtLabel}
+                            </p>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={onMarkUndone}
+                            className="text-center text-xs font-medium text-stone-500 underline decoration-stone-300/80 underline-offset-2 transition-colors hover:text-stone-800 sm:text-right"
+                          >
+                            Mark as unpaid
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setMarkPaidOpen(true)}
+                          className="rounded-lg bg-rose-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(190,24,93,0.2)] transition-[background-color,box-shadow] hover:bg-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/50 active:bg-rose-800 sm:py-2"
                         >
-                          <path
-                            d="M2 6l3 3 5-5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      ) : null}
-                    </span>
+                          Mark as paid
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  <p className="mt-3 text-xs tabular-nums leading-relaxed text-stone-500">
+                    <span className="text-stone-700">
+                      {closedThisWeekCount}
+                    </span>{" "}
+                    closed
+                    <span className="mx-1.5 text-stone-300">·</span>
+                    <span className="text-stone-700">
+                      {upcomingThisWeekCount}
+                    </span>{" "}
+                    upcoming
+                  </p>
                 </div>
-                <p className="mt-3 text-xs tabular-nums leading-relaxed text-stone-500">
-                  <span className="text-stone-700">{closedThisWeekCount}</span>{" "}
-                  closed
-                  <span className="mx-1.5 text-stone-300">·</span>
-                  <span className="text-stone-700">
-                    {upcomingThisWeekCount}
-                  </span>{" "}
-                  upcoming
-                </p>
               </div>
-            </button>
+              <DashboardMarkPaidDialog
+                open={markPaidOpen}
+                onOpenChange={setMarkPaidOpen}
+                onConfirm={onMarkDone}
+              />
+            </>
           ) : (
             <div className="rounded-xl border border-stone-200/90 bg-white p-6 shadow-sm sm:p-7">
               <p className={`text-sm font-medium ${workspaceMoneyMuted}`}>—</p>

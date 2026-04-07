@@ -58,15 +58,27 @@ export const dashboardWeeklyListToggleBand = `${dashboardPadX} border-t border-s
 
 export const dashboardModulePanel = `min-w-0 w-full overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`;
 
-export const dashboardModulePanelHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/45 py-2.5`;
+export const dashboardModulePanelHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/35 py-2.5`;
 
 export const dashboardNarrowModuleLayout = 'w-full max-w-sm self-start';
 
+// --- Page intro strip (dashboard) ---------------------------------------------
+/**
+ * Full-width intro band — not a card: wash + hairline bottom, no heavy lift shadow.
+ * Pairs with workspace shell; distinct from rounded modules below.
+ */
+export const dashboardPageIntroStrip =
+  'relative overflow-hidden rounded-lg border-b border-stone-200/55 bg-gradient-to-r from-rose-50/45 via-stone-50/50 to-stone-50/20 px-4 py-5 sm:px-5 sm:py-5';
+
+/** Thin rose accent at the text block edge (Structured App clarity). */
+export const dashboardPageIntroAccent =
+  'border-l-2 border-rose-400/45 pl-3.5 sm:pl-4';
+
 // --- Header CTA (dashboard page) ----------------------------------------------
 
-/** Primary add action — soft rose / mauve emphasis; still internal-admin quiet. */
+/** Primary “+ Show” — solid rose; readable on the intro strip (reference modal primary). */
 export const dashboardCtaAddShow =
-  'inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-rose-200/45 bg-white px-3.5 py-2 text-sm font-semibold text-stone-800 shadow-[0_1px_2px_rgba(120,113,108,0.06),0_1px_2px_rgba(190,24,93,0.05)] transition-all duration-200 hover:border-rose-300/90 hover:bg-rose-50/60 hover:text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/40';
+  'inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(190,24,93,0.18)] transition-[background-color,box-shadow] duration-200 hover:bg-rose-700 hover:shadow-[0_2px_8px_-2px_rgba(190,24,93,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/50 active:bg-rose-800';
 
 // --- Analytics module (extensible: swap body for category / vendor / season later) ---
 
