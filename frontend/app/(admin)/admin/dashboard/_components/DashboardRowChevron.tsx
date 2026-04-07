@@ -2,7 +2,7 @@
 export function DashboardRowChevron() {
   return (
     <svg
-      className="h-3.5 w-3.5 shrink-0 translate-x-0 text-gray-400 transition-all duration-200 ease-out group-hover:translate-x-1 group-hover:text-emerald-600"
+      className="h-3.5 w-3.5 shrink-0 translate-x-0 text-stone-400 transition-all duration-200 ease-out group-hover:translate-x-1 group-hover:text-rose-700/85"
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden

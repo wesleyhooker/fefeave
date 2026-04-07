@@ -39,13 +39,13 @@ export function DashboardShowRow({
     <DashboardClickableRow href={href} aria-label={label}>
       <span className="flex min-w-0 flex-1 items-center gap-2">
         <DashboardShowStatusCompact status={show.status ?? ""} />
-        <span className="min-w-0 truncate text-sm font-medium text-gray-900">
+        <span className="min-w-0 truncate text-sm font-medium text-stone-900">
           {show.name}
         </span>
       </span>
       <time
         dateTime={show.show_date}
-        className="shrink-0 whitespace-nowrap text-[11px] text-gray-500 tabular-nums sm:text-xs"
+        className="shrink-0 whitespace-nowrap text-[11px] text-stone-500 tabular-nums sm:text-xs"
       >
         {formatDate(show.show_date)}
       </time>

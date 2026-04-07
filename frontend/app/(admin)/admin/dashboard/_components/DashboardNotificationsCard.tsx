@@ -65,7 +65,7 @@ export function DashboardNotificationsCard({
     <aside className={dashboardModulePanel} aria-label="Notifications">
       <div className={dashboardModulePanelHeader}>
         <h2 className={`flex items-center gap-2 ${dashboardEyebrow}`}>
-          <BellIcon className="h-3.5 w-3.5 text-gray-400" />
+          <BellIcon className="h-3.5 w-3.5 text-stone-400" />
           Notifications
         </h2>
       </div>
@@ -78,18 +78,20 @@ export function DashboardNotificationsCard({
         ) : null}
         <DashboardNotificationRow
           href="/admin/shows"
-          iconClassName="bg-sky-400/75"
+          iconClassName="bg-stone-400/45"
           title="Open shows"
           valueLabel={String(openShowsCount)}
-          valueClassName={openShowsCount > 0 ? "text-sky-900" : "text-gray-400"}
+          valueClassName={
+            openShowsCount > 0 ? "text-stone-800" : "text-stone-400"
+          }
         />
         <DashboardNotificationRow
           href="/admin/balances"
-          iconClassName="bg-amber-400/55"
+          iconClassName="bg-amber-300/55"
           title="Vendors with balance"
           valueLabel={String(vendorsOwingCount)}
           valueClassName={
-            vendorsOwingCount > 0 ? "text-rose-800/90" : "text-gray-400"
+            vendorsOwingCount > 0 ? "text-rose-800/90" : "text-stone-400"
           }
         />
       </ul>

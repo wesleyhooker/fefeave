@@ -10,8 +10,9 @@ import {
   dashboardRoundedCard,
 } from "./dashboardStructure";
 
+/** One consistent tile treatment — differentiation via labels + numeric semantics only. */
 const statTile =
-  "relative overflow-hidden rounded-xl border border-gray-100/95 bg-white px-4 py-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.08)] before:pointer-events-none before:absolute before:left-0 before:top-1/2 before:h-[68%] before:w-[3px] before:-translate-y-1/2 before:rounded-full sm:px-5 sm:py-5";
+  "rounded-xl border border-stone-200/85 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(120,113,108,0.05)] sm:px-5 sm:py-5";
 
 export function DashboardOverviewStats({
   ytdProfit,
@@ -34,8 +35,8 @@ export function DashboardOverviewStats({
     <section
       className={`min-w-0 overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`}
     >
-      <div className="grid grid-cols-1 gap-2.5 p-2.5 sm:grid-cols-3 sm:gap-3 sm:p-3">
-        <div className={`${statTile} before:bg-emerald-400/40`}>
+      <div className="grid grid-cols-1 gap-3 bg-stone-50/40 p-3 sm:grid-cols-3 sm:gap-3 sm:p-3.5">
+        <div className={statTile}>
           <p className={dashboardEyebrow}>YTD profit</p>
           {ytdProfitError != null ? (
             <p className="mt-2 text-sm text-rose-800/90">{ytdProfitError}</p>
@@ -54,7 +55,7 @@ export function DashboardOverviewStats({
           )}
         </div>
 
-        <div className={`${statTile} before:bg-rose-400/35`}>
+        <div className={statTile}>
           <p className={dashboardEyebrow}>Vendors owed</p>
           {balancesError != null ? (
             <p className="mt-2 text-sm text-rose-800/90">{balancesError}</p>
@@ -73,12 +74,12 @@ export function DashboardOverviewStats({
           )}
         </div>
 
-        <div className={`${statTile} before:bg-slate-400/30`}>
+        <div className={statTile}>
           <p className={dashboardEyebrow}>Completed (YTD)</p>
           {showsError != null ? (
             <p className="mt-2 text-sm text-rose-800/90">{showsError}</p>
           ) : (
-            <p className="mt-2 text-xl font-semibold tabular-nums text-gray-900 sm:text-2xl">
+            <p className="mt-2 text-xl font-semibold tabular-nums text-stone-900 sm:text-2xl">
               {completedShowsYtdCount}
             </p>
           )}

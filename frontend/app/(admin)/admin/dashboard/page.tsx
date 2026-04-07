@@ -30,9 +30,16 @@ import {
 import {
   DASHBOARD_CONTENT,
   DASHBOARD_PRIMARY_SECONDARY_GRID,
+  DASHBOARD_SUPPORTING_STACK,
   DASHBOARD_THIS_WEEK_SHOWS_LIMIT,
+  DASHBOARD_TOP_STACK,
 } from "./constants";
 import type { WeekPreviewSummary } from "./types";
+import {
+  buildCalendarMonthDailySeries,
+  type DashboardDayProfitPoint,
+} from "./_components/dashboardAnalyticsUtils";
+import { DashboardThisMonthDailyEarningsCard } from "./_components/DashboardThisMonthDailyEarningsCard";
 import { DashboardNotificationsCard } from "./_components/DashboardNotificationsCard";
 import { DashboardOverviewStats } from "./_components/DashboardOverviewStats";
 import { DashboardPageHeader } from "./_components/DashboardPageHeader";
@@ -64,8 +71,25 @@ export default function AdminDashboardPage() {
   >({});
   const [ytdProfit, setYtdProfit] = useState<number | null>(null);
   const [ytdProfitError, setYtdProfitError] = useState<string | null>(null);
+  const [monthDailyProfits, setMonthDailyProfits] = useState<
+    DashboardDayProfitPoint[] | null
+  >(null);
+  const [monthDailyError, setMonthDailyError] = useState<string | null>(null);
 
   const snapshotYear = useMemo(() => new Date().getFullYear(), []);
+
+  /** Single calendar anchor for “this month” analytics (stable for the session). */
+  const dashboardCalendar = useMemo(() => {
+    const t = new Date();
+    return {
+      ref: t,
+      monthKey: `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}`,
+      monthTitle: t.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      }),
+    };
+  }, []);
 
   useEffect(() => {
     setSelfPay(loadSelfPay(weekBounds.startStr));
@@ -309,6 +333,77 @@ export default function AdminDashboardPage() {
     }).length;
   }, [shows, snapshotYear]);
 
+  const completedShowsThisMonth = useMemo(() => {
+    return (shows ?? []).filter((s) => {
+      if ((s.status ?? "").toUpperCase() !== "COMPLETED") return false;
+      const d = s.show_date;
+      return (
+        d != null &&
+        d.length >= 7 &&
+        d.slice(0, 7) === dashboardCalendar.monthKey
+      );
+    });
+  }, [shows, dashboardCalendar.monthKey]);
+
+  useEffect(() => {
+    const list = completedShowsThisMonth;
+    let cancelled = false;
+
+    if (list.length === 0) {
+      setMonthDailyProfits(
+        buildCalendarMonthDailySeries(new Map(), dashboardCalendar.ref),
+      );
+      setMonthDailyError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setMonthDailyProfits(null);
+    setMonthDailyError(null);
+    Promise.all(
+      list.map(async (show) => {
+        const [fin, settles] = await Promise.all([
+          fetchShowFinancials(show.id).catch(() => null),
+          fetchShowSettlements(show.id).catch(() => []),
+        ]);
+        const payout = fin != null ? Number(fin.payout_after_fees_amount) : 0;
+        const p = Number.isFinite(payout) ? payout : 0;
+        const profit = estimatedShowProfit(p, settles);
+        return { show_date: show.show_date, profit };
+      }),
+    )
+      .then((rows) => {
+        if (!cancelled) {
+          const byDay = new Map<string, number>();
+          for (const row of rows) {
+            const ymd = row.show_date;
+            if (ymd == null) continue;
+            const dayKey = ymd.slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) continue;
+            byDay.set(dayKey, (byDay.get(dayKey) ?? 0) + row.profit);
+          }
+          setMonthDailyProfits(
+            buildCalendarMonthDailySeries(byDay, dashboardCalendar.ref),
+          );
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setMonthDailyError(
+            e instanceof Error
+              ? e.message
+              : "Could not load monthly day totals.",
+          );
+          setMonthDailyProfits(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [completedShowsThisMonth, dashboardCalendar]);
+
   const totalVendorBalance = useMemo(() => {
     if (balances === null) return null;
     return balances.reduce((sum, r) => sum + parseAmount(r.balance_owed), 0);
@@ -341,22 +436,29 @@ export default function AdminDashboardPage() {
   const ytdProfitPending =
     completedShowsYtdCount > 0 && ytdProfit === null && ytdProfitError == null;
 
+  const monthDailyPending =
+    completedShowsThisMonth.length > 0 &&
+    monthDailyProfits === null &&
+    monthDailyError == null;
+
   return (
     <div className="min-w-0">
       <div className={DASHBOARD_CONTENT}>
-        <DashboardPageHeader
-          weekRangeLabel={formatWeekRangeCompact(weekBounds)}
-        />
+        <div className={DASHBOARD_TOP_STACK}>
+          <DashboardPageHeader
+            weekRangeLabel={formatWeekRangeCompact(weekBounds)}
+          />
 
-        <DashboardOverviewStats
-          ytdProfit={ytdProfit}
-          ytdProfitError={ytdProfitError}
-          ytdProfitPending={ytdProfitPending}
-          balancesError={balancesError}
-          totalVendorBalance={totalVendorBalance}
-          showsError={showsError}
-          completedShowsYtdCount={completedShowsYtdCount}
-        />
+          <DashboardOverviewStats
+            ytdProfit={ytdProfit}
+            ytdProfitError={ytdProfitError}
+            ytdProfitPending={ytdProfitPending}
+            balancesError={balancesError}
+            totalVendorBalance={totalVendorBalance}
+            showsError={showsError}
+            completedShowsYtdCount={completedShowsYtdCount}
+          />
+        </div>
 
         <div className={DASHBOARD_PRIMARY_SECONDARY_GRID}>
           <div className="min-w-0">
@@ -386,6 +488,15 @@ export default function AdminDashboardPage() {
               vendorsOwingCount={vendorsOwingCount}
             />
           </div>
+        </div>
+
+        <div className={DASHBOARD_SUPPORTING_STACK}>
+          <DashboardThisMonthDailyEarningsCard
+            monthTitle={dashboardCalendar.monthTitle}
+            days={monthDailyProfits}
+            error={monthDailyError}
+            pending={monthDailyPending}
+          />
         </div>
       </div>
     </div>

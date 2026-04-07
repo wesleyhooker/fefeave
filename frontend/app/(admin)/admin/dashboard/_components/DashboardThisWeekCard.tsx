@@ -27,7 +27,7 @@ import {
 } from "./dashboardStructure";
 
 const textLink =
-  "text-xs font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 hover:text-gray-900";
+  "text-xs font-medium text-stone-600 underline decoration-stone-300/90 underline-offset-2 hover:text-stone-900";
 
 function ShowsChevronIcon({ className }: { className?: string }) {
   return (
@@ -43,38 +43,6 @@ function ShowsChevronIcon({ className }: { className?: string }) {
         clipRule="evenodd"
       />
     </svg>
-  );
-}
-
-/** Tiny decorative bars beside the headline amount — not real data. */
-function WeeklySummarySparkline({ paid }: { paid: boolean }) {
-  const heightsRem = [0.36, 0.58, 0.44, 0.72, 0.5, 0.64];
-  return (
-    <div
-      className={`pointer-events-none flex h-[2.35rem] shrink-0 flex-col justify-end rounded-md border px-1.5 pb-1 pt-1 transition-[border-color,background-color] duration-300 ${
-        paid
-          ? "border-emerald-200/55 bg-emerald-600/[0.08]"
-          : "border-gray-200/90 bg-gray-950/[0.035]"
-      }`}
-      aria-hidden
-    >
-      <div className="flex h-[1.35rem] items-end justify-center gap-0.5">
-        {heightsRem.map((h, i) => (
-          <span
-            key={i}
-            className={`w-[3px] rounded-[2px] ${
-              paid ? "bg-emerald-600/80" : "bg-emerald-700/55"
-            }`}
-            style={{ height: `${h}rem` }}
-          />
-        ))}
-      </div>
-      <div
-        className={`mt-1 h-px w-full rounded-full ${
-          paid ? "bg-emerald-400/35" : "bg-gray-400/45"
-        }`}
-      />
-    </div>
   );
 }
 
@@ -163,16 +131,16 @@ export function DashboardThisWeekCard({
 
       <section className={dashboardWeeklyStatusCard}>
         <div className={dashboardWeeklyHeaderBand}>
-          <h2 className="text-base font-semibold tracking-tight text-gray-900 sm:text-lg">
+          <h2 className="text-base font-semibold tracking-tight text-stone-900 sm:text-lg">
             This week
           </h2>
         </div>
 
         <div
-          className={`${dashboardWeeklyHeroInsetWrapper} rounded-xl bg-gray-50/50 p-1 sm:p-1.5`}
+          className={`${dashboardWeeklyHeroInsetWrapper} rounded-xl bg-stone-50/45 p-1 sm:p-1.5`}
         >
           {weekProfitError != null ? (
-            <div className="rounded-xl border border-gray-200/90 bg-white p-5 shadow-sm sm:p-6">
+            <div className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-sm sm:p-6">
               <p className="text-sm leading-snug text-rose-800/90">
                 {weekProfitError}
               </p>
@@ -190,28 +158,25 @@ export function DashboardThisWeekCard({
               title={paidTitle}
               disabled={disabledMark}
               onClick={togglePaid}
-              className={`group/weekly w-full overflow-hidden rounded-[0.65rem] border text-left shadow-sm transition-[border-color,background-color,box-shadow] duration-300 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600/45 enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 ${
+              className={`group/weekly w-full overflow-hidden rounded-[0.65rem] border text-left shadow-sm transition-[border-color,background-color,box-shadow] duration-300 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/40 enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 ${
                 summaryPaidComplete
-                  ? "border-emerald-300/55 bg-emerald-50/32 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.65),0_2px_14px_-6px_rgba(5,150,105,0.09)]"
-                  : "border-gray-200/95 bg-white ring-1 ring-gray-100/90 hover:border-gray-300 hover:shadow-md"
+                  ? "border-emerald-400/35 bg-emerald-50/22 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.75),0_2px_14px_-6px_rgba(5,100,78,0.06)]"
+                  : "border-stone-200/95 bg-white hover:border-stone-300/90 hover:shadow-md"
               }`}
             >
               <div className="px-6 pb-6 pt-6 sm:px-7 sm:pb-7 sm:pt-7">
                 <div className={dashboardEyebrow}>Est. week profit</div>
                 <div className="mt-3 flex min-w-0 items-center justify-between gap-x-4 gap-y-2">
-                  <div className="flex min-w-0 flex-1 items-end gap-3">
-                    <p
-                      className={`min-w-0 text-3xl leading-none tracking-tight sm:text-[2.35rem] ${workspaceListPrimaryMoneyAmountClass(weekProfitDisplay)}`}
-                    >
-                      {formatCurrency(weekProfitDisplay)}
-                    </p>
-                    <WeeklySummarySparkline paid={summaryPaidComplete} />
-                  </div>
+                  <p
+                    className={`min-w-0 flex-1 text-3xl leading-none tracking-tight sm:text-[2.35rem] ${workspaceListPrimaryMoneyAmountClass(weekProfitDisplay)}`}
+                  >
+                    {formatCurrency(weekProfitDisplay)}
+                  </p>
                   <div
                     className={`flex shrink-0 rounded-lg p-1 transition-[background-color,box-shadow] duration-200 ${
                       summaryPaidComplete
-                        ? "bg-white/50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.65)]"
-                        : "bg-gray-100/90 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] group-hover/weekly:bg-gray-100"
+                        ? "bg-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)]"
+                        : "bg-stone-100/90 shadow-[inset_0_0_0_1px_rgba(120,113,108,0.08)] group-hover/weekly:bg-stone-100"
                     }`}
                   >
                     <span
@@ -221,8 +186,8 @@ export function DashboardThisWeekCard({
                           : "scale-100 group-hover/weekly:scale-[1.04]"
                       } ${
                         selfPaid
-                          ? "border-emerald-600 bg-emerald-600 text-white shadow-[0_1px_2px_rgba(5,150,105,0.2)]"
-                          : "border-gray-400/85 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                          ? "border-emerald-700/95 bg-emerald-700/95 text-white shadow-[0_1px_2px_rgba(5,95,72,0.2)]"
+                          : "border-stone-400/75 bg-white shadow-[0_1px_2px_rgba(120,113,108,0.06)]"
                       }`}
                       aria-hidden
                     >
@@ -244,11 +209,11 @@ export function DashboardThisWeekCard({
                     </span>
                   </div>
                 </div>
-                <p className="mt-3 text-xs tabular-nums leading-relaxed text-gray-500">
-                  <span className="text-gray-700">{closedThisWeekCount}</span>{" "}
+                <p className="mt-3 text-xs tabular-nums leading-relaxed text-stone-500">
+                  <span className="text-stone-700">{closedThisWeekCount}</span>{" "}
                   closed
-                  <span className="mx-1.5 text-gray-300">·</span>
-                  <span className="text-gray-700">
+                  <span className="mx-1.5 text-stone-300">·</span>
+                  <span className="text-stone-700">
                     {upcomingThisWeekCount}
                   </span>{" "}
                   upcoming
@@ -256,7 +221,7 @@ export function DashboardThisWeekCard({
               </div>
             </button>
           ) : (
-            <div className="rounded-xl border border-gray-200/90 bg-white p-6 shadow-sm sm:p-7">
+            <div className="rounded-xl border border-stone-200/90 bg-white p-6 shadow-sm sm:p-7">
               <p className={`text-sm font-medium ${workspaceMoneyMuted}`}>—</p>
             </div>
           )}
@@ -295,13 +260,13 @@ export function DashboardThisWeekCard({
                 className={`${dashboardEyebrow} ${dashboardShowsNavLink}`}
               >
                 Shows
-                <ShowsChevronIcon className="h-3 w-3 opacity-60" />
+                <ShowsChevronIcon className="h-3 w-3 text-stone-500 opacity-70" />
               </Link>
             </div>
             <ul className={`${dashboardPrimaryListShell} ${dashboardRowList}`}>
               {showsThisWeek.length === 0 ? (
                 <li
-                  className={`${dashboardPadX} py-6 text-center text-sm text-gray-500`}
+                  className={`${dashboardPadX} py-6 text-center text-sm text-stone-500`}
                 >
                   None scheduled this week.
                 </li>

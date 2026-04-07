@@ -6,7 +6,7 @@ export function DashboardNotificationRow({
   iconClassName,
   title,
   valueLabel,
-  valueClassName = "text-gray-600",
+  valueClassName = "text-stone-600",
 }: {
   href: string;
   iconClassName: string;
@@ -20,7 +20,7 @@ export function DashboardNotificationRow({
         className={`h-1.5 w-1.5 shrink-0 rounded-full ${iconClassName}`}
         aria-hidden
       />
-      <span className="min-w-0 flex-1 truncate text-xs font-normal text-gray-700">
+      <span className="min-w-0 flex-1 truncate text-xs font-normal text-stone-700">
         {title}
       </span>
       <span
