@@ -28,7 +28,6 @@ import {
   type SelfPayStored,
 } from "./selfPayStorage";
 import {
-  DASHBOARD_CONTENT,
   DASHBOARD_PRIMARY_SECONDARY_GRID,
   DASHBOARD_SUPPORTING_STACK,
   DASHBOARD_THIS_WEEK_SHOWS_LIMIT,
@@ -44,6 +43,10 @@ import { DashboardNotificationsCard } from "./_components/DashboardNotifications
 import { DashboardOverviewStats } from "./_components/DashboardOverviewStats";
 import { DashboardPageHeader } from "./_components/DashboardPageHeader";
 import { DashboardThisWeekCard } from "./_components/DashboardThisWeekCard";
+import {
+  AdminPageContainer,
+  AdminPageIntroSection,
+} from "../_components/AdminPageContainer";
 
 function parseAmount(value: string): number {
   const n = Number(value);
@@ -442,13 +445,15 @@ export default function AdminDashboardPage() {
     monthDailyError == null;
 
   return (
-    <div className="min-w-0">
-      <div className={DASHBOARD_CONTENT}>
-        <div className={DASHBOARD_TOP_STACK}>
-          <DashboardPageHeader
-            weekRangeLabel={formatWeekRangeCompact(weekBounds)}
-          />
+    <>
+      <AdminPageIntroSection>
+        <DashboardPageHeader
+          weekRangeLabel={formatWeekRangeCompact(weekBounds)}
+        />
+      </AdminPageIntroSection>
 
+      <AdminPageContainer>
+        <div className={DASHBOARD_TOP_STACK}>
           <DashboardOverviewStats
             ytdProfit={ytdProfit}
             ytdProfitError={ytdProfitError}
@@ -498,7 +503,7 @@ export default function AdminDashboardPage() {
             pending={monthDailyPending}
           />
         </div>
-      </div>
-    </div>
+      </AdminPageContainer>
+    </>
   );
 }

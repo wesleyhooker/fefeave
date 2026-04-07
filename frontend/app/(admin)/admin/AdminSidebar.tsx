@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { workspaceChromeHover } from "./_components/workspaceUi";
+import {
+  workspaceChromeHover,
+  workspaceChromeHoverWarm,
+} from "./_components/workspaceUi";
 
 const NAV_ITEMS: {
   href: string;
@@ -50,7 +53,7 @@ function NavLinks({
             onClick={onNavigate}
             className={`block rounded-lg px-3 py-2 text-sm ${
               isActive
-                ? "bg-gray-200/45 font-semibold text-gray-900 transition-[color,background-color] duration-200 ease-out"
+                ? "bg-rose-50/80 font-semibold text-stone-900 transition-[color,background-color] duration-200 ease-out"
                 : `text-gray-700 ${workspaceChromeHover}`
             }`}
             aria-current={isActive ? "page" : undefined}
@@ -96,7 +99,7 @@ export function AdminSidebar({
     <>
       {/* Desktop: fixed-width sidebar */}
       <aside
-        className="hidden w-56 shrink-0 bg-white p-4 md:block"
+        className="hidden w-56 shrink-0 border-r border-gray-200 bg-white p-4 md:block"
         aria-label="Admin navigation"
       >
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">
@@ -129,7 +132,7 @@ export function AdminSidebar({
               <button
                 type="button"
                 onClick={onMobileClose}
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-gray-600 ${workspaceChromeHover}`}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-stone-600 ${workspaceChromeHoverWarm}`}
                 aria-label="Close menu"
               >
                 <svg

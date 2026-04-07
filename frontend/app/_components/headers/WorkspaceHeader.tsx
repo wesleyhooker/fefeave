@@ -2,7 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { workspaceChromeHover } from "@/app/(admin)/admin/_components/workspaceUi";
+import {
+  workspaceChromeHover,
+  workspaceChromeHoverWarm,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 import { ProfileDropdown } from "./ProfileDropdown";
 
 export type WorkspaceHeaderProps = {
@@ -25,7 +28,7 @@ export function WorkspaceHeader({
   onMenuClick,
 }: WorkspaceHeaderProps) {
   return (
-    <header className="relative z-10 border-b border-gray-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur-sm md:px-6">
+    <header className="relative z-10 border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur-sm md:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
           {onMenuClick && (
@@ -54,7 +57,7 @@ export function WorkspaceHeader({
             <Link
               href="/"
               aria-label="Go to Fefe Ave site"
-              className={`flex shrink-0 items-center gap-2 rounded-lg py-1 pr-1 text-lg font-semibold text-gray-900 hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:py-0.5 md:pr-1.5 ${workspaceChromeHover}`}
+              className={`flex shrink-0 items-center gap-2 rounded-lg py-1 pr-1 text-lg font-semibold text-gray-900 hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:py-0.5 md:pr-1.5 ${workspaceChromeHoverWarm}`}
             >
               <Image
                 src="/fefe-bird-icon.png"

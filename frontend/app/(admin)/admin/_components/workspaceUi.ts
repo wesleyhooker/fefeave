@@ -29,7 +29,7 @@
  * Shadows: `shadow-workspace-surface` / `shadow-workspace-surface-sm` (tailwind.config).
  */
 
-/** Page / shell — gray-100 tone so white cards read clearly above it */
+/** Page / shell — neutral light gray so white cards read clearly above it. */
 export const workspaceShellBg = 'bg-[#F3F4F6]';
 
 /**
@@ -47,6 +47,7 @@ export const workspaceChromeTransition =
  * Slightly stronger than gray-100 on white chrome (sidebar, header, menus).
  */
 export const workspaceChromeHover = `${workspaceChromeTransition} hover:bg-gray-200/55 active:bg-gray-300/35`;
+export const workspaceChromeHoverWarm = `${workspaceChromeTransition} hover:bg-stone-200/45 active:bg-stone-300/30`;
 
 /**
  * Lighter inset band on the shell (filters, totals). Steps up toward white
@@ -77,6 +78,34 @@ export const workspacePageTitle = 'text-2xl font-semibold text-gray-900';
 
 /** Subtitle / context under page title (e.g. week range) */
 export const workspacePageMeta = 'mt-1 text-sm text-gray-600';
+
+// --- Page intro strip (soft boutique workspace) -------------------------------
+
+/** Shared page-content width for admin pages (aligns intro + cards). */
+export const workspacePageContentWidth = 'w-full max-w-5xl xl:max-w-6xl';
+
+/** Standard page gutters inside the admin main area. */
+export const workspacePageGutter = 'px-4 md:px-6';
+
+/** Shared admin page stack rhythm under intro zone. */
+export const workspacePageContentStack = 'flex flex-col gap-6 md:gap-7';
+
+/** Single owner of spacing between intro zone and the first content row. */
+export const workspacePageIntroToContentGap = 'pt-2 md:pt-2.5';
+
+/**
+ * Reusable workspace page-intro zone (page layer, not a content card).
+ * No radius/shadow/panel border; this is page framing under the workspace top nav.
+ */
+export const workspacePageIntroZone =
+  'relative overflow-hidden bg-[rgba(250,247,246,0.85)] after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-stone-200/70';
+
+/** Vertical rhythm inside intro zone; horizontal rhythm comes from main layout padding. */
+export const workspacePageIntroZoneInner = 'relative';
+
+/** Optional left accent rail for intro text block. */
+export const workspacePageIntroAccent =
+  'border-l-[3px] border-rose-400/60 pl-3.5 sm:pl-4';
 
 /** In-card section H2 */
 export const workspaceSectionTitle =
@@ -211,6 +240,14 @@ export const workspaceActionTertiaryLink = `inline-flex items-center justify-cen
  * Record payment on balance/vendor rows (secondary bucket; not Pay label).
  */
 export const workspaceActionRecordPaymentSm = workspaceActionSecondarySm;
+
+/** Warm primary action for meaningful workspace confirms (e.g. mark paid). */
+export const workspaceActionWarmPrimaryMd =
+  'inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(190,24,93,0.18)] transition-[background-color,box-shadow] duration-200 hover:bg-rose-700 hover:shadow-[0_2px_8px_-2px_rgba(190,24,93,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/50 active:bg-rose-800';
+
+/** Subtle outline action for confirm/cancel dialogs and secondary controls. */
+export const workspaceActionQuietOutlineMd =
+  'inline-flex items-center justify-center rounded-xl border border-stone-200/95 bg-white px-3 py-2.5 text-sm font-semibold text-stone-800 shadow-[0_1px_2px_rgba(120,113,108,0.04)] transition-colors hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/40';
 
 /** @deprecated Use workspaceActionPrimaryMd */
 export const workspaceBtnPrimary = workspaceActionPrimaryMd;

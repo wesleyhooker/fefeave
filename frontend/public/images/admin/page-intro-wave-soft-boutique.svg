@@ -1,0 +1,36 @@
+<svg width="900" height="180" viewBox="0 0 900 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mainSweep" x1="120" y1="155" x2="900" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#EFCFD4" stop-opacity="0.00"/>
+      <stop offset="12%" stop-color="#EFCFD4" stop-opacity="0.34"/>
+      <stop offset="52%" stop-color="#EFCFD4" stop-opacity="0.62"/>
+      <stop offset="100%" stop-color="#EFCFD4" stop-opacity="0.62"/>
+    </linearGradient>
+
+    <linearGradient id="upperSweep" x1="230" y1="108" x2="900" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F6E0E4" stop-opacity="0.00"/>
+      <stop offset="14%" stop-color="#F6E0E4" stop-opacity="0.50"/>
+      <stop offset="100%" stop-color="#F6E0E4" stop-opacity="0.50"/>
+    </linearGradient>
+  </defs>
+
+  <path
+    d="M110 180
+       C 215 160, 330 132, 470 92
+       C 620 48, 750 28, 900 18
+       L 900 180
+       Z"
+    fill="url(#mainSweep)"
+  />
+
+  <path
+    d="M220 152
+       C 335 118, 455 86, 590 52
+       C 705 24, 805 12, 900 8
+       L 900 44
+       C 810 52, 710 68, 590 100
+       C 455 136, 335 160, 220 176
+       Z"
+    fill="url(#upperSweep)"
+  />
+</svg>

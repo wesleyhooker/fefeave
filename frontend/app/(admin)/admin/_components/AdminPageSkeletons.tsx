@@ -3,7 +3,6 @@
  * Layout-matching, one cohesive skeleton per page. Uses animate-pulse and neutral gray.
  */
 import {
-  DASHBOARD_CONTENT,
   DASHBOARD_PRIMARY_SECONDARY_GRID,
   DASHBOARD_SUPPORTING_STACK,
   DASHBOARD_TOP_STACK,
@@ -15,7 +14,6 @@ import {
   dashboardModulePanel,
   dashboardModulePanelHeader,
   dashboardPadX,
-  dashboardPageIntroStrip,
   dashboardPrimaryListShell,
   dashboardRowList,
   dashboardRowPad,
@@ -30,6 +28,10 @@ import {
   workspaceMutedStrip,
   workspaceShellBg,
 } from "./workspaceUi";
+import {
+  AdminPageContainer,
+  AdminPageIntroSection,
+} from "./AdminPageContainer";
 
 const bar = "h-4 rounded bg-gray-200 animate-pulse";
 
@@ -94,19 +96,21 @@ export function TableSkeleton({
 /** Dashboard: mirrors live `page.tsx` composition (header → stats → This week + Notifications → supporting analytics). */
 export function DashboardSkeleton() {
   return (
-    <div className="min-w-0">
-      <div className={DASHBOARD_CONTENT}>
-        <div className={DASHBOARD_TOP_STACK}>
-          <header className={dashboardPageIntroStrip}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-              <div className="min-w-0 border-l-2 border-rose-400/45 pl-3.5 sm:pl-4">
-                <SkeletonBar className="h-8 w-52 max-w-full" />
-                <SkeletonBar className="mt-2 h-4 w-64 max-w-full" />
-              </div>
-              <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-28" />
+    <>
+      <AdminPageIntroSection>
+        <header>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+            <div className="min-w-0 border-l-2 border-rose-400/45 pl-3.5 sm:pl-4">
+              <SkeletonBar className="h-8 w-52 max-w-full" />
+              <SkeletonBar className="mt-2 h-4 w-64 max-w-full" />
             </div>
-          </header>
+            <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-28" />
+          </div>
+        </header>
+      </AdminPageIntroSection>
 
+      <AdminPageContainer>
+        <div className={DASHBOARD_TOP_STACK}>
           <section aria-hidden>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3">
               {[0, 1, 2].map((i) => (
@@ -205,8 +209,8 @@ export function DashboardSkeleton() {
             </div>
           </section>
         </div>
-      </div>
-    </div>
+      </AdminPageContainer>
+    </>
   );
 }
 

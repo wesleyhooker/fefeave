@@ -4,16 +4,9 @@
  */
 
 /**
- * Main column: left-anchored in the admin main area (no horizontal centering).
- * Capped width keeps the dashboard readable without floating in empty space.
- */
-export const DASHBOARD_CONTENT =
-  'flex w-full max-w-5xl flex-col gap-6 md:gap-7 xl:max-w-6xl';
-
-/**
  * Greeting + YTD strip — composed as one header stack before the hero row.
  */
-export const DASHBOARD_TOP_STACK = 'flex min-w-0 flex-col gap-3 md:gap-3.5';
+export const DASHBOARD_TOP_STACK = 'flex min-w-0 flex-col gap-4 md:gap-4.5';
 
 /**
  * Primary + secondary row directly under YTD stats: weekly hero + notifications.

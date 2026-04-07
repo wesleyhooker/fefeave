@@ -43,7 +43,7 @@ export function AdminLayoutClient({
           isProduction={isProduction}
           onMenuClick={() => setMobileSidebarOpen(true)}
         />
-        <main className="flex-1 p-4 md:p-6">
+        <main className="flex-1">
           <AdminWorkspaceProvider email={email}>
             {children}
           </AdminWorkspaceProvider>

@@ -8,9 +8,10 @@ import type { SelfPayStored } from "../selfPayStorage";
 import type { WeekPreviewSummary } from "../types";
 import {
   workspaceListPrimaryMoneyAmountClass,
+  workspaceActionWarmPrimaryMd,
   workspaceMoneyMuted,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import { DashboardMarkPaidDialog } from "./DashboardMarkPaidDialog";
+import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import { DashboardRetryBanner } from "./DashboardRetryBanner";
 import { DashboardShowRow } from "./DashboardShowRow";
 import {
@@ -82,6 +83,8 @@ export function DashboardThisWeekCard({
 
   const [weeklyShowsOpen, setWeeklyShowsOpen] = useState(!selfPaid);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markUnpaidOpen, setMarkUnpaidOpen] = useState(false);
+  const [paidStatePulse, setPaidStatePulse] = useState(false);
   const prevPaidRef = useRef(selfPaid);
 
   useEffect(() => {
@@ -96,6 +99,10 @@ export function DashboardThisWeekCard({
     if (prevPaidRef.current !== selfPaid) {
       prevPaidRef.current = selfPaid;
       setMarkPaidOpen(false);
+      setMarkUnpaidOpen(false);
+      setPaidStatePulse(true);
+      const t = window.setTimeout(() => setPaidStatePulse(false), 260);
+      return () => window.clearTimeout(t);
     }
   }, [selfPaid]);
 
@@ -143,11 +150,11 @@ export function DashboardThisWeekCard({
           ) : weekProfitDisplay !== null ? (
             <>
               <div
-                className={`w-full overflow-hidden rounded-[0.65rem] border text-left shadow-sm transition-[border-color,background-color,box-shadow] duration-300 ease-out ${
+                className={`w-full overflow-hidden rounded-[0.65rem] border text-left shadow-sm transition-[border-color,background-color,box-shadow,opacity] duration-300 ease-out ${
                   summaryPaidComplete
-                    ? "border-emerald-400/40 bg-emerald-50/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8),0_2px_14px_-6px_rgba(5,100,78,0.07)]"
+                    ? "border-emerald-500/45 bg-emerald-50/45 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.82),0_2px_14px_-6px_rgba(5,100,78,0.1)]"
                     : "border-stone-200/95 bg-white"
-                }`}
+                } ${paidStatePulse ? "opacity-[0.97]" : "opacity-100"}`}
               >
                 <div className="px-6 pb-6 pt-6 sm:px-7 sm:pb-7 sm:pt-7">
                   <div className={dashboardEyebrow}>Est. week profit</div>
@@ -160,22 +167,24 @@ export function DashboardThisWeekCard({
                     <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
                       {summaryPaidComplete ? (
                         <>
-                          <span className="inline-flex items-center justify-center gap-1.5 self-stretch rounded-lg bg-emerald-100/85 px-3 py-2 text-center text-xs font-semibold text-emerald-900 shadow-[inset_0_0_0_1px_rgba(5,95,72,0.08)] sm:self-end sm:py-1.5">
-                            <svg
-                              className="h-3.5 w-3.5 shrink-0 text-emerald-800"
-                              viewBox="0 0 12 12"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.2"
-                              aria-hidden
-                            >
-                              <path
-                                d="M2 6l3 3 5-5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                            Marked paid
+                          <span className="inline-flex items-center justify-center gap-2 self-stretch rounded-lg border border-emerald-400/45 bg-emerald-100/85 px-3 py-2 text-center text-xs font-semibold text-emerald-900 shadow-[inset_0_0_0_1px_rgba(5,95,72,0.08)] sm:self-end sm:py-1.5">
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/70 text-emerald-800">
+                              <svg
+                                className="h-3.5 w-3.5 shrink-0"
+                                viewBox="0 0 12 12"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.2"
+                                aria-hidden
+                              >
+                                <path
+                                  d="M2 6l3 3 5-5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </span>
+                            <span>Marked paid</span>
                           </span>
                           {paidAtLabel ? (
                             <p className="text-center text-[11px] font-medium tabular-nums text-emerald-800/75 sm:text-right">
@@ -184,8 +193,8 @@ export function DashboardThisWeekCard({
                           ) : null}
                           <button
                             type="button"
-                            onClick={onMarkUndone}
-                            className="text-center text-xs font-medium text-stone-500 underline decoration-stone-300/80 underline-offset-2 transition-colors hover:text-stone-800 sm:text-right"
+                            onClick={() => setMarkUnpaidOpen(true)}
+                            className="text-center text-xs font-medium text-stone-500/90 underline decoration-stone-300/70 underline-offset-2 transition-colors hover:text-stone-700 sm:text-right"
                           >
                             Mark as unpaid
                           </button>
@@ -194,7 +203,7 @@ export function DashboardThisWeekCard({
                         <button
                           type="button"
                           onClick={() => setMarkPaidOpen(true)}
-                          className="rounded-lg bg-rose-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(190,24,93,0.2)] transition-[background-color,box-shadow] hover:bg-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/50 active:bg-rose-800 sm:py-2"
+                          className={`${workspaceActionWarmPrimaryMd} sm:py-2`}
                         >
                           Mark as paid
                         </button>
@@ -214,10 +223,25 @@ export function DashboardThisWeekCard({
                   </p>
                 </div>
               </div>
-              <DashboardMarkPaidDialog
+              <WorkspaceConfirmDialog
                 open={markPaidOpen}
                 onOpenChange={setMarkPaidOpen}
+                title="Mark this week as paid?"
+                description="You're confirming you've paid yourself for this week."
+                confirmLabel="Mark as paid"
                 onConfirm={onMarkDone}
+                tone="rose"
+                icon="$"
+              />
+              <WorkspaceConfirmDialog
+                open={markUnpaidOpen}
+                onOpenChange={setMarkUnpaidOpen}
+                title="Reopen this week payout?"
+                description="This will remove the paid status and reopen this week for payout tracking."
+                confirmLabel="Reopen week"
+                onConfirm={onMarkUndone}
+                tone="stone"
+                icon="↺"
               />
             </>
           ) : (

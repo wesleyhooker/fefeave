@@ -1,19 +1,31 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import {
+  workspaceActionQuietOutlineMd,
+  workspaceActionWarmPrimaryMd,
+} from "./workspaceUi";
 
-/**
- * Confirmation for weekly self-pay — financial action, not a casual toggle.
- * Native `<dialog>` for focus handling + backdrop; styling matches Soft Boutique references.
- */
-export function DashboardMarkPaidDialog({
+export function WorkspaceConfirmDialog({
   open,
   onOpenChange,
   onConfirm,
+  title,
+  description,
+  confirmLabel,
+  cancelLabel = "Cancel",
+  tone = "rose",
+  icon = "$",
 }: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
   onConfirm: () => void;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  tone?: "rose" | "stone";
+  icon?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -36,6 +48,15 @@ export function DashboardMarkPaidDialog({
     return () => el.removeEventListener("close", onClose);
   }, [onOpenChange]);
 
+  const iconToneClass =
+    tone === "stone"
+      ? "bg-stone-200/75 text-stone-700"
+      : "bg-emerald-100/90 text-emerald-800";
+  const confirmToneClass =
+    tone === "stone"
+      ? "inline-flex items-center justify-center gap-1.5 rounded-lg bg-stone-700 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(28,25,23,0.22)] transition-colors duration-200 hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 active:bg-stone-900"
+      : workspaceActionWarmPrimaryMd;
+
   return (
     <dialog
       ref={ref}
@@ -45,38 +66,38 @@ export function DashboardMarkPaidDialog({
       <div className="px-6 pb-5 pt-7 sm:px-7 sm:pb-6 sm:pt-8">
         <div className="flex justify-center">
           <div
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100/90 text-lg font-semibold text-emerald-800"
+            className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ${iconToneClass}`}
             aria-hidden
           >
-            $
+            {icon}
           </div>
         </div>
         <h2
           id={titleId}
           className="mt-4 text-center text-base font-semibold leading-snug text-stone-900 sm:text-[1.05rem]"
         >
-          Mark this week as paid?
+          {title}
         </h2>
         <p className="mt-2 text-center text-sm leading-relaxed text-stone-600">
-          You&apos;re confirming you&apos;ve paid yourself for this week.
+          {description}
         </p>
         <div className="mt-6 grid grid-cols-2 gap-2.5 sm:gap-3">
           <button
             type="button"
-            className="rounded-xl border border-stone-200/95 bg-white px-3 py-2.5 text-sm font-semibold text-stone-800 shadow-[0_1px_2px_rgba(120,113,108,0.04)] transition-colors hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/40"
+            className={workspaceActionQuietOutlineMd}
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {cancelLabel}
           </button>
           <button
             type="button"
-            className="rounded-xl bg-rose-600 px-3 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(190,24,93,0.2)] transition-[background-color,box-shadow] hover:bg-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/50 active:bg-rose-800"
+            className={confirmToneClass}
             onClick={() => {
               onConfirm();
               onOpenChange(false);
             }}
           >
-            Mark as paid
+            {confirmLabel}
           </button>
         </div>
       </div>
