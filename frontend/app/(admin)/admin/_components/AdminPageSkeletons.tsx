@@ -3,10 +3,10 @@
  * Layout-matching, one cohesive skeleton per page. Uses animate-pulse and neutral gray.
  */
 import {
-  DASHBOARD_PRIMARY_SECONDARY_GRID,
-  DASHBOARD_SUPPORTING_STACK,
-  DASHBOARD_TOP_STACK,
-} from "@/app/(admin)/admin/dashboard/constants";
+  workspacePagePrimarySecondaryGrid,
+  workspacePageSupportingStack,
+  workspacePageTopStack,
+} from "@/app/(admin)/admin/_lib/workspacePageRegions";
 import {
   dashboardAnalyticsBody,
   dashboardAnalyticsCard,
@@ -25,8 +25,12 @@ import {
 import {
   workspaceCard,
   workspaceCardHeader,
-  workspaceMutedStrip,
+  workspacePageContentWidthWide,
+  workspacePageIntroAccent,
+  workspaceSectionToolbar,
   workspaceShellBg,
+  workspaceStatTile,
+  workspaceTheadSticky,
 } from "./workspaceUi";
 import {
   AdminPageContainer,
@@ -110,7 +114,7 @@ export function DashboardSkeleton() {
       </AdminPageIntroSection>
 
       <AdminPageContainer>
-        <div className={DASHBOARD_TOP_STACK}>
+        <div className={workspacePageTopStack}>
           <section aria-hidden>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3">
               {[0, 1, 2].map((i) => (
@@ -129,7 +133,7 @@ export function DashboardSkeleton() {
           </section>
         </div>
 
-        <div className={DASHBOARD_PRIMARY_SECONDARY_GRID}>
+        <div className={workspacePagePrimarySecondaryGrid}>
           <div className="min-w-0">
             <section className={dashboardWeeklyStatusCard}>
               <div className={dashboardWeeklyHeaderBand}>
@@ -194,7 +198,7 @@ export function DashboardSkeleton() {
           </div>
         </div>
 
-        <div className={DASHBOARD_SUPPORTING_STACK}>
+        <div className={workspacePageSupportingStack}>
           <section className={dashboardAnalyticsCard} aria-hidden>
             <div className={dashboardAnalyticsHeader}>
               <SkeletonBar className="h-3.5 w-28" />
@@ -214,189 +218,234 @@ export function DashboardSkeleton() {
   );
 }
 
-/** Balances page: title, summary strip, table. */
+/** Balances page: title + subtitle intro, four summary tiles, toolbar + table. */
 export function BalancesPageSkeleton() {
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-gray-900">Balances</h1>
-        <SkeletonBar className="h-9 w-20" />
-      </div>
-      <div className="mb-4 md:mb-6">
-        <SkeletonBar className="w-80 max-w-full" />
-      </div>
-      <div
-        className={`mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-gray-200 ${workspaceMutedStrip} px-4 py-3 pb-4`}
-      >
-        <SkeletonBar className="w-28" />
-        <SkeletonBar className="w-24" />
-        <SkeletonBar className="w-20" />
-        <SkeletonBar className="w-32" />
-      </div>
-      <div className={`overflow-auto ${workspaceCard}`}>
-        <TableSkeleton
-          cols={7}
-          rows={6}
-          headers={[
-            "Wholesaler",
-            "Status",
-            "Balance owed",
-            "Total owed",
-            "Total paid",
-            "Last payment",
-            "Actions",
-          ]}
-        />
-      </div>
-    </div>
+    <>
+      <AdminPageIntroSection>
+        <header>
+          <div className={`min-w-0 ${workspacePageIntroAccent}`}>
+            <SkeletonBar className="h-8 w-36 max-w-full" />
+            <SkeletonBar className="mt-2 h-4 w-[min(100%,20rem)] max-w-full" />
+          </div>
+        </header>
+      </AdminPageIntroSection>
+      <AdminPageContainer>
+        <div className={workspacePageTopStack}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className={workspaceStatTile} aria-hidden>
+                <SkeletonBar className="h-3 w-28" />
+                <SkeletonBar className="mt-4 h-8 w-32 max-w-full" />
+              </div>
+            ))}
+          </div>
+          <div className={`overflow-hidden ${workspaceCard}`}>
+            <div className={workspaceSectionToolbar}>
+              <SkeletonBar className="h-10 w-full max-w-full rounded-lg sm:max-w-sm" />
+              <SkeletonBar className="h-10 w-full rounded-lg sm:w-44" />
+            </div>
+            <div className="overflow-x-auto">
+              <TableSkeleton
+                cols={7}
+                rows={6}
+                headers={[
+                  "Status",
+                  "Vendor",
+                  "Balance owed",
+                  "Total owed",
+                  "Total paid",
+                  "Last payment",
+                  "",
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+      </AdminPageContainer>
+    </>
   );
 }
 
-/** Payments page: header + table skeleton. */
+/** Payments page: intro + subtitle + primary action, table with chevron column. */
 export function PaymentsTableSkeleton() {
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-gray-900">Payments</h1>
-        <SkeletonBar className="h-10 w-32" />
-      </div>
-      <div className={`hidden overflow-hidden md:block ${workspaceCard}`}>
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className={workspaceShellBg}>
-            <tr>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Wholesaler
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Amount
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Date
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Method
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Reference
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
-            {Array.from({ length: 5 }, (_, i) => (
-              <tr key={i}>
-                <td className="whitespace-nowrap px-4 py-3">
-                  <SkeletonBar className="w-28" />
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right">
-                  <SkeletonBar className="ml-auto w-16" />
-                </td>
-                <td className="whitespace-nowrap px-4 py-3">
-                  <SkeletonBar className="w-24" />
-                </td>
-                <td className="whitespace-nowrap px-4 py-3">
-                  <SkeletonBar className="w-14" />
-                </td>
-                <td className="whitespace-nowrap px-4 py-3">
-                  <SkeletonBar className="w-20" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="space-y-3 md:hidden">
-        {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className={`${workspaceCard} p-4`}>
-            <SkeletonBar className="mb-2 w-24" />
-            <SkeletonBar className="mb-2 w-32" />
-            <SkeletonBar className="w-full" />
+    <>
+      <AdminPageIntroSection>
+        <header>
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className={`min-w-0 ${workspacePageIntroAccent}`}>
+              <SkeletonBar className="h-8 w-40 max-w-full" />
+              <SkeletonBar className="mt-2 h-4 w-48 max-w-full" />
+            </div>
+            <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:mt-1 sm:w-40" />
           </div>
-        ))}
-      </div>
-    </div>
+        </header>
+      </AdminPageIntroSection>
+      <AdminPageContainer>
+        <div className={`hidden overflow-hidden md:block ${workspaceCard}`}>
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className={workspaceTheadSticky}>
+              <tr>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+                >
+                  Date
+                </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+                >
+                  Vendor
+                </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+                >
+                  Amount
+                </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+                >
+                  Method
+                </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+                >
+                  Reference
+                </th>
+                <th scope="col" className="relative px-2 py-3 sm:px-3">
+                  <span className="sr-only">Open</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {Array.from({ length: 5 }, (_, i) => (
+                <tr key={i}>
+                  <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                    <SkeletonBar className="w-24" />
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                    <SkeletonBar className="w-28" />
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right sm:px-4">
+                    <SkeletonBar className="ml-auto w-16" />
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                    <SkeletonBar className="w-14" />
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                    <SkeletonBar className="w-20" />
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-2.5 sm:px-3">
+                    <SkeletonBar className="ml-auto w-4" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="space-y-3 pt-2 md:hidden">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className={`${workspaceCard} p-4`}>
+              <SkeletonBar className="mb-2 w-24" />
+              <SkeletonBar className="mb-2 w-32" />
+              <SkeletonBar className="w-full" />
+            </div>
+          ))}
+        </div>
+      </AdminPageContainer>
+    </>
   );
 }
 
-/** Shows page: week-grouped skeleton (This week + table). */
+/** Shows page: full page chrome + week-grouped skeleton (matches loaded layout). */
 export function ShowsTableSkeleton() {
   return (
-    <div className="mb-5 overflow-hidden rounded-lg border border-emerald-200/60 border-l-4 border-l-emerald-500/50 bg-emerald-50/15 shadow-workspace-surface">
-      <div className="border-b border-emerald-100/90 bg-emerald-50/35 px-4 py-3">
-        <SkeletonBar className="w-24" />
-        <SkeletonBar className="mt-2 w-full max-w-md" />
-        <SkeletonBar className="mt-2 w-56" />
-      </div>
-      <div className="overflow-hidden bg-white">
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className={workspaceShellBg}>
-            <tr>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Show
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Date
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Status
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
-              >
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
-            {Array.from({ length: 4 }, (_, i) => (
-              <tr key={i}>
-                <td className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <SkeletonBar className="mb-1 w-36" />
-                      <SkeletonBar className="w-28" />
-                    </div>
-                    <SkeletonBar className="w-20 shrink-0" />
-                  </div>
-                </td>
-                <td className="whitespace-nowrap px-4 py-3">
-                  <SkeletonBar className="w-24" />
-                </td>
-                <td className="whitespace-nowrap px-4 py-3">
-                  <SkeletonBar className="w-14" />
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right">
-                  <SkeletonBar className="ml-auto w-16" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <>
+      <AdminPageIntroSection
+        contentWidthClassName={workspacePageContentWidthWide}
+      >
+        <header>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className={`min-w-0 ${workspacePageIntroAccent}`}>
+              <SkeletonBar className="h-8 w-28 max-w-full" />
+            </div>
+            <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-44" />
+          </div>
+        </header>
+      </AdminPageIntroSection>
+      <AdminPageContainer contentWidthClassName={workspacePageContentWidthWide}>
+        <div className="mb-5 overflow-hidden rounded-xl border border-emerald-200/60 border-l-[6px] border-l-emerald-500/50 bg-emerald-50/15 shadow-workspace-surface">
+          <div className="border-b border-emerald-100/90 bg-emerald-50/35 px-4 py-3 sm:px-5 sm:py-4">
+            <SkeletonBar className="w-32" />
+            <SkeletonBar className="mt-2 w-full max-w-md" />
+            <SkeletonBar className="mt-2 w-56" />
+          </div>
+          <div className="overflow-hidden bg-white">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className={workspaceShellBg}>
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+                  >
+                    Status
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+                  >
+                    Show
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+                  >
+                    Date
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+                  >
+                    Est. profit
+                  </th>
+                  <th scope="col" className="px-2 py-3 sm:px-3">
+                    <span className="sr-only">Navigate</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {Array.from({ length: 4 }, (_, i) => (
+                  <tr key={i}>
+                    <td className="px-3 py-2.5 sm:px-4">
+                      <SkeletonBar className="h-4 w-12" />
+                    </td>
+                    <td className="px-3 py-2.5 sm:px-4">
+                      <div className="min-w-0 space-y-1">
+                        <SkeletonBar className="w-36 max-w-full" />
+                        <SkeletonBar className="w-28" />
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                      <SkeletonBar className="w-24" />
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right sm:px-4">
+                      <SkeletonBar className="ml-auto w-20" />
+                    </td>
+                    <td className="px-2 py-2.5 text-right sm:px-3">
+                      <SkeletonBar className="ml-auto h-4 w-4 rounded" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </AdminPageContainer>
+    </>
   );
 }

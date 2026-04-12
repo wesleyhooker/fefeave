@@ -5,14 +5,14 @@ import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
 import type { ShowDTO } from "@/src/lib/api/shows";
 import type { SelfPayStored } from "../selfPayStorage";
-import type { WeekPreviewSummary } from "../types";
+import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
   workspaceListPrimaryMoneyAmountClass,
   workspaceActionWarmPrimaryMd,
   workspaceMoneyMuted,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
-import { DashboardRetryBanner } from "./DashboardRetryBanner";
+import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import { DashboardShowRow } from "./DashboardShowRow";
 import {
   dashboardCardFooterNote,
@@ -75,7 +75,7 @@ export function DashboardThisWeekCard({
   showsError: string | null;
   onRetryShows: () => void;
   showsThisWeek: ShowDTO[];
-  weekPreviewSummaries: Record<string, WeekPreviewSummary>;
+  weekPreviewSummaries: Record<string, ShowFinancialSummary>;
   showsThisWeekTotal: number;
   showsLimit: number;
 }) {
@@ -128,7 +128,11 @@ export function DashboardThisWeekCard({
   return (
     <div className="space-y-3">
       {showsError != null ? (
-        <DashboardRetryBanner message={showsError} onRetry={onRetryShows} />
+        <WorkspaceInlineError
+          title="Could not refresh shows."
+          message={showsError}
+          onRetry={onRetryShows}
+        />
       ) : null}
 
       <section className={dashboardWeeklyStatusCard}>

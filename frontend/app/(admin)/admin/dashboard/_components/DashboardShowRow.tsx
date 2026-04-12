@@ -5,7 +5,7 @@ import {
   workspaceMoneyMuted,
   workspaceMoneyTabular,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import type { WeekPreviewSummary } from "../types";
+import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import { DashboardClickableRow } from "./DashboardClickableRow";
 import { DashboardRowChevron } from "./DashboardRowChevron";
 import { DashboardShowStatusCompact } from "./DashboardShowStatusCompact";
@@ -15,7 +15,7 @@ export function DashboardShowRow({
   summary,
 }: {
   show: ShowDTO;
-  summary: WeekPreviewSummary | undefined;
+  summary: ShowFinancialSummary | undefined;
 }) {
   const href = `/admin/shows/${show.id}`;
   const label = `${show.name}, ${formatDate(show.show_date)}`;

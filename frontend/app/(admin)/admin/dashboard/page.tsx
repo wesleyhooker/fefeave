@@ -6,16 +6,11 @@ import {
   fetchWholesalerBalances,
   type BackendWholesalerBalanceRow,
 } from "@/src/lib/api/wholesalers";
+import { fetchShows, type ShowDTO } from "@/src/lib/api/shows";
 import {
-  fetchShows,
-  fetchShowFinancials,
-  fetchShowSettlements,
-  type ShowDTO,
-} from "@/src/lib/api/shows";
-import {
-  estimatedShowProfit,
-  totalOwedFromSettlements,
-} from "@/lib/showProfit";
+  fetchShowFinancialSummary,
+  type ShowFinancialSummary,
+} from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
   formatWeekRangeCompact,
   getCurrentWeekBounds,
@@ -27,13 +22,12 @@ import {
   saveSelfPay,
   type SelfPayStored,
 } from "./selfPayStorage";
+import { DASHBOARD_THIS_WEEK_SHOWS_LIMIT } from "./constants";
 import {
-  DASHBOARD_PRIMARY_SECONDARY_GRID,
-  DASHBOARD_SUPPORTING_STACK,
-  DASHBOARD_THIS_WEEK_SHOWS_LIMIT,
-  DASHBOARD_TOP_STACK,
-} from "./constants";
-import type { WeekPreviewSummary } from "./types";
+  workspacePagePrimarySecondaryGrid,
+  workspacePageSupportingStack,
+  workspacePageTopStack,
+} from "../_lib/workspacePageRegions";
 import {
   buildCalendarMonthDailySeries,
   type DashboardDayProfitPoint,
@@ -70,7 +64,7 @@ export default function AdminDashboardPage() {
 
   const [selfPay, setSelfPay] = useState<SelfPayStored | null>(null);
   const [weekPreviewSummaries, setWeekPreviewSummaries] = useState<
-    Record<string, WeekPreviewSummary>
+    Record<string, ShowFinancialSummary>
   >({});
   const [ytdProfit, setYtdProfit] = useState<number | null>(null);
   const [ytdProfitError, setYtdProfitError] = useState<string | null>(null);
@@ -117,32 +111,14 @@ export default function AdminDashboardPage() {
     let cancelled = false;
     Promise.all(
       list.map(async (show) => {
-        const [fin, settles] = await Promise.all([
-          fetchShowFinancials(show.id).catch(() => null),
-          fetchShowSettlements(show.id).catch(() => []),
-        ]);
-        const payout = fin != null ? Number(fin.payout_after_fees_amount) : 0;
-        const payoutNum = Number.isFinite(payout) ? payout : 0;
-        const totalOwed = totalOwedFromSettlements(payoutNum, settles);
-        const profitVal = estimatedShowProfit(payoutNum, settles);
-        return {
-          id: show.id,
-          payoutAfterFees: payoutNum,
-          totalOwed,
-          estimatedShowProfit: profitVal,
-          settlementCount: settles.length,
-        };
+        const summary = await fetchShowFinancialSummary(show.id);
+        return [show.id, summary] as const;
       }),
-    ).then((results) => {
+    ).then((pairs) => {
       if (cancelled) return;
-      const next: Record<string, WeekPreviewSummary> = {};
-      for (const r of results) {
-        next[r.id] = {
-          payoutAfterFees: r.payoutAfterFees,
-          totalOwed: r.totalOwed,
-          estimatedShowProfit: r.estimatedShowProfit,
-          settlementCount: r.settlementCount,
-        };
+      const next: Record<string, ShowFinancialSummary> = {};
+      for (const [id, summary] of pairs) {
+        next[id] = summary;
       }
       setWeekPreviewSummaries(next);
     });
@@ -169,13 +145,8 @@ export default function AdminDashboardPage() {
     setYtdProfitError(null);
     Promise.all(
       list.map(async (show) => {
-        const [fin, settles] = await Promise.all([
-          fetchShowFinancials(show.id).catch(() => null),
-          fetchShowSettlements(show.id).catch(() => []),
-        ]);
-        const payout = fin != null ? Number(fin.payout_after_fees_amount) : 0;
-        const p = Number.isFinite(payout) ? payout : 0;
-        return estimatedShowProfit(p, settles);
+        const s = await fetchShowFinancialSummary(show.id);
+        return s.estimatedShowProfit;
       }),
     )
       .then((profits) => {
@@ -256,14 +227,8 @@ export default function AdminDashboardPage() {
         try {
           const profits = await Promise.all(
             closedThisWeek.map(async (show) => {
-              const [fin, settles] = await Promise.all([
-                fetchShowFinancials(show.id).catch(() => null),
-                fetchShowSettlements(show.id).catch(() => []),
-              ]);
-              const payout =
-                fin != null ? Number(fin.payout_after_fees_amount) : 0;
-              const p = Number.isFinite(payout) ? payout : 0;
-              return estimatedShowProfit(p, settles);
+              const s = await fetchShowFinancialSummary(show.id);
+              return s.estimatedShowProfit;
             }),
           );
           if (!cancelled && effectRunIdRef.current === runId) {
@@ -366,14 +331,8 @@ export default function AdminDashboardPage() {
     setMonthDailyError(null);
     Promise.all(
       list.map(async (show) => {
-        const [fin, settles] = await Promise.all([
-          fetchShowFinancials(show.id).catch(() => null),
-          fetchShowSettlements(show.id).catch(() => []),
-        ]);
-        const payout = fin != null ? Number(fin.payout_after_fees_amount) : 0;
-        const p = Number.isFinite(payout) ? payout : 0;
-        const profit = estimatedShowProfit(p, settles);
-        return { show_date: show.show_date, profit };
+        const s = await fetchShowFinancialSummary(show.id);
+        return { show_date: show.show_date, profit: s.estimatedShowProfit };
       }),
     )
       .then((rows) => {
@@ -453,7 +412,7 @@ export default function AdminDashboardPage() {
       </AdminPageIntroSection>
 
       <AdminPageContainer>
-        <div className={DASHBOARD_TOP_STACK}>
+        <div className={workspacePageTopStack}>
           <DashboardOverviewStats
             ytdProfit={ytdProfit}
             ytdProfitError={ytdProfitError}
@@ -465,7 +424,7 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        <div className={DASHBOARD_PRIMARY_SECONDARY_GRID}>
+        <div className={workspacePagePrimarySecondaryGrid}>
           <div className="min-w-0">
             <DashboardThisWeekCard
               selfPaid={selfPaid}
@@ -495,7 +454,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className={DASHBOARD_SUPPORTING_STACK}>
+        <div className={workspacePageSupportingStack}>
           <DashboardThisMonthDailyEarningsCard
             monthTitle={dashboardCalendar.monthTitle}
             days={monthDailyProfits}

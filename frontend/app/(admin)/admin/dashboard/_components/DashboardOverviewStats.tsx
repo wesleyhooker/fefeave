@@ -3,8 +3,9 @@ import {
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
   workspaceMoneyMuted,
+  workspaceStatEyebrow,
+  workspaceStatTile,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import { dashboardEyebrow } from "./dashboardStructure";
 
 function IconDollarCircle({ className }: { className?: string }) {
   return (
@@ -66,9 +67,6 @@ function IconCompletedCircle({ className }: { className?: string }) {
 /**
  * Three equal-weight stat tiles — no dominant accent border; cues via soft icon circles only.
  */
-const statTile =
-  "flex min-h-[7.75rem] flex-col rounded-xl border border-stone-200/80 bg-white px-4 py-4 shadow-[0_1px_3px_rgba(120,113,108,0.06)] sm:min-h-[8rem] sm:px-5 sm:py-5";
-
 export function DashboardOverviewStats({
   ytdProfit,
   ytdProfitError,
@@ -89,9 +87,9 @@ export function DashboardOverviewStats({
   return (
     <section className="min-w-0" aria-label="Year-to-date summary">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3">
-        <div className={statTile}>
+        <div className={workspaceStatTile}>
           <div className="flex items-start justify-between gap-2">
-            <p className={dashboardEyebrow}>YTD profit</p>
+            <p className={workspaceStatEyebrow}>YTD profit</p>
             <IconDollarCircle />
           </div>
           <div className="mt-4 min-h-[2.5rem] flex-1">
@@ -113,9 +111,9 @@ export function DashboardOverviewStats({
           </div>
         </div>
 
-        <div className={statTile}>
+        <div className={workspaceStatTile}>
           <div className="flex items-start justify-between gap-2">
-            <p className={dashboardEyebrow}>Vendors owed</p>
+            <p className={workspaceStatEyebrow}>Vendors owed</p>
             <IconVendorsCircle />
           </div>
           <div className="mt-4 min-h-[2.5rem] flex-1">
@@ -137,9 +135,9 @@ export function DashboardOverviewStats({
           </div>
         </div>
 
-        <div className={statTile}>
+        <div className={workspaceStatTile}>
           <div className="flex items-start justify-between gap-2">
-            <p className={dashboardEyebrow}>Completed (YTD)</p>
+            <p className={workspaceStatEyebrow}>Completed (YTD)</p>
             <IconCompletedCircle />
           </div>
           <div className="mt-4 min-h-[2.5rem] flex-1">

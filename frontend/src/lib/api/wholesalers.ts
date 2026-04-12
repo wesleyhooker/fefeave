@@ -43,7 +43,10 @@ export interface BackendWholesalerStatementRow {
 export interface WholesalerListRowView {
   id: string;
   name: string;
+  /** Outstanding balance (liability). */
   balanceOwed: number;
+  /** Lifetime total owed (from balance row). */
+  totalOwed: number;
   totalPaid: number;
   pay_schedule: PaySchedule;
   /** ISO date (YYYY-MM-DD) of most recent payment, if any */
@@ -60,6 +63,8 @@ export interface StatementSettlementLineView {
 export interface WholesalerStatementRowView {
   date: string;
   type: 'OWED' | 'PAYMENT';
+  /** Present when the entry is tied to a show. */
+  showId?: string;
   showName: string;
   amountOwed: number | null;
   amountPaid: number | null;
@@ -119,6 +124,7 @@ export function mapBalanceRowToListView(
     id: row.wholesaler_id,
     name: row.name,
     balanceOwed: parseAmount(row.balance_owed),
+    totalOwed: parseAmount(row.owed_total),
     totalPaid: parseAmount(row.paid_total),
     pay_schedule: (row.pay_schedule ?? 'AD_HOC') as PaySchedule,
     last_payment_date: row.last_payment_date ?? null,
@@ -132,6 +138,7 @@ export function mapStatementRowToDetailView(
   return {
     date: row.date,
     type: row.type,
+    showId: row.show_id,
     showName: row.show_name ?? '—',
     amountOwed: row.type === 'OWED' ? amount : null,
     amountPaid: row.type === 'PAYMENT' ? amount : null,

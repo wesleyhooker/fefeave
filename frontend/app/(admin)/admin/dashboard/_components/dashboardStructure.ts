@@ -1,6 +1,7 @@
 /**
- * Dashboard-local layout + restrained Fefe Ave internal identity.
+ * Dashboard-local surface styling + restrained Fefe Ave internal identity.
  * Warm stone neutrals, rose accent for chrome/CTA; semantic greens reserved for money/paid.
+ * Page-level stacks/grids live in `admin/_lib/workspacePageRegions.ts`.
  */
 
 export const dashboardPadX = 'px-4';

@@ -19,7 +19,7 @@
  *   — money semantics on values only; action meanings (primary / Pay / Close out / row vs page size);
  *   row hover + title link pattern; panels vs flat lists; section toolbars
  * - Show Open/Closed: `ShowStatusPill.tsx` + `workspaceShowStatus*` in workspaceUi
- * - Payment chips: `PaymentStatusChip.tsx` + `WORKSPACE_PAYMENT_STATUS_CHIP_STYLES`
+ * - List statuses (shows + payment): `WorkspaceListShowStatus` / `WorkspaceListPaymentStatus` in `WorkspaceListStatus.tsx`
  * - Sidebar/header control hover: `workspaceChromeHover` in workspaceUi
  * - Cards: border-gray-200 + theme shadow-workspace-surface (see tailwind.config.ts)
  * - Alerts: rounded-lg border border-amber-200 bg-amber-50 text-amber-900

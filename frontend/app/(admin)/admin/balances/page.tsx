@@ -3,12 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BalancesPageSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
-  workspaceActionSecondaryMd,
-  workspaceActionSecondarySm,
+  AdminPageContainer,
+  AdminPageIntroSection,
+} from "@/app/(admin)/admin/_components/AdminPageContainer";
+import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminSummaryStatGrid } from "@/app/(admin)/admin/_components/AdminSummaryStatGrid";
+import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import {
   workspaceMoneyClassForLiability,
   workspaceMoneyTabular,
-  workspacePageTitle,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import { workspacePageTopStack } from "@/app/(admin)/admin/_lib/workspacePageRegions";
 import { formatCurrency } from "@/lib/format";
 import { apiGet } from "@/lib/api";
 import { BalancesTable, type WholesalerBalanceRow } from "./BalancesTable";
@@ -21,8 +26,8 @@ function parseNum(s: string): number {
 export default function AdminBalancesPage() {
   const [data, setData] = useState<WholesalerBalanceRow[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchBusy, setFetchBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const visibilityRef = useRef<string | null>(null);
   const dataRef = useRef<WholesalerBalanceRow[] | null>(null);
@@ -35,11 +40,10 @@ export default function AdminBalancesPage() {
   const fetchBalances = useCallback(() => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
+    setFetchBusy(true);
     const isInitial = dataRef.current === null;
     if (isInitial) {
       setLoading(true);
-    } else {
-      setRefreshing(true);
     }
     setError(null);
     setRefreshError(null);
@@ -58,7 +62,7 @@ export default function AdminBalancesPage() {
       })
       .finally(() => {
         setLoading(false);
-        setRefreshing(false);
+        setFetchBusy(false);
         isFetchingRef.current = false;
       });
   }, []);
@@ -86,7 +90,7 @@ export default function AdminBalancesPage() {
     let totalOutstanding = 0;
     let totalOwed = 0;
     let totalPaid = 0;
-    let wholesalersOwing = 0;
+    let vendorsWithBalance = 0;
     for (const r of data) {
       const owed = parseNum(r.owed_total);
       const paid = parseNum(r.paid_total);
@@ -94,15 +98,63 @@ export default function AdminBalancesPage() {
       totalOwed += owed;
       totalPaid += paid;
       totalOutstanding += balance;
-      if (balance > 0) wholesalersOwing += 1;
+      if (balance > 0) vendorsWithBalance += 1;
     }
     return {
       totalOutstanding,
       totalOwed,
       totalPaid,
-      wholesalersOwing,
+      vendorsWithBalance,
     };
   }, [data]);
+
+  const summaryStatItems = useMemo(() => {
+    if (summary == null) return [];
+    return [
+      {
+        id: "outstanding",
+        label: "Outstanding",
+        value: (
+          <p
+            className={`text-xl font-semibold tabular-nums sm:text-2xl ${workspaceMoneyClassForLiability(summary.totalOutstanding)}`}
+          >
+            {formatCurrency(summary.totalOutstanding)}
+          </p>
+        ),
+      },
+      {
+        id: "owed",
+        label: "Owed",
+        value: (
+          <p
+            className={`text-xl font-semibold text-stone-900 sm:text-2xl ${workspaceMoneyTabular}`}
+          >
+            {formatCurrency(summary.totalOwed)}
+          </p>
+        ),
+      },
+      {
+        id: "paid",
+        label: "Paid",
+        value: (
+          <p
+            className={`text-xl font-semibold text-stone-900 sm:text-2xl ${workspaceMoneyTabular}`}
+          >
+            {formatCurrency(summary.totalPaid)}
+          </p>
+        ),
+      },
+      {
+        id: "vendors-with-balance",
+        label: "Vendors with balance",
+        value: (
+          <p className="text-xl font-semibold tabular-nums text-stone-900 sm:text-2xl">
+            {summary.vendorsWithBalance}
+          </p>
+        ),
+      },
+    ];
+  }, [summary]);
 
   if (loading) {
     return <BalancesPageSkeleton />;
@@ -110,102 +162,58 @@ export default function AdminBalancesPage() {
 
   if (error) {
     return (
-      <div>
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <h1 className={workspacePageTitle}>Balances</h1>
-        </div>
-        <div
-          className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-          role="alert"
-        >
-          <p className="font-medium">Could not load balances</p>
-          <p className="mt-1">Check your connection and retry.</p>
-          <details className="mt-2 text-sm">
-            <summary className="cursor-pointer font-medium text-amber-800">
-              Technical details
-            </summary>
-            <p className="mt-1 font-mono text-xs text-amber-900">{error}</p>
-          </details>
-          <button
-            type="button"
-            onClick={() => fetchBalances()}
-            disabled={loading}
-            className={`${workspaceActionSecondarySm} mt-3 disabled:opacity-60`}
+      <>
+        <AdminPageIntroSection>
+          <AdminPageIntro
+            title="Balances"
+            subtitle="Who you owe and how much"
+          />
+        </AdminPageIntroSection>
+        <AdminPageContainer>
+          <WorkspaceInlineError
+            title="Could not load balances"
+            message="Check your connection and retry."
+            onRetry={() => fetchBalances()}
+            retryDisabled={fetchBusy}
           >
-            Retry
-          </button>
-        </div>
-      </div>
+            <details className="mt-2 text-sm">
+              <summary className="cursor-pointer font-medium text-amber-800">
+                Technical details
+              </summary>
+              <p className="mt-1 font-mono text-xs text-amber-900">{error}</p>
+            </details>
+          </WorkspaceInlineError>
+        </AdminPageContainer>
+      </>
     );
   }
 
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className={workspacePageTitle}>Balances</h1>
-        <button
-          type="button"
-          onClick={() => fetchBalances()}
-          disabled={refreshing}
-          className={`${workspaceActionSecondaryMd} disabled:cursor-not-allowed disabled:opacity-60`}
-          aria-label="Refresh balances"
-        >
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </button>
-      </div>
-      <p className="mb-4 text-sm text-gray-600 md:mb-6">
-        Per-vendor balances; dashboard totals use the same figures.
-      </p>
+    <>
+      <AdminPageIntroSection>
+        <AdminPageIntro title="Balances" subtitle="Who you owe and how much" />
+      </AdminPageIntroSection>
+      <AdminPageContainer>
+        <div className={workspacePageTopStack}>
+          {refreshError != null ? (
+            <WorkspaceInlineError
+              title="Refresh failed"
+              message={refreshError}
+              onRetry={() => fetchBalances()}
+              retryDisabled={fetchBusy}
+            />
+          ) : null}
 
-      {refreshError && (
-        <div
-          className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-          role="alert"
-        >
-          <span>Refresh failed. {refreshError}</span>
-          <button
-            type="button"
-            onClick={() => fetchBalances()}
-            disabled={refreshing}
-            className={`${workspaceActionSecondarySm} disabled:opacity-60`}
-          >
-            Retry
-          </button>
+          {summaryStatItems.length > 0 ? (
+            <AdminSummaryStatGrid
+              aria-label="Balances summary"
+              items={summaryStatItems}
+            />
+          ) : null}
+
+          {data != null ? <BalancesTable data={data} /> : null}
         </div>
-      )}
-
-      {summary && (
-        <div className="mb-4 grid grid-cols-2 gap-3 border-b border-gray-200 bg-[#F9FAFB] px-4 py-3 pb-4 sm:flex sm:flex-wrap sm:items-baseline sm:gap-x-6 sm:gap-y-2">
-          <span className="text-sm text-gray-500">
-            Outstanding:{" "}
-            <strong
-              className={`${workspaceMoneyTabular} ${workspaceMoneyClassForLiability(summary.totalOutstanding)}`}
-            >
-              {formatCurrency(summary.totalOutstanding)}
-            </strong>
-          </span>
-          <span className="text-sm text-gray-500">
-            Owed:{" "}
-            <strong className="text-gray-900">
-              {formatCurrency(summary.totalOwed)}
-            </strong>
-          </span>
-          <span className="text-sm text-gray-500">
-            Paid:{" "}
-            <strong className="text-gray-900">
-              {formatCurrency(summary.totalPaid)}
-            </strong>
-          </span>
-          <span className="text-sm text-gray-500">
-            Wholesalers owing:{" "}
-            <strong className="text-gray-900">
-              {summary.wholesalersOwing}
-            </strong>
-          </span>
-        </div>
-      )}
-
-      {data && <BalancesTable data={data} />}
-    </div>
+      </AdminPageContainer>
+    </>
   );
 }
