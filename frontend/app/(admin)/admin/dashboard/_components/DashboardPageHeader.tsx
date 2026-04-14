@@ -1,8 +1,13 @@
 "use client";
 
+import { PlusIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useAdminWorkspace } from "@/app/(admin)/admin/AdminWorkspaceContext";
-import { workspaceActionWarmPrimaryMd } from "@/app/(admin)/admin/_components/workspaceUi";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
+import {
+  workspaceActionIconMd,
+  workspaceActionPrimaryMd,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 
 function greetingNameFromEmail(email: string | null): string {
@@ -35,12 +40,13 @@ export function DashboardPageHeader({
       action={
         <Link
           href="/admin/shows/new"
-          className={`${workspaceActionWarmPrimaryMd} w-full justify-center sm:w-auto`}
+          className={`${workspaceActionPrimaryMd} w-full justify-center sm:w-auto`}
         >
-          <span className="text-base font-semibold leading-none" aria-hidden>
-            +
-          </span>
-          Show
+          <WorkspaceActionLabel
+            icon={<PlusIcon className={workspaceActionIconMd} />}
+          >
+            Show
+          </WorkspaceActionLabel>
         </Link>
       }
     />

@@ -26,8 +26,7 @@ export function AdminPageIntro({
   const effectiveDecoration = variant === "entity-detail" ? "none" : decoration;
   const effectiveUseAccent = variant === "entity-detail" ? false : useAccent;
 
-  const innerPadding =
-    variant === "entity-detail" ? "py-1.5 md:py-2" : "py-2.5 md:py-3.5";
+  const innerPadding = "py-2.5 md:py-3.5";
 
   const titleClassName =
     variant === "entity-detail"
@@ -36,8 +35,13 @@ export function AdminPageIntro({
 
   const subtitleClassName =
     variant === "entity-detail"
-      ? "mt-1 max-w-prose text-sm leading-snug text-stone-600"
+      ? "mt-1.5 max-w-prose text-sm leading-snug text-stone-500"
       : "mt-1 max-w-prose text-sm font-medium leading-snug text-stone-600";
+
+  const identityBlockClassName =
+    variant === "entity-detail"
+      ? "border-l-[4px] border-stone-500/55 pl-3.5 sm:pl-4"
+      : "";
 
   return (
     <header className="relative overflow-hidden">
@@ -63,7 +67,7 @@ export function AdminPageIntro({
       <div className={`relative z-10 ${innerPadding}`}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div
-            className={`min-w-0 ${effectiveUseAccent ? workspacePageIntroAccent : ""}`}
+            className={`min-w-0 ${effectiveUseAccent ? workspacePageIntroAccent : ""} ${identityBlockClassName}`}
           >
             {breadcrumb ? (
               <div className="mb-1.5 sm:mb-2">{breadcrumb}</div>

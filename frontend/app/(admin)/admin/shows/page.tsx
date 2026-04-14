@@ -1,5 +1,6 @@
 "use client";
 
+import { PlusIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getCurrentWeekBounds } from "@/lib/weekRange";
@@ -14,8 +15,10 @@ import {
   type ShowFinancialSummary,
 } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
-  workspaceActionWarmPrimaryMd,
+  workspaceActionIconMd,
+  workspaceActionPrimaryMd,
   workspacePageContentWidthWide,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import {
@@ -133,15 +136,13 @@ export default function AdminShowsPage() {
           action={
             <Link
               href="/admin/shows/new"
-              className={`${workspaceActionWarmPrimaryMd} w-full justify-center sm:w-auto`}
+              className={`${workspaceActionPrimaryMd} w-full justify-center sm:w-auto`}
             >
-              <span
-                className="text-base font-semibold leading-none"
-                aria-hidden
+              <WorkspaceActionLabel
+                icon={<PlusIcon className={workspaceActionIconMd} />}
               >
-                +
-              </span>
-              Show
+                Show
+              </WorkspaceActionLabel>
             </Link>
           }
         />

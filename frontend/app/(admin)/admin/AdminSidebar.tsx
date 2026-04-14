@@ -26,12 +26,10 @@ const NAV_ITEMS: {
   {
     href: "/admin/balances",
     label: "Balances",
-    match: (p) => p === "/admin/balances" || p.startsWith("/admin/wholesalers"),
-  },
-  {
-    href: "/admin/payments",
-    label: "Payments",
-    match: (p) => p.startsWith("/admin/payments"),
+    match: (p) =>
+      p === "/admin/balances" ||
+      p.startsWith("/admin/wholesalers") ||
+      p.startsWith("/admin/payments"),
   },
 ];
 

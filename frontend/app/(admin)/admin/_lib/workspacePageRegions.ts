@@ -8,6 +8,21 @@
 export const workspacePageTopStack = 'flex min-w-0 flex-col gap-4 md:gap-4.5';
 
 /**
+ * Vendor detail main workspace: desktop = summary + pay (left) | ledger (right); mobile = stacked.
+ * Horizontal gap aligns with {@link workspacePagePrimarySecondaryGrid} rhythm.
+ */
+export const workspaceFinancialVendorMainGrid =
+  'grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start lg:gap-6 xl:gap-8';
+
+/** Left column: summary + payment (tight vertical rhythm). */
+export const workspaceFinancialVendorPrimaryColumn =
+  'min-w-0 space-y-3 md:space-y-3.5 lg:col-span-5 xl:col-span-5';
+
+/** Right column: ledger (slightly wider for table density). */
+export const workspaceFinancialVendorLedgerColumn =
+  'min-w-0 min-h-0 lg:col-span-7 xl:col-span-7';
+
+/**
  * Primary + secondary columns (e.g. hero module + side notifications).
  */
 export const workspacePagePrimarySecondaryGrid =

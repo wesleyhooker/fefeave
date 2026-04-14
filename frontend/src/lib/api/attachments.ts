@@ -91,6 +91,15 @@ export async function fetchShowAttachments(
   );
 }
 
+/** List attachments linked to a payment (receipts). */
+export async function fetchPaymentAttachments(
+  paymentId: string,
+): Promise<ShowAttachmentItem[]> {
+  return backendGetJson<ShowAttachmentItem[]>(
+    `/payments/${encodeURIComponent(paymentId)}/attachments`,
+  );
+}
+
 /** Link an attachment to a show. */
 export async function linkAttachmentToShow(
   showId: string,

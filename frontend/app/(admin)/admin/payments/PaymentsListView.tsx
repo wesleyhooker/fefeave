@@ -1,5 +1,6 @@
 "use client";
 
+import { BanknotesIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PaymentsTableSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
@@ -16,7 +17,9 @@ import {
   workspaceTableBodyCellPadding,
   workspaceTableHeaderCellPadding,
 } from "@/app/(admin)/admin/_components/WorkspaceTableRow";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
+  workspaceActionIconMd,
   workspaceActionPrimaryMd,
   workspaceCard,
   workspaceMoneyNeutral,
@@ -99,7 +102,11 @@ export function PaymentsListView() {
               href="/admin/payments/new"
               className={`${workspaceActionPrimaryMd} w-full justify-center sm:w-auto`}
             >
-              Record payment
+              <WorkspaceActionLabel
+                icon={<BanknotesIcon className={workspaceActionIconMd} />}
+              >
+                Record payment
+              </WorkspaceActionLabel>
             </Link>
           }
         />

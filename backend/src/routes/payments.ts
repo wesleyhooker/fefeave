@@ -204,6 +204,157 @@ export async function paymentRoutes(
     }
   );
 
+  const patchPaymentSchema = z.object({
+    amount: z.union([z.string(), z.number()]).transform((v) => {
+      const n = typeof v === 'string' ? parseFloat(v) : v;
+      if (Number.isNaN(n) || n <= 0) {
+        throw new Error('amount must be greater than 0');
+      }
+      return n;
+    }),
+    payment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'payment_date must be YYYY-MM-DD'),
+    reference: z.string().optional(),
+    notes: z.string().optional(),
+  });
+
+  fastify.patch<{
+    Params: { paymentId: string };
+    Body: z.infer<typeof patchPaymentSchema>;
+  }>(
+    '/payments/:paymentId',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Update a payment',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['paymentId'],
+          properties: { paymentId: { type: 'string', format: 'uuid' } },
+        },
+        body: {
+          type: 'object',
+          required: ['amount', 'payment_date'],
+          properties: {
+            amount: { type: 'number' },
+            payment_date: { type: 'string', format: 'date' },
+            reference: { type: 'string' },
+            notes: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              wholesaler_id: { type: 'string' },
+              amount: { type: 'string' },
+              currency: { type: 'string' },
+              payment_date: { type: 'string' },
+              reference: { type: 'string' },
+              notes: { type: 'string' },
+              created_at: { type: 'string' },
+              updated_at: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const idParsed = uuidSchema.safeParse(request.params.paymentId);
+      if (!idParsed.success) {
+        throw new ValidationError('Invalid payment id', idParsed.error.errors);
+      }
+      const bodyParsed = patchPaymentSchema.safeParse(request.body);
+      if (!bodyParsed.success) {
+        throw new ValidationError('Invalid request body', bodyParsed.error.errors);
+      }
+      const paymentId = idParsed.data;
+      const { amount, payment_date, reference, notes } = bodyParsed.data;
+
+      const pool = getPool();
+      const result = await pool.query(
+        `UPDATE payments
+            SET amount = $1,
+                payment_date = $2,
+                reference = $3,
+                notes = $4,
+                updated_at = NOW()
+          WHERE id = $5 AND deleted_at IS NULL
+          RETURNING id, wholesaler_id, amount, currency, payment_date, reference, notes, created_at, updated_at`,
+        [amount, payment_date, reference ?? null, notes ?? null, paymentId]
+      );
+
+      const row = result.rows[0] as
+        | {
+            id: string;
+            wholesaler_id: string;
+            amount: string;
+            currency: string;
+            payment_date: string;
+            reference: string | null;
+            notes: string | null;
+            created_at: Date;
+            updated_at: Date;
+          }
+        | undefined;
+
+      if (!row) {
+        throw new NotFoundError('Payment', paymentId);
+      }
+
+      return reply.send({
+        id: row.id,
+        wholesaler_id: row.wholesaler_id,
+        amount: row.amount,
+        currency: row.currency,
+        payment_date: row.payment_date,
+        reference: row.reference ?? undefined,
+        notes: row.notes ?? undefined,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      });
+    }
+  );
+
+  fastify.delete<{ Params: { paymentId: string } }>(
+    '/payments/:paymentId',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Soft-delete a payment',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['paymentId'],
+          properties: { paymentId: { type: 'string', format: 'uuid' } },
+        },
+        response: { 204: { type: 'null' } },
+      },
+    },
+    async (request, reply) => {
+      const idParsed = uuidSchema.safeParse(request.params.paymentId);
+      if (!idParsed.success) {
+        throw new ValidationError('Invalid payment id', idParsed.error.errors);
+      }
+      const paymentId = idParsed.data;
+
+      const pool = getPool();
+      const result = await pool.query(
+        `UPDATE payments SET deleted_at = NOW(), updated_at = NOW()
+          WHERE id = $1 AND deleted_at IS NULL
+          RETURNING id`,
+        [paymentId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new NotFoundError('Payment', paymentId);
+      }
+
+      return reply.status(204).send();
+    }
+  );
+
   const linkAttachmentBodySchema = z.object({
     attachmentId: z.string().uuid(),
   });

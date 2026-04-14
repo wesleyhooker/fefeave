@@ -20,6 +20,11 @@
  * | Page region stacks/grids (intro-adjacent, primary/secondary columns) | `_lib/workspacePageRegions.ts` |
  * | Summary stat tiles (dashboard-style cards) | `AdminSummaryStatGrid.tsx` + `workspaceStatTile` |
  * | Section toolbar (filters left, actions right) | `AdminWorkspaceToolbar.tsx` + `workspaceSectionToolbar` |
+ * | Styled native `<select>` / text / date | `workspaceSelect`, `workspaceTextInput`, `workspaceDateInput` + `WorkspaceNativeSelect.tsx` |
+ * | Segmented toolbar filter | `workspaceSegmentedTrack` / `workspaceSegmentedButton*` + `WorkspaceSegmentedControl.tsx` |
+ * | Toolbar Export / Actions menu | `WorkspaceToolbarMenu.tsx` (+ `workspaceToolbarMenuPanel` / `workspaceToolbarMenuItem*`) |
+ * | Single-select menu (form fields, same family as toolbar menus) | `WorkspaceSelectMenu.tsx` |
+ * | File upload (form attachment row) | `WorkspaceFileUpload.tsx` |
  *
  * ## Row interaction model
  * - **Primary navigation:** link on the entity name/title (`workspaceRowTitleLink`). Shows desktop table uses
@@ -154,6 +159,60 @@ export const workspaceToolbarSearchInput =
 export const workspaceToolbarFilterLabel =
   'flex cursor-pointer select-none items-center gap-2 text-sm text-gray-700';
 
+/**
+ * Shared field chrome for native text, select, and date inputs (aligned height + border).
+ */
+const workspaceFormFieldChrome =
+  'w-full min-w-0 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 shadow-sm outline-none transition-[border-color,box-shadow] hover:border-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-60';
+
+/** Standard single-line text / amount fields (not `<select>`). */
+export const workspaceTextInput = `h-10 px-3 ${workspaceFormFieldChrome}`;
+
+/** Compact fields (dense forms, e.g. vendor inline pay). */
+export const workspaceTextInputCompact = `h-9 px-2.5 ${workspaceFormFieldChrome}`;
+
+/**
+ * Native `<select>` — pair with {@link WorkspaceNativeSelect} for chevron affordance.
+ */
+export const workspaceSelect = `h-10 cursor-pointer appearance-none px-3 pr-10 ${workspaceFormFieldChrome}`;
+
+/**
+ * Native `<input type="date">` — calendar chrome stays browser-native; field matches other controls.
+ */
+export const workspaceDateInput = `${workspaceTextInput} [color-scheme:light]`;
+
+export const workspaceDateInputCompact = `${workspaceTextInputCompact} [color-scheme:light]`;
+
+/** Segmented filter track (toolbar / compact filters). */
+export const workspaceSegmentedTrack =
+  'inline-flex shrink-0 rounded-lg border border-gray-300 bg-[#F3F4F6] p-0.5 shadow-[inset_0_1px_2px_rgba(15,23,42,0.06)]';
+
+/** Inactive segment in {@link workspaceSegmentedTrack}. */
+export const workspaceSegmentedButton =
+  'rounded-md px-2 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:text-gray-900 sm:px-3 sm:py-2 sm:text-sm';
+
+/** Active segment — inset chip. */
+export const workspaceSegmentedButtonActive =
+  'bg-white text-gray-900 shadow-sm';
+
+/** Toolbar dropdown panel (Export / Filter / Download) — shared surface. */
+export const workspaceToolbarMenuPanel =
+  'absolute z-40 mt-1.5 min-w-[12.5rem] rounded-xl border border-gray-200/95 bg-white p-1.5 shadow-[0_12px_40px_-12px_rgba(15,23,42,0.16),0_4px_14px_-6px_rgba(15,23,42,0.08)] ring-1 ring-gray-900/[0.04]';
+
+/** Menu row — text + hover; pair with {@link workspaceToolbarMenuItemSelected}. */
+export const workspaceToolbarMenuItem =
+  'flex w-full min-h-[2.5rem] items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-gray-400/80';
+
+/** Selected row in filter-style menus. */
+export const workspaceToolbarMenuItemSelected =
+  'bg-stone-50/90 font-medium text-gray-900';
+
+/** Unified form label (primary fields). */
+export const workspaceFormLabel = 'text-sm font-medium text-gray-800';
+
+/** Secondary tier label (reference, date, receipt) — same size, softer tone. */
+export const workspaceFormLabelSecondary = 'text-sm font-medium text-gray-600';
+
 /** Secondary numeric / meta cells in admin data tables */
 export const workspaceTableCellSecondary = 'text-sm tabular-nums text-gray-600';
 
@@ -200,6 +259,76 @@ export const workspaceShowsTableRowLinkToday =
  */
 export const workspaceRowTitleLink =
   'font-medium text-gray-900 hover:text-gray-600 hover:underline';
+
+/**
+ * Ledger row — strongest contextual label (show name); one step below page-title scale.
+ */
+export const workspaceLedgerContextTitle =
+  'text-sm font-semibold leading-snug text-gray-900';
+
+/** Linked show name in ledger (desktop + mobile). */
+export const workspaceLedgerShowNameLink = `${workspaceLedgerContextTitle} underline-offset-2 hover:text-gray-700 hover:underline`;
+
+/** Non-link show label (e.g. no show id). */
+export const workspaceLedgerShowNamePlain = `${workspaceLedgerContextTitle} text-gray-600`;
+
+/**
+ * Shared ledger row baseline: same neutral hover tint as Balances (`workspaceTableRowInteractive`).
+ * Role-specific rows add cursor, group, and optional inset rails — never a different hover strength.
+ */
+export const workspaceLedgerRowBaseline = `${workspaceTableRowInteractive} select-none transition-[background-color,box-shadow] duration-200 ease-out`;
+
+/**
+ * Wholesaler ledger — payment row (whole row selects inline edit). Emerald inset rail on hover; `group/ledger-payment` for trailing edit affordance.
+ */
+export const workspaceLedgerRowPayment =
+  'group/ledger-payment cursor-pointer ' +
+  workspaceLedgerRowBaseline +
+  ' hover:shadow-[inset_3px_0_0_0_rgba(16,185,129,0.24)]';
+
+/**
+ * Wholesaler ledger — itemized settlement (row toggles line items). Stone inset rail; `group/ledger-settlement` for disclosure icon tone.
+ */
+export const workspaceLedgerRowSettlementExpandable =
+  'group/ledger-settlement cursor-pointer ' +
+  workspaceLedgerRowBaseline +
+  ' hover:shadow-[inset_3px_0_0_0_rgba(120,113,108,0.16)]';
+
+/**
+ * Wholesaler ledger — informational settlement (no expand, not editable). Same hover scan as other rows; default cursor.
+ */
+export const workspaceLedgerRowSettlement =
+  'cursor-default ' + workspaceLedgerRowBaseline;
+
+/** Subtle selected payment row (paired with {@link workspaceLedgerRowPayment}). */
+export const workspaceLedgerRowPaymentSelected =
+  'bg-emerald-50/40 shadow-[inset_3px_0_0_0_rgba(16,185,129,0.36)] hover:bg-emerald-50/50 hover:shadow-[inset_3px_0_0_0_rgba(16,185,129,0.42)]';
+
+/** Narrow columns that reserve disclosure / edit affordances — pair with {@link WorkspaceTableRow} ledger cells. */
+export const workspaceLedgerAffordanceColWidth =
+  'w-9 min-w-[2.25rem] sm:w-10 sm:min-w-[2.5rem]';
+
+/**
+ * Expanded settlement line items: subordinate detail (not a nested card). Left rail + flat wash.
+ */
+export const workspaceLedgerDetailPanel =
+  'border-l-2 border-stone-200/80 bg-gray-50/90 py-2 pl-3 pr-2 sm:pl-4 sm:pr-3';
+
+export const workspaceLedgerDetailTableHead =
+  'text-left text-[10px] font-semibold uppercase tracking-wider text-gray-500';
+
+export const workspaceLedgerDetailCell =
+  'py-1.5 text-xs tabular-nums text-gray-700 sm:py-2 sm:text-sm';
+
+export const workspaceLedgerDetailCellMuted =
+  'py-1.5 text-xs tabular-nums text-gray-600 sm:py-2 sm:text-sm';
+
+/**
+ * Running balance cell — primary vs supporting columns without oversized type.
+ * Combine with {@link workspaceListPrimaryMoneyAmountClass} / semantic money helpers.
+ */
+export const workspaceLedgerRunningBalanceAmount =
+  'text-sm font-semibold tabular-nums sm:text-base';
 
 // --- Semantic money (value carries meaning; avoid loud green/red) ------------
 
@@ -252,6 +381,15 @@ export function workspaceListPrimaryMoneyAmountClass(
 
 // --- Actions (meaning + size) -------------------------------------------------
 
+/**
+ * Leading/trailing icon size inside workspace action buttons (pair with Heroicons `outline` 24px).
+ * Buttons use `inline-flex … gap-1.5` — place icon as first child before label text.
+ */
+export const workspaceActionIconMd = 'h-4 w-4 shrink-0';
+
+/** Compact row/section actions (`*Sm` tokens). */
+export const workspaceActionIconSm = 'h-3.5 w-3.5 shrink-0';
+
 const focusRingDark =
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900';
 
@@ -271,17 +409,17 @@ export const workspaceActionSecondaryMd = `inline-flex items-center justify-cent
 /**
  * Completion workflow — Close out, Mark done (row / compact).
  */
-export const workspaceActionCompleteSm = `inline-flex items-center justify-center rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-gray-800 ${focusRingDark}`;
+export const workspaceActionCompleteSm = `inline-flex items-center justify-center gap-1.5 rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-gray-800 ${focusRingDark}`;
 
 /**
  * Completion workflow — section-level (e.g. show detail close out).
  */
-export const workspaceActionCompleteMd = `inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 ${focusRingDark}`;
+export const workspaceActionCompleteMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 ${focusRingDark}`;
 
 /**
  * Neutral row follow-up — View, Cancel-style outline.
  */
-export const workspaceActionSecondarySm = `inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 ${focusRingSoft}`;
+export const workspaceActionSecondarySm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 ${focusRingSoft}`;
 
 /**
  * Financial / money-out — Pay (distinct from completion; restrained amber field).
@@ -298,7 +436,23 @@ export const workspaceActionTertiaryLink = `inline-flex items-center justify-cen
  */
 export const workspaceActionRecordPaymentSm = workspaceActionSecondarySm;
 
-/** Warm primary action for meaningful workspace confirms (e.g. mark paid). */
+const focusRingEmerald =
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500/55';
+
+/**
+ * Positive completion — Record payment, Mark as paid, confirm-success (emerald; not destructive).
+ */
+export const workspaceActionPositiveCompleteMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(4,120,87,0.2)] transition-[background-color,box-shadow] duration-200 hover:bg-emerald-700 hover:shadow-[0_2px_10px_-2px_rgba(4,120,87,0.28)] active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
+
+/**
+ * Compact positive completion (e.g. Mark as paid in workflow strips).
+ */
+export const workspaceActionPositiveCompleteSm = `inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
+
+/**
+ * @deprecated Prefer {@link workspaceActionPrimaryMd} for neutral creation CTAs or {@link workspaceActionPositiveCompleteMd} for success-style completion. Rose retained only for legacy call sites until migrated.
+ * Warm / rose — use sparingly; reads as danger-adjacent next to emerald success actions.
+ */
 export const workspaceActionWarmPrimaryMd =
   'inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(190,24,93,0.18)] transition-[background-color,box-shadow] duration-200 hover:bg-rose-700 hover:shadow-[0_2px_8px_-2px_rgba(190,24,93,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/50 active:bg-rose-800';
 

@@ -1,11 +1,13 @@
 "use client";
 
+import { ArrowDownTrayIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import { apiGetText } from "@/lib/api";
 import { AdminWorkspaceToolbar } from "@/app/(admin)/admin/_components/AdminWorkspaceToolbar";
+import { WorkspaceToolbarMenu } from "@/app/(admin)/admin/_components/WorkspaceToolbarMenu";
 import { WorkspaceListPaymentStatus } from "@/app/(admin)/admin/_components/WorkspaceListStatus";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
 import {
@@ -16,6 +18,7 @@ import {
 } from "@/app/(admin)/admin/_components/WorkspaceTableRow";
 import { getWorkspacePaymentStatus } from "@/app/(admin)/admin/_lib/workspacePaymentStatus";
 import {
+  workspaceActionIconMd,
   workspaceActionSecondaryMd,
   workspaceActionSecondarySm,
   workspaceCard,
@@ -24,7 +27,6 @@ import {
   workspaceTableCellMeta,
   workspaceTableCellSecondary,
   workspaceTheadSticky,
-  workspaceToolbarFilterLabel,
   workspaceToolbarSearchInput,
 } from "../_components/workspaceUi";
 
@@ -59,7 +61,8 @@ function wholesalerDetailHref(wholesalerId: string): string {
 
 export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
   const [search, setSearch] = useState("");
-  const [owingOnly, setOwingOnly] = useState(false);
+  const [filterScope, setFilterScope] = useState<"all" | "balance">("all");
+  const owingOnly = filterScope === "balance";
   const [sortKey, setSortKey] = useState<SortKey>("balance_owed");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [exportError, setExportError] = useState<string | null>(null);
@@ -164,25 +167,44 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
               className={`${workspaceToolbarSearchInput} sm:max-w-xs md:max-w-sm`}
               aria-label="Search vendors"
             />
-            <label className={workspaceToolbarFilterLabel}>
-              <input
-                type="checkbox"
-                checked={owingOnly}
-                onChange={(e) => setOwingOnly(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-              />
-              Owing only
-            </label>
+            <WorkspaceToolbarMenu
+              label="Filter"
+              leadingIcon={<FunnelIcon className={workspaceActionIconMd} />}
+              menuId="balances-filter"
+              items={[
+                {
+                  id: "all",
+                  label: "All vendors",
+                  selected: filterScope === "all",
+                  onSelect: () => setFilterScope("all"),
+                },
+                {
+                  id: "balance",
+                  label: "Vendors with balance",
+                  selected: filterScope === "balance",
+                  onSelect: () => setFilterScope("balance"),
+                },
+              ]}
+            />
           </>
         }
         right={
-          <button
-            type="button"
-            onClick={handleDownloadCsv}
-            className={`${workspaceActionSecondaryMd} w-full justify-center sm:w-auto`}
-          >
-            Download Balances CSV
-          </button>
+          <WorkspaceToolbarMenu
+            label="Export"
+            leadingIcon={
+              <ArrowDownTrayIcon className={workspaceActionIconMd} />
+            }
+            menuId="balances-export"
+            items={[
+              {
+                id: "balances-csv",
+                label: "Download balances CSV",
+                onSelect: () => {
+                  void handleDownloadCsv();
+                },
+              },
+            ]}
+          />
         }
       />
 

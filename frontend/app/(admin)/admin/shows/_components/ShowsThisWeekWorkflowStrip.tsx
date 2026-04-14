@@ -1,11 +1,17 @@
 "use client";
 
+import {
+  ArrowUturnLeftIcon,
+  CheckCircleIcon,
+} from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import {
+  workspaceActionIconSm,
   workspaceActionSecondarySm,
-  workspaceActionWarmPrimaryMd,
+  workspaceActionPositiveCompleteSm,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import {
   clearSelfPay,
@@ -13,21 +19,6 @@ import {
   saveSelfPay,
   type SelfPayStored,
 } from "@/app/(admin)/admin/dashboard/selfPayStorage";
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 12 12"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      aria-hidden
-    >
-      <path d="M2 6l3 3 5-5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export function ShowsThisWeekWorkflowStrip({
   weekStartStr,
@@ -104,9 +95,9 @@ export function ShowsThisWeekWorkflowStrip({
             {paid ? (
               <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                 <span className="inline-flex items-center gap-1.5 font-medium text-emerald-800">
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100/90 text-emerald-800">
-                    <CheckIcon className="h-3.5 w-3.5 shrink-0" />
-                  </span>
+                  <CheckCircleIcon
+                    className={`${workspaceActionIconSm} shrink-0 text-emerald-700`}
+                  />
                   Paid
                 </span>
                 {paidAtLabel ? (
@@ -124,15 +115,25 @@ export function ShowsThisWeekWorkflowStrip({
                 onClick={() => setMarkUnpaidOpen(true)}
                 className={workspaceActionSecondarySm}
               >
-                Mark as unpaid
+                <WorkspaceActionLabel
+                  icon={
+                    <ArrowUturnLeftIcon className={workspaceActionIconSm} />
+                  }
+                >
+                  Mark as unpaid
+                </WorkspaceActionLabel>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setMarkPaidOpen(true)}
-                className={`${workspaceActionWarmPrimaryMd} sm:py-2`}
+                className={`${workspaceActionPositiveCompleteSm} sm:px-3.5 sm:py-2`}
               >
-                Mark as paid
+                <WorkspaceActionLabel
+                  icon={<CheckCircleIcon className={workspaceActionIconSm} />}
+                >
+                  Mark as paid
+                </WorkspaceActionLabel>
               </button>
             )}
           </div>

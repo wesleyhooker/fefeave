@@ -1,14 +1,17 @@
 "use client";
 
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
 import type { ShowDTO } from "@/src/lib/api/shows";
 import type { SelfPayStored } from "../selfPayStorage";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
   workspaceListPrimaryMoneyAmountClass,
-  workspaceActionWarmPrimaryMd,
+  workspaceActionIconSm,
+  workspaceActionPositiveCompleteSm,
   workspaceMoneyMuted,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
@@ -172,22 +175,9 @@ export function DashboardThisWeekCard({
                       {summaryPaidComplete ? (
                         <>
                           <span className="inline-flex items-center justify-center gap-2 self-stretch rounded-lg border border-emerald-400/45 bg-emerald-100/85 px-3 py-2 text-center text-xs font-semibold text-emerald-900 shadow-[inset_0_0_0_1px_rgba(5,95,72,0.08)] sm:self-end sm:py-1.5">
-                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/70 text-emerald-800">
-                              <svg
-                                className="h-3.5 w-3.5 shrink-0"
-                                viewBox="0 0 12 12"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.2"
-                                aria-hidden
-                              >
-                                <path
-                                  d="M2 6l3 3 5-5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </span>
+                            <CheckCircleIcon
+                              className={`${workspaceActionIconSm} shrink-0 text-emerald-800`}
+                            />
                             <span>Marked paid</span>
                           </span>
                           {paidAtLabel ? (
@@ -207,9 +197,17 @@ export function DashboardThisWeekCard({
                         <button
                           type="button"
                           onClick={() => setMarkPaidOpen(true)}
-                          className={`${workspaceActionWarmPrimaryMd} sm:py-2`}
+                          className={`${workspaceActionPositiveCompleteSm} sm:px-3.5 sm:py-2`}
                         >
-                          Mark as paid
+                          <WorkspaceActionLabel
+                            icon={
+                              <CheckCircleIcon
+                                className={workspaceActionIconSm}
+                              />
+                            }
+                          >
+                            Mark as paid
+                          </WorkspaceActionLabel>
                         </button>
                       )}
                     </div>

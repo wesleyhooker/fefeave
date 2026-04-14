@@ -40,3 +40,35 @@ export async function backendGetJson<T>(
 
   return res.json() as Promise<T>;
 }
+
+/**
+ * Mutations (POST / PATCH / PUT / DELETE) returning JSON or empty 204.
+ */
+export async function backendMutateJson<T>(
+  path: string,
+  init: RequestInit,
+): Promise<T | undefined> {
+  const res = await fetch(toAbsoluteUrl(path), {
+    cache: 'no-store',
+    credentials: 'include',
+    ...init,
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(
+      `Backend ${init.method ?? 'REQUEST'} ${path} failed (${res.status} ${res.statusText}): ${body}`,
+    );
+  }
+
+  if (res.status === 204) {
+    return undefined;
+  }
+
+  const text = await res.text();
+  if (!text.trim()) {
+    return undefined;
+  }
+
+  return JSON.parse(text) as T;
+}

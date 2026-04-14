@@ -11,6 +11,15 @@ export function formatCurrencyAbs(n: number): string {
   return formatCurrency(Math.abs(n));
 }
 
+/**
+ * Ledger **running balance** cell text: magnitude only (no leading “-” in the string).
+ * Pair with signed semantic color classes in the UI so sign is not duplicated visually.
+ * For screen readers, set `aria-label` to the full signed value (e.g. {@link formatCurrency}).
+ */
+export function formatLedgerRunningBalance(n: number): string {
+  return formatCurrencyAbs(n);
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
     year: 'numeric',

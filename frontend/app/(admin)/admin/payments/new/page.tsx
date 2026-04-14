@@ -1,5 +1,6 @@
 "use client";
 
+import { BanknotesIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
@@ -12,8 +13,10 @@ import {
 } from "@/src/lib/api/attachments";
 import { createPayment } from "@/src/lib/api/payments";
 import { fetchWholesalerBalances } from "@/src/lib/api/wholesalers";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
   workspaceActionCompleteMd,
+  workspaceActionIconMd,
   workspaceActionSecondaryMd,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 
@@ -166,8 +169,8 @@ function RecordPaymentForm() {
   return (
     <div>
       <nav className="mb-2 text-sm text-gray-500" aria-label="Breadcrumb">
-        <Link href="/admin/payments" className="hover:text-gray-700">
-          Payments
+        <Link href="/admin/balances" className="hover:text-gray-700">
+          Balances
         </Link>
         <span className="mx-1.5">/</span>
         <span aria-current="page">Record payment</span>
@@ -415,10 +418,18 @@ function RecordPaymentForm() {
             disabled={submitting || loadingWholesalers}
             className={`${workspaceActionCompleteMd} disabled:opacity-60`}
           >
-            {submitting ? "Saving..." : "Record payment"}
+            <WorkspaceActionLabel
+              icon={<BanknotesIcon className={workspaceActionIconMd} />}
+            >
+              {submitting ? "Saving..." : "Record payment"}
+            </WorkspaceActionLabel>
           </button>
-          <Link href="/admin/payments" className={workspaceActionSecondaryMd}>
-            Cancel
+          <Link href="/admin/balances" className={workspaceActionSecondaryMd}>
+            <WorkspaceActionLabel
+              icon={<XMarkIcon className={workspaceActionIconMd} />}
+            >
+              Cancel
+            </WorkspaceActionLabel>
           </Link>
         </div>
       </form>

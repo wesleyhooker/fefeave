@@ -388,4 +388,59 @@ describe('Settlement and ledger integration', () => {
     expect(Number(bal.owed_total)).toBe(999.99);
     expect(Number(bal.balance_owed)).toBe(999.99);
   });
+
+  test('PATCH payment updates fields; DELETE soft-removes payment', async () => {
+    const wholesalerRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers`,
+      payload: { name: 'Patch Delete Wholesaler' },
+    });
+    expect(wholesalerRes.statusCode).toBe(201);
+    const wholesaler = JSON.parse(wholesalerRes.payload);
+
+    const paymentRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/payments`,
+      payload: {
+        wholesaler_id: wholesaler.id,
+        amount: 100,
+        payment_date: '2025-10-01',
+        reference: 'note-a',
+        notes: 'Method: Zelle',
+      },
+    });
+    expect(paymentRes.statusCode).toBe(201);
+    const payment = JSON.parse(paymentRes.payload);
+
+    const patchRes = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/payments/${payment.id}`,
+      payload: {
+        amount: 75.5,
+        payment_date: '2025-10-02',
+        reference: 'note-b',
+        notes: 'Method: Cash',
+      },
+    });
+    expect(patchRes.statusCode).toBe(200);
+    const updated = JSON.parse(patchRes.payload);
+    expect(updated.id).toBe(payment.id);
+    expect(parseFloat(String(updated.amount))).toBe(75.5);
+    expect(updated.payment_date).toBe('2025-10-02');
+    expect(updated.reference).toBe('note-b');
+
+    const delRes = await app.inject({
+      method: 'DELETE',
+      url: `${prefix}/payments/${payment.id}`,
+    });
+    expect(delRes.statusCode).toBe(204);
+
+    const listRes = await app.inject({
+      method: 'GET',
+      url: `${prefix}/payments?wholesaler_id=${wholesaler.id}`,
+    });
+    expect(listRes.statusCode).toBe(200);
+    const list = JSON.parse(listRes.payload);
+    expect(list.some((p: { id: string }) => p.id === payment.id)).toBe(false);
+  });
 });

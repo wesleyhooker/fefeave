@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import {
+  workspaceActionPositiveCompleteMd,
   workspaceActionQuietOutlineMd,
   workspaceActionWarmPrimaryMd,
 } from "./workspaceUi";
@@ -19,12 +20,13 @@ export function WorkspaceConfirmDialog({
 }: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title: string;
   description: string;
   confirmLabel: string;
   cancelLabel?: string;
-  tone?: "rose" | "stone";
+  /** `rose` = positive completion (emerald confirm). `stone` = neutral. `danger` = destructive (rose confirm). */
+  tone?: "rose" | "stone" | "danger";
   icon?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -51,11 +53,15 @@ export function WorkspaceConfirmDialog({
   const iconToneClass =
     tone === "stone"
       ? "bg-stone-200/75 text-stone-700"
-      : "bg-emerald-100/90 text-emerald-800";
+      : tone === "danger"
+        ? "bg-rose-100/90 text-rose-800"
+        : "bg-emerald-100/90 text-emerald-800";
   const confirmToneClass =
     tone === "stone"
       ? "inline-flex items-center justify-center gap-1.5 rounded-lg bg-stone-700 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(28,25,23,0.22)] transition-colors duration-200 hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 active:bg-stone-900"
-      : workspaceActionWarmPrimaryMd;
+      : tone === "danger"
+        ? workspaceActionWarmPrimaryMd
+        : workspaceActionPositiveCompleteMd;
 
   return (
     <dialog
@@ -92,8 +98,8 @@ export function WorkspaceConfirmDialog({
           <button
             type="button"
             className={confirmToneClass}
-            onClick={() => {
-              onConfirm();
+            onClick={async () => {
+              await Promise.resolve(onConfirm());
               onOpenChange(false);
             }}
           >

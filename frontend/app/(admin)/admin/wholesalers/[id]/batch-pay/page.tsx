@@ -1,5 +1,6 @@
 "use client";
 
+import { BanknotesIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -10,7 +11,9 @@ import {
   type ClosedShowInBalanceRow,
   type PaySchedule,
 } from "@/src/lib/api/wholesalers";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
+  workspaceActionIconMd,
   workspaceActionSecondaryMd,
   workspaceMoneyClassForLiability,
   workspaceMoneyTabular,
@@ -278,7 +281,11 @@ export default function BatchPayPage() {
           href={`/admin/payments/new?wholesalerId=${encodeURIComponent(id)}`}
           className={workspaceActionSecondaryMd}
         >
-          Record payment
+          <WorkspaceActionLabel
+            icon={<BanknotesIcon className={workspaceActionIconMd} />}
+          >
+            Record payment
+          </WorkspaceActionLabel>
         </Link>
       </div>
     </div>
