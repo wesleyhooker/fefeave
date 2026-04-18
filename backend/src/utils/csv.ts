@@ -13,15 +13,18 @@ export function toCsvText(header: string[], rows: Array<Array<string | number>>)
   return csvLines.join('\n');
 }
 
+import { toYyyyMmDd } from './pg-date';
+
 export function formatCurrency2dp(value: string): string {
   const n = Number(value);
   if (!Number.isFinite(n)) return '0.00';
   return n.toFixed(2);
 }
 
-export function normalizeDateYyyyMmDd(value?: string | null): string {
-  if (!value) return '';
-  return String(value).slice(0, 10);
+/** CSV / export-safe YYYY-MM-DD (handles PG `date` and JS `Date` from node-pg). */
+export function normalizeDateYyyyMmDd(value?: string | Date | null): string {
+  if (value === null || value === undefined) return '';
+  return toYyyyMmDd(value);
 }
 
 export function todayFileDate(): string {

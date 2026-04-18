@@ -1,30 +1,27 @@
 "use client";
 
 import {
-  BanknotesIcon,
   CheckIcon,
+  DocumentTextIcon,
   TrashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import {
-  createPayment,
-  deletePayment,
-  paymentMethodFromNotes,
-  updatePayment,
-  type PaymentDTO,
-} from "@/src/lib/api/payments";
+  createVendorExpense,
+  deleteVendorExpense,
+  updateVendorExpense,
+} from "@/src/lib/api/vendor-expenses";
 import {
   uploadFile,
-  linkAttachmentToPayment,
+  linkAttachmentToOwedLineItem,
   isAllowedContentType,
   getMaxUploadBytes,
-  fetchPaymentAttachments,
+  fetchOwedLineItemAttachments,
 } from "@/src/lib/api/attachments";
 import { WorkspaceFileUpload } from "@/app/(admin)/admin/_components/WorkspaceFileUpload";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
-import { WorkspaceSelectMenu } from "@/app/(admin)/admin/_components/WorkspaceSelectMenu";
 import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
   workspaceActionIconMd,
@@ -42,44 +39,32 @@ import {
   workspaceTextInputCompact,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 
-const METHOD_OPTIONS = (
-  ["Cash", "Zelle", "Venmo", "Check", "Other"] as const
-).map((m) => ({ value: m, label: m }));
-
 const ACCEPT_RECEIPT = ".pdf,image/png,image/jpeg,image/jpg";
 const MAX_MB = Math.round(getMaxUploadBytes() / 1024 / 1024);
 
-function composeNotesFromMethod(
-  existingNotes: string | undefined,
-  selectedMethod: string,
-): string {
-  const methodText = `Method: ${selectedMethod || "Other"}`;
-  if (!existingNotes?.trim()) return methodText;
-  return `${existingNotes.trim()} | ${methodText}`;
-}
+export type VendorExpenseEditDraft = {
+  id: string;
+  amount: number;
+  description: string;
+  expense_date: string;
+};
 
-function formatBalanceForInput(n: number): string {
-  if (!Number.isFinite(n) || n <= 0) return "";
-  return (Math.round(n * 100) / 100).toFixed(2);
-}
+export type WholesalerExpenseFormMode = "create" | "edit";
 
-export type WholesalerPayFormMode = "create" | "edit";
-
-export function WholesalerInlinePaySection({
+export function WholesalerInlineExpenseSection({
   wholesalerId,
   currentBalance,
   mode,
-  editPayment,
+  editExpense,
   onCancelEdit,
   onRecorded,
   density = "default",
-  /** When true, omit outer card + main title (parent provides Transactions shell). */
   embedded = false,
 }: {
   wholesalerId: string;
   currentBalance: number;
-  mode: WholesalerPayFormMode;
-  editPayment: PaymentDTO | null;
+  mode: WholesalerExpenseFormMode;
+  editExpense: VendorExpenseEditDraft | null;
   onCancelEdit: () => void;
   onRecorded: () => void;
   density?: "default" | "compact";
@@ -93,8 +78,7 @@ export function WholesalerInlinePaySection({
   }`;
 
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState<string>("Zelle");
-  const [note, setNote] = useState("");
+  const [description, setDescription] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [existingReceipts, setExistingReceipts] = useState<
@@ -104,27 +88,17 @@ export function WholesalerInlinePaySection({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const amountInputRef = useRef<HTMLInputElement>(null);
-  const [amountHighlight, setAmountHighlight] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (!amountHighlight) return;
-    const id = window.setTimeout(() => setAmountHighlight(false), 700);
-    return () => window.clearTimeout(id);
-  }, [amountHighlight]);
-
-  useEffect(() => {
-    if (mode === "edit" && editPayment) {
-      const amt = parseFloat(String(editPayment.amount));
-      setAmount(Number.isFinite(amt) ? amt.toFixed(2) : "");
-      setMethod(paymentMethodFromNotes(editPayment.notes));
-      setNote(editPayment.reference ?? "");
-      setDate(editPayment.payment_date);
+    if (mode === "edit" && editExpense) {
+      setAmount(editExpense.amount.toFixed(2));
+      setDescription(editExpense.description);
+      setDate(editExpense.expense_date);
       setReceiptFile(null);
       setReceiptError(null);
-      void fetchPaymentAttachments(editPayment.id)
+      void fetchOwedLineItemAttachments(editExpense.id)
         .then((list) =>
           setExistingReceipts(
             list.map((a) => ({ id: a.id, filename: a.filename })),
@@ -132,13 +106,12 @@ export function WholesalerInlinePaySection({
         )
         .catch(() => setExistingReceipts([]));
     }
-  }, [mode, editPayment?.id]);
+  }, [mode, editExpense?.id]);
 
   useEffect(() => {
-    if (mode === "create" && !editPayment) {
+    if (mode === "create" && !editExpense) {
       setAmount("");
-      setMethod("Zelle");
-      setNote("");
+      setDescription("");
       setDate(new Date().toISOString().slice(0, 10));
       setReceiptFile(null);
       setExistingReceipts([]);
@@ -146,7 +119,7 @@ export function WholesalerInlinePaySection({
       setSubmitError(null);
       setFieldErrors({});
     }
-  }, [mode, editPayment]);
+  }, [mode, editExpense?.id]);
 
   function handleReceiptChange(e: React.ChangeEvent<HTMLInputElement>) {
     setReceiptError(null);
@@ -179,70 +152,62 @@ export function WholesalerInlinePaySection({
     const amt = amount === "" ? NaN : Number(amount);
     if (Number.isNaN(amt) || amt <= 0)
       err.amount = "Amount must be greater than 0";
+    const desc = description.trim();
+    if (!desc) err.description = "Description is required";
     setFieldErrors(err);
     if (Object.keys(err).length > 0) return;
 
-    const notesPayload = composeNotesFromMethod(undefined, method);
-    const refPayload = note.trim() || undefined;
-
     setSubmitting(true);
     try {
-      if (mode === "edit" && editPayment) {
-        await updatePayment(editPayment.id, {
+      if (mode === "edit" && editExpense) {
+        await updateVendorExpense(wholesalerId, editExpense.id, {
           amount: amt,
-          payment_date: date.trim(),
-          reference: refPayload,
-          notes: notesPayload,
+          description: desc,
+          expense_date: date.trim(),
         });
-
         if (receiptFile) {
           try {
             const attachmentId = await uploadFile(receiptFile);
-            await linkAttachmentToPayment(editPayment.id, attachmentId);
+            await linkAttachmentToOwedLineItem(editExpense.id, attachmentId);
           } catch (attachErr) {
             const msg =
               attachErr instanceof Error
                 ? attachErr.message
                 : String(attachErr);
             setReceiptError(
-              `Payment saved. Receipt upload failed: ${msg}. Refreshing…`,
+              `Expense saved. Receipt upload failed: ${msg}. Refreshing…`,
             );
           }
         }
         onCancelEdit();
       } else {
-        const payment = await createPayment({
-          wholesaler_id: wholesalerId,
+        const created = await createVendorExpense(wholesalerId, {
           amount: amt,
-          payment_date: date.trim(),
-          reference: refPayload,
-          notes: notesPayload,
+          description: desc,
+          expense_date: date.trim(),
         });
-
         if (receiptFile) {
           try {
             const attachmentId = await uploadFile(receiptFile);
-            await linkAttachmentToPayment(payment.id, attachmentId);
+            await linkAttachmentToOwedLineItem(created.id, attachmentId);
           } catch (attachErr) {
             const msg =
               attachErr instanceof Error
                 ? attachErr.message
                 : String(attachErr);
             setReceiptError(
-              `Payment saved. Receipt upload failed: ${msg}. Refreshing vendor data…`,
+              `Expense saved. Receipt upload failed: ${msg}. Refreshing vendor data…`,
             );
           }
         }
-
         setAmount("");
-        setNote("");
+        setDescription("");
         setReceiptFile(null);
         const fileInput = document.getElementById(
-          "wholesaler-inline-receipt",
+          "wholesaler-inline-expense-receipt",
         ) as HTMLInputElement | null;
         if (fileInput) fileInput.value = "";
       }
-
       onRecorded();
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : String(error));
@@ -252,11 +217,11 @@ export function WholesalerInlinePaySection({
   }
 
   async function handleDeleteConfirm() {
-    if (!editPayment) return;
+    if (!editExpense) return;
     setDeleting(true);
     setSubmitError(null);
     try {
-      await deletePayment(editPayment.id);
+      await deleteVendorExpense(wholesalerId, editExpense.id);
       onCancelEdit();
       onRecorded();
     } catch (error) {
@@ -272,9 +237,8 @@ export function WholesalerInlinePaySection({
   const validAmount = Number.isFinite(amtNum) && amtNum > 0;
   const projected =
     mode === "create" && validAmount && Number.isFinite(currentBalance)
-      ? Math.round((currentBalance - amtNum) * 100) / 100
+      ? Math.round((currentBalance + amtNum) * 100) / 100
       : null;
-  const isOverage = mode === "create" && validAmount && amtNum > currentBalance;
 
   const formStack =
     isCompact && embedded
@@ -316,7 +280,7 @@ export function WholesalerInlinePaySection({
   const footerBlockEdit =
     "flex flex-col-reverse gap-3 border-t border-gray-200/90 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
 
-  const isEdit = mode === "edit" && editPayment;
+  const isEdit = mode === "edit" && editExpense;
 
   const headerBlock = embedded ? (
     isEdit ? (
@@ -337,8 +301,8 @@ export function WholesalerInlinePaySection({
   ) : (
     <div className={workspaceSectionToolbar}>
       <div className="flex w-full min-w-0 items-center justify-between gap-3">
-        <h2 id="wholesaler-pay-heading" className={workspaceSectionTitle}>
-          {isEdit ? "Edit payment" : "Make payment"}
+        <h2 id="wholesaler-expense-heading" className={workspaceSectionTitle}>
+          {isEdit ? "Edit expense" : "Add expense"}
         </h2>
         {isEdit ? (
           <button
@@ -363,10 +327,10 @@ export function WholesalerInlinePaySection({
 
   return (
     <section
-      id="vendor-inline-payment"
+      id="vendor-inline-expense"
       className={outerClass}
-      aria-labelledby={embedded ? undefined : "wholesaler-pay-heading"}
-      aria-label={embedded ? "Payment" : undefined}
+      aria-labelledby={embedded ? undefined : "wholesaler-expense-heading"}
+      aria-label={embedded ? "Expense" : undefined}
     >
       {headerBlock}
 
@@ -376,7 +340,7 @@ export function WholesalerInlinePaySection({
             className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
             role="alert"
           >
-            <p className="font-medium">Could not save payment.</p>
+            <p className="font-medium">Could not save expense.</p>
             <p className="mt-1">{submitError}</p>
           </div>
         ) : null}
@@ -384,7 +348,7 @@ export function WholesalerInlinePaySection({
         <div className={primaryRowGrid}>
           <div className={primaryFieldShell}>
             <label
-              htmlFor="wholesaler-pay-amount"
+              htmlFor="wholesaler-expense-amount"
               className={`${workspaceFormLabel} block`}
             >
               Amount <span className="text-red-500">*</span>
@@ -398,8 +362,7 @@ export function WholesalerInlinePaySection({
                   $
                 </span>
                 <input
-                  ref={amountInputRef}
-                  id="wholesaler-pay-amount"
+                  id="wholesaler-expense-amount"
                   type="text"
                   inputMode="decimal"
                   autoComplete="off"
@@ -411,36 +374,11 @@ export function WholesalerInlinePaySection({
                     if (parts[1]?.length > 2) return;
                     setAmount(v);
                   }}
-                  className={`${textField} w-full ${isCompact ? "pl-6" : "pl-7"} tabular-nums transition-[box-shadow,border-color] duration-200 ${
-                    amountHighlight
-                      ? "border-emerald-500/50 ring-2 ring-emerald-200/70 ring-offset-1 ring-offset-white"
-                      : ""
-                  }`}
+                  className={`${textField} w-full ${isCompact ? "pl-6" : "pl-7"} tabular-nums`}
                   placeholder="0.00"
-                  aria-label="Payment amount in dollars"
+                  aria-label="Expense amount in dollars"
                 />
               </div>
-              {!isEdit ? (
-                <div
-                  className={
-                    isCompact
-                      ? "mt-1.5 border-t border-dashed border-gray-200/90 pt-1.5"
-                      : "mt-2 border-t border-dashed border-gray-200/90 pt-2"
-                  }
-                >
-                  <button
-                    type="button"
-                    className="text-left text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-2 transition-colors hover:text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
-                    onClick={() => {
-                      setAmount(formatBalanceForInput(currentBalance));
-                      setAmountHighlight(true);
-                      queueMicrotask(() => amountInputRef.current?.focus());
-                    }}
-                  >
-                    Pay full amount
-                  </button>
-                </div>
-              ) : null}
             </div>
             {fieldErrors.amount ? (
               <p className="mt-2 text-xs text-red-600">{fieldErrors.amount}</p>
@@ -454,22 +392,17 @@ export function WholesalerInlinePaySection({
                 }
               >
                 <p>
-                  Balance before{" "}
+                  Balance before:{" "}
                   <span className="font-medium text-stone-900">
                     {formatCurrency(currentBalance)}
                   </span>
                 </p>
                 {projected !== null ? (
                   <p className="mt-1">
-                    After this payment{" "}
+                    After this expense:{" "}
                     <span className="font-medium text-stone-900">
                       {formatCurrency(projected)}
                     </span>
-                  </p>
-                ) : null}
-                {isOverage ? (
-                  <p className="mt-2 text-amber-800" role="status">
-                    Exceeds balance — creates vendor credit.
                   </p>
                 ) : null}
               </div>
@@ -478,51 +411,45 @@ export function WholesalerInlinePaySection({
 
           <div className={primaryFieldShell}>
             <label
-              htmlFor="wholesaler-pay-method-trigger"
+              htmlFor="wholesaler-expense-desc"
               className={`${workspaceFormLabel} block`}
             >
-              Payment method
+              Description <span className="text-red-500">*</span>
             </label>
-            <div className={isCompact ? "mt-1.5" : "mt-2"}>
-              <WorkspaceSelectMenu
-                id="wholesaler-pay-method"
-                value={method}
-                onChange={setMethod}
-                options={METHOD_OPTIONS}
-                ariaLabel="Payment method"
-                align="left"
-              />
-            </div>
+            <input
+              id="wholesaler-expense-desc"
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className={`${textField} ${isCompact ? "mt-1.5" : "mt-2"}`}
+              placeholder="e.g. Shipping, supplies"
+              autoComplete="off"
+            />
+            {fieldErrors.description ? (
+              <p className="mt-2 text-xs text-red-600">
+                {fieldErrors.description}
+              </p>
+            ) : null}
           </div>
         </div>
 
         <div className={secondaryRowGrid}>
           <div className="min-w-0">
-            <label
-              htmlFor="wholesaler-pay-note"
-              className={`${workspaceFormLabelSecondary} block`}
+            <p
+              className={`${workspaceFormLabelSecondary} text-sm leading-snug text-gray-700`}
             >
-              Note <span className="font-normal text-gray-400">(optional)</span>
-            </label>
-            <input
-              id="wholesaler-pay-note"
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className={`${textField} ${isCompact ? "mt-1" : "mt-1.5"}`}
-              placeholder="Memo"
-              autoComplete="off"
-            />
+              Scope: Vendor only
+            </p>
           </div>
           <div className="min-w-0">
             <label
-              htmlFor="wholesaler-pay-date"
+              htmlFor="wholesaler-expense-date"
               className={`${workspaceFormLabelSecondary} block`}
             >
-              Payment date
+              Expense date
             </label>
             <input
-              id="wholesaler-pay-date"
+              id="wholesaler-expense-date"
               type="date"
               required
               value={date}
@@ -538,7 +465,7 @@ export function WholesalerInlinePaySection({
         <div className={tertiaryBlock}>
           <WorkspaceFileUpload
             tone={embedded ? "flush" : "default"}
-            id="wholesaler-inline-receipt"
+            id="wholesaler-inline-expense-receipt"
             label={
               <>
                 Receipt{" "}
@@ -547,14 +474,14 @@ export function WholesalerInlinePaySection({
             }
             helperText={`PDF or image (PNG/JPEG), max ${MAX_MB} MB.${
               isEdit && existingReceipts.length > 0
-                ? ` Current: ${existingReceipts.map((r) => r.filename).join(", ")}.`
+                ? ` Linked: ${existingReceipts.map((r) => r.filename).join(", ")}.`
                 : ""
             }`}
             accept={ACCEPT_RECEIPT}
             onChange={handleReceiptChange}
             error={receiptError}
             fileName={
-              receiptFile && !receiptError?.startsWith("Payment saved")
+              receiptFile && !receiptError?.startsWith("Expense saved")
                 ? receiptFile.name
                 : null
             }
@@ -572,7 +499,7 @@ export function WholesalerInlinePaySection({
               <WorkspaceActionLabel
                 icon={<TrashIcon className={workspaceActionIconMd} />}
               >
-                Delete payment
+                Delete expense
               </WorkspaceActionLabel>
             </button>
             <button
@@ -595,9 +522,9 @@ export function WholesalerInlinePaySection({
               className={`${workspaceActionPositiveCompleteMd} min-w-[11rem]`}
             >
               <WorkspaceActionLabel
-                icon={<BanknotesIcon className={workspaceActionIconMd} />}
+                icon={<DocumentTextIcon className={workspaceActionIconMd} />}
               >
-                {submitting ? "Saving…" : "Record payment"}
+                {submitting ? "Saving…" : "Record expense"}
               </WorkspaceActionLabel>
             </button>
           </div>
@@ -609,9 +536,9 @@ export function WholesalerInlinePaySection({
         onOpenChange={setDeleteOpen}
         tone="danger"
         icon="×"
-        title="Delete this payment?"
-        description="This removes the payment from the ledger. You can record a new payment later if needed."
-        confirmLabel={deleting ? "Deleting…" : "Delete payment"}
+        title="Delete this expense?"
+        description="This removes the expense from the ledger. You can add a new expense later if needed."
+        confirmLabel={deleting ? "Deleting…" : "Delete expense"}
         cancelLabel="Cancel"
         onConfirm={handleDeleteConfirm}
       />

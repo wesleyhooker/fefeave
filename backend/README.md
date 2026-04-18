@@ -118,6 +118,13 @@ backend/
 └── package.json
 ```
 
+### Migrations
+
+- **Create:** `npm run migrate:create -- <migration-name>` (from `backend/`) so `node-pg-migrate` assigns a **unique** timestamp prefix. Avoid hand-copying an existing file’s numeric prefix.
+- **Order:** `node-pg-migrate` sorts by the numeric prefix (first `_`-separated segment), then by full filename. It also **checks** that the ordered file list matches the database’s applied migration names in lockstep. Two different files must not share the same prefix (e.g. `1771120000000_a` and `1771120000000_b` both sort as `1771120000000` and break ordering expectations).
+- **Missing file on disk:** If the DB already lists a migration name that is not in `migrations/`, every later `migrate:up` fails. Restore the matching file (use a no-op `up`/`down` only if the DDL already exists everywhere), or fix the DB metadata in controlled environments.
+- **Renames:** If you rename a migration file **after** it has been applied somewhere, reconcile the `pgmigrations` metadata (or re-baseline that environment) so the tool does not try to run the same schema change twice.
+
 ---
 
 ## 7. Module Status
@@ -133,8 +140,8 @@ backend/
 
 ## 8. Troubleshooting
 
-| Issue                            | Fix                                                                           |
-| -------------------------------- | ----------------------------------------------------------------------------- |
-| App fails to start               | Check `DATABASE_URL` or split DB vars; Postgres must be running.              |
-| `npm run test:integration` fails | Ensure Docker is running. For manual runs, set `DATABASE_URL` to skip docker. |
-| Migrations fail                  | Ensure DB exists; user has create-table privileges.                           |
+| Issue                            | Fix                                                                                                                                                   |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App fails to start               | Check `DATABASE_URL` or split DB vars; Postgres must be running.                                                                                      |
+| `npm run test:integration` fails | Ensure Docker is running. For manual runs, set `DATABASE_URL` to skip docker.                                                                         |
+| Migrations fail                  | Ensure DB exists; user has create-table privileges. Check for **duplicate migration timestamp prefixes** in `migrations/` (see **Migrations** above). |

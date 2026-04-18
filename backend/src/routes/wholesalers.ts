@@ -540,8 +540,14 @@ export async function wholesalerRoutes(
                 show_id: { type: 'string' },
                 running_balance: { type: 'string' },
                 entry_id: { type: 'string' },
+                ledger_entry_kind: {
+                  type: 'string',
+                  enum: ['SHOW_OBLIGATION', 'VENDOR_EXPENSE', 'PAYMENT'],
+                },
+                obligation_kind: { type: 'string', enum: ['SHOW_LINKED', 'VENDOR_EXPENSE'] },
                 calculation_method: { type: 'string' },
                 show_name: { type: 'string' },
+                description: { type: 'string' },
                 lines: {
                   type: 'array',
                   items: {

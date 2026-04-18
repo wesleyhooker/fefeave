@@ -36,6 +36,7 @@ export function WorkspaceSegmentedControl<T extends string>({
             className={`${workspaceSegmentedButton} ${
               active ? workspaceSegmentedButtonActive : ""
             }`}
+            aria-pressed={active}
           >
             {opt.label}
           </button>

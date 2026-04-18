@@ -22,6 +22,7 @@ import {
   WorkspaceLedgerLineItemsPanel,
   WorkspaceLedgerPaymentEditAffordanceCell,
   WorkspaceLedgerTrailingSpacerCell,
+  WorkspaceLedgerVendorExpenseEditAffordanceCell,
   WorkspaceTableStaticRow,
   workspaceLedgerTableColumnCount,
   type WorkspaceLedgerLineItem,
@@ -34,10 +35,13 @@ import {
   workspaceLedgerRowPaymentSelected,
   workspaceLedgerRowSettlement,
   workspaceLedgerRowSettlementExpandable,
+  workspaceLedgerRowVendorExpense,
+  workspaceLedgerRowVendorExpenseSelected,
   workspaceLedgerRunningBalanceAmount,
   workspaceLedgerShowNameLink,
   workspaceLedgerShowNamePlain,
   workspacePageContentWidthWide,
+  workspacePanel,
   workspaceStatEyebrow,
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
@@ -55,8 +59,12 @@ import {
   workspaceFinancialVendorMainGrid,
   workspaceFinancialVendorPrimaryColumn,
 } from "@/app/(admin)/admin/_lib/workspacePageRegions";
-import { WholesalerInlinePaySection } from "./WholesalerInlinePaySection";
 import { WholesalerLedgerExportMenu } from "./WholesalerLedgerExportMenu";
+import {
+  WholesalerVendorMoneySection,
+  type VendorMoneyTab,
+} from "./WholesalerVendorMoneySection";
+import type { VendorExpenseEditDraft } from "./WholesalerInlineExpenseSection";
 import {
   fetchWholesalerBalances,
   fetchWholesalerStatement,
@@ -67,17 +75,41 @@ import {
 } from "@/src/lib/api/wholesalers";
 import { fetchPayments, type PaymentDTO } from "@/src/lib/api/payments";
 
-function LedgerEntryType({ type }: { type: "OWED" | "PAYMENT" }) {
-  const isSettlement = type === "OWED";
-  const dot = isSettlement
-    ? workspaceShowsTableStatusDotOpen
-    : workspaceShowsTableStatusDotClosed;
-  const label = isSettlement ? "Settlement" : "Payment";
+function LedgerEntryTypeLabel({ row }: { row: WholesalerStatementRowView }) {
+  if (row.type === "PAYMENT") {
+    return (
+      <span className="inline-flex items-center gap-[5px] sm:gap-1.5">
+        <span
+          className={`${workspaceShowsTableStatusDotClosed} translate-y-px`}
+          aria-hidden
+        />
+        <span className="text-[11px] font-medium leading-none text-gray-800">
+          Payment
+        </span>
+      </span>
+    );
+  }
+  if (row.ledgerEntryKind === "VENDOR_EXPENSE") {
+    return (
+      <span className="inline-flex items-center gap-[5px] sm:gap-1.5">
+        <span
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 translate-y-px"
+          aria-hidden
+        />
+        <span className="text-[11px] font-medium leading-none text-gray-800">
+          Expense
+        </span>
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-[5px] sm:gap-1.5">
-      <span className={`${dot} translate-y-px`} aria-hidden />
+      <span
+        className={`${workspaceShowsTableStatusDotOpen} translate-y-px`}
+        aria-hidden
+      />
       <span className="text-[11px] font-medium leading-none text-gray-800">
-        {label}
+        Settlement
       </span>
     </span>
   );
@@ -157,9 +189,12 @@ export function WholesalerDetailView({ id }: { id: string }) {
     string | null
   >(null);
   const [payments, setPayments] = useState<PaymentDTO[]>([]);
-  const [selectedLedgerEntryId, setSelectedLedgerEntryId] = useState<
-    string | null
+  const [ledgerFocus, setLedgerFocus] = useState<
+    | { kind: "PAYMENT"; id: string }
+    | { kind: "VENDOR_EXPENSE"; id: string }
+    | null
   >(null);
+  const [moneyTab, setMoneyTab] = useState<VendorMoneyTab>("payment");
 
   const toggleExpanded = (entryId: string) => {
     setExpandedEntryIds((prev) => {
@@ -205,18 +240,30 @@ export function WholesalerDetailView({ id }: { id: string }) {
   }, [id, reloadToken]);
 
   useEffect(() => {
-    if (!selectedLedgerEntryId) return;
-    const exists = payments.some((p) => p.id === selectedLedgerEntryId);
-    if (!exists) setSelectedLedgerEntryId(null);
-  }, [selectedLedgerEntryId, payments]);
+    if (!ledgerFocus) return;
+    if (ledgerFocus.kind === "PAYMENT") {
+      const exists = payments.some((p) => p.id === ledgerFocus.id);
+      if (!exists) setLedgerFocus(null);
+      return;
+    }
+    const exists = statement.some(
+      (r) =>
+        r.entryId === ledgerFocus.id && r.ledgerEntryKind === "VENDOR_EXPENSE",
+    );
+    if (!exists) setLedgerFocus(null);
+  }, [ledgerFocus, payments, statement]);
 
   useEffect(() => {
-    if (!selectedLedgerEntryId) return;
-    document.getElementById("vendor-inline-payment")?.scrollIntoView({
+    if (!ledgerFocus) return;
+    const anchorId =
+      ledgerFocus.kind === "PAYMENT"
+        ? "vendor-inline-payment"
+        : "vendor-inline-expense";
+    document.getElementById(anchorId)?.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
     });
-  }, [selectedLedgerEntryId]);
+  }, [ledgerFocus]);
 
   const balance = useMemo(() => {
     if (statement.length === 0) return wholesaler?.balanceOwed ?? 0;
@@ -224,10 +271,53 @@ export function WholesalerDetailView({ id }: { id: string }) {
   }, [statement, wholesaler]);
 
   const editPaymentForForm =
-    selectedLedgerEntryId !== null
-      ? (payments.find((p) => p.id === selectedLedgerEntryId) ?? null)
+    ledgerFocus?.kind === "PAYMENT"
+      ? (payments.find((p) => p.id === ledgerFocus.id) ?? null)
       : null;
-  const payFormMode = editPaymentForForm ? "edit" : "create";
+
+  const editExpenseForForm: VendorExpenseEditDraft | null =
+    ledgerFocus?.kind === "VENDOR_EXPENSE"
+      ? (() => {
+          const row = statement.find((r) => r.entryId === ledgerFocus.id);
+          if (!row || row.ledgerEntryKind !== "VENDOR_EXPENSE") return null;
+          return {
+            id: row.entryId,
+            amount: row.amountOwed ?? 0,
+            description: row.description?.trim() || row.showName || "",
+            expense_date: row.date,
+          };
+        })()
+      : null;
+
+  function handleMoneyTabChange(tab: VendorMoneyTab) {
+    setMoneyTab(tab);
+    if (tab === "payment" && ledgerFocus?.kind === "VENDOR_EXPENSE") {
+      setLedgerFocus(null);
+    }
+    if (tab === "expense" && ledgerFocus?.kind === "PAYMENT") {
+      setLedgerFocus(null);
+    }
+  }
+
+  function handleLedgerRowActivate(row: WholesalerStatementRowView) {
+    if (row.type === "PAYMENT") {
+      setMoneyTab("payment");
+      setLedgerFocus((prev) =>
+        prev?.kind === "PAYMENT" && prev.id === row.entryId
+          ? null
+          : { kind: "PAYMENT", id: row.entryId },
+      );
+      return;
+    }
+    if (row.ledgerEntryKind === "VENDOR_EXPENSE") {
+      setMoneyTab("expense");
+      setLedgerFocus((prev) =>
+        prev?.kind === "VENDOR_EXPENSE" && prev.id === row.entryId
+          ? null
+          : { kind: "VENDOR_EXPENSE", id: row.entryId },
+      );
+    }
+  }
 
   const lastPaymentSubtext = wholesaler ? (
     <>Last payment: {formatDaysAgo(wholesaler.last_payment_date)}</>
@@ -356,37 +446,49 @@ export function WholesalerDetailView({ id }: { id: string }) {
               </div>
             </section>
 
-            <WholesalerInlinePaySection
+            <WholesalerVendorMoneySection
               wholesalerId={id}
               currentBalance={balance}
-              mode={payFormMode}
-              editPayment={editPaymentForForm}
-              onCancelEdit={() => setSelectedLedgerEntryId(null)}
+              activeTab={moneyTab}
+              onTabChange={handleMoneyTabChange}
+              paymentEdit={editPaymentForForm}
+              expenseEdit={editExpenseForForm}
+              onCancelPaymentEdit={() =>
+                setLedgerFocus((f) => (f?.kind === "PAYMENT" ? null : f))
+              }
+              onCancelExpenseEdit={() =>
+                setLedgerFocus((f) => (f?.kind === "VENDOR_EXPENSE" ? null : f))
+              }
               onRecorded={() => {
                 setReloadToken((v) => v + 1);
-                setSelectedLedgerEntryId(null);
+                setLedgerFocus(null);
               }}
-              density="compact"
             />
           </div>
 
           <div className={workspaceFinancialVendorLedgerColumn}>
             <section
-              className={`min-w-0 overflow-hidden ${workspaceCard}`}
+              className={`min-w-0 overflow-hidden ${workspacePanel}`}
               aria-labelledby="wholesaler-ledger-heading"
             >
-              <div className={workspaceSectionToolbar}>
-                <h2
-                  id="wholesaler-ledger-heading"
-                  className={workspaceSectionTitle}
-                >
-                  Ledger
-                </h2>
-                <WholesalerLedgerExportMenu
-                  wholesalerId={id}
-                  onStatementError={setStatementExportError}
-                  onLedgerError={setLedgerExportError}
-                />
+              <div
+                className={`${workspaceSectionToolbar} items-start gap-3 sm:items-center`}
+              >
+                <div className="min-w-0 flex-1">
+                  <h2
+                    id="wholesaler-ledger-heading"
+                    className={workspaceSectionTitle}
+                  >
+                    Ledger
+                  </h2>
+                </div>
+                <div className="shrink-0 self-center pt-0.5 sm:pt-0">
+                  <WholesalerLedgerExportMenu
+                    wholesalerId={id}
+                    onStatementError={setStatementExportError}
+                    onLedgerError={setLedgerExportError}
+                  />
+                </div>
               </div>
 
               {statementExportError != null || ledgerExportError != null ? (
@@ -416,7 +518,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                         scope="col"
                         className={`${workspaceTableHeaderCellPadding} text-center`}
                       >
-                        <span className="sr-only">Details</span>
+                        <span className="sr-only">Line items</span>
                       </th>
                       <th
                         scope="col"
@@ -428,7 +530,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                         scope="col"
                         className={`${workspaceTableHeaderCellPadding} text-left`}
                       >
-                        Show
+                        Details
                       </th>
                       <th
                         scope="col"
@@ -476,16 +578,27 @@ export function WholesalerDetailView({ id }: { id: string }) {
                       statement.flatMap((row) => {
                         const isItemized =
                           row.type === "OWED" &&
+                          row.ledgerEntryKind === "SHOW_OBLIGATION" &&
                           row.calculationMethod === "ITEMIZED" &&
                           (row.lines?.length ?? 0) > 0;
                         const isExpanded = expandedEntryIds.has(row.entryId);
 
                         const isPaymentRow = row.type === "PAYMENT";
-                        const isRowSelected =
-                          isPaymentRow && selectedLedgerEntryId === row.entryId;
+                        const isVendorExpenseRow =
+                          row.ledgerEntryKind === "VENDOR_EXPENSE";
+                        const isRowPaymentSelected =
+                          isPaymentRow &&
+                          ledgerFocus?.kind === "PAYMENT" &&
+                          ledgerFocus.id === row.entryId;
+                        const isRowExpenseSelected =
+                          isVendorExpenseRow &&
+                          ledgerFocus?.kind === "VENDOR_EXPENSE" &&
+                          ledgerFocus.id === row.entryId;
 
                         const showCell =
-                          row.showId != null && row.showId !== "" ? (
+                          row.showId != null &&
+                          row.showId !== "" &&
+                          row.ledgerEntryKind === "SHOW_OBLIGATION" ? (
                             <Link
                               href={`/admin/shows/${row.showId}`}
                               className={workspaceLedgerShowNameLink}
@@ -494,45 +607,50 @@ export function WholesalerDetailView({ id }: { id: string }) {
                               {row.showName}
                             </Link>
                           ) : (
-                            <span className={workspaceLedgerShowNamePlain}>
+                            <span
+                              className={`${workspaceLedgerShowNamePlain} line-clamp-3 break-words`}
+                            >
                               {row.showName}
                             </span>
                           );
 
                         const ledgerRowKind = isPaymentRow
                           ? "payment"
-                          : isItemized
-                            ? "settlementExpandable"
-                            : "settlementStatic";
+                          : isVendorExpenseRow
+                            ? "vendorExpense"
+                            : isItemized
+                              ? "settlementExpandable"
+                              : "settlementStatic";
 
                         const lineItems: WorkspaceLedgerLineItem[] | null =
                           isItemized && row.lines
                             ? mapStatementLinesToLedgerLineItems(row.lines)
                             : null;
 
+                        const rowSelectedClass = isRowPaymentSelected
+                          ? workspaceLedgerRowPaymentSelected
+                          : isRowExpenseSelected
+                            ? workspaceLedgerRowVendorExpenseSelected
+                            : "";
+
                         const mainRow = (
                           <WorkspaceTableStaticRow
                             key={row.entryId}
                             ledgerRowKind={ledgerRowKind}
-                            className={
-                              isRowSelected
-                                ? workspaceLedgerRowPaymentSelected
-                                : ""
-                            }
+                            className={rowSelectedClass}
                             ariaLabel={
                               isPaymentRow
                                 ? "Payment — select to edit in Make payment"
-                                : isItemized
-                                  ? "Settlement with line items — expand or collapse"
-                                  : undefined
+                                : isVendorExpenseRow
+                                  ? "Expense — select to edit in Add expense"
+                                  : isItemized
+                                    ? "Settlement with line items — expand or collapse"
+                                    : undefined
                             }
                             ariaExpanded={isItemized ? isExpanded : undefined}
                             onClick={
-                              isPaymentRow
-                                ? () =>
-                                    setSelectedLedgerEntryId((prev) =>
-                                      prev === row.entryId ? null : row.entryId,
-                                    )
+                              isPaymentRow || isVendorExpenseRow
+                                ? () => handleLedgerRowActivate(row)
                                 : isItemized
                                   ? () => toggleExpanded(row.entryId)
                                   : undefined
@@ -548,7 +666,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                             <td
                               className={`whitespace-nowrap align-middle ${workspaceTableBodyCellPadding}`}
                             >
-                              <LedgerEntryType type={row.type} />
+                              <LedgerEntryTypeLabel row={row} />
                             </td>
                             <td
                               className={`min-w-0 max-w-[12rem] sm:max-w-md ${workspaceTableBodyCellPadding}`}
@@ -585,6 +703,8 @@ export function WholesalerDetailView({ id }: { id: string }) {
                             </td>
                             {isPaymentRow ? (
                               <WorkspaceLedgerPaymentEditAffordanceCell />
+                            ) : isVendorExpenseRow ? (
+                              <WorkspaceLedgerVendorExpenseEditAffordanceCell />
                             ) : (
                               <WorkspaceLedgerTrailingSpacerCell />
                             )}
@@ -618,17 +738,27 @@ export function WholesalerDetailView({ id }: { id: string }) {
                   statement.flatMap((row) => {
                     const isItemized =
                       row.type === "OWED" &&
+                      row.ledgerEntryKind === "SHOW_OBLIGATION" &&
                       row.calculationMethod === "ITEMIZED" &&
                       (row.lines?.length ?? 0) > 0;
                     const isExpanded = expandedEntryIds.has(row.entryId);
 
                     const isPaymentRowMobile = row.type === "PAYMENT";
-                    const isCardSelected =
+                    const isVendorExpenseMobile =
+                      row.ledgerEntryKind === "VENDOR_EXPENSE";
+                    const isCardPaymentSelected =
                       isPaymentRowMobile &&
-                      selectedLedgerEntryId === row.entryId;
+                      ledgerFocus?.kind === "PAYMENT" &&
+                      ledgerFocus.id === row.entryId;
+                    const isCardExpenseSelected =
+                      isVendorExpenseMobile &&
+                      ledgerFocus?.kind === "VENDOR_EXPENSE" &&
+                      ledgerFocus.id === row.entryId;
 
                     const showBlock =
-                      row.showId != null && row.showId !== "" ? (
+                      row.showId != null &&
+                      row.showId !== "" &&
+                      row.ledgerEntryKind === "SHOW_OBLIGATION" ? (
                         <Link
                           href={`/admin/shows/${row.showId}`}
                           className={workspaceLedgerShowNameLink}
@@ -637,7 +767,9 @@ export function WholesalerDetailView({ id }: { id: string }) {
                           {row.showName}
                         </Link>
                       ) : (
-                        <span className={workspaceLedgerShowNamePlain}>
+                        <span
+                          className={`${workspaceLedgerShowNamePlain} line-clamp-4 break-words`}
+                        >
                           {row.showName}
                         </span>
                       );
@@ -649,24 +781,25 @@ export function WholesalerDetailView({ id }: { id: string }) {
 
                     const rowSurface = isPaymentRowMobile
                       ? workspaceLedgerRowPayment
-                      : isItemized
-                        ? workspaceLedgerRowSettlementExpandable
-                        : workspaceLedgerRowSettlement;
+                      : isVendorExpenseMobile
+                        ? workspaceLedgerRowVendorExpense
+                        : isItemized
+                          ? workspaceLedgerRowSettlementExpandable
+                          : workspaceLedgerRowSettlement;
+
+                    const cardSelectedClass = isCardPaymentSelected
+                      ? workspaceLedgerRowPaymentSelected
+                      : isCardExpenseSelected
+                        ? workspaceLedgerRowVendorExpenseSelected
+                        : "";
 
                     const card = (
                       <div key={row.entryId}>
                         <div
-                          className={`${rowSurface} ${
-                            isCardSelected
-                              ? workspaceLedgerRowPaymentSelected
-                              : ""
-                          } px-4 py-4 sm:px-5`}
+                          className={`${rowSurface} ${cardSelectedClass} px-4 py-4 sm:px-5`}
                           onClick={
-                            isPaymentRowMobile
-                              ? () =>
-                                  setSelectedLedgerEntryId((prev) =>
-                                    prev === row.entryId ? null : row.entryId,
-                                  )
+                            isPaymentRowMobile || isVendorExpenseMobile
+                              ? () => handleLedgerRowActivate(row)
                               : isItemized
                                 ? () => toggleExpanded(row.entryId)
                                 : undefined
@@ -686,7 +819,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <LedgerEntryType type={row.type} />
+                              <LedgerEntryTypeLabel row={row} />
                               <div className="mt-2">{showBlock}</div>
                               <p
                                 className={`mt-1.5 text-xs ${workspaceTableCellMeta}`}
@@ -697,6 +830,13 @@ export function WholesalerDetailView({ id }: { id: string }) {
                             {isPaymentRowMobile ? (
                               <div
                                 className="shrink-0 pt-0.5 text-gray-400 opacity-40 group-hover/ledger-payment:opacity-100"
+                                aria-hidden
+                              >
+                                <PencilSquareIcon className="h-3.5 w-3.5" />
+                              </div>
+                            ) : isVendorExpenseMobile ? (
+                              <div
+                                className="shrink-0 pt-0.5 text-gray-400 opacity-40 group-hover/ledger-vendor-expense:opacity-100"
                                 aria-hidden
                               >
                                 <PencilSquareIcon className="h-3.5 w-3.5" />

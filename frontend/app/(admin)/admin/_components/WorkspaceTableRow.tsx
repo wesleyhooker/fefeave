@@ -14,11 +14,13 @@ import {
   workspaceLedgerRowPayment,
   workspaceLedgerRowSettlement,
   workspaceLedgerRowSettlementExpandable,
+  workspaceLedgerRowVendorExpense,
   workspaceTableRowInteractive,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 
 export type WorkspaceLedgerRowKind =
   | "payment"
+  | "vendorExpense"
   | "settlementStatic"
   | "settlementExpandable";
 
@@ -106,13 +108,15 @@ export function WorkspaceTableStaticRow({
     rowInteractionClassName ??
     (ledgerRowKind === "payment"
       ? workspaceLedgerRowPayment
-      : ledgerRowKind === "settlementExpandable"
-        ? workspaceLedgerRowSettlementExpandable
-        : ledgerRowKind === "settlementStatic"
-          ? workspaceLedgerRowSettlement
-          : onClick != null
-            ? workspaceLedgerRowPayment
-            : workspaceLedgerRowSettlement);
+      : ledgerRowKind === "vendorExpense"
+        ? workspaceLedgerRowVendorExpense
+        : ledgerRowKind === "settlementExpandable"
+          ? workspaceLedgerRowSettlementExpandable
+          : ledgerRowKind === "settlementStatic"
+            ? workspaceLedgerRowSettlement
+            : onClick != null
+              ? workspaceLedgerRowPayment
+              : workspaceLedgerRowSettlement);
 
   return (
     <tr
@@ -172,6 +176,22 @@ export function WorkspaceLedgerPaymentEditAffordanceCell() {
     >
       <span
         className="inline-flex justify-end text-gray-400 opacity-40 transition-opacity group-hover/ledger-payment:opacity-100"
+        aria-hidden
+      >
+        <PencilSquareIcon className="h-3.5 w-3.5" />
+      </span>
+    </td>
+  );
+}
+
+/** Trailing column: edit hint for vendor expense rows (`group/ledger-vendor-expense` on the row). */
+export function WorkspaceLedgerVendorExpenseEditAffordanceCell() {
+  return (
+    <td
+      className={`${workspaceLedgerAffordanceColWidth} ${ledgerAffordanceCellPad} text-right`}
+    >
+      <span
+        className="inline-flex justify-end text-gray-400 opacity-40 transition-opacity group-hover/ledger-vendor-expense:opacity-100"
         aria-hidden
       >
         <PencilSquareIcon className="h-3.5 w-3.5" />

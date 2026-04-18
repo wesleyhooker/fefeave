@@ -36,6 +36,9 @@ Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). In
 - **Migrations failed**
   - Confirm DB status with `docker compose ps`.
   - Retry `make dev-migrate`.
+- **Migration ordering / duplicate timestamp**
+  - Each file in `backend/migrations/` must have a **unique** numeric prefix (the part before the first `_`). Two migrations must not share the same prefix (e.g. colliding with another branch’s `1771120000000_*`).
+  - Prefer `npm run migrate:create -- <name>` from `backend/` so `node-pg-migrate` generates a fresh timestamp; avoid copying another file’s prefix when adding migrations by hand.
 - **Reset local DB**
   - Run `make dev-db-reset`, then `make dev-migrate`.
 

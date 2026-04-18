@@ -31,7 +31,12 @@
 @layer base {
   @import "../system/tokens.css";
 
+  /**
+   * Prevent rare horizontal bleed from decorative absolutely-positioned media
+   * (admin intro wave, wide imagery) without affecting vertical scroll.
+   */
   body {
+    overflow-x: clip;
     font-family: var(--fefe-font-body), ui-sans-serif, sans-serif;
     color: var(--fefe-charcoal);
     background-color: var(--fefe-cream);

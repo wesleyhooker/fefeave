@@ -603,7 +603,10 @@ export async function owedLineItemRoutes(
       const result = await pool.query(
         `SELECT id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at
          FROM owed_line_items
-         WHERE show_id = $1 AND calculation_method IS NOT NULL AND deleted_at IS NULL
+         WHERE show_id = $1
+           AND obligation_kind = 'SHOW_LINKED'
+           AND calculation_method IS NOT NULL
+           AND deleted_at IS NULL
          ORDER BY created_at ASC`,
         [showId]
       );
@@ -725,7 +728,7 @@ export async function owedLineItemRoutes(
       }
 
       const settlementResult = await pool.query(
-        `SELECT id, show_id, calculation_method, deleted_at
+        `SELECT id, show_id, calculation_method, obligation_kind, deleted_at
          FROM owed_line_items
          WHERE id = $1`,
         [settlementId]
@@ -736,12 +739,17 @@ export async function owedLineItemRoutes(
 
       const settlement = settlementResult.rows[0] as {
         id: string;
-        show_id: string;
+        show_id: string | null;
         calculation_method: string | null;
+        obligation_kind: string;
         deleted_at: Date | null;
       };
 
-      if (settlement.show_id !== showId || settlement.calculation_method == null) {
+      if (
+        settlement.show_id !== showId ||
+        settlement.calculation_method == null ||
+        settlement.obligation_kind !== 'SHOW_LINKED'
+      ) {
         throw new NotFoundError('Settlement', settlementId);
       }
 

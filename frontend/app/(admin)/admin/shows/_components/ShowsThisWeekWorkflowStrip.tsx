@@ -10,8 +10,8 @@ import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceA
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import {
   workspaceActionIconSm,
+  workspaceActionPositiveOutlineSm,
   workspaceActionSecondarySm,
-  workspaceActionPositiveCompleteSm,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import {
   clearSelfPay,
@@ -77,43 +77,42 @@ export function ShowsThisWeekWorkflowStrip({
 
   return (
     <>
-      <div
-        className={
-          paid
-            ? "border-t border-emerald-200/55 bg-emerald-50/45 px-4 py-3.5 sm:px-5"
-            : "border-t border-gray-200/95 bg-white px-4 py-3.5 sm:px-5"
-        }
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-gray-500">
+      <div className="border-t border-gray-200/95 bg-gray-50/70 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 sm:gap-x-2.5">
+            <span className="text-xs font-medium text-gray-500">
               This week payout
-            </p>
-            <p className="mt-0.5 text-xl font-semibold tabular-nums tracking-tight text-gray-900">
+            </span>
+            <span className="text-xl font-semibold tabular-nums tracking-tight text-gray-900">
               {formatCurrency(completedWeekProfitForSnapshot)}
-            </p>
-            {paid ? (
-              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
-                <span className="inline-flex items-center gap-1.5 font-medium text-emerald-800">
-                  <CheckCircleIcon
-                    className={`${workspaceActionIconSm} shrink-0 text-emerald-700`}
-                  />
-                  Paid
-                </span>
-                {paidAtLabel ? (
-                  <span className="text-xs font-normal tabular-nums text-gray-500">
-                    {paidAtLabel}
-                  </span>
-                ) : null}
-              </p>
-            ) : null}
+            </span>
           </div>
-          <div className="flex shrink-0">
-            {paid ? (
+
+          {paid ? (
+            <div className="ml-auto flex min-w-0 shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <p className="m-0 text-right">
+                <span className="inline-flex max-w-full items-center gap-1.5 whitespace-nowrap text-sm font-medium text-emerald-800">
+                  <CheckCircleIcon
+                    className={`${workspaceActionIconSm} shrink-0 text-emerald-700/90`}
+                    aria-hidden
+                  />
+                  <span>Paid</span>
+                  {paidAtLabel ? (
+                    <>
+                      <span className="select-none font-normal text-gray-300">
+                        ·
+                      </span>
+                      <span className="font-normal tabular-nums text-gray-500">
+                        {paidAtLabel}
+                      </span>
+                    </>
+                  ) : null}
+                </span>
+              </p>
               <button
                 type="button"
                 onClick={() => setMarkUnpaidOpen(true)}
-                className={workspaceActionSecondarySm}
+                className={`${workspaceActionSecondarySm} shrink-0 !gap-1 !px-2 !py-0.5`}
               >
                 <WorkspaceActionLabel
                   icon={
@@ -123,11 +122,13 @@ export function ShowsThisWeekWorkflowStrip({
                   Mark as unpaid
                 </WorkspaceActionLabel>
               </button>
-            ) : (
+            </div>
+          ) : (
+            <div className="ml-auto flex shrink-0">
               <button
                 type="button"
                 onClick={() => setMarkPaidOpen(true)}
-                className={`${workspaceActionPositiveCompleteSm} sm:px-3.5 sm:py-2`}
+                className={workspaceActionPositiveOutlineSm}
               >
                 <WorkspaceActionLabel
                   icon={<CheckCircleIcon className={workspaceActionIconSm} />}
@@ -135,8 +136,8 @@ export function ShowsThisWeekWorkflowStrip({
                   Mark as paid
                 </WorkspaceActionLabel>
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

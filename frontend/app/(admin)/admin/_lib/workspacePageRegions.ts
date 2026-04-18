@@ -14,9 +14,9 @@ export const workspacePageTopStack = 'flex min-w-0 flex-col gap-4 md:gap-4.5';
 export const workspaceFinancialVendorMainGrid =
   'grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start lg:gap-6 xl:gap-8';
 
-/** Left column: summary + payment (tight vertical rhythm). */
+/** Left column: summary + money workspace (aligned rhythm with ledger column). */
 export const workspaceFinancialVendorPrimaryColumn =
-  'min-w-0 space-y-3 md:space-y-3.5 lg:col-span-5 xl:col-span-5';
+  'min-w-0 space-y-5 md:space-y-5 lg:col-span-5 xl:col-span-5';
 
 /** Right column: ledger (slightly wider for table density). */
 export const workspaceFinancialVendorLedgerColumn =

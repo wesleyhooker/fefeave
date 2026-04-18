@@ -30,20 +30,18 @@ export function ShowsThisWeekSection({
 
   return (
     <section
-      className="mb-7 overflow-hidden rounded-xl border border-emerald-200/80 border-l-[6px] border-l-emerald-600/70 bg-gradient-to-br from-emerald-50/50 via-white to-emerald-50/25 shadow-[0_1px_3px_rgba(6,78,59,0.06),0_8px_24px_-4px_rgba(6,78,59,0.08)]"
+      className="overflow-hidden rounded-xl border border-gray-200 border-l-[3px] border-l-emerald-500/40 bg-white shadow-workspace-surface"
       aria-labelledby="shows-this-week-heading"
     >
-      <div className="border-b border-emerald-200/55 bg-gradient-to-r from-emerald-50/90 via-white to-emerald-50/50 px-4 py-4 sm:px-6 sm:py-5">
+      <div className="border-b border-gray-200 bg-gray-50/95 px-4 py-4 sm:px-5">
         <div className="min-w-0">
           <h2
             id="shows-this-week-heading"
-            className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl"
+            className="text-lg font-semibold tracking-tight text-gray-900"
           >
             This week
           </h2>
-          <p className="mt-1.5 text-sm font-medium text-gray-800">
-            {currentWeek.labelLong}
-          </p>
+          <p className="mt-1 text-sm text-gray-600">{currentWeek.labelLong}</p>
           <WeekStripStats shows={currentShows} summaries={summaries} />
         </div>
       </div>

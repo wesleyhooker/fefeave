@@ -18,6 +18,7 @@ import { wholesalerRoutes } from './routes/wholesalers';
 import { showRoutes } from './routes/shows';
 import { showFinancialsRoutes } from './routes/show-financials';
 import { owedLineItemRoutes } from './routes/owed-line-items';
+import { vendorExpenseRoutes } from './routes/vendor-expenses';
 import { paymentRoutes } from './routes/payments';
 import { adjustmentRoutes } from './routes/adjustments';
 import { attachmentRoutes } from './routes/attachments';
@@ -113,6 +114,7 @@ async function buildApp() {
   await app.register(showRoutes, { prefix: env.API_PREFIX });
   await app.register(showFinancialsRoutes, { prefix: env.API_PREFIX });
   await app.register(owedLineItemRoutes, { prefix: env.API_PREFIX });
+  await app.register(vendorExpenseRoutes, { prefix: env.API_PREFIX });
   await app.register(paymentRoutes, { prefix: env.API_PREFIX });
   await app.register(adjustmentRoutes, { prefix: env.API_PREFIX });
   await app.register(attachmentRoutes, { prefix: env.API_PREFIX });

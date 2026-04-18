@@ -38,27 +38,30 @@ export function AdminPageIntro({
       ? "mt-1.5 max-w-prose text-sm leading-snug text-stone-500"
       : "mt-1 max-w-prose text-sm font-medium leading-snug text-stone-600";
 
+  const SubtitleContainer = variant === "entity-detail" ? "div" : "p";
+
   const identityBlockClassName =
     variant === "entity-detail"
       ? "border-l-[4px] border-stone-500/55 pl-3.5 sm:pl-4"
       : "";
 
   return (
-    <header className="relative overflow-hidden">
+    <header className="relative isolate overflow-x-clip overflow-y-hidden">
       {effectiveDecoration === "boutique" ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 overflow-hidden"
+          className="pointer-events-none absolute inset-0 overflow-x-clip overflow-y-hidden [contain:paint]"
         >
-          <div className="absolute inset-y-0 right-0 w-[86%] max-w-[24rem] overflow-hidden sm:w-[48%] sm:max-w-[20rem] lg:w-[58%] lg:max-w-[40rem]">
-            <div className="relative h-full w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent_0%,black_0%,black_100%)] sm:[mask-image:linear-gradient(to_right,transparent_0%,black_2%,black_100%)]">
+          <div className="absolute inset-y-0 right-0 w-[86%] max-w-[24rem] overflow-x-clip overflow-y-hidden sm:w-[48%] sm:max-w-[20rem] lg:w-[58%] lg:max-w-[40rem]">
+            <div className="relative h-full min-h-0 w-full">
               <Image
                 src="/images/admin/page-intro-wave-soft-boutique.svg"
                 alt=""
                 width={900}
                 height={180}
-                className="absolute left-[-68%] top-[48%] h-auto w-[188%] max-w-none -translate-y-1/2 opacity-95 sm:left-[-56%] sm:top-[72%] sm:w-[172%] lg:left-[-100%] lg:top-[66%] lg:w-[230%] lg:-translate-x-[4%]"
+                className="absolute left-[-68%] top-[48%] h-auto max-h-full w-[188%] max-w-none -translate-y-1/2 opacity-95 sm:left-[-56%] sm:top-[72%] sm:w-[172%] lg:left-[-100%] lg:top-[66%] lg:w-[230%] lg:-translate-x-[4%]"
               />
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-[min(28%,10rem)] bg-gradient-to-r from-[rgba(250,247,246,0.97)] via-[rgba(250,247,246,0.55)] to-transparent sm:w-[min(24%,9rem)]" />
             </div>
           </div>
         </div>
@@ -73,7 +76,11 @@ export function AdminPageIntro({
               <div className="mb-1.5 sm:mb-2">{breadcrumb}</div>
             ) : null}
             <h1 className={titleClassName}>{title}</h1>
-            {subtitle ? <p className={subtitleClassName}>{subtitle}</p> : null}
+            {subtitle ? (
+              <SubtitleContainer className={subtitleClassName}>
+                {subtitle}
+              </SubtitleContainer>
+            ) : null}
           </div>
           {action ? (
             <div className="w-full pt-0.5 sm:w-auto sm:shrink-0 sm:pt-1 lg:pr-2">

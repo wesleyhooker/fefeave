@@ -14,7 +14,7 @@ export function ShowsUnscheduledSection({
 
   return (
     <section
-      className="mb-5 overflow-hidden rounded-lg border border-amber-200/60 border-l-4 border-l-amber-400/50 bg-amber-50/10 shadow-workspace-surface"
+      className="overflow-hidden rounded-lg border border-amber-200/60 border-l-4 border-l-amber-400/50 bg-amber-50/10 shadow-workspace-surface"
       aria-labelledby="shows-unscheduled-heading"
     >
       <div className="border-b border-amber-100/80 bg-amber-50/25 px-4 py-3">

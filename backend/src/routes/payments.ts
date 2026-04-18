@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
 import { ensureUser } from '../db/ensure-user';
 import { NotFoundError, ValidationError } from '../utils/errors';
+import { toYyyyMmDd } from '../utils/pg-date';
 
 const uuidSchema = z.string().uuid();
 
@@ -107,7 +108,7 @@ export async function paymentRoutes(
         wholesaler_id: r.wholesaler_id,
         amount: r.amount,
         currency: r.currency,
-        payment_date: r.payment_date,
+        payment_date: toYyyyMmDd(r.payment_date),
         reference: r.reference ?? undefined,
         notes: r.notes ?? undefined,
         created_at: r.created_at,
@@ -194,7 +195,7 @@ export async function paymentRoutes(
           wholesaler_id: r.wholesaler_id,
           amount: r.amount,
           currency: r.currency,
-          payment_date: r.payment_date,
+          payment_date: toYyyyMmDd(r.payment_date),
           reference: r.reference ?? undefined,
           notes: r.notes ?? undefined,
           created_at: r.created_at,
@@ -308,7 +309,7 @@ export async function paymentRoutes(
         wholesaler_id: row.wholesaler_id,
         amount: row.amount,
         currency: row.currency,
-        payment_date: row.payment_date,
+        payment_date: toYyyyMmDd(row.payment_date),
         reference: row.reference ?? undefined,
         notes: row.notes ?? undefined,
         created_at: row.created_at,

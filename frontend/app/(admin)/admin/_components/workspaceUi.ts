@@ -185,15 +185,15 @@ export const workspaceDateInputCompact = `${workspaceTextInputCompact} [color-sc
 
 /** Segmented filter track (toolbar / compact filters). */
 export const workspaceSegmentedTrack =
-  'inline-flex shrink-0 rounded-lg border border-gray-300 bg-[#F3F4F6] p-0.5 shadow-[inset_0_1px_2px_rgba(15,23,42,0.06)]';
+  'flex w-full min-w-0 rounded-lg border border-gray-200/95 bg-gray-100/70 p-0.5 shadow-[inset_0_1px_1px_rgba(15,23,42,0.04)]';
 
 /** Inactive segment in {@link workspaceSegmentedTrack}. */
 export const workspaceSegmentedButton =
-  'rounded-md px-2 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:text-gray-900 sm:px-3 sm:py-2 sm:text-sm';
+  'flex-1 min-w-0 justify-center rounded-md px-2 py-1.5 text-center text-xs font-medium text-gray-500 antialiased transition-[color,background-color,box-shadow] duration-150 hover:bg-white/45 hover:text-gray-800 sm:px-3 sm:py-2 sm:text-sm';
 
 /** Active segment — inset chip. */
 export const workspaceSegmentedButtonActive =
-  'bg-white text-gray-900 shadow-sm';
+  'bg-white/95 font-medium text-gray-900 shadow-[0_1px_1px_rgba(15,23,42,0.05)]';
 
 /** Toolbar dropdown panel (Export / Filter / Download) — shared surface. */
 export const workspaceToolbarMenuPanel =
@@ -303,6 +303,17 @@ export const workspaceLedgerRowSettlement =
 /** Subtle selected payment row (paired with {@link workspaceLedgerRowPayment}). */
 export const workspaceLedgerRowPaymentSelected =
   'bg-emerald-50/40 shadow-[inset_3px_0_0_0_rgba(16,185,129,0.36)] hover:bg-emerald-50/50 hover:shadow-[inset_3px_0_0_0_rgba(16,185,129,0.42)]';
+
+/**
+ * Manual vendor expense (owed, non-show) — same interaction model as payment; amber rail.
+ */
+export const workspaceLedgerRowVendorExpense =
+  'group/ledger-vendor-expense cursor-pointer ' +
+  workspaceLedgerRowBaseline +
+  ' hover:shadow-[inset_3px_0_0_0_rgba(217,119,6,0.22)]';
+
+export const workspaceLedgerRowVendorExpenseSelected =
+  'bg-amber-50/40 shadow-[inset_3px_0_0_0_rgba(217,119,6,0.34)] hover:bg-amber-50/50 hover:shadow-[inset_3px_0_0_0_rgba(217,119,6,0.4)]';
 
 /** Narrow columns that reserve disclosure / edit affordances — pair with {@link WorkspaceTableRow} ledger cells. */
 export const workspaceLedgerAffordanceColWidth =
@@ -448,6 +459,11 @@ export const workspaceActionPositiveCompleteMd = `inline-flex items-center justi
  * Compact positive completion (e.g. Mark as paid in workflow strips).
  */
 export const workspaceActionPositiveCompleteSm = `inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
+
+/**
+ * Positive completion — outline emerald (calmer than {@link workspaceActionPositiveCompleteSm}; dense strips / secondary to page chrome).
+ */
+export const workspaceActionPositiveOutlineSm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-emerald-200/90 bg-white px-2.5 py-1 text-xs font-medium text-emerald-900 shadow-sm transition-colors hover:border-emerald-300/90 hover:bg-emerald-50/75 active:bg-emerald-50/90 disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
 
 /**
  * @deprecated Prefer {@link workspaceActionPrimaryMd} for neutral creation CTAs or {@link workspaceActionPositiveCompleteMd} for success-style completion. Rose retained only for legacy call sites until migrated.

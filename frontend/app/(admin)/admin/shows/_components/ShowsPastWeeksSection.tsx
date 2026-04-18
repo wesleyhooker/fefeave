@@ -35,7 +35,7 @@ export function ShowsPastWeeksSection({
   if (pastBlocks.length === 0) return null;
 
   return (
-    <section className="mb-7" aria-labelledby="shows-past-weeks-heading">
+    <section aria-labelledby="shows-past-weeks-heading">
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-workspace-surface">
         <header className="border-b border-gray-200 bg-gray-50/95 px-4 py-4 sm:px-5">
           <h2

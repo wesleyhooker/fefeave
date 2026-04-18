@@ -1,0 +1,34 @@
+diff --git a/node_modules/next/dist/esm/pages/_document.js b/node_modules/next/dist/esm/pages/_document.js
+index d9e061b..ba4e987 100644
+--- a/node_modules/next/dist/esm/pages/_document.js
++++ b/node_modules/next/dist/esm/pages/_document.js
+@@ -210,8 +210,10 @@ function getNextFontLinkTags(nextFontManifest, dangerousAsPath, assetPrefix = ''
+             preload: null
+         };
+     }
+-    const appFontsEntry = nextFontManifest.pages['/_app'];
+-    const pageFontsEntry = nextFontManifest.pages[dangerousAsPath];
++    // App Router–only builds may omit `pages` on the font manifest; default avoids throwing.
++    const pages = nextFontManifest.pages ?? {};
++    const appFontsEntry = pages['/_app'];
++    const pageFontsEntry = pages[dangerousAsPath];
+     const preloadedFontFiles = Array.from(new Set([
+         ...appFontsEntry ?? [],
+         ...pageFontsEntry ?? []
+diff --git a/node_modules/next/dist/pages/_document.js b/node_modules/next/dist/pages/_document.js
+index 3328a9c..86ecc83 100644
+--- a/node_modules/next/dist/pages/_document.js
++++ b/node_modules/next/dist/pages/_document.js
+@@ -292,8 +292,10 @@ function getNextFontLinkTags(nextFontManifest, dangerousAsPath, assetPrefix = ''
+             preload: null
+         };
+     }
+-    const appFontsEntry = nextFontManifest.pages['/_app'];
+-    const pageFontsEntry = nextFontManifest.pages[dangerousAsPath];
++    // App Router–only builds may omit `pages` on the font manifest; default avoids throwing.
++    const pages = nextFontManifest.pages ?? {};
++    const appFontsEntry = pages['/_app'];
++    const pageFontsEntry = pages[dangerousAsPath];
+     const preloadedFontFiles = Array.from(new Set([
+         ...appFontsEntry ?? [],
+         ...pageFontsEntry ?? []

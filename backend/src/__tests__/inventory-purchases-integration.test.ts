@@ -5,6 +5,7 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import type { FastifyInstance } from 'fastify';
+import { getPool } from '../db';
 import { buildAppForTest, buildUniqueDevBypassIdentity } from './helpers';
 
 const TEST_SCHEMA = 'test';
@@ -44,6 +45,8 @@ describe('Inventory purchases API integration', () => {
     });
     app = result.app;
     restoreEnv = result.restoreEnv;
+    const pool = getPool();
+    await pool.query('DELETE FROM inventory_purchases');
   });
 
   afterEach(async () => {

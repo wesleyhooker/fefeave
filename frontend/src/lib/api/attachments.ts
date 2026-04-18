@@ -3,7 +3,7 @@
  * Uses: presign -> client uploads to S3 -> create attachment record -> link to entity.
  */
 
-import { backendGetJson } from './backend';
+import { backendGetJson, backendMutateJson } from './backend';
 
 const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg'] as const;
 
@@ -97,6 +97,34 @@ export async function fetchPaymentAttachments(
 ): Promise<ShowAttachmentItem[]> {
   return backendGetJson<ShowAttachmentItem[]>(
     `/payments/${encodeURIComponent(paymentId)}/attachments`,
+  );
+}
+
+/**
+ * Link an attachment to an owed line item (settlement or vendor expense uses same settlement_attachments table).
+ */
+export async function linkAttachmentToOwedLineItem(
+  owedLineItemId: string,
+  attachmentId: string,
+): Promise<{ settlementId: string; attachmentId: string }> {
+  const res = await backendMutateJson<{
+    settlementId: string;
+    attachmentId: string;
+  }>(`/settlements/${encodeURIComponent(owedLineItemId)}/attachments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ attachmentId }),
+  });
+  if (!res) throw new Error('Expected attachment link response');
+  return res;
+}
+
+/** List attachments linked to an owed line item (settlement or vendor expense). */
+export async function fetchOwedLineItemAttachments(
+  owedLineItemId: string,
+): Promise<ShowAttachmentItem[]> {
+  return backendGetJson<ShowAttachmentItem[]>(
+    `/settlements/${encodeURIComponent(owedLineItemId)}/attachments`,
   );
 }
 
