@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "playwright:install": "playwright install chromium",
+    "playwright:save-auth": "node scripts/playwright/save-auth.mjs",
+    "playwright:screenshot": "node scripts/playwright/screenshot.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -23,6 +26,7 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.0.0",
     "patch-package": "^8.0.1",
+    "playwright": "^1.51.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.0"
