@@ -25,6 +25,9 @@ dist/
 .sass-cache/
 .tmp/
 
+# Playwright local dev (session storage + screenshots; never commit)
+frontend/.playwright-dev/
+
 # =========================
 # Terraform / Infra
 # =========================

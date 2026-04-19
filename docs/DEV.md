@@ -26,6 +26,47 @@ Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). In
 - `make dev-status` — check local backend endpoint HTTP status codes
 - `make test` — run backend tests, then frontend build
 
+## Local UI screenshots (Playwright, dev-only)
+
+**Normal workflow:** keep using `make dev` (or `make dev-ui` + `make dev-api`). No change to that. Screenshots layer on top.
+
+**What the code enforces automatically**
+
+- The preferred path uses **`/api/auth/dev-bootstrap`** (development only, localhost, opt-in env, shared secret). Before minting `fefeave_session`, the server **calls your local API `/users/me`** with the dev bootstrap bearer token. If the backend is not in **`AUTH_MODE=dev_bypass`** or is unreachable, bootstrap **fails with a clear JSON error** — no half-broken cookie.
+- Session **roles and user** are taken from **`/users/me`**, so the cookie matches the backend dev-bypass identity.
+- Production is unaffected: wrong `NODE_ENV`, missing opt-in, wrong host, or wrong secret → **no cookie** (404/403).
+
+**One-time setup in `frontend/.env.local`**
+
+1. Keep existing vars (`AUTH_SESSION_SECRET`, `BACKEND_BASE_URL`, etc. — see `AUTH_SETUP.md`).
+2. Add (generate a long random secret for the value):
+
+   ```env
+   AUTH_DEV_BOOTSTRAP_ENABLED=1
+   AUTH_DEV_BOOTSTRAP_SECRET=<your-long-random-secret>
+   ```
+
+3. After `npm install` in `frontend/`, install Chromium once: `npm run playwright:install`.
+
+**Capture a screenshot** (paths are app routes under `http://localhost:3001`):
+
+```bash
+cd frontend && npm run playwright:screenshot -- /admin/dashboard
+cd frontend && npm run playwright:screenshot -- /admin/shows my-screen.png
+```
+
+The script loads `.env.local`, hits dev-bootstrap, then opens the target route. Output: timestamped PNG under **`frontend/.playwright-dev/screenshots/`** (gitignored).
+
+**Flags:** `--full` (default) or `--viewport`; `--storage` to force the older **saved Cognito session** file (`playwright:save-auth`) instead of bootstrap.
+
+**Manual steps you still own**
+
+- Put the two bootstrap lines in **`.env.local`** (not committed).
+- Run **`make dev`** so API + UI are up; bootstrap requires **`dev_bypass`** API (default for `make dev-api`).
+- For real Cognito-only API (`make dev-api-cognito`), use **`npm run playwright:save-auth`** once and **`--storage`**, or rely on Hosted UI — bootstrap is not compatible with Cognito API mode.
+
+**Cognito-only fallback (optional):** `npm run playwright:save-auth` saves **`frontend/.playwright-dev/auth.json`** after you sign in manually; use `playwright:screenshot -- --storage /admin/...`.
+
 ## Troubleshooting
 
 - **Port already in use**
