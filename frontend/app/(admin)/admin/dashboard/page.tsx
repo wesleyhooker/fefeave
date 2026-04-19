@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DashboardSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
@@ -41,6 +42,8 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "../_components/AdminPageContainer";
+import { WorkspacePageWithRightPanel } from "../_components/WorkspacePageWithRightPanel";
+import { ShowCreateForm } from "../shows/new/ShowCreateForm";
 
 function parseAmount(value: string): number {
   const n = Number(value);
@@ -48,6 +51,8 @@ function parseAmount(value: string): number {
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
+  const [isCreateShowOpen, setIsCreateShowOpen] = useState(false);
   const weekBounds = useMemo(() => getCurrentWeekBounds(), []);
 
   const [balances, setBalances] = useState<
@@ -404,10 +409,26 @@ export default function AdminDashboardPage() {
     monthDailyError == null;
 
   return (
-    <>
+    <WorkspacePageWithRightPanel
+      open={isCreateShowOpen}
+      onClose={() => setIsCreateShowOpen(false)}
+      title="Create show"
+      panel={
+        <ShowCreateForm
+          variant="drawer"
+          onSuccess={(show) => {
+            setIsCreateShowOpen(false);
+            router.push(`/admin/shows/${show.id}`);
+          }}
+          onCancel={() => setIsCreateShowOpen(false)}
+        />
+      }
+    >
       <AdminPageIntroSection>
         <DashboardPageHeader
           weekRangeLabel={formatWeekRangeCompact(weekBounds)}
+          newShowPanelOpen={isCreateShowOpen}
+          onNewShowClick={() => setIsCreateShowOpen(true)}
         />
       </AdminPageIntroSection>
 
@@ -463,6 +484,6 @@ export default function AdminDashboardPage() {
           />
         </div>
       </AdminPageContainer>
-    </>
+    </WorkspacePageWithRightPanel>
   );
 }

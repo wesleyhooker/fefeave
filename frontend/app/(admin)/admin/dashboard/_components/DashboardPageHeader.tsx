@@ -1,14 +1,8 @@
 "use client";
 
-import { PlusIcon } from "@heroicons/react/24/outline";
-import Link from "next/link";
 import { useAdminWorkspace } from "@/app/(admin)/admin/AdminWorkspaceContext";
-import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
-import {
-  workspaceActionIconMd,
-  workspaceActionPrimaryMd,
-} from "@/app/(admin)/admin/_components/workspaceUi";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
 
 function greetingNameFromEmail(email: string | null): string {
   if (email == null || !email.includes("@")) return "there";
@@ -20,8 +14,12 @@ function greetingNameFromEmail(email: string | null): string {
 
 export function DashboardPageHeader({
   weekRangeLabel,
+  onNewShowClick,
+  newShowPanelOpen,
 }: {
   weekRangeLabel: string;
+  onNewShowClick: () => void;
+  newShowPanelOpen: boolean;
 }) {
   const { email } = useAdminWorkspace();
   const name = greetingNameFromEmail(email);
@@ -38,16 +36,12 @@ export function DashboardPageHeader({
       }
       subtitle={weekRangeLabel}
       action={
-        <Link
-          href="/admin/shows/new"
-          className={`${workspaceActionPrimaryMd} w-full justify-center sm:w-auto`}
-        >
-          <WorkspaceActionLabel
-            icon={<PlusIcon className={workspaceActionIconMd} />}
-          >
-            Show
-          </WorkspaceActionLabel>
-        </Link>
+        <WorkspaceSidePanelTrigger
+          label="New show"
+          variant="subtle"
+          open={newShowPanelOpen}
+          onClick={onNewShowClick}
+        />
       }
     />
   );

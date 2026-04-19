@@ -4,6 +4,7 @@ import { ChevronDownIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent, ReactNode } from "react";
 import { formatCurrency } from "@/lib/format";
+import { SettlementAmountOwedFooter } from "@/app/(admin)/admin/_components/SettlementAmountOwedFooter";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
 import {
   workspaceLedgerAffordanceColWidth,
@@ -224,12 +225,20 @@ export type WorkspaceLedgerLineItem = {
 /** Shared line-item grid (desktop detail row + mobile expanded block). */
 export function WorkspaceLedgerLineItemsPanel({
   lines,
+  heading,
 }: {
   lines: WorkspaceLedgerLineItem[];
+  /** e.g. “Itemized breakdown” — same heading on show detail + vendor ledger. */
+  heading?: string;
 }) {
   if (lines.length === 0) return null;
   return (
     <div className={workspaceLedgerDetailPanel}>
+      {heading ? (
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+          {heading}
+        </p>
+      ) : null}
       <table className="min-w-full table-fixed">
         <thead>
           <tr>
@@ -290,15 +299,27 @@ export function WorkspaceLedgerLineItemsPanel({
 export function WorkspaceLedgerLineItemsDetailRow({
   lines,
   colSpan = workspaceLedgerTableColumnCount,
+  heading,
+  amountOwedTotal,
 }: {
   lines: WorkspaceLedgerLineItem[];
   colSpan?: number;
+  heading?: string;
+  /** Same “Amount owed” total line as show settlement itemized expansion. */
+  amountOwedTotal?: number;
 }) {
   if (lines.length === 0) return null;
   return (
     <tr className="bg-gray-50/80">
       <td colSpan={colSpan} className="p-0">
-        <WorkspaceLedgerLineItemsPanel lines={lines} />
+        <div>
+          <WorkspaceLedgerLineItemsPanel lines={lines} heading={heading} />
+          {amountOwedTotal != null ? (
+            <div className="px-2 pb-2 sm:px-3 sm:pb-2.5">
+              <SettlementAmountOwedFooter amountOwed={amountOwedTotal} />
+            </div>
+          ) : null}
+        </div>
       </td>
     </tr>
   );

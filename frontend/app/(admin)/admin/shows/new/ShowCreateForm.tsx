@@ -22,6 +22,7 @@ import {
 import {
   createShow,
   fetchShows,
+  type ShowDTO,
   upsertShowFinancials,
 } from "@/src/lib/api/shows";
 
@@ -54,11 +55,36 @@ const PLATFORM_OPTIONS: {
   { value: "OTHER", label: "Other" },
 ];
 
+export type ShowCreateFormProps = {
+  onSuccess?: (show: ShowDTO) => void;
+  onCancel?: () => void;
+  variant?: "page" | "drawer";
+};
+
 /**
- * Create-show fields and submission — route shell lives in `page.tsx`.
+ * Create-show fields and submission — route shell lives in `page.tsx`,
+ * or open from the Shows list drawer with callbacks.
  */
-export function ShowCreateForm() {
+export function ShowCreateForm({
+  onSuccess,
+  onCancel,
+  variant = "page",
+}: ShowCreateFormProps = {}) {
   const router = useRouter();
+  const dense = variant === "drawer";
+
+  const innerCardClass = dense
+    ? "min-w-0 overflow-hidden rounded-none border-0 bg-transparent shadow-none"
+    : `min-w-0 overflow-hidden ${workspaceCard}`;
+
+  const sectionToolbarClass = workspaceSectionToolbar;
+
+  const identityFieldsClass = "space-y-4 px-4 py-4 sm:px-5";
+
+  const financialBlockClass = "px-4 py-4 sm:px-5";
+
+  /** Page: eyebrow + field stack; drawer: payout is a peer field after Core identity (no subsection chrome). */
+  const payoutIntroMargin = dense ? "mt-0" : "mt-3";
   const defaultDate = () => new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(defaultDate);
   const [existingShows, setExistingShows] = useState<
@@ -126,7 +152,11 @@ export function ShowCreateForm() {
         payout_after_fees_amount: payoutNum,
       });
 
-      router.push(`/admin/shows/${created.id}`);
+      if (onSuccess != null) {
+        onSuccess(created);
+      } else {
+        router.push(`/admin/shows/${created.id}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -134,8 +164,110 @@ export function ShowCreateForm() {
     }
   }
 
+  const dateField = (
+    <div>
+      <label htmlFor="create-show-date" className={workspaceFormLabel}>
+        Show date <span className="text-red-500">*</span>
+      </label>
+      <input
+        id="create-show-date"
+        type="date"
+        required
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        className={`${workspaceDateInput} mt-1.5 w-full min-w-0`}
+      />
+    </div>
+  );
+
+  const platformField = (
+    <div>
+      <label htmlFor="create-show-platform" className={workspaceFormLabel}>
+        Platform <span className="text-red-500">*</span>
+      </label>
+      <div className="mt-1.5">
+        <WorkspaceNativeSelect
+          id="create-show-platform"
+          required
+          value={platform}
+          onChange={(e) =>
+            setPlatform(e.target.value as "WHATNOT" | "INSTAGRAM" | "OTHER")
+          }
+          className="w-full min-w-0"
+          aria-label="Platform"
+        >
+          {PLATFORM_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </WorkspaceNativeSelect>
+      </div>
+    </div>
+  );
+
+  const nameField = (
+    <div>
+      <label htmlFor="create-show-name" className={workspaceFormLabel}>
+        Show name <span className="text-red-500">*</span>
+      </label>
+      <input
+        id="create-show-name"
+        type="text"
+        required
+        value={name}
+        onChange={(e) => {
+          nameManuallyEdited.current = true;
+          setName(e.target.value);
+        }}
+        className={`${workspaceTextInput} mt-1.5 w-full min-w-0 ${
+          dense ? "bg-stone-50/80 border-stone-200/85" : ""
+        }`}
+        placeholder="e.g. 2026-03-10"
+        autoComplete="off"
+      />
+    </div>
+  );
+
+  const payoutField = (
+    <div className={payoutIntroMargin}>
+      <label htmlFor="create-show-payout" className={workspaceFormLabel}>
+        Payout after fees ($) <span className="text-red-500">*</span>
+      </label>
+      <div className="relative mt-1.5 max-w-[10rem]">
+        <span
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+          aria-hidden
+        >
+          $
+        </span>
+        <input
+          id="create-show-payout"
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          required
+          value={payoutAfterFees}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^0-9.]/g, "");
+            const parts = v.split(".");
+            if (parts.length > 2) return;
+            if (parts[1]?.length > 2) return;
+            setPayoutAfterFees(v);
+          }}
+          className={`${workspaceTextInput} w-full pl-7 tabular-nums`}
+          placeholder="0.00"
+          aria-label="Payout after fees in dollars"
+        />
+      </div>
+    </div>
+  );
+
   return (
-    <form onSubmit={handleSubmit} className="min-w-0 max-w-xl space-y-6">
+    <form
+      onSubmit={handleSubmit}
+      className={`min-w-0 max-w-xl ${dense ? "space-y-3" : "space-y-6"}`}
+    >
       {error != null ? (
         <WorkspaceInlineError
           title={
@@ -147,116 +279,59 @@ export function ShowCreateForm() {
         />
       ) : null}
 
-      {/* A. Core show identity */}
-      <div className={`min-w-0 overflow-hidden ${workspaceCard}`}>
-        <div className={workspaceSectionToolbar}>
-          <h2 className={workspaceSectionTitle}>Core show identity</h2>
+      <div
+        className={
+          dense
+            ? "overflow-hidden rounded-lg border border-gray-200/90 bg-white shadow-workspace-surface-sm"
+            : "contents"
+        }
+      >
+        {/* A. Core show identity (drawer: no in-form section title — shell title suffices) */}
+        <div className={innerCardClass}>
+          {!dense ? (
+            <div className={sectionToolbarClass}>
+              <h2 className={workspaceSectionTitle}>Core show identity</h2>
+            </div>
+          ) : null}
+          {dense ? (
+            <div className="px-3.5 pb-3 pt-3.5">
+              <div className="space-y-2">
+                {dateField}
+                {platformField}
+              </div>
+              <div className="mt-4">{payoutField}</div>
+              <div className="mt-6">{nameField}</div>
+            </div>
+          ) : (
+            <div className={identityFieldsClass}>
+              {dateField}
+              {nameField}
+              {platformField}
+            </div>
+          )}
         </div>
-        <div className="space-y-4 px-4 py-4 sm:px-5">
-          <div>
-            <label htmlFor="create-show-date" className={workspaceFormLabel}>
-              Show date <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="create-show-date"
-              type="date"
-              required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={`${workspaceDateInput} mt-1.5 w-full min-w-0`}
-            />
-          </div>
-          <div>
-            <label htmlFor="create-show-name" className={workspaceFormLabel}>
-              Show name <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="create-show-name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => {
-                nameManuallyEdited.current = true;
-                setName(e.target.value);
-              }}
-              className={`${workspaceTextInput} mt-1.5 w-full min-w-0`}
-              placeholder="e.g. 2026-03-10"
-              autoComplete="off"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="create-show-platform"
-              className={workspaceFormLabel}
-            >
-              Platform <span className="text-red-500">*</span>
-            </label>
-            <div className="mt-1.5">
-              <WorkspaceNativeSelect
-                id="create-show-platform"
-                required
-                value={platform}
-                onChange={(e) =>
-                  setPlatform(
-                    e.target.value as "WHATNOT" | "INSTAGRAM" | "OTHER",
-                  )
-                }
-                className="w-full min-w-0"
-                aria-label="Platform"
-              >
-                {PLATFORM_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </WorkspaceNativeSelect>
+
+        {/* B. Financial setup — page only (drawer: payout lives in identity stack above) */}
+        {!dense ? (
+          <div className={innerCardClass}>
+            <div className={sectionToolbarClass}>
+              <h2 className={workspaceSectionTitle}>Financial setup</h2>
+            </div>
+            <div className={financialBlockClass}>
+              <p className={workspaceLabelEyebrow}>Starting payout</p>
+              {payoutField}
             </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
-      {/* B. Financial setup */}
-      <div className={`min-w-0 overflow-hidden ${workspaceCard}`}>
-        <div className={workspaceSectionToolbar}>
-          <h2 className={workspaceSectionTitle}>Financial setup</h2>
-        </div>
-        <div className="px-4 py-4 sm:px-5">
-          <p className={workspaceLabelEyebrow}>Starting payout</p>
-          <div className="mt-3">
-            <label htmlFor="create-show-payout" className={workspaceFormLabel}>
-              Payout after fees ($) <span className="text-red-500">*</span>
-            </label>
-            <div className="relative mt-1.5 max-w-[10rem]">
-              <span
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
-                aria-hidden
-              >
-                $
-              </span>
-              <input
-                id="create-show-payout"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                required
-                value={payoutAfterFees}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9.]/g, "");
-                  const parts = v.split(".");
-                  if (parts.length > 2) return;
-                  if (parts[1]?.length > 2) return;
-                  setPayoutAfterFees(v);
-                }}
-                className={`${workspaceTextInput} w-full pl-7 tabular-nums`}
-                placeholder="0.00"
-                aria-label="Payout after fees in dollars"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-3 pt-1">
+      <div
+        className={
+          dense
+            ? "flex flex-wrap gap-2 border-t border-stone-200/80 pt-3"
+            : "flex flex-wrap gap-3 pt-1"
+        }
+      >
         <button
           type="submit"
           disabled={submitting}
@@ -268,9 +343,19 @@ export function ShowCreateForm() {
             {submitting ? "Creating…" : "Create show"}
           </WorkspaceActionLabel>
         </button>
-        <Link href="/admin/shows" className={workspaceActionSecondaryMd}>
-          Cancel
-        </Link>
+        {onCancel != null ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className={workspaceActionSecondaryMd}
+          >
+            Cancel
+          </button>
+        ) : (
+          <Link href="/admin/shows" className={workspaceActionSecondaryMd}>
+            Cancel
+          </Link>
+        )}
       </div>
     </form>
   );

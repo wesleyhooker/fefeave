@@ -198,6 +198,16 @@ describe('Settlement and ledger integration', () => {
     expect(wholesalerRes.statusCode).toBe(201);
     const wholesaler = JSON.parse(wholesalerRes.payload);
 
+    const finRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: {
+        payout_after_fees_amount: 100000,
+        gross_sales_amount: 120000,
+      },
+    });
+    expect(finRes.statusCode).toBe(200);
+
     const settlementRes = await app.inject({
       method: 'POST',
       url: `${prefix}/shows/${show.id}/settlements`,
@@ -265,6 +275,16 @@ describe('Settlement and ledger integration', () => {
     expect(wholesalerRes.statusCode).toBe(201);
     const wholesaler = JSON.parse(wholesalerRes.payload);
 
+    const finRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: {
+        payout_after_fees_amount: 10000,
+        gross_sales_amount: 12000,
+      },
+    });
+    expect(finRes.statusCode).toBe(200);
+
     await app.inject({
       method: 'POST',
       url: `${prefix}/shows/${show.id}/settlements`,
@@ -316,6 +336,16 @@ describe('Settlement and ledger integration', () => {
     expect(wholesalerRes.statusCode).toBe(201);
     const wholesaler = JSON.parse(wholesalerRes.payload);
 
+    const finRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: {
+        payout_after_fees_amount: 10000,
+        gross_sales_amount: 12000,
+      },
+    });
+    expect(finRes.statusCode).toBe(200);
+
     await app.inject({
       method: 'POST',
       url: `${prefix}/shows/${show.id}/settlements`,
@@ -362,6 +392,16 @@ describe('Settlement and ledger integration', () => {
     expect(wholesalerRes.statusCode).toBe(201);
     const wholesaler = JSON.parse(wholesalerRes.payload);
 
+    const finRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: {
+        payout_after_fees_amount: 10000,
+        gross_sales_amount: 12000,
+      },
+    });
+    expect(finRes.statusCode).toBe(200);
+
     const settlementRes = await app.inject({
       method: 'POST',
       url: `${prefix}/shows/${show.id}/settlements`,
@@ -387,6 +427,172 @@ describe('Settlement and ledger integration', () => {
     expect(bal).toBeDefined();
     expect(Number(bal.owed_total)).toBe(999.99);
     expect(Number(bal.balance_owed)).toBe(999.99);
+  });
+
+  test('POST settlement rejects cumulative percent over 100%', async () => {
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2025-11-01',
+        platform: 'WHATNOT',
+        name: 'Percent Cap Show',
+      },
+    });
+    expect(showRes.statusCode).toBe(201);
+    const show = JSON.parse(showRes.payload);
+
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 10000, gross_sales_amount: 12000 },
+    });
+
+    const w1 = JSON.parse(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `${prefix}/wholesalers`,
+          payload: { name: 'Percent A' },
+        })
+      ).payload
+    );
+    const w2 = JSON.parse(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `${prefix}/wholesalers`,
+          payload: { name: 'Percent B' },
+        })
+      ).payload
+    );
+
+    const first = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: {
+        wholesaler_id: w1.id,
+        method: 'PERCENT_PAYOUT',
+        rate_percent: 60,
+      },
+    });
+    expect(first.statusCode).toBe(201);
+
+    const second = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: {
+        wholesaler_id: w2.id,
+        method: 'PERCENT_PAYOUT',
+        rate_percent: 50,
+      },
+    });
+    expect(second.statusCode).toBe(400);
+    const err = JSON.parse(second.payload);
+    expect(err.message).toMatch(/100%|100 %|exceed/i);
+  });
+
+  test('POST settlement rejects duplicate wholesaler on same show', async () => {
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2025-11-02',
+        platform: 'WHATNOT',
+        name: 'Dup Vendor Show',
+      },
+    });
+    const show = JSON.parse(showRes.payload);
+
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 10000, gross_sales_amount: 12000 },
+    });
+
+    const w = JSON.parse(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `${prefix}/wholesalers`,
+          payload: { name: 'Dup Vendor' },
+        })
+      ).payload
+    );
+
+    const ok = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: {
+        wholesaler_id: w.id,
+        method: 'PERCENT_PAYOUT',
+        rate_percent: 10,
+      },
+    });
+    expect(ok.statusCode).toBe(201);
+
+    const dup = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: {
+        wholesaler_id: w.id,
+        method: 'MANUAL',
+        amount: 50,
+      },
+    });
+    expect(dup.statusCode).toBe(409);
+  });
+
+  test('POST MANUAL settlement rejects when total owed would exceed payout', async () => {
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2025-11-03',
+        platform: 'WHATNOT',
+        name: 'Over Cap Show',
+      },
+    });
+    const show = JSON.parse(showRes.payload);
+
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 100, gross_sales_amount: 120 },
+    });
+
+    const w1 = JSON.parse(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `${prefix}/wholesalers`,
+          payload: { name: 'Over A' },
+        })
+      ).payload
+    );
+    const w2 = JSON.parse(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `${prefix}/wholesalers`,
+          payload: { name: 'Over B' },
+        })
+      ).payload
+    );
+
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: { wholesaler_id: w1.id, method: 'MANUAL', amount: 60 },
+    });
+
+    const bad = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: { wholesaler_id: w2.id, method: 'MANUAL', amount: 50 },
+    });
+    expect(bad.statusCode).toBe(400);
+    expect(JSON.parse(bad.payload).message).toMatch(/exceed|payout/i);
   });
 
   test('PATCH payment updates fields; DELETE soft-removes payment', async () => {

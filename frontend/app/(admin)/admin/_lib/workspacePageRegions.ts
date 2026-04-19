@@ -31,3 +31,32 @@ export const workspacePagePrimarySecondaryGrid =
 /** Supporting band below the primary row (analytics, secondary modules). */
 export const workspacePageSupportingStack =
   'flex min-w-0 w-full flex-col gap-5 lg:gap-6';
+
+// --- Host page + right workspace panel (dock in-flow on lg+, overlay on small screens) ---
+
+/**
+ * Width for a docked right workspace panel on lg+ (in-flow column).
+ * Do not apply on the mobile overlay shell — use only from `lg:` upward.
+ */
+export const workspaceRightPanelDockedColumnClass =
+  'lg:w-[min(26rem,calc(100vw-1.5rem))] lg:max-w-[26rem] lg:shrink-0';
+
+/**
+ * Root row/column when a page hosts a right-side workspace panel.
+ * Fills the admin main column (`flex-1 min-h-0`); desktop: main + panel share the row.
+ */
+export const workspaceHostPageRoot =
+  'flex min-h-0 w-full min-w-0 flex-1 flex-col lg:flex-row lg:items-stretch';
+
+/**
+ * Primary column (intro + page content) when a right panel may be open.
+ */
+export const workspaceHostPageMain =
+  'relative flex min-h-0 min-w-0 flex-1 flex-col';
+
+/**
+ * Desktop-only light scrim over the primary column while a right panel is open.
+ * Click dismisses the panel; keeps focus on workspace rather than full-screen modal dim.
+ */
+export const workspaceHostPageMainScrim =
+  'absolute inset-0 hidden cursor-default bg-stone-900/[0.08] lg:block';

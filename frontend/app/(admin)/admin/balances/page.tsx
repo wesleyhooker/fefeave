@@ -16,6 +16,7 @@ import {
 import { workspacePageTopStack } from "@/app/(admin)/admin/_lib/workspacePageRegions";
 import { formatCurrency } from "@/lib/format";
 import { apiGet } from "@/lib/api";
+import { VENDOR_BALANCES_INVALIDATE_EVENT } from "@/lib/vendorBalancesInvalidate";
 import { BalancesTable, type WholesalerBalanceRow } from "./BalancesTable";
 
 function parseNum(s: string): number {
@@ -83,6 +84,18 @@ export default function AdminBalancesPage() {
     document.addEventListener("visibilitychange", handleVisibility);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibility);
+  }, [fetchBalances]);
+
+  useEffect(() => {
+    const onInvalidate = () => {
+      fetchBalances();
+    };
+    window.addEventListener(VENDOR_BALANCES_INVALIDATE_EVENT, onInvalidate);
+    return () =>
+      window.removeEventListener(
+        VENDOR_BALANCES_INVALIDATE_EVENT,
+        onInvalidate,
+      );
   }, [fetchBalances]);
 
   const summary = useMemo(() => {
@@ -166,7 +179,7 @@ export default function AdminBalancesPage() {
         <AdminPageIntroSection>
           <AdminPageIntro
             title="Balances"
-            subtitle="Who you owe and how much"
+            subtitle="Vendor totals across shows — same vendors as on each show’s settlements"
           />
         </AdminPageIntroSection>
         <AdminPageContainer>
@@ -191,7 +204,10 @@ export default function AdminBalancesPage() {
   return (
     <>
       <AdminPageIntroSection>
-        <AdminPageIntro title="Balances" subtitle="Who you owe and how much" />
+        <AdminPageIntro
+          title="Balances"
+          subtitle="Vendor totals across shows — same vendors as on each show’s settlements"
+        />
       </AdminPageIntroSection>
       <AdminPageContainer>
         <div className={workspacePageTopStack}>

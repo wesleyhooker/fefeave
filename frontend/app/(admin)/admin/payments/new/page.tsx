@@ -13,6 +13,7 @@ import {
 } from "@/src/lib/api/attachments";
 import { createPayment } from "@/src/lib/api/payments";
 import { fetchWholesalerBalances } from "@/src/lib/api/wholesalers";
+import { dispatchVendorBalancesInvalidate } from "@/lib/vendorBalancesInvalidate";
 import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
   workspaceActionCompleteMd,
@@ -131,11 +132,13 @@ function RecordPaymentForm() {
             `Payment saved. Receipt upload failed: ${msg}. Redirecting…`,
           );
           setTimeout(() => {
+            dispatchVendorBalancesInvalidate();
             router.push(`/admin/wholesalers/${wholesalerId}`);
           }, 3000);
           return;
         }
       }
+      dispatchVendorBalancesInvalidate();
       router.push(`/admin/wholesalers/${wholesalerId}`);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : String(error));

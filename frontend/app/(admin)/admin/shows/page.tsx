@@ -1,7 +1,6 @@
 "use client";
 
-import { PlusIcon } from "@heroicons/react/24/outline";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getCurrentWeekBounds } from "@/lib/weekRange";
 import { ShowsTableSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
@@ -14,13 +13,10 @@ import {
   fetchShowFinancialSummariesByShowIds,
   type ShowFinancialSummary,
 } from "@/app/(admin)/admin/_lib/showFinancialSummary";
+import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
+import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
-import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
-import {
-  workspaceActionIconMd,
-  workspaceActionPrimaryMd,
-  workspacePageContentWidthWide,
-} from "@/app/(admin)/admin/_components/workspaceUi";
+import { workspacePageContentWidthWide } from "@/app/(admin)/admin/_components/workspaceUi";
 import {
   fetchShows,
   mapShowToViewModel,
@@ -34,8 +30,11 @@ import { ShowsPastWeeksSection } from "./_components/ShowsPastWeeksSection";
 import { ShowsThisWeekSection } from "./_components/ShowsThisWeekSection";
 import { ShowsUnscheduledSection } from "./_components/ShowsUnscheduledSection";
 import { buildWeekStructure } from "./weekStructure";
+import { ShowCreateForm } from "./new/ShowCreateForm";
 
 export default function AdminShowsPage() {
+  const router = useRouter();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const currentWeek = useMemo(() => getCurrentWeekBounds(), []);
   const [shows, setShows] = useState<ShowViewModel[] | null>(null);
   const [summaries, setSummaries] = useState<
@@ -127,23 +126,32 @@ export default function AdminShowsPage() {
   }
 
   return (
-    <>
+    <WorkspacePageWithRightPanel
+      open={isCreateOpen}
+      onClose={() => setIsCreateOpen(false)}
+      title="Create show"
+      panel={
+        <ShowCreateForm
+          variant="drawer"
+          onSuccess={(show) => {
+            setIsCreateOpen(false);
+            router.push(`/admin/shows/${show.id}`);
+          }}
+          onCancel={() => setIsCreateOpen(false)}
+        />
+      }
+    >
       <AdminPageIntroSection
         contentWidthClassName={workspacePageContentWidthWide}
       >
         <AdminPageIntro
           title="Shows"
           action={
-            <Link
-              href="/admin/shows/new"
-              className={`${workspaceActionPrimaryMd} w-full justify-center sm:w-auto`}
-            >
-              <WorkspaceActionLabel
-                icon={<PlusIcon className={workspaceActionIconMd} />}
-              >
-                Show
-              </WorkspaceActionLabel>
-            </Link>
+            <WorkspaceSidePanelTrigger
+              open={isCreateOpen}
+              label="New show"
+              onClick={() => setIsCreateOpen(true)}
+            />
           }
         />
       </AdminPageIntroSection>
@@ -184,6 +192,6 @@ export default function AdminShowsPage() {
           </>
         )}
       </AdminPageContainer>
-    </>
+    </WorkspacePageWithRightPanel>
   );
 }

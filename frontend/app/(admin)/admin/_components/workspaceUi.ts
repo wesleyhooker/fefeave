@@ -295,6 +295,15 @@ export const workspaceLedgerRowSettlementExpandable =
   ' hover:shadow-[inset_3px_0_0_0_rgba(120,113,108,0.16)]';
 
 /**
+ * Show detail — settlement row with chevron expand (expand control is a button, not whole-row click).
+ * Same stone rail + disclosure group as ledger so {@link WorkspaceLedgerDisclosureIcon} matches.
+ */
+export const workspaceShowSettlementRowDisclosure =
+  'group/ledger-settlement ' +
+  workspaceLedgerRowBaseline +
+  ' hover:shadow-[inset_3px_0_0_0_rgba(120,113,108,0.16)]';
+
+/**
  * Wholesaler ledger — informational settlement (no expand, not editable). Same hover scan as other rows; default cursor.
  */
 export const workspaceLedgerRowSettlement =
@@ -411,6 +420,26 @@ const focusRingSoft =
  * Primary page/section action — e.g. + Show (filled dark).
  */
 export const workspaceActionPrimaryMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 active:bg-gray-950 ${focusRingDark}`;
+
+/**
+ * {@link WorkspaceSidePanelTrigger} — default (Shows header): boutique-tinted surface.
+ */
+export const workspaceSidePanelTriggerShellDefault = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-2 self-start rounded-lg border border-stone-300/90 bg-[rgba(245,243,240,0.97)] px-3.5 py-1.5 text-left text-sm font-medium leading-snug text-stone-800 shadow-[0_1px_2px_rgba(28,25,23,0.07)] ring-1 ring-stone-900/[0.05] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] hover:border-stone-400/95 hover:bg-[rgba(239,236,232,0.98)] hover:shadow-[0_2px_8px_-3px_rgba(28,25,23,0.1)] active:bg-stone-200/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
+
+/**
+ * {@link WorkspaceSidePanelTrigger} — subtle (e.g. dashboard): lighter emphasis, same motion model.
+ */
+export const workspaceSidePanelTriggerShellSubtle = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-2 self-start rounded-lg border border-stone-200/95 bg-white/90 px-3.5 py-1.5 text-left text-sm font-medium leading-snug text-stone-800 shadow-[0_1px_2px_rgba(28,25,23,0.05)] ring-1 ring-stone-900/[0.035] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] hover:border-stone-300/95 hover:bg-stone-50/95 hover:shadow-[0_2px_6px_-3px_rgba(28,25,23,0.08)] active:bg-stone-100/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
+
+/**
+ * Engaged state while the target panel is open — default variant.
+ */
+export const workspaceSidePanelTriggerOpenDefault = `border-stone-500/55 bg-stone-200/55 text-stone-900 shadow-[inset_0_0_0_1px_rgba(120,113,108,0.18),0_1px_2px_rgba(28,25,23,0.06)] ring-stone-900/10 hover:border-stone-500/60 hover:bg-stone-200/65`;
+
+/**
+ * Engaged state while the target panel is open — subtle variant.
+ */
+export const workspaceSidePanelTriggerOpenSubtle = `border-stone-400/70 bg-stone-100/90 text-stone-900 shadow-[inset_0_0_0_1px_rgba(120,113,108,0.14),0_1px_2px_rgba(28,25,23,0.05)] ring-stone-900/[0.08] hover:border-stone-500/55 hover:bg-stone-100/95`;
 
 /**
  * Secondary page/section action — Record payment in header, supporting flows (outline).

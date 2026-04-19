@@ -3,6 +3,13 @@ import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
 import { ensureUser } from '../db/ensure-user';
+import {
+  assertNewSettlementAmountAllowed,
+  assertNoDuplicateSettlementForWholesaler,
+  assertPercentBpsHeadroom,
+  computePercentSettlementAmount,
+  loadShowSettlementAggregates,
+} from '../services/show-settlement-create-validation';
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
 
 const uuidSchema = z.string().uuid();
@@ -286,7 +293,8 @@ export async function owedLineItemRoutes(
     {
       preHandler: adminPre,
       schema: {
-        description: 'Create a settlement obligation for a show',
+        description:
+          'Create a settlement obligation for a show. Enforces: one settlement per wholesaler per show; cumulative PERCENT_PAYOUT rates ≤ 100%; total owed from settlements ≤ payout after fees (unless already over-cap historically — then new obligations cannot increase total owed).',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
@@ -392,6 +400,9 @@ export async function owedLineItemRoutes(
           throw new NotFoundError('Wholesaler', wholesaler_id);
         }
 
+        await assertNoDuplicateSettlementForWholesaler(client, showId, wholesaler_id);
+        const settlementAgg = await loadShowSettlementAggregates(client, showId);
+
         const rate_bps = method === 'PERCENT_PAYOUT' ? Math.round((rate_percent ?? 0) * 100) : null;
         const description =
           method === 'PERCENT_PAYOUT'
@@ -401,14 +412,22 @@ export async function owedLineItemRoutes(
               : 'Settlement (manual)';
 
         if (method === 'PERCENT_PAYOUT') {
-          const finCheck = await client.query(`SELECT 1 FROM show_financials WHERE show_id = $1`, [
-            showId,
-          ]);
-          if (finCheck.rows.length === 0) {
+          if (settlementAgg.payoutAfterFees == null) {
             throw new ConflictError(
               'Show financials not found for this show. Add financials before creating a percent-based settlement.'
             );
           }
+          assertPercentBpsHeadroom(settlementAgg.existingPercentBps, rate_bps ?? 0);
+          const newAmountPercent = await computePercentSettlementAmount(
+            client,
+            Number(settlementAgg.payoutAfterFees),
+            rate_bps ?? 0
+          );
+          assertNewSettlementAmountAllowed(
+            settlementAgg.existingTotalOwed,
+            newAmountPercent,
+            settlementAgg.payoutAfterFees
+          );
           const result = await client.query(
             `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
              SELECT $1, $2, ROUND(sf.payout_after_fees_amount * $3 / 10000, 4), 'USD', $4, 'PENDING', $5, 'API', 'PERCENT_PAYOUT', $3, sf.payout_after_fees_amount
@@ -435,6 +454,11 @@ export async function owedLineItemRoutes(
             throw new ValidationError('ITEMIZED settlement total must be greater than 0');
           }
           const amountDollars = Math.round(totalCents) / 100;
+          assertNewSettlementAmountAllowed(
+            settlementAgg.existingTotalOwed,
+            amountDollars,
+            settlementAgg.payoutAfterFees
+          );
           const result = await client.query(
             `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
              VALUES ($1, $2, $3, 'USD', $4, 'PENDING', $5, 'API', 'ITEMIZED', NULL, NULL)
@@ -475,6 +499,11 @@ export async function owedLineItemRoutes(
         if (Number.isNaN(amount) || amount <= 0) {
           throw new ValidationError('MANUAL settlement requires amount > 0');
         }
+        assertNewSettlementAmountAllowed(
+          settlementAgg.existingTotalOwed,
+          amount,
+          settlementAgg.payoutAfterFees
+        );
         const result = await client.query(
           `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
            VALUES ($1, $2, $3, 'USD', $4, 'PENDING', $5, 'API', 'MANUAL', NULL, NULL)

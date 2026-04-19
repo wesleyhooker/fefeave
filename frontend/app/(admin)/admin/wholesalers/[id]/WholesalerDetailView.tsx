@@ -2,7 +2,7 @@
 
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   formatCurrency,
   formatDate,
@@ -59,6 +59,13 @@ import {
   workspaceFinancialVendorMainGrid,
   workspaceFinancialVendorPrimaryColumn,
 } from "@/app/(admin)/admin/_lib/workspacePageRegions";
+import { SettlementAmountOwedFooter } from "@/app/(admin)/admin/_components/SettlementAmountOwedFooter";
+import {
+  mapStatementSettlementLinesToLedgerLineItems,
+  settlementMethodHint,
+  settlementMethodPrimaryLabel,
+  SETTLEMENT_LABELS,
+} from "@/app/(admin)/admin/_lib/settlementUi";
 import { WholesalerLedgerExportMenu } from "./WholesalerLedgerExportMenu";
 import {
   WholesalerVendorMoneySection,
@@ -74,6 +81,7 @@ import {
   type WholesalerStatementRowView,
 } from "@/src/lib/api/wholesalers";
 import { fetchPayments, type PaymentDTO } from "@/src/lib/api/payments";
+import { dispatchVendorBalancesInvalidate } from "@/lib/vendorBalancesInvalidate";
 
 function LedgerEntryTypeLabel({ row }: { row: WholesalerStatementRowView }) {
   if (row.type === "PAYMENT") {
@@ -102,28 +110,27 @@ function LedgerEntryTypeLabel({ row }: { row: WholesalerStatementRowView }) {
       </span>
     );
   }
+  const primary = settlementMethodPrimaryLabel(row.calculationMethod);
+  const hint = settlementMethodHint({
+    calculationMethod: row.calculationMethod,
+    lineCount: row.lines?.length,
+  });
   return (
-    <span className="inline-flex items-center gap-[5px] sm:gap-1.5">
+    <span className="inline-flex items-start gap-[5px] sm:gap-1.5">
       <span
-        className={`${workspaceShowsTableStatusDotOpen} translate-y-px`}
+        className={`${workspaceShowsTableStatusDotOpen} mt-0.5 translate-y-px`}
         aria-hidden
       />
-      <span className="text-[11px] font-medium leading-none text-gray-800">
-        Settlement
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-[11px] font-medium leading-none text-gray-800">
+          {primary}
+        </span>
+        {hint ? (
+          <span className="text-[11px] leading-snug text-gray-500">{hint}</span>
+        ) : null}
       </span>
     </span>
   );
-}
-
-function mapStatementLinesToLedgerLineItems(
-  lines: NonNullable<WholesalerStatementRowView["lines"]>,
-): WorkspaceLedgerLineItem[] {
-  return lines.map((l) => ({
-    itemName: l.itemName,
-    quantity: l.quantity,
-    unitPrice: l.unitPriceCents / 100,
-    lineTotal: l.lineTotalCents / 100,
-  }));
 }
 
 function moneyOwedClass(value: number | null): string {
@@ -265,10 +272,8 @@ export function WholesalerDetailView({ id }: { id: string }) {
     });
   }, [ledgerFocus]);
 
-  const balance = useMemo(() => {
-    if (statement.length === 0) return wholesaler?.balanceOwed ?? 0;
-    return statement[statement.length - 1]?.runningBalance ?? 0;
-  }, [statement, wholesaler]);
+  /** Same as Balances list: `balance_owed` = total owed − total paid (authoritative read model). */
+  const balance = wholesaler?.balanceOwed ?? 0;
 
   const editPaymentForForm =
     ledgerFocus?.kind === "PAYMENT"
@@ -408,6 +413,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     <div className="flex h-full flex-col justify-center border-l-[3px] border-rose-400/50 pl-3 sm:pl-3.5">
                       <p
                         className={`${workspaceStatEyebrow} min-w-0 break-words [hyphens:auto]`}
+                        title="Outstanding amount: total owed minus total paid (matches Balances)."
                       >
                         Current balance
                       </p>
@@ -462,6 +468,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
               onRecorded={() => {
                 setReloadToken((v) => v + 1);
                 setLedgerFocus(null);
+                dispatchVendorBalancesInvalidate();
               }}
             />
           </div>
@@ -624,7 +631,9 @@ export function WholesalerDetailView({ id }: { id: string }) {
 
                         const lineItems: WorkspaceLedgerLineItem[] | null =
                           isItemized && row.lines
-                            ? mapStatementLinesToLedgerLineItems(row.lines)
+                            ? mapStatementSettlementLinesToLedgerLineItems(
+                                row.lines,
+                              )
                             : null;
 
                         const rowSelectedClass = isRowPaymentSelected
@@ -719,6 +728,12 @@ export function WholesalerDetailView({ id }: { id: string }) {
                           <WorkspaceLedgerLineItemsDetailRow
                             key={`${row.entryId}-lines`}
                             lines={lineItems}
+                            heading={SETTLEMENT_LABELS.itemizedBreakdown}
+                            amountOwedTotal={
+                              row.amountOwed != null
+                                ? row.amountOwed
+                                : undefined
+                            }
                           />
                         );
 
@@ -776,7 +791,9 @@ export function WholesalerDetailView({ id }: { id: string }) {
 
                     const lineItemsMobile: WorkspaceLedgerLineItem[] | null =
                       isItemized && row.lines
-                        ? mapStatementLinesToLedgerLineItems(row.lines)
+                        ? mapStatementSettlementLinesToLedgerLineItems(
+                            row.lines,
+                          )
                         : null;
 
                     const rowSurface = isPaymentRowMobile
@@ -851,7 +868,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                           <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
                             <div>
                               <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                                Owed
+                                {SETTLEMENT_LABELS.amountOwed}
                               </dt>
                               <dd
                                 className={`text-right ${moneyOwedClass(row.amountOwed)}`}
@@ -895,7 +912,13 @@ export function WholesalerDetailView({ id }: { id: string }) {
                           <div className="border-t border-gray-100 px-4 py-3 sm:px-5">
                             <WorkspaceLedgerLineItemsPanel
                               lines={lineItemsMobile}
+                              heading={SETTLEMENT_LABELS.itemizedBreakdown}
                             />
+                            {row.amountOwed != null ? (
+                              <SettlementAmountOwedFooter
+                                amountOwed={row.amountOwed}
+                              />
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
