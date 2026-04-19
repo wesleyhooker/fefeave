@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import {
   ChevronRightIcon,
   DocumentPlusIcon,
@@ -35,6 +36,7 @@ export function WorkspaceSidePanelTrigger({
   open = false,
   className = "",
 }: WorkspaceSidePanelTriggerProps) {
+  const descriptionId = useId();
   const shell =
     variant === "subtle"
       ? workspaceSidePanelTriggerShellSubtle
@@ -50,8 +52,13 @@ export function WorkspaceSidePanelTrigger({
       onClick={onClick}
       aria-expanded={open}
       aria-pressed={open}
+      aria-describedby={descriptionId}
       className={`${shell} w-full sm:w-auto ${open ? engaged : ""} ${className}`}
     >
+      <span id={descriptionId} className="sr-only">
+        Opens a workflow in the side panel beside this page. You can keep
+        working here while the panel is open.
+      </span>
       <span
         className={`flex min-w-0 w-full items-center gap-2 transition-transform duration-200 ${motionEase} will-change-transform group-hover:translate-x-0.5`}
       >

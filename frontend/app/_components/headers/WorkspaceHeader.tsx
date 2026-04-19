@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   workspaceChromeHover,
   workspaceChromeHoverWarm,
+  workspaceGlobalHeaderBar,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import { ProfileDropdown } from "./ProfileDropdown";
 
@@ -28,7 +29,9 @@ export function WorkspaceHeader({
   onMenuClick,
 }: WorkspaceHeaderProps) {
   return (
-    <header className="relative z-10 border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur-sm md:px-6">
+    <header
+      className={`${workspaceGlobalHeaderBar} px-4 py-3 backdrop-blur-[2px] md:px-6`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
           {onMenuClick && (

@@ -22,9 +22,9 @@ export function WorkspaceRightPanelSurface({
 }) {
   return (
     <div
-      className={`flex h-full min-h-0 w-full flex-col overflow-hidden ${workspaceCard}`}
+      className={`flex h-full min-h-0 w-full flex-col overflow-hidden border-l-[3px] border-l-rose-300/45 ${workspaceCard}`}
     >
-      <header className="flex min-h-[3.25rem] shrink-0 items-center justify-between gap-3 border-b border-gray-200/90 bg-gray-50/60 px-3.5 py-2.5">
+      <header className="flex min-h-[3.25rem] shrink-0 items-center justify-between gap-3 border-b border-stone-200/90 bg-gradient-to-r from-rose-50/[0.35] to-stone-50/50 px-3.5 py-2.5">
         <h2
           id={titleId}
           className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-snug tracking-tight text-stone-900"

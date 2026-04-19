@@ -3,6 +3,27 @@
  * **Interaction reference:** the dashboard (`/admin/dashboard`) — match its row hover, title links,
  * action chip sizes, and money treatment when building new admin lists or tables.
  *
+ * ## Visual hierarchy (three layers)
+ *
+ * | Layer | Role | Tokens / components |
+ * |-------|------|---------------------|
+ * | 1 — Global chrome | Workspace top bar (logo, env, profile) — cool, dense, “instrument” | `workspaceGlobalHeaderBar` + `WorkspaceHeader` |
+ * | 2 — Page context | Warm intro band (title, subtitle, page actions) | `workspacePageIntroZone` / `workspacePageEntityIntroZone` + `AdminPageIntroSection` + `AdminPageIntro` |
+ * | 3 — Work surface | Cards, tables, forms on shell gray | `workspaceShellBg` + `AdminPageContainer` + `workspaceCard` / `workspacePanel` |
+ *
+ * ## Action tiers (meaning + emphasis)
+ *
+ * | Tier | Use | Token(s) |
+ * |------|-----|----------|
+ * | Primary | Create / commit / main forward action on a page | `workspaceActionPrimaryMd`, `workspaceActionCompleteMd` / `*Sm` |
+ * | Secondary | Supporting outline (cancel, back, alternate path) | `workspaceActionSecondaryMd` / `*Sm` |
+ * | Utility | Toolbar menus, filters, export — quieter than secondary | `workspaceActionUtilityMd` / `workspaceActionUtilitySm` |
+ * | Financial | Money-out (Pay) | `workspaceActionFinancialSm` |
+ * | Positive completion | Record payment / mark paid (emerald) | `workspaceActionPositiveCompleteMd` / `*Sm`, `workspaceActionPositiveOutlineSm` |
+ * | Tertiary / chip | Compact nav chips (“All shows”) | `workspaceActionTertiaryLink` |
+ * | Inline text | Row-level text actions that must not read as buttons | `workspaceActionInlineText` |
+ * | Side panel workflow | Opens docked right panel (create flows) | `WorkspaceSidePanelTrigger` + `workspaceSidePanelTriggerShell*` |
+ *
  * ## Where things live (do not duplicate ad hoc Tailwind for these concerns)
  *
  * | Concern | Home |
@@ -15,14 +36,14 @@
  * | Vendor payment state (Unpaid / Partially paid / Paid) | `WorkspaceListPaymentStatus` + `getWorkspacePaymentStatus` in `_lib/workspacePaymentStatus.ts` |
  * | Show detail settlement rollup (Open/Paid/Unpaid) | This file — `workspaceDetailSettlement*` |
  * | Workspace shadows | `tailwind.config.ts` — `shadow-workspace-surface*` |
- * | Sidebar/header/menu hover + active | This file — `workspaceChromeHover` (+ `workspaceChromeTransition`) |
+ * | Sidebar/header/menu hover + active | This file — `workspaceChromeHover` (+ `workspaceChromeTransition`); sidebar composition `AdminSidebar.tsx` |
  * | Loading skeletons shaped like admin pages | `AdminPageSkeletons.tsx` |
  * | Page region stacks/grids (intro-adjacent, primary/secondary columns) | `_lib/workspacePageRegions.ts` |
  * | Summary stat tiles (dashboard-style cards) | `AdminSummaryStatGrid.tsx` + `workspaceStatTile` |
  * | Section toolbar (filters left, actions right) | `AdminWorkspaceToolbar.tsx` + `workspaceSectionToolbar` |
  * | Styled native `<select>` / text / date | `workspaceSelect`, `workspaceTextInput`, `workspaceDateInput` + `WorkspaceNativeSelect.tsx` |
  * | Segmented toolbar filter | `workspaceSegmentedTrack` / `workspaceSegmentedButton*` + `WorkspaceSegmentedControl.tsx` |
- * | Toolbar Export / Actions menu | `WorkspaceToolbarMenu.tsx` (+ `workspaceToolbarMenuPanel` / `workspaceToolbarMenuItem*`) |
+ * | Toolbar Export / Actions menu | `WorkspaceToolbarMenu.tsx` (trigger: `workspaceActionUtilityMd`; panel: `workspaceToolbarMenuPanel` / `workspaceToolbarMenuItem*`) |
  * | Single-select menu (form fields, same family as toolbar menus) | `WorkspaceSelectMenu.tsx` |
  * | File upload (form attachment row) | `WorkspaceFileUpload.tsx` |
  *
@@ -47,7 +68,14 @@ export const workspaceShellBg = 'bg-[#F3F4F6]';
  * sidebar is one deliberate edge (pairs with header border-b at the junction).
  */
 export const workspaceShellColumn =
-  'flex min-w-0 flex-1 flex-col md:border-l md:border-gray-200';
+  'flex min-w-0 flex-1 flex-col md:border-l md:border-stone-200/80';
+
+/**
+ * Layer 1 — workspace top header only (`WorkspaceHeader`).
+ * Cool, slightly elevated chrome; visually distinct from the warm page-intro band below.
+ */
+export const workspaceGlobalHeaderBar =
+  'relative z-20 border-b border-stone-200/80 bg-gradient-to-b from-white via-white to-stone-50/[0.65] shadow-[0_4px_20px_-12px_rgba(28,25,23,0.1)]';
 
 /** Transitions for workspace chrome — restrained, no bouncy motion */
 export const workspaceChromeTransition =
@@ -113,15 +141,16 @@ export const workspacePageIntroToContentGap = 'pt-2 md:pt-2.5';
 /**
  * Reusable workspace page-intro zone (page layer, not a content card).
  * No radius/shadow/panel border; this is page framing under the workspace top nav.
+ * Top hairline + warm wash signal “page context” vs global chrome above.
  */
 export const workspacePageIntroZone =
-  'relative overflow-hidden bg-[rgba(250,247,246,0.85)] after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-stone-200/70';
+  'relative z-10 overflow-hidden bg-[rgba(250,247,246,0.92)] before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-0 before:z-[1] before:h-px before:bg-gradient-to-r before:from-rose-100/50 before:via-stone-200/40 before:to-transparent after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:z-[1] after:h-px after:bg-stone-200/65';
 
 /**
  * Flatter intro strip for nested entity pages (e.g. wholesaler under Balances) — less “landing page” wash.
  */
 export const workspacePageEntityIntroZone =
-  'relative overflow-hidden bg-white after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-stone-200/70';
+  'relative z-10 overflow-hidden bg-white before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-0 before:z-[1] before:h-px before:bg-gradient-to-r before:from-stone-200/35 before:via-stone-200/25 before:to-transparent after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:z-[1] after:h-px after:bg-stone-200/65';
 
 /** Vertical rhythm inside intro zone; horizontal rhythm comes from main layout padding. */
 export const workspacePageIntroZoneInner = 'relative';
@@ -422,24 +451,24 @@ const focusRingSoft =
 export const workspaceActionPrimaryMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 active:bg-gray-950 ${focusRingDark}`;
 
 /**
- * {@link WorkspaceSidePanelTrigger} — default (Shows header): boutique-tinted surface.
+ * {@link WorkspaceSidePanelTrigger} — default (Shows header): boutique-tinted surface + blush workflow rail.
  */
-export const workspaceSidePanelTriggerShellDefault = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-2 self-start rounded-lg border border-stone-300/90 bg-[rgba(245,243,240,0.97)] px-3.5 py-1.5 text-left text-sm font-medium leading-snug text-stone-800 shadow-[0_1px_2px_rgba(28,25,23,0.07)] ring-1 ring-stone-900/[0.05] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] hover:border-stone-400/95 hover:bg-[rgba(239,236,232,0.98)] hover:shadow-[0_2px_8px_-3px_rgba(28,25,23,0.1)] active:bg-stone-200/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
+export const workspaceSidePanelTriggerShellDefault = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-2 self-start rounded-lg border border-stone-300/90 bg-[rgba(245,243,240,0.97)] px-3.5 py-1.5 text-left text-sm font-medium leading-snug text-stone-800 shadow-[inset_3px_0_0_0_rgba(225,169,175,0.42),0_1px_2px_rgba(28,25,23,0.07)] ring-1 ring-stone-900/[0.05] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] hover:border-stone-400/95 hover:bg-[rgba(239,236,232,0.98)] hover:shadow-[inset_3px_0_0_0_rgba(219,158,165,0.48),0_2px_8px_-3px_rgba(28,25,23,0.1)] active:bg-stone-200/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
 
 /**
- * {@link WorkspaceSidePanelTrigger} — subtle (e.g. dashboard): lighter emphasis, same motion model.
+ * {@link WorkspaceSidePanelTrigger} — subtle (e.g. dashboard): lighter emphasis, same motion model + rail.
  */
-export const workspaceSidePanelTriggerShellSubtle = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-2 self-start rounded-lg border border-stone-200/95 bg-white/90 px-3.5 py-1.5 text-left text-sm font-medium leading-snug text-stone-800 shadow-[0_1px_2px_rgba(28,25,23,0.05)] ring-1 ring-stone-900/[0.035] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] hover:border-stone-300/95 hover:bg-stone-50/95 hover:shadow-[0_2px_6px_-3px_rgba(28,25,23,0.08)] active:bg-stone-100/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
+export const workspaceSidePanelTriggerShellSubtle = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-2 self-start rounded-lg border border-stone-200/95 bg-white/90 px-3.5 py-1.5 text-left text-sm font-medium leading-snug text-stone-800 shadow-[inset_3px_0_0_0_rgba(225,169,175,0.32),0_1px_2px_rgba(28,25,23,0.05)] ring-1 ring-stone-900/[0.035] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] hover:border-stone-300/95 hover:bg-stone-50/95 hover:shadow-[inset_3px_0_0_0_rgba(219,158,165,0.4),0_2px_6px_-3px_rgba(28,25,23,0.08)] active:bg-stone-100/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
 
 /**
  * Engaged state while the target panel is open — default variant.
  */
-export const workspaceSidePanelTriggerOpenDefault = `border-stone-500/55 bg-stone-200/55 text-stone-900 shadow-[inset_0_0_0_1px_rgba(120,113,108,0.18),0_1px_2px_rgba(28,25,23,0.06)] ring-stone-900/10 hover:border-stone-500/60 hover:bg-stone-200/65`;
+export const workspaceSidePanelTriggerOpenDefault = `border-stone-500/55 bg-stone-200/55 text-stone-900 shadow-[inset_3px_0_0_0_rgba(192,120,132,0.55),inset_0_0_0_1px_rgba(120,113,108,0.18),0_1px_2px_rgba(28,25,23,0.06)] ring-stone-900/10 hover:border-stone-500/60 hover:bg-stone-200/65`;
 
 /**
  * Engaged state while the target panel is open — subtle variant.
  */
-export const workspaceSidePanelTriggerOpenSubtle = `border-stone-400/70 bg-stone-100/90 text-stone-900 shadow-[inset_0_0_0_1px_rgba(120,113,108,0.14),0_1px_2px_rgba(28,25,23,0.05)] ring-stone-900/[0.08] hover:border-stone-500/55 hover:bg-stone-100/95`;
+export const workspaceSidePanelTriggerOpenSubtle = `border-stone-400/70 bg-stone-100/90 text-stone-900 shadow-[inset_3px_0_0_0_rgba(192,120,132,0.45),inset_0_0_0_1px_rgba(120,113,108,0.14),0_1px_2px_rgba(28,25,23,0.05)] ring-stone-900/[0.08] hover:border-stone-500/55 hover:bg-stone-100/95`;
 
 /**
  * Secondary page/section action — Record payment in header, supporting flows (outline).
@@ -460,6 +489,20 @@ export const workspaceActionCompleteMd = `inline-flex items-center justify-cente
  * Neutral row follow-up — View, Cancel-style outline.
  */
 export const workspaceActionSecondarySm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 ${focusRingSoft}`;
+
+/**
+ * Utility toolbar control — Filter, Export, compact menus; quieter than {@link workspaceActionSecondaryMd}
+ * so primary/secondary page actions stay visually dominant.
+ */
+export const workspaceActionUtilityMd = `inline-flex items-center justify-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/90 px-3.5 py-2 text-sm font-medium text-stone-600 shadow-none transition-[color,background-color,border-color] duration-200 hover:border-stone-300/95 hover:bg-stone-50/95 hover:text-stone-900 ${focusRingSoft}`;
+
+/** Compact utility control (toolbars, dense strips). */
+export const workspaceActionUtilitySm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-stone-200/90 bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-600 shadow-none transition-[color,background-color,border-color] duration-200 hover:border-stone-300/95 hover:bg-stone-50/95 hover:text-stone-900 ${focusRingSoft}`;
+
+/**
+ * Inline row / table text action — does not compete with {@link workspaceActionPrimaryMd} or chips.
+ */
+export const workspaceActionInlineText = `text-sm font-medium text-stone-600 underline-offset-2 transition-colors hover:text-stone-900 hover:underline ${focusRingSoft}`;
 
 /**
  * Financial / money-out — Pay (distinct from completion; restrained amber field).

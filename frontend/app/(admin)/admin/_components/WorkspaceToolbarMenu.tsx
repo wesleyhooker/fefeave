@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
-  workspaceActionSecondaryMd,
+  workspaceActionUtilityMd,
   workspaceToolbarMenuItem,
   workspaceToolbarMenuItemSelected,
   workspaceToolbarMenuPanel,
@@ -57,19 +57,19 @@ export function WorkspaceToolbarMenu({
         type="button"
         id={`${id}-trigger`}
         onClick={() => setOpen((v) => !v)}
-        className={workspaceActionSecondaryMd}
+        className={workspaceActionUtilityMd}
         aria-expanded={open}
         aria-haspopup="true"
         aria-controls={open ? id : undefined}
       >
         {leadingIcon ? (
-          <span className="inline-flex shrink-0 text-gray-600" aria-hidden>
+          <span className="inline-flex shrink-0 text-stone-500" aria-hidden>
             {leadingIcon}
           </span>
         ) : null}
         {label}
         <svg
-          className="h-4 w-4 shrink-0 text-gray-500"
+          className="h-4 w-4 shrink-0 text-stone-500"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
