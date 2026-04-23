@@ -16,6 +16,11 @@ import {
   useState,
 } from "react";
 import {
+  WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING,
+  WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY,
+  WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
@@ -31,13 +36,11 @@ import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/Workspace
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
-  workspaceActionCompleteMd,
   workspaceActionCompleteSm,
   workspaceActionIconMd,
   workspaceActionIconSm,
   workspaceActionPositiveCompleteMd,
   workspaceActionSecondaryMd,
-  workspaceCard,
   workspaceLabelEyebrow,
   workspaceMoneyClassForSigned,
   workspaceMoneyNegative,
@@ -46,6 +49,9 @@ import {
   workspacePageContentWidthWide,
   workspaceSectionTitle,
   workspaceSectionToolbar,
+  workspaceShowDetailOperatingShell,
+  workspaceShowDetailOutcomeShell,
+  workspaceActionCompleteMd,
   workspaceTextInput,
   workspaceTextInputCompact,
   workspaceTheadSticky,
@@ -63,7 +69,7 @@ import {
   settlementMethodHint,
   settlementMethodPrimaryLabel,
 } from "@/app/(admin)/admin/_lib/settlementUi";
-import { workspacePagePrimarySecondaryGrid } from "@/app/(admin)/admin/_lib/workspacePageRegions";
+import { workspacePageShowDetailGrid } from "@/app/(admin)/admin/_lib/workspacePageRegions";
 import {
   getShowCloseOutBlock,
   type CloseOutScrollTarget,
@@ -325,7 +331,7 @@ export function ShowDetailView({ id }: { id: string }) {
   const [expandedSettlementIds, setExpandedSettlementIds] = useState<
     Record<string, boolean>
   >({});
-  /** Brief highlight on Show breakdown when Close is blocked (scroll target). */
+  /** Brief highlight on payout/settlements block when Close is blocked (scroll target). */
   const [breakdownFlash, setBreakdownFlash] = useState<
     "payout" | "settlements" | null
   >(null);
@@ -871,98 +877,84 @@ export function ShowDetailView({ id }: { id: string }) {
 
       <AdminPageContainer contentWidthClassName={workspacePageContentWidthWide}>
         <div className="flex min-w-0 flex-col gap-5 md:gap-6">
-          <div className={workspacePagePrimarySecondaryGrid}>
-            {/* Main column: unified money breakdown */}
+          <div className={workspacePageShowDetailGrid}>
+            {/* Main column: unified show finances (payout + settlements) */}
             <div className="min-w-0">
               <section
                 ref={breakdownSectionRef}
                 className="min-w-0 scroll-mt-4"
-                aria-labelledby="show-breakdown-heading"
+                aria-labelledby="show-finances-heading"
               >
                 <div
-                  className={`min-w-0 overflow-hidden ${workspaceCard} ${
+                  className={`min-w-0 overflow-hidden ${workspaceShowDetailOperatingShell} ${
                     isClosed ? "bg-gray-50/50" : ""
                   }`}
                 >
-                  <div className="border-b border-gray-100/90 px-4 py-2.5 sm:px-5">
-                    <h2
-                      id="show-breakdown-heading"
-                      className="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
-                    >
-                      Show breakdown
-                    </h2>
-                    {isClosed ? (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Locked — reopen the show below to edit payout or
-                        settlements.
+                  <h2 id="show-finances-heading" className="sr-only">
+                    Payout and settlements
+                  </h2>
+                  {isClosed ? (
+                    <div className="border-b border-stone-200/80 bg-stone-50/50 px-4 py-2 sm:px-5">
+                      <p className="text-xs text-gray-600">
+                        Locked — reopen below to edit payout or settlements.
                       </p>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
 
-                  <div className="px-4 pb-4 pt-3 sm:px-5">
-                    {/* Payout + settlements: one financial block, visually linked */}
-                    <div className="rounded-lg border border-gray-200/80 bg-gradient-to-b from-gray-50/60 to-gray-50/30 p-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5)] sm:p-3.5">
-                      <div className="space-y-1 border-b border-gray-200/70 pb-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                          Payout <span className="sr-only">after fees</span>
-                        </p>
-                        <div
-                          ref={payoutFigureRef}
-                          tabIndex={-1}
-                          className={`scroll-mt-20 -mx-0.5 rounded-md outline-none transition-[box-shadow] duration-300 ${
-                            breakdownFlash === "payout"
-                              ? "ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
-                              : ""
-                          } ${
-                            addSettlementOpen &&
-                            fieldHints.payoutFigure &&
-                            breakdownFlash !== "payout"
-                              ? "ring-2 ring-amber-300/90 ring-offset-2 ring-offset-white"
-                              : ""
-                          }`}
-                        >
-                          <EditablePayout
-                            payoutAfterFees={payoutAfterFees}
-                            saving={savingPayout}
-                            disabled={isClosed}
-                            onSave={handleSavePayout}
-                            displayVariant="moneyCard"
-                            embedded
-                          />
-                        </div>
-                        {savePayoutError ? (
-                          <p className="text-sm text-amber-700" role="alert">
-                            {savePayoutError}
+                  <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-stone-200/85 bg-gradient-to-b from-stone-50/50 via-white/90 to-stone-50/30 p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.65)] sm:p-4">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-500">
+                            Payout <span className="sr-only">after fees</span>
                           </p>
-                        ) : null}
+                          <div
+                            ref={payoutFigureRef}
+                            tabIndex={-1}
+                            className={`scroll-mt-20 -mx-0.5 rounded-md outline-none transition-[box-shadow] duration-300 ${
+                              breakdownFlash === "payout"
+                                ? "ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
+                                : ""
+                            } ${
+                              addSettlementOpen &&
+                              fieldHints.payoutFigure &&
+                              breakdownFlash !== "payout"
+                                ? "ring-2 ring-amber-300/90 ring-offset-2 ring-offset-white"
+                                : ""
+                            }`}
+                          >
+                            <EditablePayout
+                              payoutAfterFees={payoutAfterFees}
+                              saving={savingPayout}
+                              disabled={isClosed}
+                              onSave={handleSavePayout}
+                              displayVariant="moneyCard"
+                              embedded
+                            />
+                          </div>
+                          {savePayoutError ? (
+                            <p className="text-sm text-amber-700" role="alert">
+                              {savePayoutError}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
 
                       <div
                         ref={settlementsAnchorRef}
                         tabIndex={-1}
-                        className={`scroll-mt-20 pt-3 outline-none transition-[box-shadow] duration-300 ${
+                        className={`scroll-mt-20 rounded-lg border border-stone-200/75 bg-white/[0.98] p-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)] outline-none transition-[box-shadow] duration-300 sm:p-3.5 ${
                           breakdownFlash === "settlements"
-                            ? "rounded-md ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
+                            ? "ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
                             : ""
                         }`}
                       >
                         <h3
                           id="settlements-heading"
-                          className="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
+                          className={workspaceLabelEyebrow}
                         >
                           Settlements
                         </h3>
-                        <p className="mt-1 max-w-prose text-xs leading-snug text-gray-500">
-                          Each settlement is money owed to a vendor for this
-                          show — the same vendors and amounts roll up to{" "}
-                          <Link
-                            href="/admin/balances"
-                            className="font-medium text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900"
-                          >
-                            Balances
-                          </Link>
-                          .
-                        </p>
                         {showPercentOverCapBanner ? (
                           <p
                             className="mt-2 rounded-md border border-amber-200/90 bg-amber-50/70 px-2.5 py-1.5 text-xs font-medium text-amber-950/90"
@@ -1040,11 +1032,24 @@ export function ShowDetailView({ id }: { id: string }) {
                                 <tr>
                                   <td
                                     colSpan={6}
-                                    className={`${workspaceTableBodyCellPadding} py-3 text-left text-sm text-gray-600`}
+                                    className={`${workspaceTableBodyCellPadding} py-6 text-left text-sm text-gray-600`}
                                   >
-                                    {isClosed
-                                      ? "No settlements recorded."
-                                      : "No settlements yet — add a settlement below."}
+                                    {isClosed ? (
+                                      "No settlements recorded."
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <span>No settlements yet -</span>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            focusSettlementComposer()
+                                          }
+                                          className="text-sm font-medium text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900"
+                                        >
+                                          Add settlement
+                                        </button>
+                                      </span>
+                                    )}
                                   </td>
                                 </tr>
                               ) : (
@@ -1194,19 +1199,19 @@ export function ShowDetailView({ id }: { id: string }) {
                             </tbody>
                           </table>
                         </div>
-                        {!isClosed ? (
-                          <div className="mt-4 flex justify-start border-t border-gray-200/70 pt-3">
+                        {!isClosed && settlements.length > 0 ? (
+                          <div className="mt-px flex justify-end border-t border-gray-100/90 pt-1.5">
                             <button
                               type="button"
                               onClick={() => focusSettlementComposer()}
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-gray-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+                              className="inline-flex h-7 items-center gap-1 rounded-md border border-gray-200/70 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-600 transition-colors hover:border-gray-300/80 hover:bg-gray-50 hover:text-gray-800"
                               aria-label="Add settlement"
                             >
                               <PlusIcon
-                                className="h-4 w-4 shrink-0 text-gray-500"
+                                className="h-3.5 w-3.5 shrink-0 text-gray-500"
                                 aria-hidden
                               />
-                              <span>Add</span>
+                              <span>Add settlement</span>
                             </button>
                           </div>
                         ) : null}
@@ -1409,8 +1414,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                   />
                                   {payoutAfterFees <= 0 ? (
                                     <p className="mt-1.5 text-xs text-amber-800/90">
-                                      Set payout after fees in Show breakdown
-                                      first.
+                                      {WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST}
                                     </p>
                                   ) : fieldHints.percent &&
                                     settlementComposerBlock ? (
@@ -1677,10 +1681,10 @@ export function ShowDetailView({ id }: { id: string }) {
                               (createSettlementError
                                 ?.toLowerCase()
                                 .includes("financials")
-                                ? "Save payout in Show breakdown, then try again."
+                                ? WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY
                                 : createSettlementError) ??
                               (newRowError?.toLowerCase().includes("financials")
-                                ? "Save payout in Show breakdown, then try again."
+                                ? WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY
                                 : newRowError)}
                           </p>
                         ) : null}
@@ -1689,7 +1693,7 @@ export function ShowDetailView({ id }: { id: string }) {
 
                     {/* Receipt — secondary, outside payout/settlements cluster */}
                     <div
-                      className="mt-4 border-t border-dashed border-gray-200/90 pt-3"
+                      className="mt-8 border-t border-dashed border-gray-200/90 pt-5"
                       aria-labelledby="payout-receipt-heading"
                     >
                       <input
@@ -1822,20 +1826,22 @@ export function ShowDetailView({ id }: { id: string }) {
             </div>
 
             {/* Supporting column: review → close out (one finalization surface) */}
-            <div className="min-w-0">
+            <div className="min-w-0 lg:flex lg:min-h-full lg:flex-col">
               <section
-                className={`flex min-h-full min-w-0 flex-col overflow-hidden ${workspaceCard}`}
+                className={`flex min-h-full min-w-0 flex-col overflow-hidden ${workspaceShowDetailOutcomeShell}`}
                 aria-labelledby="review-profit-heading"
               >
-                <div className={workspaceSectionToolbar}>
+                <div
+                  className={`${workspaceSectionToolbar.replace(/\bpy-3\b/, "py-4")} border-stone-200/80 bg-gradient-to-r from-white via-rose-50/[0.08] to-amber-50/[0.06]`}
+                >
                   <h2
                     id="review-profit-heading"
-                    className={workspaceSectionTitle}
+                    className={`min-w-0 ${workspaceSectionTitle}`}
                   >
-                    Review
+                    {WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING}
                   </h2>
                 </div>
-                <div className="flex flex-1 flex-col px-4 py-3.5 sm:px-5">
+                <div className="flex flex-1 flex-col px-5 py-5 sm:px-6 sm:py-6">
                   <div
                     className="flex flex-1 flex-col text-sm"
                     role="region"
@@ -1843,9 +1849,7 @@ export function ShowDetailView({ id }: { id: string }) {
                   >
                     <div className="space-y-3">
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                          Payout
-                        </span>
+                        <span className={workspaceLabelEyebrow}>Payout</span>
                         <span
                           className={`shrink-0 text-right text-lg font-semibold ${workspaceMoneyTabular} ${workspaceMoneyPositive}`}
                           aria-label={`Payout after fees ${formatCurrency(payoutAfterFees)}`}
@@ -1854,7 +1858,9 @@ export function ShowDetailView({ id }: { id: string }) {
                         </span>
                       </div>
                       {settlements.length === 0 ? (
-                        <p className="text-xs text-gray-500">No settlements.</p>
+                        <p className="py-1.5 text-xs leading-relaxed text-gray-500">
+                          No settlements.
+                        </p>
                       ) : (
                         <ul className="space-y-1 border-t border-gray-100/90 pt-3">
                           {settlements.map((s) => {
@@ -1883,13 +1889,13 @@ export function ShowDetailView({ id }: { id: string }) {
                       )}
                     </div>
 
-                    <div className="mt-6 space-y-4 border-t border-gray-200/90 pt-5">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm font-semibold text-gray-900">
-                          = Profit
+                    <div className="mt-4 border-t border-stone-200/70 pt-3.5">
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
+                          Est. profit
                         </span>
                         <span
-                          className={`shrink-0 text-right text-2xl font-bold tracking-tight ${workspaceMoneyTabular} ${workspaceMoneyClassForSigned(totals.profitEstimate)}`}
+                          className={`text-left text-[1.5rem] font-bold leading-none tracking-tight sm:text-[1.85rem] ${workspaceMoneyTabular} ${workspaceMoneyClassForSigned(totals.profitEstimate)}`}
                           aria-label={`Profit ${formatCurrency(totals.profitEstimate)}`}
                         >
                           {formatCurrencyAbs(totals.profitEstimate)}
@@ -1901,7 +1907,7 @@ export function ShowDetailView({ id }: { id: string }) {
                           type="button"
                           onClick={handleCloseShowClick}
                           disabled={closing}
-                          className={`${workspaceActionCompleteMd} w-full shadow-sm disabled:cursor-not-allowed disabled:opacity-50`}
+                          className={`${workspaceActionCompleteMd} mt-5 w-full px-3 py-2 shadow-none disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                           {closing ? "Closing…" : "Close show"}
                         </button>
@@ -1910,7 +1916,7 @@ export function ShowDetailView({ id }: { id: string }) {
                           type="button"
                           onClick={() => setReopenDialogOpen(true)}
                           disabled={closing}
-                          className={`${workspaceActionSecondaryMd} w-full disabled:cursor-not-allowed disabled:opacity-50`}
+                          className={`${workspaceActionSecondaryMd} mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                           Reopen show
                         </button>
@@ -1962,7 +1968,7 @@ export function ShowDetailView({ id }: { id: string }) {
           await handleReopenShow();
         }}
         title="Reopen this show?"
-        description="You will be able to edit payout and settlements again."
+        description="Editing will be enabled."
         confirmLabel={
           closing
             ? "Reopening…"
@@ -2027,11 +2033,7 @@ function EditablePayout({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             {!embedded ? (
-              <p
-                className={`${workspaceLabelEyebrow} text-[10px] font-medium uppercase tracking-wide text-stone-500`}
-              >
-                Payout after fees
-              </p>
+              <p className={workspaceLabelEyebrow}>Payout after fees</p>
             ) : null}
             <div className="mt-0.5 min-h-[1.625rem]">
               {!editing ? (

@@ -6,8 +6,6 @@ import { ShowStatusPill } from "@/app/(admin)/admin/_components/ShowStatusPill";
 import {
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
-  workspaceMoneyMuted,
-  workspaceMoneyTabular,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import type { ShowViewModel } from "@/src/lib/api/shows";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
@@ -82,10 +80,7 @@ export function ShowMobileCard({
 
       {summary != null ? (
         <div className="mt-2.5 border-t border-gray-100 pt-2.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-            Est. profit
-          </p>
-          <p className="mt-0.5 text-sm text-gray-800">
+          <p className="text-sm text-gray-800">
             <span
               className={`text-sm ${workspaceListPrimaryMoneyAmountClass(
                 summary.estimatedShowProfit,
@@ -102,18 +97,7 @@ export function ShowMobileCard({
             </p>
           ) : null}
         </div>
-      ) : (
-        <div className="mt-2.5 border-t border-gray-100 pt-2.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-            Est. profit
-          </p>
-          <p
-            className={`mt-0.5 text-sm ${workspaceMoneyMuted} ${workspaceMoneyTabular}`}
-          >
-            —
-          </p>
-        </div>
-      )}
+      ) : null}
 
       <div className="mt-3 flex justify-end border-t border-gray-100 pt-3">
         <WorkspaceRowChevron className="text-gray-400 transition-transform duration-200 ease-out group-hover/card:translate-x-0.5 group-hover/card:text-gray-700" />

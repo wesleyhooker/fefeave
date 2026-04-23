@@ -13,10 +13,14 @@ import {
   workspaceMoneyClassForLiability,
   workspaceMoneyTabular,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import { workspacePageTopStack } from "@/app/(admin)/admin/_lib/workspacePageRegions";
+import { workspaceBalancesPageStack } from "@/app/(admin)/admin/_lib/workspacePageRegions";
 import { formatCurrency } from "@/lib/format";
 import { apiGet } from "@/lib/api";
 import { VENDOR_BALANCES_INVALIDATE_EVENT } from "@/lib/vendorBalancesInvalidate";
+import {
+  WORKFLOW_BALANCES_PAGE_SUBTITLE,
+  WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { BalancesTable, type WholesalerBalanceRow } from "./BalancesTable";
 
 function parseNum(s: string): number {
@@ -159,7 +163,7 @@ export default function AdminBalancesPage() {
       },
       {
         id: "vendors-with-balance",
-        label: "Vendors with balance",
+        label: WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
         value: (
           <p className="text-xl font-semibold tabular-nums text-stone-900 sm:text-2xl">
             {summary.vendorsWithBalance}
@@ -179,7 +183,7 @@ export default function AdminBalancesPage() {
         <AdminPageIntroSection>
           <AdminPageIntro
             title="Balances"
-            subtitle="Vendor totals across shows — same vendors as on each show’s settlements"
+            subtitle={WORKFLOW_BALANCES_PAGE_SUBTITLE}
           />
         </AdminPageIntroSection>
         <AdminPageContainer>
@@ -206,11 +210,11 @@ export default function AdminBalancesPage() {
       <AdminPageIntroSection>
         <AdminPageIntro
           title="Balances"
-          subtitle="Vendor totals across shows — same vendors as on each show’s settlements"
+          subtitle={WORKFLOW_BALANCES_PAGE_SUBTITLE}
         />
       </AdminPageIntroSection>
       <AdminPageContainer>
-        <div className={workspacePageTopStack}>
+        <div className={workspaceBalancesPageStack}>
           {refreshError != null ? (
             <WorkspaceInlineError
               title="Refresh failed"

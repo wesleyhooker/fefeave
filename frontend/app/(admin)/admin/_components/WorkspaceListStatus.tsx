@@ -66,8 +66,9 @@ export function WorkspaceListShowStatus({ status }: { status: string }) {
 }
 
 /**
- * Vendor payment state — same dot + label shell as show statuses; dots reuse the show palette
- * (Paid ≈ closed, Partially paid ≈ open, Unpaid ≈ other) for one workspace system.
+ * Vendor payment state — same dot + label presentation as the Shows desktop table
+ * (`WorkspaceListShowStatus`): no chip shell, same sizing and `workspaceShowsTableStatus*` tokens
+ * (Paid ≈ closed, Partially paid ≈ open, Unpaid ≈ other).
  */
 export function WorkspaceListPaymentStatus({
   status,

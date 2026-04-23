@@ -16,6 +16,21 @@ import {
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import {
+  WORKFLOW_EMPTY_WEEK_SCHEDULE,
+  WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL,
+  WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION,
+  WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE,
+  WORKFLOW_SELF_PAY_MARKED_PAID_LABEL,
+  WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL,
+  WORKFLOW_SELF_PAY_REOPEN_DIALOG_DESCRIPTION,
+  WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE,
+  WORKFLOW_THIS_WEEK_HEADING,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
+  workspaceThisWeekSupportingMeta,
+  workspaceThisWeekTitle,
+} from "@/app/(admin)/admin/_lib/workspaceThisWeekSurface";
 import { DashboardShowRow } from "./DashboardShowRow";
 import {
   dashboardCardFooterNote,
@@ -24,6 +39,7 @@ import {
   dashboardPrimaryListShell,
   dashboardRowList,
   dashboardShowsNavLink,
+  dashboardWeeklyShowsEyebrow,
   dashboardWeeklyHeaderBand,
   dashboardWeeklyHeroInsetWrapper,
   dashboardWeeklyListToggleBand,
@@ -140,13 +156,13 @@ export function DashboardThisWeekCard({
 
       <section className={dashboardWeeklyStatusCard}>
         <div className={dashboardWeeklyHeaderBand}>
-          <h2 className="text-base font-semibold tracking-tight text-stone-900 sm:text-lg">
-            This week
+          <h2 className={workspaceThisWeekTitle}>
+            {WORKFLOW_THIS_WEEK_HEADING}
           </h2>
         </div>
 
         <div
-          className={`${dashboardWeeklyHeroInsetWrapper} rounded-xl bg-stone-50/45 p-1 sm:p-1.5`}
+          className={`${dashboardWeeklyHeroInsetWrapper} rounded-xl bg-stone-50/45 p-2 sm:p-2.5`}
         >
           {weekProfitError != null ? (
             <div className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-sm sm:p-6">
@@ -163,9 +179,8 @@ export function DashboardThisWeekCard({
                     : "border-stone-200/95 bg-white"
                 } ${paidStatePulse ? "opacity-[0.97]" : "opacity-100"}`}
               >
-                <div className="px-6 pb-6 pt-6 sm:px-7 sm:pb-7 sm:pt-7">
-                  <div className={dashboardEyebrow}>Est. week profit</div>
-                  <div className="mt-3 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-x-4">
+                <div className="px-7 pb-7 pt-9 sm:px-8 sm:pb-8 sm:pt-10">
+                  <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-x-3">
                     <p
                       className={`min-w-0 text-3xl leading-none tracking-tight sm:text-[2.35rem] ${workspaceListPrimaryMoneyAmountClass(weekProfitDisplay)}`}
                     >
@@ -178,7 +193,7 @@ export function DashboardThisWeekCard({
                             <CheckCircleIcon
                               className={`${workspaceActionIconSm} shrink-0 text-emerald-800`}
                             />
-                            <span>Marked paid</span>
+                            <span>{WORKFLOW_SELF_PAY_MARKED_PAID_LABEL}</span>
                           </span>
                           {paidAtLabel ? (
                             <p className="text-center text-[11px] font-medium tabular-nums text-emerald-800/75 sm:text-right">
@@ -206,19 +221,21 @@ export function DashboardThisWeekCard({
                               />
                             }
                           >
-                            Mark as paid
+                            {WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL}
                           </WorkspaceActionLabel>
                         </button>
                       )}
                     </div>
                   </div>
-                  <p className="mt-3 text-xs tabular-nums leading-relaxed text-stone-500">
-                    <span className="text-stone-700">
+                  <p
+                    className={`mt-3.5 tabular-nums leading-relaxed ${workspaceThisWeekSupportingMeta}`}
+                  >
+                    <span className="font-semibold text-stone-700">
                       {closedThisWeekCount}
                     </span>{" "}
                     closed
                     <span className="mx-1.5 text-stone-300">·</span>
-                    <span className="text-stone-700">
+                    <span className="font-semibold text-stone-700">
                       {upcomingThisWeekCount}
                     </span>{" "}
                     upcoming
@@ -228,9 +245,9 @@ export function DashboardThisWeekCard({
               <WorkspaceConfirmDialog
                 open={markPaidOpen}
                 onOpenChange={setMarkPaidOpen}
-                title="Mark this week as paid?"
-                description="You're confirming you've paid yourself for this week."
-                confirmLabel="Mark as paid"
+                title={WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE}
+                description={WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION}
+                confirmLabel={WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL}
                 onConfirm={onMarkDone}
                 tone="rose"
                 icon="$"
@@ -238,9 +255,9 @@ export function DashboardThisWeekCard({
               <WorkspaceConfirmDialog
                 open={markUnpaidOpen}
                 onOpenChange={setMarkUnpaidOpen}
-                title="Reopen this week payout?"
-                description="This will remove the paid status and reopen this week for payout tracking."
-                confirmLabel="Reopen week"
+                title={WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE}
+                description={WORKFLOW_SELF_PAY_REOPEN_DIALOG_DESCRIPTION}
+                confirmLabel={WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL}
                 onConfirm={onMarkUndone}
                 tone="stone"
                 icon="↺"
@@ -283,18 +300,18 @@ export function DashboardThisWeekCard({
             <div className={dashboardWeeklyShowsToolbar}>
               <Link
                 href="/admin/shows"
-                className={`${dashboardEyebrow} ${dashboardShowsNavLink}`}
+                className={`${dashboardWeeklyShowsEyebrow} ${dashboardShowsNavLink}`}
               >
                 Shows
-                <ShowsChevronIcon className="h-3 w-3 text-stone-500 opacity-70" />
+                <ShowsChevronIcon className="h-3 w-3 text-stone-600 opacity-80" />
               </Link>
             </div>
             <ul className={`${dashboardPrimaryListShell} ${dashboardRowList}`}>
               {showsThisWeek.length === 0 ? (
                 <li
-                  className={`${dashboardPadX} py-6 text-center text-sm text-stone-500`}
+                  className={`${dashboardPadX} py-4 text-center text-sm text-stone-500`}
                 >
-                  None scheduled this week.
+                  {WORKFLOW_EMPTY_WEEK_SCHEDULE}
                 </li>
               ) : (
                 showsThisWeek.map((show) => (

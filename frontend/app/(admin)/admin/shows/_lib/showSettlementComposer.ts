@@ -1,3 +1,5 @@
+import { WORKFLOW_SHOW_FINANCES_PAYOUT_HINT } from '@/app/(admin)/admin/_lib/adminWorkflowCopy';
+
 /** Half-cent tolerance — keep aligned with backend `SHOW_SETTLEMENT_TOTAL_EPS`. */
 export const SHOW_SETTLEMENT_TOTAL_EPS = 0.005;
 
@@ -29,7 +31,7 @@ export function settlementComposerBlockMessage(
     case 'wholesaler_duplicate':
       return 'This vendor already has a settlement on this show.';
     case 'payout_required':
-      return 'Set payout after fees in Show breakdown first — percent uses that amount, and totals can’t exceed it.';
+      return WORKFLOW_SHOW_FINANCES_PAYOUT_HINT;
     case 'percent_invalid':
       return 'Enter a percent from 0 to 100.';
     case 'percent_over_100': {

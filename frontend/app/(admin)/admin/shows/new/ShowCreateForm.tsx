@@ -20,6 +20,10 @@ import {
   workspaceTextInput,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import {
+  WORKFLOW_LOG_SHOW_FORM_DRAWER_NOTE,
+  WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
   createShow,
   fetchShows,
   type ShowDTO,
@@ -295,6 +299,9 @@ export function ShowCreateForm({
           ) : null}
           {dense ? (
             <div className="px-3.5 pb-3 pt-3.5">
+              <p className="mb-3 text-xs font-medium leading-snug text-stone-600">
+                {WORKFLOW_LOG_SHOW_FORM_DRAWER_NOTE}
+              </p>
               <div className="space-y-2">
                 {dateField}
                 {platformField}
@@ -340,7 +347,13 @@ export function ShowCreateForm({
           <WorkspaceActionLabel
             icon={<PlusIcon className={workspaceActionIconMd} />}
           >
-            {submitting ? "Creating…" : "Create show"}
+            {submitting
+              ? dense
+                ? "Logging…"
+                : "Creating…"
+              : dense
+                ? WORKFLOW_LOG_SHOW_TRIGGER_LABEL
+                : "Create show"}
           </WorkspaceActionLabel>
         </button>
         {onCancel != null ? (

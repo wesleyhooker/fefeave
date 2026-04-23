@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { workspaceCard } from "@/app/(admin)/admin/_components/workspaceUi";
 
@@ -9,12 +10,15 @@ import { workspaceCard } from "@/app/(admin)/admin/_components/workspaceUi";
  */
 export function WorkspaceRightPanelSurface({
   title,
+  subtitle,
   titleId,
   onClose,
   children,
   bodyClassName = "px-3.5 py-3",
 }: {
   title: string;
+  /** Optional workflow context under the title (keeps panels from feeling like anonymous forms). */
+  subtitle?: ReactNode;
   titleId: string;
   onClose: () => void;
   children: React.ReactNode;
@@ -24,13 +28,20 @@ export function WorkspaceRightPanelSurface({
     <div
       className={`flex h-full min-h-0 w-full flex-col overflow-hidden border-l-[3px] border-l-rose-300/45 ${workspaceCard}`}
     >
-      <header className="flex min-h-[3.25rem] shrink-0 items-center justify-between gap-3 border-b border-stone-200/90 bg-gradient-to-r from-rose-50/[0.35] to-stone-50/50 px-3.5 py-2.5">
-        <h2
-          id={titleId}
-          className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-snug tracking-tight text-stone-900"
-        >
-          {title}
-        </h2>
+      <header className="flex min-h-[3.25rem] shrink-0 items-start justify-between gap-3 border-b border-stone-200/90 bg-gradient-to-r from-rose-50/[0.35] to-stone-50/50 px-3.5 py-2.5">
+        <div className="min-w-0 flex-1 pr-2">
+          <h2
+            id={titleId}
+            className="truncate text-[15px] font-semibold leading-snug tracking-tight text-stone-900"
+          >
+            {title}
+          </h2>
+          {subtitle != null && subtitle !== "" ? (
+            <p className="mt-1 max-w-prose text-xs font-medium leading-snug text-stone-500">
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={onClose}

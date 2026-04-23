@@ -2,6 +2,18 @@
 
 import { useMemo } from "react";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
+import {
+  WORKFLOW_EMPTY_WEEK_SCHEDULE,
+  WORKFLOW_THIS_WEEK_HEADING,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
+  workspaceThisWeekHeaderBand,
+  workspaceThisWeekHeaderPadding,
+  workspaceThisWeekListZone,
+  workspaceThisWeekSectionRoot,
+  workspaceThisWeekSubtitle,
+  workspaceThisWeekTitle,
+} from "@/app/(admin)/admin/_lib/workspaceThisWeekSurface";
 import type { WeekBounds } from "@/lib/weekRange";
 import type { ShowViewModel } from "@/src/lib/api/shows";
 import { ShowMobileCard } from "./ShowMobileCard";
@@ -28,29 +40,37 @@ export function ShowsThisWeekSection({
     return sum;
   }, [currentShows, summaries]);
 
+  const hasCompletedProfitDataThisWeek = useMemo(
+    () =>
+      currentShows.some((s) => {
+        if ((s.status ?? "").toUpperCase() !== "COMPLETED") return false;
+        return summaries[s.id] != null;
+      }),
+    [currentShows, summaries],
+  );
+
   return (
     <section
-      className="overflow-hidden rounded-xl border border-gray-200 border-l-[3px] border-l-emerald-500/40 bg-white shadow-workspace-surface"
+      className={workspaceThisWeekSectionRoot}
       aria-labelledby="shows-this-week-heading"
     >
-      <div className="border-b border-gray-200 bg-gray-50/95 px-4 py-4 sm:px-5">
+      <div
+        className={`${workspaceThisWeekHeaderPadding} ${workspaceThisWeekHeaderBand}`}
+      >
         <div className="min-w-0">
-          <h2
-            id="shows-this-week-heading"
-            className="text-lg font-semibold tracking-tight text-gray-900"
-          >
-            This week
+          <h2 id="shows-this-week-heading" className={workspaceThisWeekTitle}>
+            {WORKFLOW_THIS_WEEK_HEADING}
           </h2>
-          <p className="mt-1 text-sm text-gray-600">{currentWeek.labelLong}</p>
+          <p className={workspaceThisWeekSubtitle}>{currentWeek.labelLong}</p>
           <WeekStripStats shows={currentShows} summaries={summaries} />
         </div>
       </div>
-      <div className="bg-white">
+      <div className={workspaceThisWeekListZone}>
         <div className="md:hidden">
-          <div className="space-y-3 p-3 sm:p-4">
+          <div className="space-y-3 p-4 sm:p-5">
             {currentShows.length === 0 ? (
               <p className="rounded-lg border border-gray-100 bg-white px-4 py-6 text-center text-sm text-gray-500">
-                None this week.
+                {WORKFLOW_EMPTY_WEEK_SCHEDULE}
               </p>
             ) : (
               currentShows.map((show) => (
@@ -68,13 +88,14 @@ export function ShowsThisWeekSection({
             shows={currentShows}
             summaries={summaries}
             showProfitHint
-            emptyLabel="None this week."
+            emptyLabel={WORKFLOW_EMPTY_WEEK_SCHEDULE}
           />
         </div>
       </div>
       <ShowsThisWeekWorkflowStrip
         weekStartStr={currentWeek.startStr}
         completedWeekProfitForSnapshot={completedWeekProfitForSnapshot}
+        showWeekProfitFigure={hasCompletedProfitDataThisWeek}
       />
     </section>
   );

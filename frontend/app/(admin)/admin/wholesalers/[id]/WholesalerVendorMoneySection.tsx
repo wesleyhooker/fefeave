@@ -68,7 +68,7 @@ export function WholesalerVendorMoneySection({
           />
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 px-4 pb-7 pt-6 sm:px-5 sm:pb-8 sm:pt-7">
           {activeTab === "payment" ? (
             <WholesalerInlinePaySection
               wholesalerId={wholesalerId}

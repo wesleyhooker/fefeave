@@ -86,6 +86,8 @@ export function WholesalerInlinePaySection({
   embedded?: boolean;
 }) {
   const isCompact = density === "compact";
+  const fieldLabelClass =
+    isCompact && embedded ? workspaceFormLabelSecondary : workspaceFormLabel;
   const textField = isCompact ? workspaceTextInputCompact : workspaceTextInput;
   const dateField = isCompact ? workspaceDateInputCompact : workspaceDateInput;
   const primaryFieldShell = `${workspacePanel} ${
@@ -278,7 +280,7 @@ export function WholesalerInlinePaySection({
 
   const formStack =
     isCompact && embedded
-      ? "space-y-2.5"
+      ? "space-y-3.5"
       : isCompact
         ? "space-y-4"
         : "space-y-6";
@@ -303,7 +305,7 @@ export function WholesalerInlinePaySection({
         : "grid gap-4 border-t border-gray-200/90 pt-5 sm:grid-cols-2 sm:items-start sm:gap-5";
   const tertiaryBlock =
     isCompact && embedded
-      ? "border-t border-gray-200/55 pt-2"
+      ? "border-t border-gray-200/55 pt-3"
       : isCompact
         ? "border-t border-gray-200/90 pt-3"
         : "border-t border-gray-200/90 pt-5";
@@ -385,7 +387,7 @@ export function WholesalerInlinePaySection({
           <div className={primaryFieldShell}>
             <label
               htmlFor="wholesaler-pay-amount"
-              className={`${workspaceFormLabel} block`}
+              className={`${fieldLabelClass} block`}
             >
               Amount <span className="text-red-500">*</span>
             </label>
@@ -479,7 +481,7 @@ export function WholesalerInlinePaySection({
           <div className={primaryFieldShell}>
             <label
               htmlFor="wholesaler-pay-method-trigger"
-              className={`${workspaceFormLabel} block`}
+              className={`${fieldLabelClass} block`}
             >
               Payment method
             </label>

@@ -26,11 +26,12 @@ import {
   WorkspaceTableStaticRow,
   workspaceLedgerTableColumnCount,
   type WorkspaceLedgerLineItem,
-  workspaceTableBodyCellPadding,
+  workspaceTableBodyCellPaddingLedgerComfortable,
   workspaceTableHeaderCellPadding,
 } from "@/app/(admin)/admin/_components/WorkspaceTableRow";
 import {
-  workspaceCard,
+  workspaceBalanceDetailControlShell,
+  workspaceBalanceDetailLedgerShell,
   workspaceLedgerRowPayment,
   workspaceLedgerRowPaymentSelected,
   workspaceLedgerRowSettlement,
@@ -40,8 +41,8 @@ import {
   workspaceLedgerRunningBalanceAmount,
   workspaceLedgerShowNameLink,
   workspaceLedgerShowNamePlain,
+  workspaceLedgerTableDivide,
   workspacePageContentWidthWide,
-  workspacePanel,
   workspaceStatEyebrow,
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
@@ -91,7 +92,7 @@ function LedgerEntryTypeLabel({ row }: { row: WholesalerStatementRowView }) {
           className={`${workspaceShowsTableStatusDotClosed} translate-y-px`}
           aria-hidden
         />
-        <span className="text-[11px] font-medium leading-none text-gray-800">
+        <span className="text-[11px] font-medium leading-none text-gray-600">
           Payment
         </span>
       </span>
@@ -104,7 +105,7 @@ function LedgerEntryTypeLabel({ row }: { row: WholesalerStatementRowView }) {
           className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 translate-y-px"
           aria-hidden
         />
-        <span className="text-[11px] font-medium leading-none text-gray-800">
+        <span className="text-[11px] font-medium leading-none text-gray-600">
           Expense
         </span>
       </span>
@@ -122,7 +123,7 @@ function LedgerEntryTypeLabel({ row }: { row: WholesalerStatementRowView }) {
         aria-hidden
       />
       <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-[11px] font-medium leading-none text-gray-800">
+        <span className="text-[11px] font-medium leading-none text-gray-600">
           {primary}
         </span>
         {hint ? (
@@ -347,7 +348,9 @@ export function WholesalerDetailView({ id }: { id: string }) {
         <AdminPageIntroSection variant="entity-detail">
           <AdminPageIntro
             variant="entity-detail"
-            breadcrumb={<WholesalerBalancesBreadcrumb currentLabel="Vendor" />}
+            breadcrumb={
+              <WholesalerBalancesBreadcrumb currentLabel="Wholesaler" />
+            }
             title="Unable to load vendor"
           />
         </AdminPageIntroSection>
@@ -407,7 +410,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
         <div className={workspaceFinancialVendorMainGrid}>
           <div className={workspaceFinancialVendorPrimaryColumn}>
             <section className="min-w-0" aria-label="Wholesaler summary">
-              <div className={`overflow-hidden ${workspaceCard}`}>
+              <div className={workspaceBalanceDetailControlShell}>
                 <div className="grid grid-cols-1 sm:grid-cols-3 sm:items-stretch sm:divide-x sm:divide-gray-200/80">
                   <div className="min-w-0 border-b border-gray-200/80 px-4 py-4 sm:border-b-0 sm:px-5 sm:py-4">
                     <div className="flex h-full flex-col justify-center border-l-[3px] border-rose-400/50 pl-3 sm:pl-3.5">
@@ -475,7 +478,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
 
           <div className={workspaceFinancialVendorLedgerColumn}>
             <section
-              className={`min-w-0 overflow-hidden ${workspacePanel}`}
+              className={`min-w-0 overflow-hidden ${workspaceBalanceDetailLedgerShell}`}
               aria-labelledby="wholesaler-ledger-heading"
             >
               <div
@@ -571,7 +574,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
+                  <tbody className={`${workspaceLedgerTableDivide} bg-white`}>
                     {statement.length === 0 ? (
                       <tr>
                         <td
@@ -673,36 +676,36 @@ export function WholesalerDetailView({ id }: { id: string }) {
                               ) : null}
                             </WorkspaceLedgerLeadingAffordanceCell>
                             <td
-                              className={`whitespace-nowrap align-middle ${workspaceTableBodyCellPadding}`}
+                              className={`whitespace-nowrap align-middle ${workspaceTableBodyCellPaddingLedgerComfortable}`}
                             >
                               <LedgerEntryTypeLabel row={row} />
                             </td>
                             <td
-                              className={`min-w-0 max-w-[12rem] sm:max-w-md ${workspaceTableBodyCellPadding}`}
+                              className={`min-w-0 max-w-[12rem] sm:max-w-md ${workspaceTableBodyCellPaddingLedgerComfortable}`}
                             >
                               {showCell}
                             </td>
                             <td
-                              className={`whitespace-nowrap align-top text-xs ${workspaceTableBodyCellPadding} ${workspaceTableCellMeta}`}
+                              className={`whitespace-nowrap align-top text-xs ${workspaceTableBodyCellPaddingLedgerComfortable} ${workspaceTableCellMeta}`}
                             >
                               {formatDate(row.date)}
                             </td>
                             <td
-                              className={`whitespace-nowrap text-right align-top text-sm ${workspaceTableBodyCellPadding} ${moneyOwedClass(row.amountOwed)}`}
+                              className={`whitespace-nowrap text-right align-top text-sm ${workspaceTableBodyCellPaddingLedgerComfortable} ${moneyOwedClass(row.amountOwed)}`}
                             >
                               {row.amountOwed !== null
                                 ? formatCurrency(row.amountOwed)
                                 : "—"}
                             </td>
                             <td
-                              className={`whitespace-nowrap text-right align-top text-sm ${workspaceTableBodyCellPadding} ${moneyPaidClass(row.amountPaid)}`}
+                              className={`whitespace-nowrap text-right align-top text-sm ${workspaceTableBodyCellPaddingLedgerComfortable} ${moneyPaidClass(row.amountPaid)}`}
                             >
                               {row.amountPaid !== null
                                 ? formatCurrency(row.amountPaid)
                                 : "—"}
                             </td>
                             <td
-                              className={`whitespace-nowrap text-right align-top ${workspaceLedgerRunningBalanceAmount} ${workspaceTableBodyCellPadding} ${runningBalanceClass(row.runningBalance)}`}
+                              className={`whitespace-nowrap text-right align-top ${workspaceLedgerRunningBalanceAmount} ${workspaceTableBodyCellPaddingLedgerComfortable} ${runningBalanceClass(row.runningBalance)}`}
                             >
                               <span
                                 aria-label={`Running balance ${formatCurrency(row.runningBalance)}`}
@@ -744,7 +747,9 @@ export function WholesalerDetailView({ id }: { id: string }) {
                 </table>
               </div>
 
-              <div className="md:hidden divide-y divide-gray-100 border-t border-gray-100">
+              <div
+                className={`md:hidden border-t border-stone-100/75 ${workspaceLedgerTableDivide}`}
+              >
                 {statement.length === 0 ? (
                   <p className="px-4 py-8 text-center text-sm text-gray-500">
                     No ledger entries yet.

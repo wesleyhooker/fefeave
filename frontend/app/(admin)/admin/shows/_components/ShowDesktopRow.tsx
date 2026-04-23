@@ -6,8 +6,6 @@ import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancia
 import {
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
-  workspaceMoneyMuted,
-  workspaceMoneyTabular,
   workspaceTableRowInteractive,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import type { ShowViewModel } from "@/src/lib/api/shows";
@@ -100,13 +98,7 @@ export function ShowDesktopRow({
       <td
         className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPadding}`}
       >
-        {summary == null ? (
-          <span
-            className={`text-sm ${workspaceMoneyMuted} ${workspaceMoneyTabular}`}
-          >
-            —
-          </span>
-        ) : (
+        {summary == null ? null : (
           <div>
             <span
               className={`text-sm ${workspaceListPrimaryMoneyAmountClass(summary.estimatedShowProfit)}`}

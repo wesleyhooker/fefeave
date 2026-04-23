@@ -3,6 +3,7 @@
  * Layout-matching, one cohesive skeleton per page. Uses animate-pulse and neutral gray.
  */
 import {
+  workspaceBalancesPageStack,
   workspacePagePrimarySecondaryGrid,
   workspacePageSupportingStack,
   workspacePageTopStack,
@@ -231,7 +232,7 @@ export function BalancesPageSkeleton() {
         </header>
       </AdminPageIntroSection>
       <AdminPageContainer>
-        <div className={workspacePageTopStack}>
+        <div className={workspaceBalancesPageStack}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className={workspaceStatTile} aria-hidden>
@@ -411,7 +412,7 @@ export function ShowsTableSkeleton() {
                     scope="col"
                     className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
                   >
-                    Est. profit
+                    Profit
                   </th>
                   <th scope="col" className="px-2 py-3 sm:px-3">
                     <span className="sr-only">Navigate</span>

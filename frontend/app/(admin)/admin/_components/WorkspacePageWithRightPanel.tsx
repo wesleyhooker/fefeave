@@ -13,6 +13,8 @@ type WorkspacePageWithRightPanelProps = {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Optional subtitle under the panel title (workflow context). */
+  panelSubtitle?: string;
   /** Primary page content (intro, container, etc.). */
   children: React.ReactNode;
   /** Right panel body (e.g. form). Rendered once; responsive positioning only. */
@@ -29,6 +31,7 @@ export function WorkspacePageWithRightPanel({
   open,
   onClose,
   title,
+  panelSubtitle,
   children,
   panel,
 }: WorkspacePageWithRightPanelProps) {
@@ -106,6 +109,7 @@ export function WorkspacePageWithRightPanel({
           >
             <WorkspaceRightPanelSurface
               title={title}
+              subtitle={panelSubtitle}
               titleId={titleId}
               onClose={onClose}
             >

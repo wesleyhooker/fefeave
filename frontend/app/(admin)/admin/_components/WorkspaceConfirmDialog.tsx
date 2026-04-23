@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   workspaceActionPositiveCompleteMd,
   workspaceActionQuietOutlineMd,
@@ -31,12 +31,16 @@ export function WorkspaceConfirmDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const [entered, setEntered] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     if (open && !el.open) {
+      setEntered(false);
       el.showModal();
+      const id = requestAnimationFrame(() => setEntered(true));
+      return () => cancelAnimationFrame(id);
     } else if (!open && el.open) {
       el.close();
     }
@@ -67,7 +71,11 @@ export function WorkspaceConfirmDialog({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className="w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-stone-200/90 bg-white p-0 text-stone-900 shadow-[0_18px_50px_-24px_rgba(28,25,23,0.35)] open:backdrop:bg-stone-900/25"
+      className={`workspace-confirm-dialog w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-stone-200/90 bg-white p-0 text-stone-900 shadow-[0_18px_50px_-24px_rgba(28,25,23,0.35)] transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none motion-reduce:transform-none open:backdrop:bg-stone-900/25 open:backdrop:transition-colors open:backdrop:duration-150 ${
+        entered
+          ? "opacity-100 translate-y-0 scale-100"
+          : "opacity-0 translate-y-1 scale-[0.99]"
+      }`}
     >
       <div className="px-6 pb-5 pt-7 sm:px-7 sm:pb-6 sm:pt-8">
         <div className="flex justify-center">

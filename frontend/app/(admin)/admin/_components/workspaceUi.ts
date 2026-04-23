@@ -72,14 +72,14 @@ export const workspaceShellColumn =
 
 /**
  * Layer 1 — workspace top header only (`WorkspaceHeader`).
- * Cool, slightly elevated chrome; visually distinct from the warm page-intro band below.
+ * Soft anchored band: barely-there warm wash (still reads white) + hairline base.
  */
 export const workspaceGlobalHeaderBar =
-  'relative z-20 border-b border-stone-200/80 bg-gradient-to-b from-white via-white to-stone-50/[0.65] shadow-[0_4px_20px_-12px_rgba(28,25,23,0.1)]';
+  'relative z-20 border-b border-stone-200/90 bg-stone-50/60 shadow-[0_4px_18px_-14px_rgba(28,25,23,0.14)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-stone-200/55 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-stone-200/85';
 
 /** Transitions for workspace chrome — restrained, no bouncy motion */
 export const workspaceChromeTransition =
-  'transition-[color,background-color] duration-200 ease-out';
+  'transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none';
 
 /**
  * Slightly stronger than gray-100 on white chrome (sidebar, header, menus).
@@ -97,9 +97,41 @@ export const workspaceMutedStrip = 'bg-[#F9FAFB]';
 export const workspaceCard =
   'rounded-lg border border-gray-200 bg-white shadow-workspace-surface';
 
+/**
+ * Show detail — **left**: build payout + settlements (neutral operating rail).
+ */
+export const workspaceShowDetailOperatingShell = `${workspaceCard} border-stone-200/90 border-l-[3px] border-l-stone-400/35 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.9),0_2px_16px_-8px_rgba(120,113,108,0.08)]`;
+
+/**
+ * Show detail — **right**: elevated outcome / close-out (warm, restrained rose).
+ */
+export const workspaceShowDetailOutcomeShell =
+  'rounded-xl border border-stone-200/95 border-l-[4px] border-l-rose-400/50 bg-gradient-to-b from-white via-stone-50/[0.35] to-rose-50/[0.14] shadow-[0_14px_40px_-18px_rgba(120,113,108,0.24),0_4px_16px_-10px_rgba(192,38,77,0.09)]';
+
+/**
+ * Balances index — primary liability table (importance without dense styling).
+ */
+export const workspaceBalancesPrimaryTableShell =
+  'min-w-0 overflow-hidden rounded-xl border border-stone-200/95 bg-white shadow-[0_4px_28px_-14px_rgba(120,113,108,0.16)]';
+
+/** Sticky head for financial index tables (Balances). */
+export const workspaceTableTheadFinancial =
+  'sticky top-0 z-10 border-b border-stone-200/70 bg-gradient-to-b from-stone-100/95 to-stone-100/75';
+
+/**
+ * Wholesaler detail — **left** money / payment control stack.
+ */
+export const workspaceBalanceDetailControlShell =
+  'overflow-hidden rounded-xl border border-stone-200/95 bg-white shadow-[0_4px_24px_-12px_rgba(120,113,108,0.14)]';
+
 /** Bordered white surface with a lighter lift (nested blocks) */
 export const workspacePanel =
   'rounded-lg border border-gray-200 bg-white shadow-workspace-surface-sm';
+
+/**
+ * Wholesaler detail — **right** ledger (flat, trustworthy record; not decorative).
+ */
+export const workspaceBalanceDetailLedgerShell = `${workspacePanel} border-stone-200/95 bg-[#FAFAF9] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.95)]`;
 
 /** Header row inside a card-style block */
 export const workspaceCardHeader =
@@ -133,7 +165,10 @@ export const workspacePageContentWidthWide =
 export const workspacePageGutter = 'px-4 md:px-6';
 
 /** Shared admin page stack rhythm under intro zone. */
-export const workspacePageContentStack = 'flex flex-col gap-6 md:gap-7';
+export const workspacePageContentStack = 'flex flex-col gap-7 md:gap-8';
+
+/** Shows index: extra air between “This week” and later sections. */
+export const workspaceShowsIndexContentStack = 'flex flex-col gap-9 md:gap-11';
 
 /** Single owner of spacing between intro zone and the first content row. */
 export const workspacePageIntroToContentGap = 'pt-2 md:pt-2.5';
@@ -144,13 +179,13 @@ export const workspacePageIntroToContentGap = 'pt-2 md:pt-2.5';
  * Top hairline + warm wash signal “page context” vs global chrome above.
  */
 export const workspacePageIntroZone =
-  'relative z-10 overflow-hidden bg-[rgba(250,247,246,0.92)] before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-0 before:z-[1] before:h-px before:bg-gradient-to-r before:from-rose-100/50 before:via-stone-200/40 before:to-transparent after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:z-[1] after:h-px after:bg-stone-200/65';
+  'relative z-10 overflow-hidden bg-gradient-to-br from-[rgba(252,249,247,0.99)] via-[rgba(250,247,246,0.96)] to-rose-50/[0.16] before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-0 before:z-[1] before:h-px before:bg-gradient-to-r before:from-rose-200/45 before:via-stone-200/45 before:to-transparent after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:z-[1] after:h-px after:bg-stone-200/75';
 
 /**
  * Flatter intro strip for nested entity pages (e.g. wholesaler under Balances) — less “landing page” wash.
  */
 export const workspacePageEntityIntroZone =
-  'relative z-10 overflow-hidden bg-white before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-0 before:z-[1] before:h-px before:bg-gradient-to-r before:from-stone-200/35 before:via-stone-200/25 before:to-transparent after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:z-[1] after:h-px after:bg-stone-200/65';
+  'relative z-10 overflow-hidden bg-gradient-to-b from-white via-[rgba(252,249,247,0.65)] to-stone-50/[0.4] before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-0 before:z-[1] before:h-px before:bg-gradient-to-r before:from-stone-200/35 before:via-stone-200/25 before:to-transparent after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:z-[1] after:h-px after:bg-stone-200/75';
 
 /** Vertical rhythm inside intro zone; horizontal rhythm comes from main layout padding. */
 export const workspacePageIntroZoneInner = 'relative';
@@ -165,7 +200,13 @@ export const workspaceSectionTitle =
 
 /** Uppercase label above a metric or block */
 export const workspaceLabelEyebrow =
-  'text-[11px] font-medium uppercase tracking-wider text-gray-500';
+  'text-[11px] font-medium uppercase tracking-wider text-stone-500';
+
+/**
+ * Ledger index tables — softer row separators than generic `divide-gray-100`
+ * so long streams scan without heavy grid lines.
+ */
+export const workspaceLedgerTableDivide = 'divide-y divide-stone-100/[0.65]';
 
 /**
  * Summary stat tile — matches dashboard overview cards (warm stone border, soft lift).
@@ -176,7 +217,7 @@ export const workspaceStatTile =
 
 /** Eyebrow label inside summary stat tiles (aligned with dashboard overview). */
 export const workspaceStatEyebrow =
-  'text-[11px] font-semibold uppercase tracking-wider text-stone-500';
+  'text-[11px] font-medium uppercase tracking-wider text-stone-500';
 
 /**
  * Toolbar search field — height aligned with `workspaceActionSecondaryMd` row actions.
@@ -262,7 +303,7 @@ export const workspaceTheadSticky = 'sticky top-0 z-10 bg-[#F3F4F6]';
 
 /** Interactive table body row — clearer hover, still neutral */
 export const workspaceTableRowHover =
-  'transition-colors duration-200 ease-out hover:bg-gray-200/45';
+  'transition-[background-color,box-shadow] duration-200 ease-out motion-reduce:transition-none hover:bg-gray-200/45 hover:shadow-[inset_2px_0_0_0_rgba(107,114,128,0.14)]';
 
 /**
  * Same as `workspaceTableRowHover` — use on any row you want to feel “interactive”
@@ -364,7 +405,7 @@ export const workspaceLedgerDetailPanel =
   'border-l-2 border-stone-200/80 bg-gray-50/90 py-2 pl-3 pr-2 sm:pl-4 sm:pr-3';
 
 export const workspaceLedgerDetailTableHead =
-  'text-left text-[10px] font-semibold uppercase tracking-wider text-gray-500';
+  'text-left text-[10px] font-medium uppercase tracking-wider text-gray-500';
 
 export const workspaceLedgerDetailCell =
   'py-1.5 text-xs tabular-nums text-gray-700 sm:py-2 sm:text-sm';
@@ -448,17 +489,17 @@ const focusRingSoft =
 /**
  * Primary page/section action — e.g. + Show (filled dark).
  */
-export const workspaceActionPrimaryMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 active:bg-gray-950 ${focusRingDark}`;
+export const workspaceActionPrimaryMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-[background-color,box-shadow,transform] duration-150 ease-out hover:bg-gray-800 hover:shadow-[0_4px_14px_-8px_rgba(17,24,39,0.32)] active:translate-y-px active:bg-gray-950 motion-reduce:transition-none motion-reduce:transform-none ${focusRingDark}`;
 
 /**
- * {@link WorkspaceSidePanelTrigger} — default (Shows header): boutique-tinted surface + blush workflow rail.
+ * {@link WorkspaceSidePanelTrigger} — default: slightly stronger surface (rare; prefer {@link workspaceSidePanelTriggerShellSubtle} in page headers).
  */
-export const workspaceSidePanelTriggerShellDefault = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-2 self-start rounded-lg border border-stone-300/90 bg-[rgba(245,243,240,0.97)] px-3.5 py-1.5 text-left text-sm font-medium leading-snug text-stone-800 shadow-[inset_3px_0_0_0_rgba(225,169,175,0.42),0_1px_2px_rgba(28,25,23,0.07)] ring-1 ring-stone-900/[0.05] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] hover:border-stone-400/95 hover:bg-[rgba(239,236,232,0.98)] hover:shadow-[inset_3px_0_0_0_rgba(219,158,165,0.48),0_2px_8px_-3px_rgba(28,25,23,0.1)] active:bg-stone-200/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
+export const workspaceSidePanelTriggerShellDefault = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-2 rounded-lg border border-stone-300/90 bg-[rgba(245,243,240,0.97)] px-3 py-1.5 text-left text-sm font-medium leading-snug text-stone-800 shadow-[inset_3px_0_0_0_rgba(225,169,175,0.38),0_1px_2px_rgba(28,25,23,0.06)] ring-1 ring-stone-900/[0.05] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] motion-reduce:transition-none motion-reduce:transform-none hover:border-stone-400/95 hover:bg-[rgba(239,236,232,0.98)] hover:shadow-[inset_3px_0_0_0_rgba(219,158,165,0.44),0_2px_8px_-3px_rgba(28,25,23,0.09)] active:translate-y-px active:bg-stone-200/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
 
 /**
- * {@link WorkspaceSidePanelTrigger} — subtle (e.g. dashboard): lighter emphasis, same motion model + rail.
+ * {@link WorkspaceSidePanelTrigger} — contextual / header (e.g. Log show): outline toolbar weight, aligns in {@link AdminPageIntro} row.
  */
-export const workspaceSidePanelTriggerShellSubtle = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-2 self-start rounded-lg border border-stone-200/95 bg-white/90 px-3.5 py-1.5 text-left text-sm font-medium leading-snug text-stone-800 shadow-[inset_3px_0_0_0_rgba(225,169,175,0.32),0_1px_2px_rgba(28,25,23,0.05)] ring-1 ring-stone-900/[0.035] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] hover:border-stone-300/95 hover:bg-stone-50/95 hover:shadow-[inset_3px_0_0_0_rgba(219,158,165,0.4),0_2px_6px_-3px_rgba(28,25,23,0.08)] active:bg-stone-100/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
+export const workspaceSidePanelTriggerShellSubtle = `group inline-flex min-h-8 max-h-9 min-w-0 max-w-full shrink-0 items-center gap-1.5 rounded-lg border border-stone-200/95 bg-white/90 px-3 py-1 text-left text-sm font-normal leading-snug text-stone-700 shadow-[inset_3px_0_0_0_rgba(225,169,175,0.26),0_1px_2px_rgba(28,25,23,0.04)] ring-1 ring-stone-900/[0.03] outline-none transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.25,0.8,0.25,1)] motion-reduce:transition-none motion-reduce:transform-none hover:border-stone-300/95 hover:bg-stone-50/95 hover:text-stone-800 hover:shadow-[inset_3px_0_0_0_rgba(219,158,165,0.34),0_2px_6px_-3px_rgba(28,25,23,0.07)] active:translate-y-px active:bg-stone-100/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 disabled:pointer-events-none disabled:opacity-60`;
 
 /**
  * Engaged state while the target panel is open — default variant.
@@ -473,31 +514,37 @@ export const workspaceSidePanelTriggerOpenSubtle = `border-stone-400/70 bg-stone
 /**
  * Secondary page/section action — Record payment in header, supporting flows (outline).
  */
-export const workspaceActionSecondaryMd = `inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-800 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 ${focusRingSoft}`;
+export const workspaceActionSecondaryMd = `inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-800 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out hover:border-gray-400 hover:bg-gray-50 hover:shadow-[0_4px_14px_-10px_rgba(31,41,55,0.28)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none ${focusRingSoft}`;
 
 /**
  * Completion workflow — Close out, Mark done (row / compact).
  */
-export const workspaceActionCompleteSm = `inline-flex items-center justify-center gap-1.5 rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-gray-800 ${focusRingDark}`;
+export const workspaceActionCompleteSm = `inline-flex items-center justify-center gap-1.5 rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition-[background-color,box-shadow,transform] duration-150 ease-out hover:bg-gray-800 hover:shadow-[0_3px_10px_-6px_rgba(17,24,39,0.35)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none ${focusRingDark}`;
 
 /**
  * Completion workflow — section-level (e.g. show detail close out).
  */
-export const workspaceActionCompleteMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 ${focusRingDark}`;
+export const workspaceActionCompleteMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-[background-color,box-shadow,transform] duration-150 ease-out hover:bg-gray-800 hover:shadow-[0_4px_14px_-8px_rgba(17,24,39,0.32)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-50 ${focusRingDark}`;
+
+/**
+ * Final workflow commit on a page (e.g. **Close show**) — calmer than a marketing CTA so
+ * page numbers stay focal; still clearly actionable.
+ */
+export const workspaceWorkflowFocalCompleteMd = `inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-950 px-4 py-2 text-sm font-medium text-white shadow-[0_1px_10px_-6px_rgba(15,23,42,0.3)] transition-[background-color,box-shadow,transform] duration-200 hover:bg-gray-900 hover:shadow-[0_4px_18px_-8px_rgba(192,38,77,0.12)] active:translate-y-px active:shadow-[0_1px_6px_-3px_rgba(15,23,42,0.32)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none ${focusRingDark}`;
 
 /**
  * Neutral row follow-up — View, Cancel-style outline.
  */
-export const workspaceActionSecondarySm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 ${focusRingSoft}`;
+export const workspaceActionSecondarySm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out hover:border-gray-400 hover:bg-gray-50 hover:shadow-[0_3px_10px_-7px_rgba(31,41,55,0.25)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none ${focusRingSoft}`;
 
 /**
  * Utility toolbar control — Filter, Export, compact menus; quieter than {@link workspaceActionSecondaryMd}
  * so primary/secondary page actions stay visually dominant.
  */
-export const workspaceActionUtilityMd = `inline-flex items-center justify-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/90 px-3.5 py-2 text-sm font-medium text-stone-600 shadow-none transition-[color,background-color,border-color] duration-200 hover:border-stone-300/95 hover:bg-stone-50/95 hover:text-stone-900 ${focusRingSoft}`;
+export const workspaceActionUtilityMd = `inline-flex items-center justify-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/90 px-3.5 py-2 text-sm font-medium text-stone-600 shadow-none transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:border-stone-300/95 hover:bg-stone-50/95 hover:text-stone-900 hover:shadow-[0_3px_10px_-8px_rgba(28,25,23,0.22)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none ${focusRingSoft}`;
 
 /** Compact utility control (toolbars, dense strips). */
-export const workspaceActionUtilitySm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-stone-200/90 bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-600 shadow-none transition-[color,background-color,border-color] duration-200 hover:border-stone-300/95 hover:bg-stone-50/95 hover:text-stone-900 ${focusRingSoft}`;
+export const workspaceActionUtilitySm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-stone-200/90 bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-600 shadow-none transition-[color,background-color,border-color,transform] duration-200 ease-out hover:border-stone-300/95 hover:bg-stone-50/95 hover:text-stone-900 active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none ${focusRingSoft}`;
 
 /**
  * Inline row / table text action — does not compete with {@link workspaceActionPrimaryMd} or chips.
@@ -507,7 +554,7 @@ export const workspaceActionInlineText = `text-sm font-medium text-stone-600 und
 /**
  * Financial / money-out — Pay (distinct from completion; restrained amber field).
  */
-export const workspaceActionFinancialSm = `inline-flex items-center justify-center rounded-md border border-amber-200/90 bg-amber-50/40 px-2.5 py-1 text-xs font-medium text-gray-900 shadow-sm transition-colors hover:border-amber-300/90 hover:bg-amber-50/70 ${focusRingSoft}`;
+export const workspaceActionFinancialSm = `inline-flex items-center justify-center rounded-md border border-amber-200/90 bg-amber-50/40 px-2.5 py-1 text-xs font-medium text-gray-900 shadow-sm transition-[border-color,background-color,box-shadow,transform] hover:border-amber-300/90 hover:bg-amber-50/70 hover:shadow-[0_2px_10px_-4px_rgba(217,119,6,0.18)] active:translate-y-px ${focusRingSoft}`;
 
 /**
  * Tertiary navigation chip — All shows, Balances, footer links.
@@ -525,17 +572,17 @@ const focusRingEmerald =
 /**
  * Positive completion — Record payment, Mark as paid, confirm-success (emerald; not destructive).
  */
-export const workspaceActionPositiveCompleteMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(4,120,87,0.2)] transition-[background-color,box-shadow] duration-200 hover:bg-emerald-700 hover:shadow-[0_2px_10px_-2px_rgba(4,120,87,0.28)] active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
+export const workspaceActionPositiveCompleteMd = `inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(4,120,87,0.2)] transition-[background-color,box-shadow,transform] duration-200 hover:bg-emerald-700 hover:shadow-[0_3px_14px_-4px_rgba(4,120,87,0.32)] active:translate-y-px active:bg-emerald-800 motion-reduce:transition-none motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
 
 /**
  * Compact positive completion (e.g. Mark as paid in workflow strips).
  */
-export const workspaceActionPositiveCompleteSm = `inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
+export const workspaceActionPositiveCompleteSm = `inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-[background-color,box-shadow,transform] duration-150 ease-out hover:bg-emerald-700 hover:shadow-[0_2px_10px_-4px_rgba(4,120,87,0.28)] active:translate-y-px active:bg-emerald-800 motion-reduce:transition-none motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
 
 /**
  * Positive completion — outline emerald (calmer than {@link workspaceActionPositiveCompleteSm}; dense strips / secondary to page chrome).
  */
-export const workspaceActionPositiveOutlineSm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-emerald-200/90 bg-white px-2.5 py-1 text-xs font-medium text-emerald-900 shadow-sm transition-colors hover:border-emerald-300/90 hover:bg-emerald-50/75 active:bg-emerald-50/90 disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
+export const workspaceActionPositiveOutlineSm = `inline-flex items-center justify-center gap-1.5 rounded-md border border-emerald-200/90 bg-white px-2.5 py-1 text-xs font-medium text-emerald-900 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out hover:border-emerald-300/90 hover:bg-emerald-50/75 hover:shadow-[0_3px_10px_-6px_rgba(4,120,87,0.2)] active:translate-y-px active:bg-emerald-50/90 motion-reduce:transition-none motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-60 ${focusRingEmerald}`;
 
 /**
  * @deprecated Prefer {@link workspaceActionPrimaryMd} for neutral creation CTAs or {@link workspaceActionPositiveCompleteMd} for success-style completion. Rose retained only for legacy call sites until migrated.
@@ -546,7 +593,7 @@ export const workspaceActionWarmPrimaryMd =
 
 /** Subtle outline action for confirm/cancel dialogs and secondary controls. */
 export const workspaceActionQuietOutlineMd =
-  'inline-flex items-center justify-center rounded-xl border border-stone-200/95 bg-white px-3 py-2.5 text-sm font-semibold text-stone-800 shadow-[0_1px_2px_rgba(120,113,108,0.04)] transition-colors hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/40';
+  'inline-flex items-center justify-center rounded-xl border border-stone-200/95 bg-white px-3 py-2.5 text-sm font-semibold text-stone-800 shadow-[0_1px_2px_rgba(120,113,108,0.04)] transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out hover:bg-stone-50 hover:shadow-[0_3px_10px_-8px_rgba(120,113,108,0.22)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/40';
 
 /** @deprecated Use workspaceActionPrimaryMd */
 export const workspaceBtnPrimary = workspaceActionPrimaryMd;

@@ -8,8 +8,71 @@ import {
 import { setSessionCookie } from '@/lib/auth/session.node';
 import type { AppRole } from '@/lib/auth/session.types';
 
-function isLocalHost(hostname: string): boolean {
-  return hostname === 'localhost' || hostname === '127.0.0.1';
+/** Strip IPv6 brackets and lowercase for stable comparison (localhost is case-insensitive). */
+function normalizeHostname(raw: string): string {
+  let h = raw.trim();
+  if (h.startsWith('[')) {
+    const end = h.indexOf(']');
+    if (end > 1) h = h.slice(1, end);
+  }
+  return h.toLowerCase();
+}
+
+/**
+ * Loopback hosts only — dev-bootstrap must not run on arbitrary interfaces.
+ * Canonical IPv6 loopback is `::1` (and full expanded form).
+ */
+function isAllowedLoopbackHost(normalized: string): boolean {
+  return (
+    normalized === 'localhost' ||
+    normalized === '127.0.0.1' ||
+    normalized === '::1' ||
+    normalized === '0:0:0:0:0:0:0:1'
+  );
+}
+
+/**
+ * Parse hostname from the direct HTTP `Host` header (not forwarded headers).
+ * Handles `[::1]:port` and `127.0.0.1:port` without mis-parsing IPv6 colons.
+ */
+function hostnameFromHostHeader(hostHeader: string | null): string {
+  if (hostHeader == null || hostHeader === '') return '';
+  const trimmed = hostHeader.trim();
+  if (trimmed.startsWith('[')) {
+    const end = trimmed.indexOf(']');
+    if (end > 1) return normalizeHostname(trimmed.slice(0, end + 1));
+    return '';
+  }
+  const colon = trimmed.lastIndexOf(':');
+  if (colon > 0) {
+    const after = trimmed.slice(colon + 1);
+    if (/^\d+$/.test(after)) {
+      const before = trimmed.slice(0, colon);
+      /** `host:port` only — if `before` still contains `:`, it is IPv6 (RFC 5952 uses brackets; reject naive strip). */
+      if (!before.includes(':')) {
+        return normalizeHostname(before);
+      }
+    }
+  }
+  return normalizeHostname(trimmed);
+}
+
+/**
+ * Prefer {@link NextURL#hostname} (request URL authority). If it is missing or not loopback,
+ * fall back to the direct `Host` header only — never `X-Forwarded-Host` (spoofable by clients).
+ */
+function getValidatedLoopbackHostname(request: NextRequest): string | null {
+  const fromUrl = normalizeHostname(request.nextUrl.hostname);
+  if (fromUrl && isAllowedLoopbackHost(fromUrl)) {
+    return fromUrl;
+  }
+
+  const fromDirectHost = hostnameFromHostHeader(request.headers.get('host'));
+  if (fromDirectHost && isAllowedLoopbackHost(fromDirectHost)) {
+    return fromDirectHost;
+  }
+
+  return null;
 }
 
 function featureDisabledResponse(): NextResponse {
@@ -34,8 +97,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return featureDisabledResponse();
   }
 
-  const host = request.nextUrl.hostname;
-  if (!isLocalHost(host)) {
+  const host = getValidatedLoopbackHostname(request);
+  if (host == null) {
     return NextResponse.json(
       {
         error: 'forbidden',

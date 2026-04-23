@@ -1,4 +1,5 @@
 import { HelpTooltip } from "@/app/(admin)/admin/_components/HelpTooltip";
+import { WORKFLOW_SHOWS_PROFIT_LABEL } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import { workspaceTheadSticky } from "@/app/(admin)/admin/_components/workspaceUi";
 import type { ShowViewModel } from "@/src/lib/api/shows";
@@ -58,9 +59,9 @@ export function WeekDesktopTable({
               className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
             >
               <span className="inline-flex items-center justify-end gap-1.5">
-                Est. profit
+                {WORKFLOW_SHOWS_PROFIT_LABEL}
                 {showProfitHint && (
-                  <HelpTooltip content="Estimated profit = payout after fees − settlements owed to wholesalers">
+                  <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
                     <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500">
                       i
                     </span>

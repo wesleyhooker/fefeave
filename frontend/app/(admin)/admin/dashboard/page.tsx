@@ -44,6 +44,10 @@ import {
 } from "../_components/AdminPageContainer";
 import { WorkspacePageWithRightPanel } from "../_components/WorkspacePageWithRightPanel";
 import { ShowCreateForm } from "../shows/new/ShowCreateForm";
+import {
+  WORKFLOW_LOG_SHOW_PANEL_SUBTITLE,
+  WORKFLOW_LOG_SHOW_PANEL_TITLE,
+} from "../_lib/adminWorkflowCopy";
 
 function parseAmount(value: string): number {
   const n = Number(value);
@@ -412,7 +416,8 @@ export default function AdminDashboardPage() {
     <WorkspacePageWithRightPanel
       open={isCreateShowOpen}
       onClose={() => setIsCreateShowOpen(false)}
-      title="Create show"
+      title={WORKFLOW_LOG_SHOW_PANEL_TITLE}
+      panelSubtitle={WORKFLOW_LOG_SHOW_PANEL_SUBTITLE}
       panel={
         <ShowCreateForm
           variant="drawer"

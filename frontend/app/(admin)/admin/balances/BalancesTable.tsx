@@ -13,20 +13,21 @@ import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRo
 import {
   WorkspaceTableChevronCell,
   WorkspaceTableNavRow,
-  workspaceTableBodyCellPadding,
+  workspaceTableBodyCellPaddingComfortable,
   workspaceTableHeaderCellPadding,
 } from "@/app/(admin)/admin/_components/WorkspaceTableRow";
 import { getWorkspacePaymentStatus } from "@/app/(admin)/admin/_lib/workspacePaymentStatus";
+import { WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
   workspaceActionIconMd,
   workspaceActionSecondaryMd,
   workspaceActionSecondarySm,
-  workspaceCard,
+  workspaceBalancesPrimaryTableShell,
   workspaceMoneyClassForLiability,
   workspaceMoneyTabular,
   workspaceTableCellMeta,
   workspaceTableCellSecondary,
-  workspaceTheadSticky,
+  workspaceTableTheadFinancial,
   workspaceToolbarSearchInput,
 } from "../_components/workspaceUi";
 
@@ -149,11 +150,11 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
 
   return (
     <section
-      className={`min-w-0 overflow-hidden ${workspaceCard}`}
+      className={workspaceBalancesPrimaryTableShell}
       aria-labelledby="balances-table-heading"
     >
       <h2 id="balances-table-heading" className="sr-only">
-        Vendor balances
+        Wholesaler balances
       </h2>
 
       <AdminWorkspaceToolbar
@@ -161,11 +162,11 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
           <>
             <input
               type="search"
-              placeholder="Search vendors…"
+              placeholder="Search wholesalers…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={`${workspaceToolbarSearchInput} sm:max-w-xs md:max-w-sm`}
-              aria-label="Search vendors"
+              aria-label="Search wholesalers"
             />
             <WorkspaceToolbarMenu
               label="Filter"
@@ -174,13 +175,13 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
               items={[
                 {
                   id: "all",
-                  label: "All vendors",
+                  label: "All wholesalers",
                   selected: filterScope === "all",
                   onSelect: () => setFilterScope("all"),
                 },
                 {
                   id: "balance",
-                  label: "Vendors with balance",
+                  label: WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
                   selected: filterScope === "balance",
                   onSelect: () => setFilterScope("balance"),
                 },
@@ -297,7 +298,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         </div>
       </div>
 
-      <div className="hidden overflow-x-auto md:block">
+      <div className="mt-6 hidden overflow-x-auto md:mt-7 md:block">
         <table className="min-w-full table-fixed divide-y divide-gray-100">
           <colgroup>
             <col className="w-[5rem] sm:w-[5.5rem]" />
@@ -308,13 +309,13 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
             <col className="w-[7.5rem] sm:w-[8.5rem]" />
             <col className="w-10 sm:w-12" />
           </colgroup>
-          <thead className={workspaceTheadSticky}>
+          <thead className={workspaceTableTheadFinancial}>
             <tr>
               <th
                 scope="col"
                 className={`${workspaceTableHeaderCellPadding} text-left`}
               >
-                <span className="font-medium text-gray-600">Status</span>
+                <span className="font-medium text-stone-700">Status</span>
               </th>
               <th
                 scope="col"
@@ -325,7 +326,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                   onClick={() => handleSort("name")}
                   className={`${thBtn} min-w-0`}
                 >
-                  Vendor
+                  Wholesaler
                   <SortIndicator column="name" />
                 </button>
               </th>
@@ -386,7 +387,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-gray-100 bg-white [&>tr:first-child>td]:pt-4">
             {sorted.length === 0 ? (
               <tr>
                 <td
@@ -409,34 +410,34 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                     ariaLabel={rowNavigateLabel(r.name)}
                   >
                     <td
-                      className={`w-[5rem] whitespace-nowrap align-middle sm:w-[5.5rem] ${workspaceTableBodyCellPadding}`}
+                      className={`w-[5rem] whitespace-nowrap align-middle sm:w-[5.5rem] ${workspaceTableBodyCellPaddingComfortable}`}
                     >
                       <WorkspaceListPaymentStatus status={status} />
                     </td>
                     <td
-                      className={`min-w-0 max-w-[min(100%,28rem)] align-top ${workspaceTableBodyCellPadding}`}
+                      className={`min-w-0 max-w-[min(100%,28rem)] align-top ${workspaceTableBodyCellPaddingComfortable}`}
                     >
                       <span className="text-sm font-semibold text-gray-900 group-hover/workspace-row:text-gray-950">
                         {r.name}
                       </span>
                     </td>
                     <td
-                      className={`whitespace-nowrap text-right align-top text-lg font-semibold tabular-nums sm:text-xl ${workspaceTableBodyCellPadding} ${workspaceMoneyClassForLiability(balance)}`}
+                      className={`whitespace-nowrap text-right align-top text-lg font-semibold tabular-nums sm:text-xl ${workspaceTableBodyCellPaddingComfortable} ${workspaceMoneyClassForLiability(balance)}`}
                     >
                       {formatCurrency(balance)}
                     </td>
                     <td
-                      className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPadding} ${workspaceTableCellSecondary}`}
+                      className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPaddingComfortable} ${workspaceTableCellSecondary}`}
                     >
                       {formatCurrency(parseNum(r.owed_total))}
                     </td>
                     <td
-                      className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPadding} ${workspaceTableCellSecondary}`}
+                      className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPaddingComfortable} ${workspaceTableCellSecondary}`}
                     >
                       {formatCurrency(parseNum(r.paid_total))}
                     </td>
                     <td
-                      className={`whitespace-nowrap align-top ${workspaceTableBodyCellPadding} ${workspaceTableCellMeta}`}
+                      className={`whitespace-nowrap align-top ${workspaceTableBodyCellPaddingComfortable} ${workspaceTableCellMeta}`}
                     >
                       {r.last_payment_date
                         ? formatDate(r.last_payment_date)

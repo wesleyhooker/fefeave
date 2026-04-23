@@ -60,10 +60,10 @@ export function WorkspaceSidePanelTrigger({
         working here while the panel is open.
       </span>
       <span
-        className={`flex min-w-0 w-full items-center gap-2 transition-transform duration-200 ${motionEase} will-change-transform group-hover:translate-x-0.5`}
+        className={`flex min-w-0 w-full items-center gap-1.5 transition-transform duration-200 motion-reduce:transition-none motion-reduce:transform-none ${motionEase} will-change-transform group-hover:translate-x-0.5`}
       >
         <span
-          className={`inline-flex shrink-0 transition-colors duration-200 [&_svg]:h-4 [&_svg]:w-4 ${
+          className={`inline-flex shrink-0 transition-colors duration-200 motion-reduce:transition-none [&_svg]:h-4 [&_svg]:w-4 ${
             open
               ? "text-stone-800"
               : "text-stone-600 group-hover:text-stone-800"
@@ -73,7 +73,7 @@ export function WorkspaceSidePanelTrigger({
         </span>
         <span className="min-w-0 flex-1 truncate">{label}</span>
         <ChevronRightIcon
-          className={`${workspaceActionIconMd} shrink-0 will-change-transform transition-[transform,color] duration-200 ${motionEase} group-hover:translate-x-1 ${
+          className={`${workspaceActionIconMd} shrink-0 will-change-transform transition-[transform,color] duration-200 motion-reduce:transition-none motion-reduce:transform-none ${motionEase} group-hover:translate-x-1 ${
             open
               ? "text-stone-800"
               : "text-stone-500 group-hover:text-stone-700"

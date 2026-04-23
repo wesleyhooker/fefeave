@@ -19,14 +19,27 @@ import {
   saveSelfPay,
   type SelfPayStored,
 } from "@/app/(admin)/admin/dashboard/selfPayStorage";
+import { workspaceThisWeekWorkflowFooter } from "@/app/(admin)/admin/_lib/workspaceThisWeekSurface";
+import {
+  WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL,
+  WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION,
+  WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE,
+  WORKFLOW_SELF_PAY_MARKED_PAID_LABEL,
+  WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL,
+  WORKFLOW_SELF_PAY_REOPEN_DIALOG_DESCRIPTION,
+  WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 
 export function ShowsThisWeekWorkflowStrip({
   weekStartStr,
   completedWeekProfitForSnapshot,
+  showWeekProfitFigure,
 }: {
   weekStartStr: string;
   /** Sum of estimated profit for COMPLETED shows this week (same basis as Dashboard self-pay snapshot). */
   completedWeekProfitForSnapshot: number;
+  /** When false, omit the week profit figure (no completed shows — no placeholder). */
+  showWeekProfitFigure: boolean;
 }) {
   const [selfPay, setSelfPay] = useState<SelfPayStored | null>(null);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
@@ -77,37 +90,35 @@ export function ShowsThisWeekWorkflowStrip({
 
   return (
     <>
-      <div className="border-t border-gray-200/95 bg-gray-50/70 px-4 py-3 sm:px-5">
+      <div
+        className={`px-4 py-4 sm:px-5 sm:py-4 ${workspaceThisWeekWorkflowFooter}`}
+      >
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 sm:gap-x-2.5">
-            <span className="text-xs font-medium text-gray-500">
-              This week payout
-            </span>
-            <span className="text-xl font-semibold tabular-nums tracking-tight text-gray-900">
-              {formatCurrency(completedWeekProfitForSnapshot)}
-            </span>
-          </div>
+          {showWeekProfitFigure ? (
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 sm:gap-x-2.5">
+              <span className="text-xl font-semibold tabular-nums tracking-tight text-gray-900">
+                {formatCurrency(completedWeekProfitForSnapshot)}
+              </span>
+            </div>
+          ) : null}
 
           {paid ? (
-            <div className="ml-auto flex min-w-0 shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <p className="m-0 text-right">
-                <span className="inline-flex max-w-full items-center gap-1.5 whitespace-nowrap text-sm font-medium text-emerald-800">
+            <div
+              className={`flex min-w-0 shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3 ${showWeekProfitFigure ? "ml-auto" : "ml-auto w-full sm:w-auto"}`}
+            >
+              <p className="m-0 flex flex-col items-end gap-0.5 text-right sm:flex-row sm:items-center sm:gap-2">
+                <span className="inline-flex max-w-full items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-emerald-800">
                   <CheckCircleIcon
                     className={`${workspaceActionIconSm} shrink-0 text-emerald-700/90`}
                     aria-hidden
                   />
-                  <span>Paid</span>
-                  {paidAtLabel ? (
-                    <>
-                      <span className="select-none font-normal text-gray-300">
-                        ·
-                      </span>
-                      <span className="font-normal tabular-nums text-gray-500">
-                        {paidAtLabel}
-                      </span>
-                    </>
-                  ) : null}
+                  <span>{WORKFLOW_SELF_PAY_MARKED_PAID_LABEL}</span>
                 </span>
+                {paidAtLabel ? (
+                  <span className="text-[11px] font-medium tabular-nums text-emerald-800/75">
+                    Confirmed {paidAtLabel}
+                  </span>
+                ) : null}
               </p>
               <button
                 type="button"
@@ -133,7 +144,7 @@ export function ShowsThisWeekWorkflowStrip({
                 <WorkspaceActionLabel
                   icon={<CheckCircleIcon className={workspaceActionIconSm} />}
                 >
-                  Mark as paid
+                  {WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL}
                 </WorkspaceActionLabel>
               </button>
             </div>
@@ -144,9 +155,9 @@ export function ShowsThisWeekWorkflowStrip({
       <WorkspaceConfirmDialog
         open={markPaidOpen}
         onOpenChange={setMarkPaidOpen}
-        title="Mark this week as paid?"
-        description="You're confirming you've paid yourself for this week."
-        confirmLabel="Mark as paid"
+        title={WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE}
+        description={WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION}
+        confirmLabel={WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL}
         onConfirm={handleMarkDone}
         tone="rose"
         icon="$"
@@ -154,9 +165,9 @@ export function ShowsThisWeekWorkflowStrip({
       <WorkspaceConfirmDialog
         open={markUnpaidOpen}
         onOpenChange={setMarkUnpaidOpen}
-        title="Reopen this week payout?"
-        description="This will remove the paid status so you can confirm again later."
-        confirmLabel="Reopen week"
+        title={WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE}
+        description={WORKFLOW_SELF_PAY_REOPEN_DIALOG_DESCRIPTION}
+        confirmLabel={WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL}
         onConfirm={handleMarkUndone}
         tone="stone"
         icon="↺"

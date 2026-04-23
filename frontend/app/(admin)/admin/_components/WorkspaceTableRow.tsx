@@ -33,6 +33,14 @@ const navRowFocus =
 /** Shared body cell padding — keep in sync across all admin data tables. */
 export const workspaceTableBodyCellPadding = "px-3 py-2.5 sm:px-4";
 
+/** Balances index + balance-detail ledger — roomier rows without changing global default. */
+export const workspaceTableBodyCellPaddingComfortable =
+  "px-3 py-3 sm:px-4 sm:py-3.5";
+
+/** Wholesaler ledger — slightly more vertical room than index tables. */
+export const workspaceTableBodyCellPaddingLedgerComfortable =
+  "px-3 py-3.5 sm:px-4 sm:py-4";
+
 /** Vendor ledger (desktop): leading disclosure + trailing edit + data columns — used for empty/detail colspan. */
 export const workspaceLedgerTableColumnCount = 8;
 
@@ -159,11 +167,11 @@ export function WorkspaceLedgerDisclosureIcon({
 }) {
   return (
     <span
-      className="inline-flex shrink-0 text-gray-500 transition-colors group-hover/ledger-settlement:text-gray-700"
+      className="inline-flex shrink-0 text-gray-500 transition-colors duration-200 ease-out motion-reduce:transition-none group-hover/ledger-settlement:text-gray-700"
       aria-hidden
     >
       <ChevronDownIcon
-        className={`h-3.5 w-3.5 transition-transform duration-200 ease-out ${expanded ? "rotate-180" : ""}`}
+        className={`h-3.5 w-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${expanded ? "rotate-180" : ""}`}
       />
     </span>
   );
@@ -332,7 +340,7 @@ export function WorkspaceTableChevronCell() {
       className={`w-10 whitespace-nowrap px-2 py-2.5 text-right align-middle sm:w-12 sm:px-3`}
     >
       <span className="inline-flex justify-end text-gray-400" aria-hidden>
-        <WorkspaceRowChevron className="h-3.5 w-3.5 transition-transform duration-200 ease-out group-hover/workspace-row:translate-x-0.5 group-hover/workspace-row:text-gray-600" />
+        <WorkspaceRowChevron className="h-3.5 w-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none group-hover/workspace-row:translate-x-0.5 group-hover/workspace-row:text-gray-600" />
       </span>
     </td>
   );

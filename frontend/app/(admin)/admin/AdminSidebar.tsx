@@ -7,7 +7,7 @@ import {
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   workspaceActionIconMd,
   workspaceChromeHoverWarm,
@@ -58,18 +58,18 @@ function NavLinks({
             key={href}
             href={href}
             onClick={onNavigate}
-            className={`group relative flex min-h-[2.75rem] items-center gap-3 rounded-xl px-3 py-2 text-sm transition-[color,background-color,box-shadow] duration-200 ease-out ${
+            className={`group relative flex min-h-[2.75rem] items-center gap-3 rounded-xl px-3 py-2 text-sm transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
               isActive
                 ? "bg-gradient-to-r from-rose-50/95 to-stone-50/40 font-semibold text-stone-900 shadow-[inset_3px_0_0_0_rgba(225,148,158,0.65),0_1px_2px_rgba(28,25,23,0.04)] ring-1 ring-rose-200/35"
-                : `text-stone-600 ${workspaceChromeHoverWarm}`
+                : `text-stone-600 ${workspaceChromeHoverWarm} hover:translate-x-[1px]`
             }`}
             aria-current={isActive ? "page" : undefined}
           >
             <span
-              className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-[border-color,background-color,color] duration-200 ${
+              className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-[border-color,background-color,color,transform] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
                 isActive
                   ? "border-rose-200/70 bg-white/90 text-rose-700/90"
-                  : "border-transparent bg-stone-100/50 text-stone-500 group-hover:border-stone-200/80 group-hover:bg-white/80 group-hover:text-stone-700"
+                  : "border-transparent bg-stone-100/50 text-stone-500 group-hover:border-stone-200/80 group-hover:bg-white/80 group-hover:text-stone-700 group-hover:scale-[1.03]"
               }`}
               aria-hidden
             >
@@ -93,6 +93,16 @@ export function AdminSidebar({
   onMobileClose,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [mobileEntered, setMobileEntered] = useState(false);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      setMobileEntered(false);
+      return;
+    }
+    const id = requestAnimationFrame(() => setMobileEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -150,10 +160,18 @@ export function AdminSidebar({
           <button
             type="button"
             onClick={onMobileClose}
-            className="absolute inset-0 bg-black/40"
+            className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+              mobileEntered ? "opacity-100" : "opacity-0"
+            }`}
             aria-label="Close menu"
           />
-          <div className="absolute left-0 top-0 z-10 h-full w-[17rem] border-r border-stone-200/80 bg-gradient-to-b from-[#fdfcfb] to-white p-4 shadow-xl">
+          <div
+            className={`absolute left-0 top-0 z-10 h-full w-[17rem] border-r border-stone-200/80 bg-gradient-to-b from-[#fdfcfb] to-white p-4 shadow-xl transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
+              mobileEntered
+                ? "translate-x-0 opacity-100"
+                : "-translate-x-3 opacity-0"
+            }`}
+          >
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-semibold text-stone-800">Menu</p>
               <button
