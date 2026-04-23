@@ -82,7 +82,7 @@ export function WorkspaceTableNavRow({
     <tr
       tabIndex={0}
       role="link"
-      className={`group/workspace-row cursor-pointer select-none bg-white ${rowInteractionClassName} ${navRowFocus} ${className}`.trim()}
+      className={`group/workspace-row cursor-pointer select-none bg-white [&_*]:cursor-inherit ${rowInteractionClassName} ${navRowFocus} ${className}`.trim()}
       onClick={() => router.push(href)}
       onKeyDown={onKeyDown}
       aria-label={ariaLabel}
@@ -129,7 +129,7 @@ export function WorkspaceTableStaticRow({
 
   return (
     <tr
-      className={`bg-white ${interaction} ${className}`.trim()}
+      className={`bg-white [&_*]:cursor-inherit ${interaction} ${className}`.trim()}
       onClick={onClick}
       aria-label={ariaLabel}
       aria-expanded={ariaExpanded}

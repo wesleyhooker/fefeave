@@ -4,6 +4,11 @@ import { BanknotesIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import {
+  AdminPageContainer,
+  AdminPageIntroSection,
+} from "@/app/(admin)/admin/_components/AdminPageContainer";
+import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   fetchWholesalerBalances,
@@ -12,9 +17,19 @@ import {
   type PaySchedule,
 } from "@/src/lib/api/wholesalers";
 import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
+import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
 import {
+  workspaceTableBodyCellPadding,
+  workspaceTableHeaderCellPadding,
+} from "@/app/(admin)/admin/_components/WorkspaceTableRow";
+import {
+  workspaceActionCompleteMd,
   workspaceActionIconMd,
   workspaceActionSecondaryMd,
+  workspaceCard,
+  workspaceFormLabelSecondary,
+  workspaceMoneyNeutral,
   workspaceMoneyClassForLiability,
   workspaceMoneyTabular,
   workspaceRowTitleLink,
@@ -131,163 +146,177 @@ export default function BatchPayPage() {
 
   if (!id) {
     return (
-      <div>
-        <Link
-          href="/admin/balances"
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Back to Balances
-        </Link>
-        <p className="mt-4 text-gray-600">Invalid wholesaler.</p>
-      </div>
+      <AdminPageContainer>
+        <WorkspaceInlineError
+          title="Invalid wholesaler."
+          message="Open this page from Balances and try again."
+        />
+      </AdminPageContainer>
     );
   }
 
   if (loading) {
     return (
-      <div>
-        <Link
-          href="/admin/balances"
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Back to Balances
-        </Link>
-        <p className="mt-4 text-gray-600">Loading closed shows…</p>
-      </div>
+      <AdminPageContainer>
+        <p className="text-sm text-gray-600">Loading balance breakdown...</p>
+      </AdminPageContainer>
     );
   }
 
   if (error) {
     return (
-      <div>
-        <Link
-          href="/admin/balances"
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Back to Balances
-        </Link>
-        <p className="mt-4 text-amber-700">{error}</p>
-      </div>
+      <AdminPageContainer>
+        <WorkspaceInlineError
+          title="Could not load balance breakdown."
+          message={error}
+        />
+      </AdminPageContainer>
     );
   }
 
   return (
-    <div>
-      <Link
-        href="/admin/balances"
-        className="text-sm text-gray-500 hover:text-gray-700"
-      >
-        ← Back to Balances
-      </Link>
-      <h1 className="mt-4 text-2xl font-semibold text-gray-900">
-        Balance breakdown — {name ?? id}
-      </h1>
-      <p className="mt-1 text-sm text-gray-500">
-        Shows that contribute to current outstanding. Record a payment to clear
-        balance.
-      </p>
+    <>
+      <AdminPageIntroSection variant="entity-detail">
+        <AdminPageIntro
+          variant="entity-detail"
+          title={`Balance breakdown - ${name ?? id}`}
+          subtitle="Shows currently contributing to this wholesaler balance."
+          breadcrumb={
+            <nav className="text-sm text-stone-500" aria-label="Breadcrumb">
+              <Link href="/admin/balances" className="hover:text-stone-700">
+                Balances
+              </Link>
+              <span className="mx-1.5">/</span>
+              <span aria-current="page">Balance breakdown</span>
+            </nav>
+          }
+          action={
+            <Link
+              href={`/admin/payments/new?wholesalerId=${encodeURIComponent(id)}`}
+              className={workspaceActionCompleteMd}
+            >
+              <WorkspaceActionLabel
+                icon={<BanknotesIcon className={workspaceActionIconMd} />}
+              >
+                Record payment
+              </WorkspaceActionLabel>
+            </Link>
+          }
+        />
+      </AdminPageIntroSection>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <label className="text-sm text-gray-600">
-          Date range:
-          <select
-            value={dateWindow}
-            onChange={(e) => {
-              const v = e.target.value;
-              setDateWindow(v === "all" ? "all" : (Number(v) as 7 | 14 | 30));
-            }}
-            className="ml-2 rounded border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900"
-          >
-            {WINDOW_OPTIONS.map((opt) => (
-              <option key={String(opt.value)} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span className="text-sm text-gray-500">{dateWindowNote}</span>
-      </div>
-
-      <div className="mt-4 rounded-lg border border-gray-200 bg-[#F9FAFB] px-4 py-3">
-        <p className="text-sm font-medium text-gray-700">
-          Total for displayed shows:{" "}
-          <span className="text-lg text-gray-900">
-            {formatCurrency(totalOwed)}
-          </span>
-        </p>
-      </div>
-
-      <div className="mt-4 rounded-lg border border-gray-200 bg-white shadow-workspace-surface">
-        <div className="border-b border-gray-100 px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-900">Closed shows</h2>
-        </div>
-        {filteredShows.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-gray-500">
-            {closedShows.length === 0
-              ? "No closed shows for this wholesaler."
-              : "No closed shows in the selected date range."}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead className={workspaceTheadSticky}>
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Show
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Owed
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
-                {filteredShows.map((row) => {
-                  const owed = parseAmount(row.owed_total);
-                  return (
-                    <tr
-                      key={row.show_id}
-                      className={workspaceTableRowInteractive}
-                    >
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <Link
-                          href={`/admin/shows/${row.show_id}`}
-                          className={workspaceRowTitleLink}
-                        >
-                          {row.show_name}
-                        </Link>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                        {formatDate(row.show_date)}
-                      </td>
-                      <td
-                        className={`whitespace-nowrap px-4 py-3 text-right text-sm ${workspaceMoneyTabular} ${workspaceMoneyClassForLiability(owed)}`}
-                      >
-                        {formatCurrency(owed)}
-                      </td>
-                    </tr>
+      <AdminPageContainer>
+        <section className={`p-4 ${workspaceCard}`}>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="min-w-[12rem]">
+              <span className={`mb-1 block ${workspaceFormLabelSecondary}`}>
+                Date range
+              </span>
+              <WorkspaceNativeSelect
+                value={dateWindow}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDateWindow(
+                    v === "all" ? "all" : (Number(v) as 7 | 14 | 30),
                   );
-                })}
-              </tbody>
-            </table>
+                }}
+              >
+                {WINDOW_OPTIONS.map((opt) => (
+                  <option key={String(opt.value)} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </WorkspaceNativeSelect>
+            </label>
+            <p className="pb-2 text-sm text-gray-500">{dateWindowNote}</p>
           </div>
-        )}
-      </div>
+          <p className="mt-3 text-sm font-medium text-gray-700">
+            Total for displayed shows:{" "}
+            <span
+              className={`text-lg ${workspaceMoneyTabular} ${workspaceMoneyNeutral}`}
+            >
+              {formatCurrency(totalOwed)}
+            </span>
+          </p>
+        </section>
 
-      <div className="mt-6">
-        <Link
-          href={`/admin/payments/new?wholesalerId=${encodeURIComponent(id)}`}
-          className={workspaceActionSecondaryMd}
-        >
-          <WorkspaceActionLabel
-            icon={<BanknotesIcon className={workspaceActionIconMd} />}
-          >
-            Record payment
-          </WorkspaceActionLabel>
-        </Link>
-      </div>
-    </div>
+        <section className={workspaceCard}>
+          <div className="border-b border-gray-100 px-4 py-3">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Closed shows
+            </h2>
+          </div>
+          {filteredShows.length === 0 ? (
+            <div className="px-4 py-6 text-center text-sm text-gray-500">
+              {closedShows.length === 0
+                ? "No closed shows for this wholesaler."
+                : "No closed shows in the selected date range."}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className={workspaceTheadSticky}>
+                  <tr>
+                    <th
+                      className={`${workspaceTableHeaderCellPadding} text-left`}
+                    >
+                      Show
+                    </th>
+                    <th
+                      className={`${workspaceTableHeaderCellPadding} text-left`}
+                    >
+                      Date
+                    </th>
+                    <th
+                      className={`${workspaceTableHeaderCellPadding} text-right`}
+                    >
+                      Owed
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {filteredShows.map((row) => {
+                    const owed = parseAmount(row.owed_total);
+                    return (
+                      <tr
+                        key={row.show_id}
+                        className={workspaceTableRowInteractive}
+                      >
+                        <td
+                          className={`whitespace-nowrap text-sm ${workspaceTableBodyCellPadding}`}
+                        >
+                          <Link
+                            href={`/admin/shows/${row.show_id}`}
+                            className={workspaceRowTitleLink}
+                          >
+                            {row.show_name}
+                          </Link>
+                        </td>
+                        <td
+                          className={`whitespace-nowrap text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
+                        >
+                          {formatDate(row.show_date)}
+                        </td>
+                        <td
+                          className={`whitespace-nowrap text-right text-sm ${workspaceTableBodyCellPadding} ${workspaceMoneyTabular} ${workspaceMoneyClassForLiability(owed)}`}
+                        >
+                          {formatCurrency(owed)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <div>
+          <Link href="/admin/balances" className={workspaceActionSecondaryMd}>
+            Back to balances
+          </Link>
+        </div>
+      </AdminPageContainer>
+    </>
   );
 }

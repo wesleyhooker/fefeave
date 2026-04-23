@@ -11,6 +11,7 @@ import {
   workspaceThisWeekHeaderPadding,
   workspaceThisWeekSectionRoot,
 } from '@/app/(admin)/admin/_lib/workspaceThisWeekSurface';
+import { workspaceTableRowInteractive } from '@/app/(admin)/admin/_components/workspaceUi';
 
 export const dashboardPadX = 'px-4';
 
@@ -58,8 +59,7 @@ export const dashboardRowList =
  * Full-width row link — stable hover (no vertical nudge); chevron handles direction.
  * Inset accent: restrained rose (brand) without overriding money semantics in cells.
  */
-export const dashboardClickableRowInner =
-  'group relative flex w-full min-h-11 min-w-0 items-center gap-3 text-left text-inherit no-underline outline-none transition-[background-color,box-shadow] duration-200 ease-out hover:bg-stone-100/90 hover:shadow-[0_4px_14px_-4px_rgba(120,113,108,0.09),inset_3px_0_0_0_rgba(192,38,77,0.12)] active:bg-stone-100/95 ring-inset focus-visible:ring-2 focus-visible:ring-rose-300/45';
+export const dashboardClickableRowInner = `group relative flex w-full min-h-11 min-w-0 items-center gap-3 text-left text-inherit no-underline outline-none cursor-pointer [&_*]:cursor-inherit ${workspaceTableRowInteractive} hover:bg-stone-100/90 hover:shadow-[0_4px_14px_-4px_rgba(120,113,108,0.09),inset_3px_0_0_0_rgba(192,38,77,0.12)] active:bg-stone-100/95 ring-inset focus-visible:ring-2 focus-visible:ring-rose-300/45`;
 
 export const dashboardRowPad = `${dashboardPadX} py-3 sm:py-3.5`;
 

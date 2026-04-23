@@ -15,7 +15,16 @@ import {
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
+  workspaceTableBodyCellPadding,
+  workspaceTableHeaderCellPadding,
+} from "@/app/(admin)/admin/_components/WorkspaceTableRow";
+import {
   workspaceActionCompleteMd,
+  workspaceCard,
+  workspaceDateInput,
+  workspaceFormLabel,
+  workspaceFormLabelSecondary,
+  workspaceTextInput,
   workspaceTheadSticky,
   workspaceTableRowInteractive,
 } from "@/app/(admin)/admin/_components/workspaceUi";
@@ -109,33 +118,33 @@ export default function AdminInventoryPage() {
         />
       </AdminPageIntroSection>
       <AdminPageContainer>
-        <section className="mb-8 rounded-lg border border-gray-200 bg-white p-4 shadow-workspace-surface">
+        <section className={`mb-8 p-4 ${workspaceCard}`}>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
             Add purchase
           </h2>
           <form onSubmit={handleSubmit} className="flex flex-wrap gap-4">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-gray-700">Date</span>
+              <span className={workspaceFormLabel}>Date</span>
               <input
                 type="date"
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
-                className="rounded border border-gray-200 px-3 py-2 text-gray-900"
+                className={workspaceDateInput}
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-gray-700">Amount ($)</span>
+              <span className={workspaceFormLabel}>Amount ($)</span>
               <input
                 type="number"
                 step="0.01"
                 min="0.01"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-28 rounded border border-gray-200 px-3 py-2 text-gray-900"
+                className={`w-28 ${workspaceTextInput}`}
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-gray-700">
+              <span className={workspaceFormLabelSecondary}>
                 Notes (optional)
               </span>
               <input
@@ -143,7 +152,7 @@ export default function AdminInventoryPage() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g. Pallet #3"
-                className="min-w-[12rem] rounded border border-gray-200 px-3 py-2 text-gray-900"
+                className={`min-w-[12rem] ${workspaceTextInput}`}
               />
             </label>
             <div className="flex items-end">
@@ -163,7 +172,7 @@ export default function AdminInventoryPage() {
           ) : null}
         </section>
 
-        <section className="rounded-lg border border-gray-200 bg-white shadow-workspace-surface">
+        <section className={workspaceCard}>
           <div className="border-b border-gray-100 px-4 py-3">
             <h2 className="text-lg font-semibold text-gray-900">
               Recent purchases (last 30 days)
@@ -187,13 +196,19 @@ export default function AdminInventoryPage() {
               <table className="min-w-full divide-y divide-gray-100">
                 <thead className={workspaceTheadSticky}>
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    <th
+                      className={`${workspaceTableHeaderCellPadding} text-left`}
+                    >
                       Date
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                    <th
+                      className={`${workspaceTableHeaderCellPadding} text-right`}
+                    >
                       Amount
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    <th
+                      className={`${workspaceTableHeaderCellPadding} text-left`}
+                    >
                       Notes
                     </th>
                   </tr>
@@ -201,13 +216,19 @@ export default function AdminInventoryPage() {
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {purchases.map((row) => (
                     <tr key={row.id} className={workspaceTableRowInteractive}>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+                      <td
+                        className={`whitespace-nowrap text-sm text-gray-900 ${workspaceTableBodyCellPadding}`}
+                      >
                         {formatDate(row.purchase_date)}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-900">
+                      <td
+                        className={`whitespace-nowrap text-right text-sm text-gray-900 ${workspaceTableBodyCellPadding}`}
+                      >
                         {formatCurrency(parseAmount(row.amount))}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
+                      <td
+                        className={`text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
+                      >
                         {row.notes ?? "—"}
                       </td>
                     </tr>

@@ -7,11 +7,10 @@ import { formatCurrency } from "@/lib/format";
 import type { ShowDTO } from "@/src/lib/api/shows";
 import type { SelfPayStored } from "../selfPayStorage";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
-import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
   workspaceListPrimaryMoneyAmountClass,
+  workspaceActionSecondaryMd,
   workspaceActionIconSm,
-  workspaceActionPositiveCompleteSm,
   workspaceMoneyMuted,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
@@ -21,7 +20,7 @@ import {
   WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL,
   WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION,
   WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE,
-  WORKFLOW_SELF_PAY_MARKED_PAID_LABEL,
+  WORKFLOW_SELF_PAY_MARK_PAID_TOGGLE_LABEL,
   WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL,
   WORKFLOW_SELF_PAY_REOPEN_DIALOG_DESCRIPTION,
   WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE,
@@ -182,48 +181,55 @@ export function DashboardThisWeekCard({
                 <div className="px-7 pb-7 pt-9 sm:px-8 sm:pb-8 sm:pt-10">
                   <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-x-3">
                     <p
-                      className={`min-w-0 text-3xl leading-none tracking-tight sm:text-[2.35rem] ${workspaceListPrimaryMoneyAmountClass(weekProfitDisplay)}`}
+                      className={`min-w-0 text-[2.35rem] leading-none tracking-tight sm:text-[2.8rem] ${workspaceListPrimaryMoneyAmountClass(weekProfitDisplay)}`}
                     >
                       {formatCurrency(weekProfitDisplay)}
                     </p>
-                    <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+                    <div className="w-full shrink-0 sm:w-auto">
                       {summaryPaidComplete ? (
-                        <>
-                          <span className="inline-flex items-center justify-center gap-2 self-stretch rounded-lg border border-emerald-400/45 bg-emerald-100/85 px-3 py-2 text-center text-xs font-semibold text-emerald-900 shadow-[inset_0_0_0_1px_rgba(5,95,72,0.08)] sm:self-end sm:py-1.5">
+                        <div className="flex w-full flex-col items-stretch gap-1.5 rounded-lg border border-emerald-200/75 bg-emerald-50/45 px-3 py-2 sm:min-w-[11.5rem] sm:w-auto sm:items-end">
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-stone-500">
+                            Status
+                          </span>
+                          <span className="inline-flex items-center justify-center gap-1.5 text-center text-xs font-medium text-emerald-800 sm:justify-end">
                             <CheckCircleIcon
                               className={`${workspaceActionIconSm} shrink-0 text-emerald-800`}
                             />
-                            <span>{WORKFLOW_SELF_PAY_MARKED_PAID_LABEL}</span>
+                            <span>Paid</span>
                           </span>
                           {paidAtLabel ? (
-                            <p className="text-center text-[11px] font-medium tabular-nums text-emerald-800/75 sm:text-right">
+                            <p className="text-center text-[11px] font-medium tabular-nums text-emerald-800/80 sm:text-right">
                               Confirmed {paidAtLabel}
                             </p>
                           ) : null}
                           <button
                             type="button"
                             onClick={() => setMarkUnpaidOpen(true)}
-                            className="text-center text-xs font-medium text-stone-500/90 underline decoration-stone-300/70 underline-offset-2 transition-colors hover:text-stone-700 sm:text-right"
+                            className={`${workspaceActionSecondaryMd} w-full justify-center !py-1.5 sm:w-auto`}
                           >
                             Mark as unpaid
                           </button>
-                        </>
+                        </div>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => setMarkPaidOpen(true)}
-                          className={`${workspaceActionPositiveCompleteSm} sm:px-3.5 sm:py-2`}
-                        >
-                          <WorkspaceActionLabel
-                            icon={
-                              <CheckCircleIcon
-                                className={workspaceActionIconSm}
-                              />
-                            }
+                        <div className="flex w-full flex-col items-stretch gap-1.5 rounded-lg border border-stone-200/85 bg-stone-50/50 px-3 py-2 sm:min-w-[11.5rem] sm:w-auto sm:items-end">
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-stone-500">
+                            Status
+                          </span>
+                          <span className="inline-flex items-center justify-center gap-1 text-xs font-medium text-stone-700 sm:justify-end">
+                            <CheckCircleIcon
+                              className={`${workspaceActionIconSm} shrink-0 text-stone-500`}
+                              aria-hidden
+                            />
+                            Unpaid
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setMarkPaidOpen(true)}
+                            className={`${workspaceActionSecondaryMd} w-full justify-center !py-1.5 sm:w-auto`}
                           >
-                            {WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL}
-                          </WorkspaceActionLabel>
-                        </button>
+                            {WORKFLOW_SELF_PAY_MARK_PAID_TOGGLE_LABEL}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>

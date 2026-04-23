@@ -1,5 +1,6 @@
 import { formatCurrency } from "@/lib/format";
 import { roundToCents } from "@/lib/showProfit";
+import { workspaceTableRowInteractive } from "@/app/(admin)/admin/_components/workspaceUi";
 
 export type ShowsClosedAnalytics = {
   closedCount: number;
@@ -37,7 +38,9 @@ export function ShowsAllTimeClosedSummary({
 
   return (
     <details className="group rounded-lg border border-gray-200 bg-[#F9FAFB] shadow-workspace-surface">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-100/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
+      <summary
+        className={`flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-gray-800 [&_*]:cursor-inherit ${workspaceTableRowInteractive} hover:bg-gray-100/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-inset [&::-webkit-details-marker]:hidden`}
+      >
         <span>All-time · closed shows</span>
         <SummaryChevron className="h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 group-open:rotate-180" />
       </summary>

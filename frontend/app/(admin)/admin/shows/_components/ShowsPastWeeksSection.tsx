@@ -1,6 +1,9 @@
 import { formatWeekRangeCompact } from "@/lib/weekRange";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
-import { workspaceMutedStrip } from "@/app/(admin)/admin/_components/workspaceUi";
+import {
+  workspaceMutedStrip,
+  workspaceTableRowInteractive,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 import type { PastWeekBlock } from "../weekStructure";
 import { ShowMobileCard } from "./ShowMobileCard";
 import { WeekDesktopTable } from "./WeekDesktopTable";
@@ -52,7 +55,7 @@ export function ShowsPastWeeksSection({
               <li key={block.startStr}>
                 <details className="group overflow-hidden rounded-xl border border-gray-200/95 bg-white shadow-sm transition-[box-shadow,ring] duration-200 ease-out motion-reduce:transition-none open:shadow-md open:ring-1 open:ring-gray-300/45">
                   <summary
-                    className="flex cursor-pointer list-none items-center gap-3 border-l-[3px] border-l-gray-500/45 bg-gray-50/90 px-4 py-3.5 outline-none transition-[background-color,border-color] duration-200 ease-out motion-reduce:transition-none hover:bg-gray-100/95 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 group-open:border-b group-open:border-gray-200/90 group-open:bg-white [&::-webkit-details-marker]:hidden"
+                    className={`flex cursor-pointer list-none items-center gap-3 border-l-[3px] border-l-gray-500/45 bg-gray-50/90 px-4 py-3.5 outline-none [&_*]:cursor-inherit ${workspaceTableRowInteractive} hover:bg-gray-100/95 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 group-open:border-b group-open:border-gray-200/90 group-open:bg-white [&::-webkit-details-marker]:hidden`}
                     title={block.bounds.labelLong}
                   >
                     <div className="min-w-0 flex-1">

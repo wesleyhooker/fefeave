@@ -60,13 +60,13 @@ export function WorkspaceDrawer({
       <button
         type="button"
         aria-label="Close panel"
-        className={`pointer-events-auto absolute inset-0 bg-stone-900/25 transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+        className={`pointer-events-auto absolute inset-0 bg-stone-900/25 transition-opacity duration-[220ms] ease-out motion-reduce:transition-none ${
           entered ? "opacity-100" : "opacity-0"
         }`}
         onClick={onClose}
       />
       <div
-        className={`pointer-events-auto relative z-10 flex h-full w-[min(26rem,calc(100vw-1rem))] max-w-[26rem] flex-col transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
+        className={`pointer-events-auto relative z-10 flex h-full w-[min(26rem,calc(100vw-1rem))] max-w-[26rem] flex-col transition-[transform,opacity] duration-[220ms] ease-out motion-reduce:transition-none motion-reduce:transform-none ${
           entered ? "translate-x-0" : "translate-x-full"
         }`}
       >

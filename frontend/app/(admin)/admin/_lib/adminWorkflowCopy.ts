@@ -21,6 +21,7 @@ export const WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE =
 export const WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION =
   "You're confirming you've paid yourself for this week.";
 export const WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL = 'Mark as paid';
+export const WORKFLOW_SELF_PAY_MARK_PAID_TOGGLE_LABEL = 'Mark paid';
 
 export const WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE = 'Reopen this week payout?';
 export const WORKFLOW_SELF_PAY_REOPEN_DIALOG_DESCRIPTION =

@@ -19,7 +19,7 @@ export function DashboardClickableRow({
       <Link
         href={href}
         aria-label={ariaLabel}
-        className={`${dashboardClickableRowInner} ${dashboardRowPad}`}
+        className={`${dashboardClickableRowInner} ${dashboardRowPad} [&_*]:cursor-inherit`}
       >
         {children}
       </Link>

@@ -40,7 +40,7 @@ export function ShowMobileCard({
   return (
     <Link
       href={href}
-      className={`group/card block rounded-lg border border-gray-200 bg-white p-3.5 shadow-workspace-surface transition-[border-color,box-shadow] duration-200 ease-out hover:border-gray-300 hover:shadow-md sm:p-4 ${
+      className={`group/card block rounded-lg border border-gray-200 bg-white p-3.5 shadow-workspace-surface transition-[border-color,box-shadow] duration-200 ease-out hover:border-gray-300 hover:shadow-md [&_*]:cursor-inherit sm:p-4 ${
         today ? "ring-1 ring-sky-300 hover:ring-sky-400/80" : ""
       }`}
       aria-label={cardAriaLabel(show)}

@@ -40,15 +40,6 @@ export function ShowsThisWeekSection({
     return sum;
   }, [currentShows, summaries]);
 
-  const hasCompletedProfitDataThisWeek = useMemo(
-    () =>
-      currentShows.some((s) => {
-        if ((s.status ?? "").toUpperCase() !== "COMPLETED") return false;
-        return summaries[s.id] != null;
-      }),
-    [currentShows, summaries],
-  );
-
   return (
     <section
       className={workspaceThisWeekSectionRoot}
@@ -57,12 +48,20 @@ export function ShowsThisWeekSection({
       <div
         className={`${workspaceThisWeekHeaderPadding} ${workspaceThisWeekHeaderBand}`}
       >
-        <div className="min-w-0">
-          <h2 id="shows-this-week-heading" className={workspaceThisWeekTitle}>
-            {WORKFLOW_THIS_WEEK_HEADING}
-          </h2>
-          <p className={workspaceThisWeekSubtitle}>{currentWeek.labelLong}</p>
-          <WeekStripStats shows={currentShows} summaries={summaries} />
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <h2 id="shows-this-week-heading" className={workspaceThisWeekTitle}>
+              {WORKFLOW_THIS_WEEK_HEADING}
+            </h2>
+            <p className={workspaceThisWeekSubtitle}>{currentWeek.labelLong}</p>
+            <WeekStripStats shows={currentShows} summaries={summaries} />
+          </div>
+          <div className="w-full sm:w-auto sm:shrink-0">
+            <ShowsThisWeekWorkflowStrip
+              weekStartStr={currentWeek.startStr}
+              completedWeekProfitForSnapshot={completedWeekProfitForSnapshot}
+            />
+          </div>
         </div>
       </div>
       <div className={workspaceThisWeekListZone}>
@@ -92,11 +91,6 @@ export function ShowsThisWeekSection({
           />
         </div>
       </div>
-      <ShowsThisWeekWorkflowStrip
-        weekStartStr={currentWeek.startStr}
-        completedWeekProfitForSnapshot={completedWeekProfitForSnapshot}
-        showWeekProfitFigure={hasCompletedProfitDataThisWeek}
-      />
     </section>
   );
 }

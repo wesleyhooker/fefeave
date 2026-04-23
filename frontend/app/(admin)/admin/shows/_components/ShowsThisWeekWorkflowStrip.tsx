@@ -5,13 +5,11 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
-import { formatCurrency } from "@/lib/format";
 import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import {
   workspaceActionIconSm,
-  workspaceActionPositiveOutlineSm,
-  workspaceActionSecondarySm,
+  workspaceActionSecondaryMd,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import {
   clearSelfPay,
@@ -19,7 +17,6 @@ import {
   saveSelfPay,
   type SelfPayStored,
 } from "@/app/(admin)/admin/dashboard/selfPayStorage";
-import { workspaceThisWeekWorkflowFooter } from "@/app/(admin)/admin/_lib/workspaceThisWeekSurface";
 import {
   WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL,
   WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION,
@@ -33,13 +30,10 @@ import {
 export function ShowsThisWeekWorkflowStrip({
   weekStartStr,
   completedWeekProfitForSnapshot,
-  showWeekProfitFigure,
 }: {
   weekStartStr: string;
   /** Sum of estimated profit for COMPLETED shows this week (same basis as Dashboard self-pay snapshot). */
   completedWeekProfitForSnapshot: number;
-  /** When false, omit the week profit figure (no completed shows — no placeholder). */
-  showWeekProfitFigure: boolean;
 }) {
   const [selfPay, setSelfPay] = useState<SelfPayStored | null>(null);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
@@ -60,7 +54,6 @@ export function ShowsThisWeekWorkflowStrip({
   }, [weekStartStr]);
 
   const paid = selfPay?.paid === true;
-
   const handleMarkDone = () => {
     const next: SelfPayStored = {
       paid: true,
@@ -90,64 +83,50 @@ export function ShowsThisWeekWorkflowStrip({
 
   return (
     <>
-      <div
-        className={`px-4 py-4 sm:px-5 sm:py-4 ${workspaceThisWeekWorkflowFooter}`}
-      >
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-          {showWeekProfitFigure ? (
-            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 sm:gap-x-2.5">
-              <span className="text-xl font-semibold tabular-nums tracking-tight text-gray-900">
-                {formatCurrency(completedWeekProfitForSnapshot)}
-              </span>
-            </div>
+      <div className="w-full rounded-lg border border-stone-200/90 bg-white/85 px-3 py-2.5 sm:min-w-[13.5rem] sm:w-auto sm:px-3.5 sm:py-3">
+        <div className="flex flex-col items-stretch gap-1.5 sm:items-end">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-stone-500">
+            Status
+          </span>
+          <span
+            className={`inline-flex items-center gap-1.5 text-xs font-medium ${paid ? "text-emerald-800" : "text-stone-700"}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${paid ? "bg-emerald-600/80" : "bg-stone-400/90"}`}
+              aria-hidden
+            />
+            {paid ? WORKFLOW_SELF_PAY_MARKED_PAID_LABEL : "Unpaid"}
+          </span>
+          {paidAtLabel && paid ? (
+            <p className="text-[11px] font-medium tabular-nums text-emerald-800/75 sm:text-right">
+              Confirmed {paidAtLabel}
+            </p>
           ) : null}
 
           {paid ? (
-            <div
-              className={`flex min-w-0 shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3 ${showWeekProfitFigure ? "ml-auto" : "ml-auto w-full sm:w-auto"}`}
+            <button
+              type="button"
+              onClick={() => setMarkUnpaidOpen(true)}
+              className={`${workspaceActionSecondaryMd} w-full justify-center !py-1.5 sm:w-auto`}
             >
-              <p className="m-0 flex flex-col items-end gap-0.5 text-right sm:flex-row sm:items-center sm:gap-2">
-                <span className="inline-flex max-w-full items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-emerald-800">
-                  <CheckCircleIcon
-                    className={`${workspaceActionIconSm} shrink-0 text-emerald-700/90`}
-                    aria-hidden
-                  />
-                  <span>{WORKFLOW_SELF_PAY_MARKED_PAID_LABEL}</span>
-                </span>
-                {paidAtLabel ? (
-                  <span className="text-[11px] font-medium tabular-nums text-emerald-800/75">
-                    Confirmed {paidAtLabel}
-                  </span>
-                ) : null}
-              </p>
-              <button
-                type="button"
-                onClick={() => setMarkUnpaidOpen(true)}
-                className={`${workspaceActionSecondarySm} shrink-0 !gap-1 !px-2 !py-0.5`}
+              <WorkspaceActionLabel
+                icon={<ArrowUturnLeftIcon className={workspaceActionIconSm} />}
               >
-                <WorkspaceActionLabel
-                  icon={
-                    <ArrowUturnLeftIcon className={workspaceActionIconSm} />
-                  }
-                >
-                  Mark as unpaid
-                </WorkspaceActionLabel>
-              </button>
-            </div>
+                Mark as unpaid
+              </WorkspaceActionLabel>
+            </button>
           ) : (
-            <div className="ml-auto flex shrink-0">
-              <button
-                type="button"
-                onClick={() => setMarkPaidOpen(true)}
-                className={workspaceActionPositiveOutlineSm}
+            <button
+              type="button"
+              onClick={() => setMarkPaidOpen(true)}
+              className={`${workspaceActionSecondaryMd} w-full justify-center !py-1.5 sm:w-auto`}
+            >
+              <WorkspaceActionLabel
+                icon={<CheckCircleIcon className={workspaceActionIconSm} />}
               >
-                <WorkspaceActionLabel
-                  icon={<CheckCircleIcon className={workspaceActionIconSm} />}
-                >
-                  {WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL}
-                </WorkspaceActionLabel>
-              </button>
-            </div>
+                Mark week paid
+              </WorkspaceActionLabel>
+            </button>
           )}
         </div>
       </div>

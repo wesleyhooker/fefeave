@@ -96,7 +96,7 @@ export function PaymentsListView() {
       <AdminPageIntroSection>
         <AdminPageIntro
           title="Payments"
-          subtitle="Payment history"
+          subtitle="Recorded wholesaler payments."
           action={
             <Link
               href="/admin/payments/new"

@@ -107,6 +107,15 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
     });
   }, [filtered, sortKey, sortDir]);
 
+  const maxPositiveBalance = useMemo(() => {
+    let max = 0;
+    for (const row of sorted) {
+      const value = parseNum(row.balance_owed);
+      if (value > max) max = value;
+    }
+    return max;
+  }, [sorted]);
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -238,17 +247,32 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
               const status = getWorkspacePaymentStatus(balance, paid);
               const totalOwed = parseNum(r.owed_total);
               const totalPaid = parseNum(r.paid_total);
+              const hasBalance = balance > 0;
+              const highBalance =
+                hasBalance &&
+                maxPositiveBalance > 0 &&
+                balance >= maxPositiveBalance * 0.6;
               const href = wholesalerDetailHref(r.wholesaler_id);
               return (
                 <Link
                   key={r.wholesaler_id}
                   href={href}
-                  className="group/card block rounded-lg border border-gray-200 bg-white p-4 shadow-workspace-surface-sm transition-[border-color,box-shadow] duration-200 ease-out hover:border-gray-300 hover:shadow-md"
+                  className={`group/card block rounded-lg border p-4 shadow-workspace-surface-sm transition-[border-color,box-shadow] duration-200 ease-out [&_*]:cursor-inherit ${
+                    hasBalance
+                      ? "border-gray-200 bg-white hover:border-gray-300 hover:shadow-md"
+                      : "border-gray-200/80 bg-gray-50/45 hover:border-gray-300/80 hover:shadow-sm"
+                  }`}
                   aria-label={rowNavigateLabel(r.name)}
                 >
                   <WorkspaceListPaymentStatus status={status} />
 
-                  <p className="mt-2 text-sm font-semibold leading-snug text-gray-900 transition-colors group-hover/card:text-gray-800">
+                  <p
+                    className={`mt-2 text-sm font-semibold leading-snug transition-colors ${
+                      hasBalance
+                        ? "text-gray-900 group-hover/card:text-gray-800"
+                        : "text-gray-600 group-hover/card:text-gray-700"
+                    }`}
+                  >
                     {r.name}
                   </p>
 
@@ -257,7 +281,13 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                       Balance owed
                     </p>
                     <p
-                      className={`mt-0.5 text-xl font-semibold tabular-nums leading-tight sm:text-2xl ${workspaceMoneyClassForLiability(balance)}`}
+                      className={`mt-0.5 text-xl tabular-nums leading-tight sm:text-2xl ${
+                        hasBalance
+                          ? highBalance
+                            ? "font-bold"
+                            : "font-semibold"
+                          : "font-medium text-gray-500"
+                      } ${workspaceMoneyClassForLiability(balance)}`}
                     >
                       {formatCurrency(balance)}
                     </p>
@@ -402,12 +432,22 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                 const balance = parseNum(r.balance_owed);
                 const paid = parseNum(r.paid_total);
                 const status = getWorkspacePaymentStatus(balance, paid);
+                const hasBalance = balance > 0;
+                const highBalance =
+                  hasBalance &&
+                  maxPositiveBalance > 0 &&
+                  balance >= maxPositiveBalance * 0.6;
                 const href = wholesalerDetailHref(r.wholesaler_id);
                 return (
                   <WorkspaceTableNavRow
                     key={r.wholesaler_id}
                     href={href}
                     ariaLabel={rowNavigateLabel(r.name)}
+                    className={
+                      hasBalance
+                        ? ""
+                        : "bg-gray-50/55 text-gray-500 hover:bg-gray-100/80"
+                    }
                   >
                     <td
                       className={`w-[5rem] whitespace-nowrap align-middle sm:w-[5.5rem] ${workspaceTableBodyCellPaddingComfortable}`}
@@ -417,12 +457,24 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                     <td
                       className={`min-w-0 max-w-[min(100%,28rem)] align-top ${workspaceTableBodyCellPaddingComfortable}`}
                     >
-                      <span className="text-sm font-semibold text-gray-900 group-hover/workspace-row:text-gray-950">
+                      <span
+                        className={`text-sm font-semibold ${
+                          hasBalance
+                            ? "text-gray-900 group-hover/workspace-row:text-gray-950"
+                            : "text-gray-600 group-hover/workspace-row:text-gray-700"
+                        }`}
+                      >
                         {r.name}
                       </span>
                     </td>
                     <td
-                      className={`whitespace-nowrap text-right align-top text-lg font-semibold tabular-nums sm:text-xl ${workspaceTableBodyCellPaddingComfortable} ${workspaceMoneyClassForLiability(balance)}`}
+                      className={`whitespace-nowrap text-right align-top text-lg tabular-nums sm:text-xl ${
+                        hasBalance
+                          ? highBalance
+                            ? "font-bold"
+                            : "font-semibold"
+                          : "font-medium text-gray-500"
+                      } ${workspaceTableBodyCellPaddingComfortable} ${workspaceMoneyClassForLiability(balance)}`}
                     >
                       {formatCurrency(balance)}
                     </td>

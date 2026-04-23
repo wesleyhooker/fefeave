@@ -71,7 +71,7 @@ export function WorkspaceConfirmDialog({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className={`workspace-confirm-dialog w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-stone-200/90 bg-white p-0 text-stone-900 shadow-[0_18px_50px_-24px_rgba(28,25,23,0.35)] transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none motion-reduce:transform-none open:backdrop:bg-stone-900/25 open:backdrop:transition-colors open:backdrop:duration-150 ${
+      className={`workspace-confirm-dialog w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-stone-200/90 bg-white p-0 text-stone-900 shadow-[0_18px_50px_-24px_rgba(28,25,23,0.35)] transition-[opacity,transform] duration-[220ms] ease-out motion-reduce:transition-none motion-reduce:transform-none open:backdrop:bg-stone-900/25 open:backdrop:transition-colors open:backdrop:duration-[220ms] open:backdrop:ease-out ${
         entered
           ? "opacity-100 translate-y-0 scale-100"
           : "opacity-0 translate-y-1 scale-[0.99]"

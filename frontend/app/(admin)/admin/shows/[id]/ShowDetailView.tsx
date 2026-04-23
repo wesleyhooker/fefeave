@@ -37,6 +37,7 @@ import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/Workspac
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
   workspaceActionCompleteSm,
+  workspaceActionInlineText,
   workspaceActionIconMd,
   workspaceActionIconSm,
   workspaceActionPositiveCompleteMd,
@@ -46,6 +47,7 @@ import {
   workspaceMoneyNegative,
   workspaceMoneyPositive,
   workspaceMoneyTabular,
+  workspaceMutedStrip,
   workspacePageContentWidthWide,
   workspaceSectionTitle,
   workspaceSectionToolbar,
@@ -1035,20 +1037,37 @@ export function ShowDetailView({ id }: { id: string }) {
                                     className={`${workspaceTableBodyCellPadding} py-6 text-left text-sm text-gray-600`}
                                   >
                                     {isClosed ? (
-                                      "No settlements recorded."
+                                      <div
+                                        className={`rounded-md border border-gray-200/80 px-3 py-2.5 text-sm ${workspaceMutedStrip}`}
+                                      >
+                                        No settlements recorded.
+                                      </div>
                                     ) : (
-                                      <span className="inline-flex items-center gap-1.5">
-                                        <span>No settlements yet -</span>
+                                      <div
+                                        className={`flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200/80 px-3 py-2.5 ${workspaceMutedStrip}`}
+                                      >
+                                        <div className="space-y-0.5">
+                                          <p className="text-sm font-medium text-gray-700">
+                                            No settlements yet
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            Add the first settlement to allocate
+                                            payout before close-out.
+                                          </p>
+                                        </div>
                                         <button
                                           type="button"
                                           onClick={() =>
                                             focusSettlementComposer()
                                           }
-                                          className="text-sm font-medium text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900"
+                                          className={`${workspaceActionInlineText} inline-flex items-center gap-1.5 whitespace-nowrap`}
                                         >
+                                          <PlusIcon
+                                            className={workspaceActionIconSm}
+                                          />
                                           Add settlement
                                         </button>
-                                      </span>
+                                      </div>
                                     )}
                                   </td>
                                 </tr>
