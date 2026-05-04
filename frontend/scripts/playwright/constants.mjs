@@ -1,15 +1,28 @@
 /**
- * Shared paths and defaults for local Playwright screenshot tooling (dev-only).
- * CWD is expected to be the frontend package root when scripts run via npm.
+ * Shared paths for Playwright dev tooling.
+ * Paths are anchored to the frontend package root (this file lives in frontend/scripts/playwright/).
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const THIS_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+/** Always `<repo>/frontend/` — not derived from process.cwd(). */
+export const FRONTEND_PACKAGE_ROOT = path.resolve(THIS_DIR, '..', '..');
+
+export const PLAYWRIGHT_DEV_DIR = path.join(
+  FRONTEND_PACKAGE_ROOT,
+  '.playwright-dev',
+);
+export const AUTH_STATE_PATH = path.join(PLAYWRIGHT_DEV_DIR, 'auth.json');
+export const SCREENSHOTS_DIR = path.join(PLAYWRIGHT_DEV_DIR, 'screenshots');
 
 /**
- * Load frontend/.env.local into process.env when keys are unset (no extra deps).
+ * Load `frontend/.env.local` into process.env when keys are unset (no extra deps).
  */
 export function loadOptionalEnvLocal() {
-  const p = path.join(process.cwd(), '.env.local');
+  const p = path.join(FRONTEND_PACKAGE_ROOT, '.env.local');
   if (!fs.existsSync(p)) return;
   const raw = fs.readFileSync(p, 'utf8');
   for (const line of raw.split('\n')) {
@@ -32,10 +45,6 @@ export function loadOptionalEnvLocal() {
     if (process.env[key] === undefined) process.env[key] = val;
   }
 }
-
-export const PLAYWRIGHT_DEV_DIR = path.join(process.cwd(), '.playwright-dev');
-export const AUTH_STATE_PATH = path.join(PLAYWRIGHT_DEV_DIR, 'auth.json');
-export const SCREENSHOTS_DIR = path.join(PLAYWRIGHT_DEV_DIR, 'screenshots');
 
 /** @returns {string} */
 export function getBaseUrl() {

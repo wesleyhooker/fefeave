@@ -59,7 +59,7 @@ try {
 
   console.log(`\nSaved auth state to ${AUTH_STATE_PATH}`);
   console.log(
-    'Next: npm run playwright:screenshot -- --storage /admin/<your-route>\n',
+    'Next: npm run playwright:screenshot -- --storage /admin/<route> [more route / output pairs…]\n',
   );
 } catch (err) {
   console.error(err);

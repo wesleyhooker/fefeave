@@ -14,17 +14,20 @@ export function WorkspaceSegmentedControl<T extends string>({
   onChange,
   options,
   ariaLabel,
+  "aria-describedby": ariaDescribedBy,
 }: {
   value: T;
   onChange: (next: T) => void;
   options: readonly { value: T; label: string }[];
   ariaLabel?: string;
+  "aria-describedby"?: string;
 }) {
   return (
     <div
       className={workspaceSegmentedTrack}
       role="group"
       aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
     >
       {options.map((opt) => {
         const active = value === opt.value;

@@ -16,6 +16,11 @@ import {
   useState,
 } from "react";
 import {
+  WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING,
+  WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY,
+  WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
@@ -31,21 +36,24 @@ import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/Workspace
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
-  workspaceActionCompleteMd,
   workspaceActionCompleteSm,
+  workspaceActionInlineText,
   workspaceActionIconMd,
   workspaceActionIconSm,
   workspaceActionPositiveCompleteMd,
   workspaceActionSecondaryMd,
-  workspaceCard,
   workspaceLabelEyebrow,
   workspaceMoneyClassForSigned,
   workspaceMoneyNegative,
   workspaceMoneyPositive,
   workspaceMoneyTabular,
+  workspaceMutedStrip,
   workspacePageContentWidthWide,
   workspaceSectionTitle,
   workspaceSectionToolbar,
+  workspaceShowDetailOperatingShell,
+  workspaceShowDetailOutcomeShell,
+  workspaceActionCompleteMd,
   workspaceTextInput,
   workspaceTextInputCompact,
   workspaceTheadSticky,
@@ -63,7 +71,7 @@ import {
   settlementMethodHint,
   settlementMethodPrimaryLabel,
 } from "@/app/(admin)/admin/_lib/settlementUi";
-import { workspacePagePrimarySecondaryGrid } from "@/app/(admin)/admin/_lib/workspacePageRegions";
+import { workspacePageShowDetailGrid } from "@/app/(admin)/admin/_lib/workspacePageRegions";
 import {
   getShowCloseOutBlock,
   type CloseOutScrollTarget,
@@ -325,7 +333,7 @@ export function ShowDetailView({ id }: { id: string }) {
   const [expandedSettlementIds, setExpandedSettlementIds] = useState<
     Record<string, boolean>
   >({});
-  /** Brief highlight on Show breakdown when Close is blocked (scroll target). */
+  /** Brief highlight on payout/settlements block when Close is blocked (scroll target). */
   const [breakdownFlash, setBreakdownFlash] = useState<
     "payout" | "settlements" | null
   >(null);
@@ -871,98 +879,84 @@ export function ShowDetailView({ id }: { id: string }) {
 
       <AdminPageContainer contentWidthClassName={workspacePageContentWidthWide}>
         <div className="flex min-w-0 flex-col gap-5 md:gap-6">
-          <div className={workspacePagePrimarySecondaryGrid}>
-            {/* Main column: unified money breakdown */}
+          <div className={workspacePageShowDetailGrid}>
+            {/* Main column: unified show finances (payout + settlements) */}
             <div className="min-w-0">
               <section
                 ref={breakdownSectionRef}
                 className="min-w-0 scroll-mt-4"
-                aria-labelledby="show-breakdown-heading"
+                aria-labelledby="show-finances-heading"
               >
                 <div
-                  className={`min-w-0 overflow-hidden ${workspaceCard} ${
+                  className={`min-w-0 overflow-hidden ${workspaceShowDetailOperatingShell} ${
                     isClosed ? "bg-gray-50/50" : ""
                   }`}
                 >
-                  <div className="border-b border-gray-100/90 px-4 py-2.5 sm:px-5">
-                    <h2
-                      id="show-breakdown-heading"
-                      className="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
-                    >
-                      Show breakdown
-                    </h2>
-                    {isClosed ? (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Locked — reopen the show below to edit payout or
-                        settlements.
+                  <h2 id="show-finances-heading" className="sr-only">
+                    Payout and settlements
+                  </h2>
+                  {isClosed ? (
+                    <div className="border-b border-stone-200/80 bg-stone-50/50 px-4 py-2 sm:px-5">
+                      <p className="text-xs text-gray-600">
+                        Locked — reopen below to edit payout or settlements.
                       </p>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
 
-                  <div className="px-4 pb-4 pt-3 sm:px-5">
-                    {/* Payout + settlements: one financial block, visually linked */}
-                    <div className="rounded-lg border border-gray-200/80 bg-gradient-to-b from-gray-50/60 to-gray-50/30 p-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5)] sm:p-3.5">
-                      <div className="space-y-1 border-b border-gray-200/70 pb-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                          Payout <span className="sr-only">after fees</span>
-                        </p>
-                        <div
-                          ref={payoutFigureRef}
-                          tabIndex={-1}
-                          className={`scroll-mt-20 -mx-0.5 rounded-md outline-none transition-[box-shadow] duration-300 ${
-                            breakdownFlash === "payout"
-                              ? "ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
-                              : ""
-                          } ${
-                            addSettlementOpen &&
-                            fieldHints.payoutFigure &&
-                            breakdownFlash !== "payout"
-                              ? "ring-2 ring-amber-300/90 ring-offset-2 ring-offset-white"
-                              : ""
-                          }`}
-                        >
-                          <EditablePayout
-                            payoutAfterFees={payoutAfterFees}
-                            saving={savingPayout}
-                            disabled={isClosed}
-                            onSave={handleSavePayout}
-                            displayVariant="moneyCard"
-                            embedded
-                          />
-                        </div>
-                        {savePayoutError ? (
-                          <p className="text-sm text-amber-700" role="alert">
-                            {savePayoutError}
+                  <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-stone-200/85 bg-gradient-to-b from-stone-50/50 via-white/90 to-stone-50/30 p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.65)] sm:p-4">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-500">
+                            Payout <span className="sr-only">after fees</span>
                           </p>
-                        ) : null}
+                          <div
+                            ref={payoutFigureRef}
+                            tabIndex={-1}
+                            className={`scroll-mt-20 -mx-0.5 rounded-md outline-none transition-[box-shadow] duration-300 ${
+                              breakdownFlash === "payout"
+                                ? "ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
+                                : ""
+                            } ${
+                              addSettlementOpen &&
+                              fieldHints.payoutFigure &&
+                              breakdownFlash !== "payout"
+                                ? "ring-2 ring-amber-300/90 ring-offset-2 ring-offset-white"
+                                : ""
+                            }`}
+                          >
+                            <EditablePayout
+                              payoutAfterFees={payoutAfterFees}
+                              saving={savingPayout}
+                              disabled={isClosed}
+                              onSave={handleSavePayout}
+                              displayVariant="moneyCard"
+                              embedded
+                            />
+                          </div>
+                          {savePayoutError ? (
+                            <p className="text-sm text-amber-700" role="alert">
+                              {savePayoutError}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
 
                       <div
                         ref={settlementsAnchorRef}
                         tabIndex={-1}
-                        className={`scroll-mt-20 pt-3 outline-none transition-[box-shadow] duration-300 ${
+                        className={`scroll-mt-20 rounded-lg border border-stone-200/75 bg-white/[0.98] p-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)] outline-none transition-[box-shadow] duration-300 sm:p-3.5 ${
                           breakdownFlash === "settlements"
-                            ? "rounded-md ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
+                            ? "ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
                             : ""
                         }`}
                       >
                         <h3
                           id="settlements-heading"
-                          className="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
+                          className={workspaceLabelEyebrow}
                         >
                           Settlements
                         </h3>
-                        <p className="mt-1 max-w-prose text-xs leading-snug text-gray-500">
-                          Each settlement is money owed to a vendor for this
-                          show — the same vendors and amounts roll up to{" "}
-                          <Link
-                            href="/admin/balances"
-                            className="font-medium text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900"
-                          >
-                            Balances
-                          </Link>
-                          .
-                        </p>
                         {showPercentOverCapBanner ? (
                           <p
                             className="mt-2 rounded-md border border-amber-200/90 bg-amber-50/70 px-2.5 py-1.5 text-xs font-medium text-amber-950/90"
@@ -984,7 +978,167 @@ export function ShowDetailView({ id }: { id: string }) {
                             increase total owed until this is resolved.
                           </p>
                         ) : null}
-                        <div className="mt-3 overflow-x-auto rounded-md border border-gray-200/75 bg-white/80">
+                        <div className="mt-3 space-y-3 md:hidden">
+                          {settlements.length === 0 ? (
+                            isClosed ? (
+                              <div
+                                className={`rounded-lg border border-gray-200/80 px-4 py-4 text-sm text-gray-600 ${workspaceMutedStrip}`}
+                              >
+                                No settlements recorded.
+                              </div>
+                            ) : (
+                              <div
+                                className={`space-y-3 rounded-lg border border-gray-200/80 px-4 py-4 ${workspaceMutedStrip}`}
+                              >
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-gray-800">
+                                    No settlements yet
+                                  </p>
+                                  <p className="text-sm leading-relaxed text-gray-600">
+                                    Add the first settlement to allocate payout
+                                    before close-out.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => focusSettlementComposer()}
+                                  className={`${workspaceActionSecondaryMd} w-full justify-center gap-2`}
+                                >
+                                  <PlusIcon
+                                    className={workspaceActionIconMd}
+                                    aria-hidden
+                                  />
+                                  Add settlement
+                                </button>
+                              </div>
+                            )
+                          ) : (
+                            settlements.map((row) => {
+                              const owed = amountOwedFor(payoutAfterFees, row);
+                              const expanded = Boolean(
+                                expandedSettlementIds[row.id],
+                              );
+                              const calcMethod =
+                                calculationMethodFromStructuredType(row.type);
+                              const typeLabel =
+                                settlementMethodPrimaryLabel(calcMethod);
+                              const summaryHint = settlementMethodHint({
+                                calculationMethod: calcMethod,
+                                percentOfPayout:
+                                  row.type === "PERCENT"
+                                    ? row.percent
+                                    : undefined,
+                                lineCount:
+                                  row.type === "ITEMIZED"
+                                    ? row.lines?.length
+                                    : undefined,
+                              });
+                              return (
+                                <div
+                                  key={row.id}
+                                  className="rounded-lg border border-gray-200/90 bg-white p-4 shadow-sm"
+                                >
+                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                                    <div className="min-w-0 flex-1">
+                                      <Link
+                                        href={`/admin/wholesalers/${row.wholesalerId}`}
+                                        className="text-base font-semibold leading-snug text-gray-900 underline-offset-2 decoration-gray-300 hover:text-gray-800 hover:underline"
+                                      >
+                                        {row.wholesaler}
+                                      </Link>
+                                      <p className="mt-1 text-sm font-medium text-gray-800">
+                                        {typeLabel}
+                                      </p>
+                                      {summaryHint ? (
+                                        <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
+                                          {summaryHint}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                        Owed
+                                      </p>
+                                      <p
+                                        className={`text-lg font-semibold tabular-nums text-gray-900 ${workspaceMoneyTabular}`}
+                                      >
+                                        {formatCurrency(owed)}
+                                      </p>
+                                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                        Paid
+                                      </p>
+                                      <p
+                                        className={`text-sm font-medium tabular-nums text-gray-800 ${workspaceMoneyTabular}`}
+                                      >
+                                        {formatCurrency(row.amountPaid)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                    <button
+                                      type="button"
+                                      className={`${workspaceActionSecondaryMd} w-full justify-center sm:w-auto`}
+                                      aria-expanded={expanded}
+                                      aria-controls={`settlement-detail-mobile-${row.id}`}
+                                      onClick={() =>
+                                        toggleSettlementExpanded(row.id)
+                                      }
+                                    >
+                                      <span className="inline-flex items-center gap-2">
+                                        <WorkspaceLedgerDisclosureIcon
+                                          expanded={expanded}
+                                        />
+                                        {expanded ? "Hide details" : "Details"}
+                                      </span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        isClosed ||
+                                        deletingSettlementId === row.id
+                                      }
+                                      onClick={() => setDeleteConfirmId(row.id)}
+                                      className={`${workspaceActionSecondaryMd} w-full justify-center border-rose-200/90 text-rose-800 hover:bg-rose-50/80 sm:w-auto`}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                  {expanded ? (
+                                    <div
+                                      id={`settlement-detail-mobile-${row.id}`}
+                                      className="mt-4 border-t border-gray-100 pt-4"
+                                      role="region"
+                                      aria-label={`Details for ${row.wholesaler}`}
+                                    >
+                                      {row.type === "PERCENT" ? (
+                                        <SettlementPercentExpandedBody
+                                          percentBasisLabel={`${row.percent}% of payout after fees (${formatCurrency(payoutAfterFees)})`}
+                                          amountOwed={owed}
+                                        />
+                                      ) : null}
+                                      {row.type === "FIXED" ? (
+                                        <SettlementFlatExpandedBody
+                                          flatAmount={row.fixedAmount}
+                                          amountOwed={owed}
+                                        />
+                                      ) : null}
+                                      {row.type === "ITEMIZED" ? (
+                                        <SettlementItemizedExpandedBody
+                                          lines={mapShowSettlementLinesToLedgerLineItems(
+                                            row.lines ?? [],
+                                          )}
+                                          amountOwed={owed}
+                                          emptyFallbackAmountOwed={owed}
+                                        />
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        <div className="mt-3 hidden overflow-x-auto rounded-md border border-gray-200/75 bg-white/80 md:block">
                           <table className="min-w-full table-fixed border-collapse text-sm">
                             <colgroup>
                               <col className="w-9 sm:w-10" />
@@ -1040,11 +1194,41 @@ export function ShowDetailView({ id }: { id: string }) {
                                 <tr>
                                   <td
                                     colSpan={6}
-                                    className={`${workspaceTableBodyCellPadding} py-3 text-left text-sm text-gray-600`}
+                                    className={`${workspaceTableBodyCellPadding} py-6 text-left text-sm text-gray-600`}
                                   >
-                                    {isClosed
-                                      ? "No settlements recorded."
-                                      : "No settlements yet — add a settlement below."}
+                                    {isClosed ? (
+                                      <div
+                                        className={`rounded-md border border-gray-200/80 px-3 py-2.5 text-sm ${workspaceMutedStrip}`}
+                                      >
+                                        No settlements recorded.
+                                      </div>
+                                    ) : (
+                                      <div
+                                        className={`flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200/80 px-3 py-2.5 ${workspaceMutedStrip}`}
+                                      >
+                                        <div className="space-y-0.5">
+                                          <p className="text-sm font-medium text-gray-700">
+                                            No settlements yet
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            Add the first settlement to allocate
+                                            payout before close-out.
+                                          </p>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            focusSettlementComposer()
+                                          }
+                                          className={`${workspaceActionInlineText} inline-flex items-center gap-1.5 whitespace-nowrap`}
+                                        >
+                                          <PlusIcon
+                                            className={workspaceActionIconSm}
+                                          />
+                                          Add settlement
+                                        </button>
+                                      </div>
+                                    )}
                                   </td>
                                 </tr>
                               ) : (
@@ -1194,19 +1378,19 @@ export function ShowDetailView({ id }: { id: string }) {
                             </tbody>
                           </table>
                         </div>
-                        {!isClosed ? (
-                          <div className="mt-4 flex justify-start border-t border-gray-200/70 pt-3">
+                        {!isClosed && settlements.length > 0 ? (
+                          <div className="mt-3 flex border-t border-gray-100/90 pt-3 sm:mt-px sm:justify-end sm:pt-1.5">
                             <button
                               type="button"
                               onClick={() => focusSettlementComposer()}
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-gray-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+                              className={`${workspaceActionSecondaryMd} w-full justify-center gap-2 sm:w-auto`}
                               aria-label="Add settlement"
                             >
                               <PlusIcon
-                                className="h-4 w-4 shrink-0 text-gray-500"
+                                className={workspaceActionIconMd}
                                 aria-hidden
                               />
-                              <span>Add</span>
+                              <span>Add settlement</span>
                             </button>
                           </div>
                         ) : null}
@@ -1409,8 +1593,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                   />
                                   {payoutAfterFees <= 0 ? (
                                     <p className="mt-1.5 text-xs text-amber-800/90">
-                                      Set payout after fees in Show breakdown
-                                      first.
+                                      {WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST}
                                     </p>
                                   ) : fieldHints.percent &&
                                     settlementComposerBlock ? (
@@ -1495,7 +1678,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                   <p className="text-xs font-medium text-gray-700">
                                     Line items
                                   </p>
-                                  <div className="grid grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] gap-x-1.5 border-b border-gray-100 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                  <div className="hidden border-b border-gray-100 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500 sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] sm:gap-x-1.5">
                                     <span>Item</span>
                                     <span className="text-right">Qty</span>
                                     <span className="text-right">$</span>
@@ -1505,7 +1688,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                     {newRowItemizedLines.map((line) => (
                                       <div
                                         key={line.id}
-                                        className="grid grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] items-center gap-x-1.5 py-1.5 first:pt-0"
+                                        className="flex flex-col gap-3 py-3 first:pt-0 sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] sm:items-center sm:gap-x-1.5 sm:py-1.5"
                                       >
                                         <input
                                           type="text"
@@ -1523,49 +1706,52 @@ export function ShowDetailView({ id }: { id: string }) {
                                             )
                                           }
                                           placeholder="Item name"
-                                          className={`min-w-0 ${workspaceTextInputCompact}`}
+                                          className={`min-w-0 w-full sm:w-auto ${workspaceTextInputCompact}`}
                                         />
-                                        <input
-                                          type="number"
-                                          step="1"
-                                          min={1}
-                                          value={line.quantity}
-                                          onChange={(e) =>
-                                            setNewRowItemizedLines((prev) =>
-                                              prev.map((l) =>
-                                                l.id === line.id
-                                                  ? {
-                                                      ...l,
-                                                      quantity: e.target.value,
-                                                    }
-                                                  : l,
-                                              ),
-                                            )
-                                          }
-                                          placeholder="Qty"
-                                          className={`${workspaceTextInputCompact} text-right tabular-nums`}
-                                        />
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          min={0}
-                                          value={line.unitPriceDollars}
-                                          onChange={(e) =>
-                                            setNewRowItemizedLines((prev) =>
-                                              prev.map((l) =>
-                                                l.id === line.id
-                                                  ? {
-                                                      ...l,
-                                                      unitPriceDollars:
-                                                        e.target.value,
-                                                    }
-                                                  : l,
-                                              ),
-                                            )
-                                          }
-                                          placeholder="Price"
-                                          className={`${workspaceTextInputCompact} text-right tabular-nums`}
-                                        />
+                                        <div className="grid grid-cols-2 gap-2 sm:contents">
+                                          <input
+                                            type="number"
+                                            step="1"
+                                            min={1}
+                                            value={line.quantity}
+                                            onChange={(e) =>
+                                              setNewRowItemizedLines((prev) =>
+                                                prev.map((l) =>
+                                                  l.id === line.id
+                                                    ? {
+                                                        ...l,
+                                                        quantity:
+                                                          e.target.value,
+                                                      }
+                                                    : l,
+                                                ),
+                                              )
+                                            }
+                                            placeholder="Qty"
+                                            className={`${workspaceTextInputCompact} w-full text-right tabular-nums sm:w-auto`}
+                                          />
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min={0}
+                                            value={line.unitPriceDollars}
+                                            onChange={(e) =>
+                                              setNewRowItemizedLines((prev) =>
+                                                prev.map((l) =>
+                                                  l.id === line.id
+                                                    ? {
+                                                        ...l,
+                                                        unitPriceDollars:
+                                                          e.target.value,
+                                                      }
+                                                    : l,
+                                                ),
+                                              )
+                                            }
+                                            placeholder="Price"
+                                            className={`${workspaceTextInputCompact} w-full text-right tabular-nums sm:w-auto`}
+                                          />
+                                        </div>
                                         <button
                                           type="button"
                                           onClick={() =>
@@ -1575,7 +1761,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                               ),
                                             )
                                           }
-                                          className="flex justify-end text-gray-500 hover:text-gray-800"
+                                          className="flex min-h-10 items-center justify-end text-gray-500 hover:text-gray-800 sm:min-h-0 sm:justify-end"
                                           aria-label="Remove item"
                                         >
                                           <TrashIcon
@@ -1677,10 +1863,10 @@ export function ShowDetailView({ id }: { id: string }) {
                               (createSettlementError
                                 ?.toLowerCase()
                                 .includes("financials")
-                                ? "Save payout in Show breakdown, then try again."
+                                ? WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY
                                 : createSettlementError) ??
                               (newRowError?.toLowerCase().includes("financials")
-                                ? "Save payout in Show breakdown, then try again."
+                                ? WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY
                                 : newRowError)}
                           </p>
                         ) : null}
@@ -1689,7 +1875,7 @@ export function ShowDetailView({ id }: { id: string }) {
 
                     {/* Receipt — secondary, outside payout/settlements cluster */}
                     <div
-                      className="mt-4 border-t border-dashed border-gray-200/90 pt-3"
+                      className="mt-8 border-t border-dashed border-gray-200/90 pt-5"
                       aria-labelledby="payout-receipt-heading"
                     >
                       <input
@@ -1700,10 +1886,10 @@ export function ShowDetailView({ id }: { id: string }) {
                         accept=".pdf,image/png,image/jpeg,image/jpg"
                         onChange={handleReceiptFileChange}
                       />
-                      <div className="flex min-h-[1.5rem] flex-wrap items-center gap-x-2 gap-y-1">
+                      <div className="flex min-h-[1.5rem] flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
                         <span
                           id="payout-receipt-heading"
-                          className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-gray-400"
+                          className="shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 sm:text-[11px]"
                         >
                           Receipt{" "}
                           <span className="font-normal normal-case tracking-normal text-gray-400">
@@ -1723,7 +1909,7 @@ export function ShowDetailView({ id }: { id: string }) {
                               type="button"
                               onClick={handleAttachReceipt}
                               disabled={uploadingReceipt}
-                              className="rounded-md px-2 py-0.5 text-[11px] font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 disabled:opacity-60"
+                              className="min-h-10 rounded-md px-3 py-2 text-sm font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 disabled:opacity-60 sm:min-h-0 sm:px-2 sm:py-0.5 sm:text-[11px]"
                             >
                               Attach
                             </button>
@@ -1737,7 +1923,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                 receiptFileInputRef.current?.click();
                               }}
                               disabled={uploadingReceipt}
-                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-60"
+                              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-60 sm:h-7 sm:w-7"
                               aria-label="Choose a different file"
                             >
                               <ArrowUpTrayIcon
@@ -1762,7 +1948,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                     onClick={() =>
                                       handleDownloadAttachment(att)
                                     }
-                                    className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900"
+                                    className="min-h-9 shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 sm:min-h-0 sm:px-1.5 sm:py-0.5 sm:text-[11px]"
                                   >
                                     View
                                   </button>
@@ -1775,7 +1961,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                 onClick={() =>
                                   receiptFileInputRef.current?.click()
                                 }
-                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 sm:h-7 sm:w-7"
                                 aria-label="Replace receipt"
                               >
                                 <ArrowUpTrayIcon
@@ -1794,7 +1980,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                 onClick={() =>
                                   receiptFileInputRef.current?.click()
                                 }
-                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 sm:h-7 sm:w-7"
                                 aria-label="Add receipt"
                               >
                                 <ArrowUpTrayIcon
@@ -1822,20 +2008,22 @@ export function ShowDetailView({ id }: { id: string }) {
             </div>
 
             {/* Supporting column: review → close out (one finalization surface) */}
-            <div className="min-w-0">
+            <div className="min-w-0 lg:flex lg:min-h-full lg:flex-col">
               <section
-                className={`flex min-h-full min-w-0 flex-col overflow-hidden ${workspaceCard}`}
+                className={`flex min-h-full min-w-0 flex-col overflow-hidden ${workspaceShowDetailOutcomeShell}`}
                 aria-labelledby="review-profit-heading"
               >
-                <div className={workspaceSectionToolbar}>
+                <div
+                  className={`${workspaceSectionToolbar.replace(/\bpy-3\b/, "py-4")} border-stone-200/80 bg-gradient-to-r from-white via-rose-50/[0.08] to-amber-50/[0.06]`}
+                >
                   <h2
                     id="review-profit-heading"
-                    className={workspaceSectionTitle}
+                    className={`min-w-0 ${workspaceSectionTitle}`}
                   >
-                    Review
+                    {WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING}
                   </h2>
                 </div>
-                <div className="flex flex-1 flex-col px-4 py-3.5 sm:px-5">
+                <div className="flex flex-1 flex-col px-5 py-5 sm:px-6 sm:py-6">
                   <div
                     className="flex flex-1 flex-col text-sm"
                     role="region"
@@ -1843,9 +2031,7 @@ export function ShowDetailView({ id }: { id: string }) {
                   >
                     <div className="space-y-3">
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                          Payout
-                        </span>
+                        <span className={workspaceLabelEyebrow}>Payout</span>
                         <span
                           className={`shrink-0 text-right text-lg font-semibold ${workspaceMoneyTabular} ${workspaceMoneyPositive}`}
                           aria-label={`Payout after fees ${formatCurrency(payoutAfterFees)}`}
@@ -1854,7 +2040,9 @@ export function ShowDetailView({ id }: { id: string }) {
                         </span>
                       </div>
                       {settlements.length === 0 ? (
-                        <p className="text-xs text-gray-500">No settlements.</p>
+                        <p className="py-2 text-sm leading-relaxed text-gray-500 sm:py-1.5 sm:text-xs">
+                          No settlements.
+                        </p>
                       ) : (
                         <ul className="space-y-1 border-t border-gray-100/90 pt-3">
                           {settlements.map((s) => {
@@ -1883,13 +2071,13 @@ export function ShowDetailView({ id }: { id: string }) {
                       )}
                     </div>
 
-                    <div className="mt-6 space-y-4 border-t border-gray-200/90 pt-5">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm font-semibold text-gray-900">
-                          = Profit
+                    <div className="mt-4 border-t border-stone-200/70 pt-3.5">
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
+                          Est. profit
                         </span>
                         <span
-                          className={`shrink-0 text-right text-2xl font-bold tracking-tight ${workspaceMoneyTabular} ${workspaceMoneyClassForSigned(totals.profitEstimate)}`}
+                          className={`text-left text-[1.5rem] font-bold leading-none tracking-tight sm:text-[1.85rem] ${workspaceMoneyTabular} ${workspaceMoneyClassForSigned(totals.profitEstimate)}`}
                           aria-label={`Profit ${formatCurrency(totals.profitEstimate)}`}
                         >
                           {formatCurrencyAbs(totals.profitEstimate)}
@@ -1901,7 +2089,7 @@ export function ShowDetailView({ id }: { id: string }) {
                           type="button"
                           onClick={handleCloseShowClick}
                           disabled={closing}
-                          className={`${workspaceActionCompleteMd} w-full shadow-sm disabled:cursor-not-allowed disabled:opacity-50`}
+                          className={`${workspaceActionCompleteMd} mt-5 w-full shadow-none disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                           {closing ? "Closing…" : "Close show"}
                         </button>
@@ -1910,7 +2098,7 @@ export function ShowDetailView({ id }: { id: string }) {
                           type="button"
                           onClick={() => setReopenDialogOpen(true)}
                           disabled={closing}
-                          className={`${workspaceActionSecondaryMd} w-full disabled:cursor-not-allowed disabled:opacity-50`}
+                          className={`${workspaceActionSecondaryMd} mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                           Reopen show
                         </button>
@@ -1962,7 +2150,7 @@ export function ShowDetailView({ id }: { id: string }) {
           await handleReopenShow();
         }}
         title="Reopen this show?"
-        description="You will be able to edit payout and settlements again."
+        description="Editing will be enabled."
         confirmLabel={
           closing
             ? "Reopening…"
@@ -2027,11 +2215,7 @@ function EditablePayout({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             {!embedded ? (
-              <p
-                className={`${workspaceLabelEyebrow} text-[10px] font-medium uppercase tracking-wide text-stone-500`}
-              >
-                Payout after fees
-              </p>
+              <p className={workspaceLabelEyebrow}>Payout after fees</p>
             ) : null}
             <div className="mt-0.5 min-h-[1.625rem]">
               {!editing ? (

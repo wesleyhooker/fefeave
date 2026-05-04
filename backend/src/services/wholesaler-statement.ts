@@ -49,7 +49,15 @@ export async function getWholesalerStatement(
   wholesalerId: string
 ): Promise<WholesalerStatementEntry[]> {
   const result = await db.query(
-    `(SELECT 'OWED' AS type,
+    `WITH wholesaler_account AS (
+       SELECT id
+       FROM accounts
+       WHERE type = 'WHOLESALER'
+         AND legacy_wholesaler_id = $1
+         AND deleted_at IS NULL
+       LIMIT 1
+     )
+     (SELECT 'OWED' AS type,
              COALESCE(oli.due_date, oli.created_at::date) AS date,
              oli.amount,
              oli.show_id,
@@ -61,7 +69,14 @@ export async function getWholesalerStatement(
              s.name AS show_name
        FROM owed_line_items oli
        LEFT JOIN shows s ON s.id = oli.show_id AND s.deleted_at IS NULL
-      WHERE oli.wholesaler_id = $1 AND oli.deleted_at IS NULL)
+      WHERE (
+        oli.account_id = (SELECT id FROM wholesaler_account)
+        OR (
+          oli.account_id IS NULL
+          AND oli.wholesaler_id = $1
+        )
+      )
+      AND oli.deleted_at IS NULL)
      UNION ALL
      (SELECT 'PAYMENT' AS type,
              p.payment_date AS date,
@@ -74,7 +89,14 @@ export async function getWholesalerStatement(
              NULL::text AS description,
              NULL::text AS show_name
        FROM payments p
-      WHERE p.wholesaler_id = $1 AND p.deleted_at IS NULL)
+      WHERE (
+        p.account_id = (SELECT id FROM wholesaler_account)
+        OR (
+          p.account_id IS NULL
+          AND p.wholesaler_id = $1
+        )
+      )
+      AND p.deleted_at IS NULL)
      ORDER BY date ASC, created_at ASC, entry_id ASC`,
     [wholesalerId]
   );

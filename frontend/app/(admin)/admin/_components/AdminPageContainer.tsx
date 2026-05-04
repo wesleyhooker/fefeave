@@ -14,16 +14,19 @@ import {
 export function AdminPageContainer({
   children,
   contentWidthClassName = workspacePageContentWidth,
+  contentStackClassName = workspacePageContentStack,
 }: {
   children: ReactNode;
   /** Override default `workspacePageContentWidth` for dense pages (e.g. Shows). */
   contentWidthClassName?: string;
+  /** Override vertical rhythm between page sections (e.g. Shows index). */
+  contentStackClassName?: string;
 }) {
   return (
     <div className="min-w-0">
-      <div className={`${workspacePageGutter} pb-4 md:pb-6`}>
+      <div className={`${workspacePageGutter} pb-5 md:pb-6`}>
         <div
-          className={`${contentWidthClassName} ${workspacePageContentStack} ${workspacePageIntroToContentGap}`}
+          className={`${contentWidthClassName} ${contentStackClassName} ${workspacePageIntroToContentGap}`}
         >
           {children}
         </div>

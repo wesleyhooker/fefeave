@@ -3,6 +3,10 @@
 import { useAdminWorkspace } from "@/app/(admin)/admin/AdminWorkspaceContext";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
+import {
+  WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
+  workflowDashboardWeekSubtitle,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 
 function greetingNameFromEmail(email: string | null): string {
   if (email == null || !email.includes("@")) return "there";
@@ -34,10 +38,10 @@ export function DashboardPageHeader({
           </span>
         </>
       }
-      subtitle={weekRangeLabel}
+      subtitle={workflowDashboardWeekSubtitle(weekRangeLabel)}
       action={
         <WorkspaceSidePanelTrigger
-          label="New show"
+          label={WORKFLOW_LOG_SHOW_TRIGGER_LABEL}
           variant="subtle"
           open={newShowPanelOpen}
           onClick={onNewShowClick}

@@ -5,7 +5,11 @@
  */
 
 /** Intro-adjacent vertical stack (e.g. metrics strip under page intro). */
-export const workspacePageTopStack = 'flex min-w-0 flex-col gap-4 md:gap-4.5';
+export const workspacePageTopStack = 'flex min-w-0 flex-col gap-5 md:gap-6';
+
+/** Balances page: KPI strip to primary table shell (more than generic top stack). */
+export const workspaceBalancesPageStack =
+  'flex min-w-0 flex-col gap-6 md:gap-8';
 
 /**
  * Vendor detail main workspace: desktop = summary + pay (left) | ledger (right); mobile = stacked.
@@ -16,7 +20,7 @@ export const workspaceFinancialVendorMainGrid =
 
 /** Left column: summary + money workspace (aligned rhythm with ledger column). */
 export const workspaceFinancialVendorPrimaryColumn =
-  'min-w-0 space-y-5 md:space-y-5 lg:col-span-5 xl:col-span-5';
+  'min-w-0 space-y-7 md:space-y-9 lg:col-span-5 xl:col-span-5';
 
 /** Right column: ledger (slightly wider for table density). */
 export const workspaceFinancialVendorLedgerColumn =
@@ -26,7 +30,13 @@ export const workspaceFinancialVendorLedgerColumn =
  * Primary + secondary columns (e.g. hero module + side notifications).
  */
 export const workspacePagePrimarySecondaryGrid =
-  'grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,20rem)] lg:items-start lg:gap-6 xl:gap-8';
+  'grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,20rem)] lg:items-start lg:gap-8 xl:gap-10';
+
+/**
+ * Show detail — wider outcome column, more breathing room between “inputs” and “result”.
+ */
+export const workspacePageShowDetailGrid =
+  'grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.12fr)_minmax(16rem,22rem)] lg:items-start lg:gap-7 xl:gap-10';
 
 /** Supporting band below the primary row (analytics, secondary modules). */
 export const workspacePageSupportingStack =

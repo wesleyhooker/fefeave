@@ -85,9 +85,9 @@ function MonthTrendChart({ days }: { days: DashboardDayProfitPoint[] }) {
     maxProfit > 0 ? formatChartAxisValue(maxProfit) : formatChartAxisValue(0);
 
   return (
-    <div className="flex gap-2 sm:gap-2.5">
+    <div className="flex gap-2.5 sm:gap-2.5">
       <div
-        className="flex w-[2.65rem] shrink-0 flex-col justify-between py-0.5 text-right text-[9px] font-medium leading-none text-stone-400 tabular-nums sm:w-[2.85rem]"
+        className="flex w-[2.85rem] shrink-0 flex-col justify-between py-0.5 text-right text-[10px] font-medium leading-none text-stone-400 tabular-nums sm:w-[2.85rem] sm:text-[9px]"
         aria-hidden
       >
         <span title={maxProfit > 0 ? formatCurrency(maxProfit) : undefined}>
@@ -98,7 +98,7 @@ function MonthTrendChart({ days }: { days: DashboardDayProfitPoint[] }) {
       <div className="min-w-0 flex-1">
         <svg
           viewBox={`0 0 100 ${VB_H}`}
-          className="h-12 w-full overflow-visible"
+          className="h-14 w-full overflow-visible sm:h-12"
           preserveAspectRatio="none"
           role="img"
           aria-hidden
@@ -140,7 +140,7 @@ function MonthTrendChart({ days }: { days: DashboardDayProfitPoint[] }) {
             />
           ))}
         </svg>
-        <div className="mt-1 flex justify-between pl-0.5 text-[10px] tabular-nums text-stone-400">
+        <div className="mt-1.5 flex justify-between pl-0.5 text-[11px] tabular-nums text-stone-400 sm:mt-1 sm:text-[10px]">
           <span>1</span>
           <span className="hidden sm:inline">
             {days[Math.floor((days.length - 1) / 2)]?.dayOfMonth ?? "—"}
@@ -181,13 +181,13 @@ function TrendBody({
 
 function TrendSkeleton() {
   return (
-    <div className="flex gap-2 sm:gap-2.5" aria-hidden>
-      <div className="flex w-[2.65rem] shrink-0 flex-col justify-between py-0.5 sm:w-[2.85rem]">
+    <div className="flex gap-2.5 sm:gap-2.5" aria-hidden>
+      <div className="flex w-[2.85rem] shrink-0 flex-col justify-between py-0.5 sm:w-[2.85rem]">
         <div className="ml-auto h-2 w-8 animate-pulse rounded bg-stone-200/55" />
         <div className="ml-auto h-2 w-5 animate-pulse rounded bg-stone-200/50" />
       </div>
       <div className="min-w-0 flex-1 space-y-2">
-        <div className="h-12 w-full animate-pulse rounded-md bg-stone-200/60" />
+        <div className="h-14 w-full animate-pulse rounded-md bg-stone-200/60 sm:h-12" />
         <div className="flex justify-between pl-0.5">
           <div className="h-2 w-4 animate-pulse rounded bg-stone-200/50" />
           <div className="h-2 w-4 animate-pulse rounded bg-stone-200/50" />

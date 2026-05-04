@@ -26,13 +26,17 @@ export function ProfileDropdown({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
       if (ref.current && !ref.current.contains(event.target as Node)) {
         setOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
   const displayName = email?.trim() || "Signed in";
@@ -42,7 +46,7 @@ export function ProfileDropdown({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${workspaceChromeHover}`}
+        className={`flex min-h-11 items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 sm:min-h-10 sm:py-1.5 ${workspaceChromeHover}`}
         aria-expanded={open}
         aria-haspopup="true"
         id="profile-menu-button"
@@ -98,7 +102,7 @@ export function ProfileDropdown({
           )}
           <Link
             href="/"
-            className={`block rounded px-3 py-2 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${workspaceChromeHover}`}
+            className={`block min-h-11 rounded px-3 py-2.5 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 sm:min-h-10 sm:py-2 ${workspaceChromeHover}`}
             role="menuitem"
             onClick={() => setOpen(false)}
           >
@@ -106,7 +110,7 @@ export function ProfileDropdown({
           </Link>
           <Link
             href="/portal"
-            className={`block rounded px-3 py-2 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${workspaceChromeHover}`}
+            className={`block min-h-11 rounded px-3 py-2.5 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 sm:min-h-10 sm:py-2 ${workspaceChromeHover}`}
             role="menuitem"
             onClick={() => setOpen(false)}
           >
@@ -115,7 +119,7 @@ export function ProfileDropdown({
           <div className="border-t border-gray-200">
             <Link
               href="/api/auth/logout"
-              className={`block rounded px-3 py-2 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 ${workspaceChromeHover}`}
+              className={`block min-h-11 rounded px-3 py-2.5 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 sm:min-h-10 sm:py-2 ${workspaceChromeHover}`}
               role="menuitem"
               onClick={() => setOpen(false)}
             >

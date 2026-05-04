@@ -30,7 +30,7 @@ export function ShowsUnscheduledSection({
         </p>
       </div>
       <div className="md:hidden">
-        <div className="space-y-3 p-3">
+        <div className="space-y-3.5 p-4">
           {unscheduled.map((show) => (
             <ShowMobileCard
               key={show.id}

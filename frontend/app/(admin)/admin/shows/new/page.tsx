@@ -7,6 +7,7 @@ import {
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import { workspacePageContentWidthWide } from "@/app/(admin)/admin/_components/workspaceUi";
+import { WORKFLOW_LOG_SHOW_PANEL_TITLE } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { ShowCreateForm } from "./ShowCreateForm";
 
 function CreateShowBreadcrumb() {
@@ -26,7 +27,7 @@ function CreateShowBreadcrumb() {
         </li>
         <li className="min-w-0 max-w-full text-stone-900" aria-current="page">
           <span className="block truncate font-semibold tracking-tight">
-            Create show
+            {WORKFLOW_LOG_SHOW_PANEL_TITLE}
           </span>
         </li>
       </ol>
@@ -41,7 +42,7 @@ export default function AdminShowsNewPage() {
         <AdminPageIntro
           variant="entity-detail"
           breadcrumb={<CreateShowBreadcrumb />}
-          title="Create show"
+          title={WORKFLOW_LOG_SHOW_PANEL_TITLE}
         />
       </AdminPageIntroSection>
 

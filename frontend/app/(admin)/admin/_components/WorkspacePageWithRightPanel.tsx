@@ -13,6 +13,8 @@ type WorkspacePageWithRightPanelProps = {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Optional subtitle under the panel title (workflow context). */
+  panelSubtitle?: string;
   /** Primary page content (intro, container, etc.). */
   children: React.ReactNode;
   /** Right panel body (e.g. form). Rendered once; responsive positioning only. */
@@ -29,6 +31,7 @@ export function WorkspacePageWithRightPanel({
   open,
   onClose,
   title,
+  panelSubtitle,
   children,
   panel,
 }: WorkspacePageWithRightPanelProps) {
@@ -92,20 +95,21 @@ export function WorkspacePageWithRightPanel({
           <button
             type="button"
             aria-label="Close panel"
-            className={`absolute inset-0 bg-stone-900/25 transition-opacity duration-300 ease-out lg:hidden ${
+            className={`absolute inset-0 bg-stone-900/25 transition-opacity duration-[220ms] ease-out lg:hidden ${
               entered ? "opacity-100" : "opacity-0"
             }`}
             onClick={onClose}
           />
           <div
-            className={`pointer-events-auto relative z-10 flex h-full w-[min(26rem,calc(100vw-1rem))] max-w-[26rem] flex-col ease-[cubic-bezier(0.22,0.99,0.26,1)] motion-reduce:transition-none motion-reduce:translate-x-0 motion-reduce:opacity-100 lg:h-full lg:w-full lg:max-w-none ${
+            className={`pointer-events-auto relative z-10 flex h-full w-[min(28rem,calc(100vw-0.5rem))] max-w-[28rem] flex-col ease-out motion-reduce:transition-none motion-reduce:translate-x-0 motion-reduce:opacity-100 lg:h-full lg:w-full lg:max-w-none ${
               entered
-                ? "translate-x-0 opacity-100 transition-[transform,opacity] duration-[420ms]"
-                : "translate-x-full opacity-100 transition-[transform,opacity] duration-300 max-lg:translate-x-full lg:translate-x-2 lg:opacity-95 lg:transition-[transform,opacity] lg:duration-[420ms]"
+                ? "translate-x-0 opacity-100 transition-[transform,opacity] duration-[220ms]"
+                : "translate-x-full opacity-100 transition-[transform,opacity] duration-[220ms] max-lg:translate-x-full lg:translate-x-2 lg:opacity-95 lg:transition-[transform,opacity] lg:duration-[220ms]"
             }`}
           >
             <WorkspaceRightPanelSurface
               title={title}
+              subtitle={panelSubtitle}
               titleId={titleId}
               onClose={onClose}
             >

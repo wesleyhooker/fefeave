@@ -71,6 +71,8 @@ export function WholesalerInlineExpenseSection({
   embedded?: boolean;
 }) {
   const isCompact = density === "compact";
+  const fieldLabelClass =
+    isCompact && embedded ? workspaceFormLabelSecondary : workspaceFormLabel;
   const textField = isCompact ? workspaceTextInputCompact : workspaceTextInput;
   const dateField = isCompact ? workspaceDateInputCompact : workspaceDateInput;
   const primaryFieldShell = `${workspacePanel} ${
@@ -242,7 +244,7 @@ export function WholesalerInlineExpenseSection({
 
   const formStack =
     isCompact && embedded
-      ? "space-y-2.5"
+      ? "space-y-3.5"
       : isCompact
         ? "space-y-4"
         : "space-y-6";
@@ -255,28 +257,28 @@ export function WholesalerInlineExpenseSection({
       : "px-4 pb-5 pt-4 sm:px-6 sm:pb-6";
   const primaryRowGrid =
     isCompact && embedded
-      ? "grid gap-3.5 sm:gap-4 lg:grid-cols-2 lg:items-start"
+      ? "grid grid-cols-1 gap-3.5 sm:gap-4 lg:grid-cols-2 lg:items-start"
       : isCompact
-        ? "grid gap-4 sm:gap-4 lg:grid-cols-2 lg:items-start"
-        : "grid gap-5 sm:gap-6 lg:grid-cols-2 lg:items-start";
+        ? "grid grid-cols-1 gap-4 sm:gap-4 lg:grid-cols-2 lg:items-start"
+        : "grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-2 lg:items-start";
   const secondaryRowGrid =
     isCompact && embedded
-      ? "grid gap-3 border-t border-gray-200/60 pt-2 sm:grid-cols-2 sm:items-start sm:gap-4"
+      ? "grid grid-cols-1 gap-3 border-t border-gray-200/60 pt-2 sm:grid-cols-2 sm:items-start sm:gap-4"
       : isCompact
-        ? "grid gap-3 border-t border-gray-200/90 pt-3 sm:grid-cols-2 sm:items-start sm:gap-4"
-        : "grid gap-4 border-t border-gray-200/90 pt-5 sm:grid-cols-2 sm:items-start sm:gap-5";
+        ? "grid grid-cols-1 gap-3 border-t border-gray-200/90 pt-3 sm:grid-cols-2 sm:items-start sm:gap-4"
+        : "grid grid-cols-1 gap-4 border-t border-gray-200/90 pt-5 sm:grid-cols-2 sm:items-start sm:gap-5";
   const tertiaryBlock =
     isCompact && embedded
-      ? "border-t border-gray-200/55 pt-2"
+      ? "border-t border-gray-200/55 pt-3"
       : isCompact
         ? "border-t border-gray-200/90 pt-3"
         : "border-t border-gray-200/90 pt-5";
   const footerBlockCreate =
     isCompact && embedded
-      ? "flex flex-wrap items-center gap-2 border-t border-gray-200/60 pt-2.5"
+      ? "flex flex-col gap-2 border-t border-gray-200/60 pt-2.5 sm:flex-row sm:flex-wrap sm:items-center"
       : isCompact
-        ? "flex flex-wrap items-center gap-2.5 border-t border-gray-200/90 pt-3"
-        : "flex flex-wrap items-center gap-3 border-t border-gray-200/90 pt-5";
+        ? "flex flex-col gap-2.5 border-t border-gray-200/90 pt-3 sm:flex-row sm:flex-wrap sm:items-center"
+        : "flex flex-col gap-3 border-t border-gray-200/90 pt-5 sm:flex-row sm:flex-wrap sm:items-center";
   const footerBlockEdit =
     "flex flex-col-reverse gap-3 border-t border-gray-200/90 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
 
@@ -349,11 +351,17 @@ export function WholesalerInlineExpenseSection({
           <div className={primaryFieldShell}>
             <label
               htmlFor="wholesaler-expense-amount"
-              className={`${workspaceFormLabel} block`}
+              className={`${fieldLabelClass} block`}
             >
               Amount <span className="text-red-500">*</span>
             </label>
-            <div className={isCompact ? "mt-1.5 max-w-xs" : "mt-2 max-w-xs"}>
+            <div
+              className={
+                isCompact
+                  ? "mt-1.5 w-full max-w-full sm:max-w-xs"
+                  : "mt-2 w-full max-w-full sm:max-w-xs"
+              }
+            >
               <div className="relative">
                 <span
                   className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-sm text-gray-500 ${isCompact ? "left-2.5" : "left-3"}`}
@@ -412,7 +420,7 @@ export function WholesalerInlineExpenseSection({
           <div className={primaryFieldShell}>
             <label
               htmlFor="wholesaler-expense-desc"
-              className={`${workspaceFormLabel} block`}
+              className={`${fieldLabelClass} block`}
             >
               Description <span className="text-red-500">*</span>
             </label>
@@ -519,7 +527,7 @@ export function WholesalerInlineExpenseSection({
             <button
               type="submit"
               disabled={submitting || deleting}
-              className={`${workspaceActionPositiveCompleteMd} min-w-[11rem]`}
+              className={`${workspaceActionPositiveCompleteMd} w-full min-w-0 justify-center sm:w-auto sm:min-w-[11rem]`}
             >
               <WorkspaceActionLabel
                 icon={<DocumentTextIcon className={workspaceActionIconMd} />}

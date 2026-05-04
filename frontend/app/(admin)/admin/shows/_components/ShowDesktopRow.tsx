@@ -6,8 +6,6 @@ import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancia
 import {
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
-  workspaceMoneyMuted,
-  workspaceMoneyTabular,
   workspaceTableRowInteractive,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import type { ShowViewModel } from "@/src/lib/api/shows";
@@ -38,23 +36,33 @@ function rowNavigateAriaLabel(show: ShowViewModel): string {
 export function ShowDesktopRow({
   show,
   summary,
+  payoutContext = false,
 }: {
   show: ShowViewModel;
   summary: ShowFinancialSummary | undefined;
+  payoutContext?: boolean;
 }) {
   const today = isToday(show.date);
   const href = `/admin/shows/${show.id}`;
+  const isClosed = (show.status ?? "").toUpperCase() === "COMPLETED";
 
   const rowHover = today
     ? "transition-colors duration-200 ease-out hover:bg-sky-100/80"
     : workspaceTableRowInteractive;
+
+  const rowClass = [
+    today ? "border-l-4 border-l-sky-400 bg-sky-50/50" : "",
+    payoutContext ? "relative z-[2]" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <WorkspaceTableNavRow
       href={href}
       ariaLabel={rowNavigateAriaLabel(show)}
       rowInteractionClassName={rowHover}
-      className={today ? "border-l-4 border-l-sky-400 bg-sky-50/50" : ""}
+      className={rowClass}
     >
       <td
         className={`w-[5rem] whitespace-nowrap align-middle sm:w-[5.5rem] ${workspaceTableBodyCellPadding}`}
@@ -65,9 +73,18 @@ export function ShowDesktopRow({
         className={`min-w-0 max-w-[min(100%,28rem)] align-top ${workspaceTableBodyCellPadding}`}
       >
         <span className="flex flex-wrap items-center gap-2 text-left">
-          <span className="text-sm font-medium text-gray-900 group-hover/workspace-row:text-gray-950">
+          <span
+            className={`text-sm font-medium group-hover/workspace-row:text-gray-950 ${
+              payoutContext && !isClosed ? "text-stone-500" : "text-gray-900"
+            }`}
+          >
             {show.name}
           </span>
+          {payoutContext && !isClosed ? (
+            <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-600">
+              Excluded
+            </span>
+          ) : null}
           {today && (
             <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[11px] font-medium text-sky-800">
               Today
@@ -100,13 +117,7 @@ export function ShowDesktopRow({
       <td
         className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPadding}`}
       >
-        {summary == null ? (
-          <span
-            className={`text-sm ${workspaceMoneyMuted} ${workspaceMoneyTabular}`}
-          >
-            —
-          </span>
-        ) : (
+        {summary == null ? null : (
           <div>
             <span
               className={`text-sm ${workspaceListPrimaryMoneyAmountClass(summary.estimatedShowProfit)}`}

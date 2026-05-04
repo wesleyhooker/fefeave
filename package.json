@@ -2,6 +2,7 @@
   "name": "fefeave",
   "private": true,
   "scripts": {
+    "db:reset": "npm --prefix backend run db:reset",
     "prepare": "husky",
     "test:project-head": "node scripts/test-project-head.mjs",
     "format": "prettier --write .",

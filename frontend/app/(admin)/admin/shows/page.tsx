@@ -16,7 +16,10 @@ import {
 import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
 import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
-import { workspacePageContentWidthWide } from "@/app/(admin)/admin/_components/workspaceUi";
+import {
+  workspacePageContentWidthWide,
+  workspaceShowsIndexContentStack,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 import {
   fetchShows,
   mapShowToViewModel,
@@ -31,6 +34,11 @@ import { ShowsThisWeekSection } from "./_components/ShowsThisWeekSection";
 import { ShowsUnscheduledSection } from "./_components/ShowsUnscheduledSection";
 import { buildWeekStructure } from "./weekStructure";
 import { ShowCreateForm } from "./new/ShowCreateForm";
+import {
+  WORKFLOW_LOG_SHOW_PANEL_SUBTITLE,
+  WORKFLOW_LOG_SHOW_PANEL_TITLE,
+  WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
+} from "../_lib/adminWorkflowCopy";
 
 export default function AdminShowsPage() {
   const router = useRouter();
@@ -129,7 +137,8 @@ export default function AdminShowsPage() {
     <WorkspacePageWithRightPanel
       open={isCreateOpen}
       onClose={() => setIsCreateOpen(false)}
-      title="Create show"
+      title={WORKFLOW_LOG_SHOW_PANEL_TITLE}
+      panelSubtitle={WORKFLOW_LOG_SHOW_PANEL_SUBTITLE}
       panel={
         <ShowCreateForm
           variant="drawer"
@@ -148,15 +157,19 @@ export default function AdminShowsPage() {
           title="Shows"
           action={
             <WorkspaceSidePanelTrigger
+              variant="subtle"
               open={isCreateOpen}
-              label="New show"
+              label={WORKFLOW_LOG_SHOW_TRIGGER_LABEL}
               onClick={() => setIsCreateOpen(true)}
             />
           }
         />
       </AdminPageIntroSection>
 
-      <AdminPageContainer contentWidthClassName={workspacePageContentWidthWide}>
+      <AdminPageContainer
+        contentWidthClassName={workspacePageContentWidthWide}
+        contentStackClassName={workspaceShowsIndexContentStack}
+      >
         {error != null ? (
           <WorkspaceInlineError
             title="Could not load shows."

@@ -26,17 +26,17 @@ export function AdminPageIntro({
   const effectiveDecoration = variant === "entity-detail" ? "none" : decoration;
   const effectiveUseAccent = variant === "entity-detail" ? false : useAccent;
 
-  const innerPadding = "py-2.5 md:py-3.5";
+  const innerPadding = "py-4 md:py-5";
 
   const titleClassName =
     variant === "entity-detail"
       ? "text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl"
-      : "text-2xl font-semibold tracking-tight text-stone-900";
+      : "text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl";
 
   const subtitleClassName =
     variant === "entity-detail"
-      ? "mt-1.5 max-w-prose text-sm leading-snug text-stone-500"
-      : "mt-1 max-w-prose text-sm font-medium leading-snug text-stone-600";
+      ? "max-w-prose text-sm leading-snug text-stone-500"
+      : "max-w-prose text-sm font-medium leading-relaxed text-stone-600";
 
   const SubtitleContainer = variant === "entity-detail" ? "div" : "p";
 
@@ -68,22 +68,24 @@ export function AdminPageIntro({
       ) : null}
 
       <div className={`relative z-10 ${innerPadding}`}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+        <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
           <div
-            className={`min-w-0 ${effectiveUseAccent ? workspacePageIntroAccent : ""} ${identityBlockClassName}`}
+            className={`min-w-0 flex-1 ${effectiveUseAccent ? workspacePageIntroAccent : ""} ${identityBlockClassName}`}
           >
             {breadcrumb ? (
               <div className="mb-1.5 sm:mb-2">{breadcrumb}</div>
             ) : null}
-            <h1 className={titleClassName}>{title}</h1>
-            {subtitle ? (
-              <SubtitleContainer className={subtitleClassName}>
-                {subtitle}
-              </SubtitleContainer>
-            ) : null}
+            <div className="space-y-2">
+              <h1 className={titleClassName}>{title}</h1>
+              {subtitle ? (
+                <SubtitleContainer className={subtitleClassName}>
+                  {subtitle}
+                </SubtitleContainer>
+              ) : null}
+            </div>
           </div>
           {action ? (
-            <div className="w-full pt-0.5 sm:w-auto sm:shrink-0 sm:pt-1 lg:pr-2">
+            <div className="flex w-full shrink-0 justify-start sm:w-auto sm:justify-end sm:self-center [&>*]:w-full sm:[&>*]:w-auto">
               {action}
             </div>
           ) : null}

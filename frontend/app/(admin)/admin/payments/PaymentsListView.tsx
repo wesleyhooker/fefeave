@@ -96,7 +96,7 @@ export function PaymentsListView() {
       <AdminPageIntroSection>
         <AdminPageIntro
           title="Payments"
-          subtitle="Payment history"
+          subtitle="Recorded wholesaler payments."
           action={
             <Link
               href="/admin/payments/new"
@@ -131,7 +131,12 @@ export function PaymentsListView() {
           </h2>
 
           <div className="md:hidden">
-            <div className="space-y-3 p-3 sm:p-4">
+            <div className="border-b border-gray-100/90 px-4 pb-2 pt-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                Recent
+              </p>
+            </div>
+            <div className="space-y-2.5 p-3 sm:p-4">
               {rows.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-gray-200 bg-gray-50/60 px-4 py-8 text-center text-sm text-gray-500">
                   No payments recorded yet.
@@ -146,34 +151,35 @@ export function PaymentsListView() {
                     <Link
                       key={p.id}
                       href={href}
-                      className="group/card block rounded-lg border border-gray-200 bg-white p-4 shadow-workspace-surface-sm transition-[border-color,box-shadow] duration-200 ease-out hover:border-gray-300 hover:shadow-md"
+                      className="group/card block min-w-0 rounded-lg border border-gray-200 bg-white p-3.5 shadow-workspace-surface-sm transition-[border-color,box-shadow] duration-200 ease-out hover:border-gray-300 hover:shadow-md"
                       aria-label={rowNavigateLabel(name)}
                     >
-                      <div className="flex items-baseline justify-between gap-3">
-                        <p className={`text-xs ${workspaceTableCellMeta}`}>
-                          {formatDate(p.date)}
-                        </p>
+                      <div className="flex items-start justify-between gap-2">
                         <p
-                          className={`text-lg font-semibold ${workspaceMoneyTabular} ${workspaceMoneyNeutral}`}
+                          className={`text-xl font-semibold leading-tight tracking-tight ${workspaceMoneyTabular} ${workspaceMoneyNeutral}`}
                         >
                           {formatCurrency(p.amount)}
                         </p>
+                        <WorkspaceRowChevron className="mt-0.5 shrink-0 text-gray-400 transition-transform duration-200 ease-out group-hover/card:translate-x-0.5 group-hover/card:text-gray-700" />
                       </div>
-                      <p className="mt-2 text-sm font-semibold leading-snug text-gray-900 transition-colors group-hover/card:text-gray-800">
+                      <p className="mt-2 text-[15px] font-semibold leading-snug text-gray-900 transition-colors group-hover/card:text-gray-800">
                         {name}
                       </p>
-                      <p className={`mt-1 text-xs ${workspaceTableCellMeta}`}>
-                        {methodLabel}
+                      <p
+                        className={`mt-1.5 text-xs leading-snug ${workspaceTableCellMeta}`}
+                      >
+                        {formatDate(p.date)}
+                        <span className="text-gray-300"> · </span>
+                        <span className="font-medium text-gray-600">
+                          {methodLabel}
+                        </span>
                         {p.reference ? (
                           <span className="text-gray-500">
                             {" "}
-                            · Ref. {p.reference}
+                            · {p.reference}
                           </span>
                         ) : null}
                       </p>
-                      <div className="mt-3 flex justify-end border-t border-gray-100 pt-3">
-                        <WorkspaceRowChevron className="text-gray-400 transition-transform duration-200 ease-out group-hover/card:translate-x-0.5 group-hover/card:text-gray-700" />
-                      </div>
                     </Link>
                   );
                 })

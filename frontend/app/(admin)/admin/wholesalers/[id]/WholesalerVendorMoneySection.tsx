@@ -59,16 +59,23 @@ export function WholesalerVendorMoneySection({
       </div>
 
       <div className="min-w-0 bg-gray-50/50">
-        <div className="border-b border-gray-200/60 px-4 py-2.5 sm:px-5 sm:py-2.5">
+        <div className="border-b border-gray-200/60 px-4 py-3 sm:px-5 sm:py-2.5">
+          <p
+            className="mb-2 text-[11px] font-medium uppercase tracking-wide text-gray-500 md:hidden"
+            id="wholesaler-money-tab-hint"
+          >
+            Transaction type
+          </p>
           <WorkspaceSegmentedControl
             ariaLabel="Payment or vendor expense"
+            aria-describedby="wholesaler-money-tab-hint"
             value={activeTab}
             onChange={onTabChange}
             options={MONEY_TAB_OPTIONS}
           />
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 px-4 pb-7 pt-5 sm:px-5 sm:pb-8 sm:pt-7">
           {activeTab === "payment" ? (
             <WholesalerInlinePaySection
               wholesalerId={wholesalerId}
