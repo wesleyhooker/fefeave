@@ -218,7 +218,7 @@ function RecordPaymentForm() {
 
         <form
           onSubmit={handleSubmit}
-          className={`max-w-xl space-y-4 p-6 ${workspaceCard}`}
+          className={`mx-auto min-w-0 max-w-full space-y-5 p-4 sm:max-w-xl sm:space-y-4 sm:p-6 ${workspaceCard}`}
         >
           <div>
             <label
@@ -311,7 +311,7 @@ function RecordPaymentForm() {
                   if (parts[1]?.length > 2) return;
                   setAmount(v);
                 }}
-                className={`w-full max-w-[8rem] pl-7 tabular-nums ${workspaceTextInput}`}
+                className={`w-full min-w-0 max-w-full pl-7 tabular-nums sm:max-w-[10rem] ${workspaceTextInput}`}
                 placeholder="0.00"
                 aria-label="Amount in dollars"
               />
@@ -389,11 +389,21 @@ function RecordPaymentForm() {
             tone="flush"
           />
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:pt-2">
+            <Link
+              href="/admin/balances"
+              className={`${workspaceActionSecondaryMd} flex w-full justify-center sm:w-auto`}
+            >
+              <WorkspaceActionLabel
+                icon={<XMarkIcon className={workspaceActionIconMd} />}
+              >
+                Cancel
+              </WorkspaceActionLabel>
+            </Link>
             <button
               type="submit"
               disabled={submitting || loadingWholesalers}
-              className={`${workspaceActionCompleteMd} disabled:opacity-60`}
+              className={`${workspaceActionCompleteMd} w-full justify-center disabled:opacity-60 sm:w-auto`}
             >
               <WorkspaceActionLabel
                 icon={<BanknotesIcon className={workspaceActionIconMd} />}
@@ -401,13 +411,6 @@ function RecordPaymentForm() {
                 {submitting ? "Saving..." : "Record payment"}
               </WorkspaceActionLabel>
             </button>
-            <Link href="/admin/balances" className={workspaceActionSecondaryMd}>
-              <WorkspaceActionLabel
-                icon={<XMarkIcon className={workspaceActionIconMd} />}
-              >
-                Cancel
-              </WorkspaceActionLabel>
-            </Link>
           </div>
         </form>
       </AdminPageContainer>

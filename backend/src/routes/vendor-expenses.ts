@@ -120,17 +120,30 @@ export async function vendorExpenseRoutes(
         if (wh.rows.length === 0) {
           throw new NotFoundError('Wholesaler', wholesalerId);
         }
+        const accountResult = await client.query(
+          `SELECT id
+           FROM accounts
+           WHERE type = 'WHOLESALER'
+             AND legacy_wholesaler_id = $1
+             AND deleted_at IS NULL
+           LIMIT 1`,
+          [wholesalerId]
+        );
+        if (accountResult.rows.length === 0) {
+          throw new NotFoundError('Account', `mapped from wholesaler ${wholesalerId}`);
+        }
+        const accountId = (accountResult.rows[0] as { id: string }).id;
 
         const due = expense_date ?? null;
 
         const result = await client.query(
           `INSERT INTO owed_line_items (
-             show_id, wholesaler_id, amount, currency, description, due_date, status,
+             show_id, wholesaler_id, account_id, amount, currency, description, due_date, status,
              created_by, created_via, obligation_kind, calculation_method
            )
-           VALUES (NULL, $1, $2, 'USD', $3, $4, 'PENDING', $5, 'API', 'VENDOR_EXPENSE', NULL)
+           VALUES (NULL, $1, $2, $3, 'USD', $4, $5, 'PENDING', $6, 'API', 'VENDOR_EXPENSE', NULL)
            RETURNING id, wholesaler_id, amount, currency, description, due_date, obligation_kind, created_at, updated_at`,
-          [wholesalerId, amount, description, due, userId]
+          [wholesalerId, accountId, amount, description, due, userId]
         );
         return result.rows[0] as {
           id: string;

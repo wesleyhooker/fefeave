@@ -32,7 +32,7 @@ export function WorkspaceHeader({
     <header
       className={`${workspaceGlobalHeaderBar} px-4 py-3.5 backdrop-blur-[2px] md:px-6 md:py-4`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5">
+      <div className="flex flex-nowrap items-center justify-between gap-x-2 gap-y-0 md:flex-wrap md:gap-x-3 md:gap-y-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
           {onMenuClick && (
             <button
@@ -56,11 +56,11 @@ export function WorkspaceHeader({
               </svg>
             </button>
           )}
-          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-stone-200/80 bg-white/65 px-2.5 py-1.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.78)] md:gap-2.5 md:px-3 md:py-1.5">
+          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-stone-200/80 bg-white/65 px-2.5 py-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.78)] md:gap-2.5 md:px-3 md:py-1.5">
             <Link
               href="/"
               aria-label="Go to Fefe Ave site"
-              className={`flex shrink-0 items-center gap-2 rounded-lg px-1 py-0.5 text-lg font-semibold text-stone-900 hover:text-stone-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:pr-1 ${workspaceChromeHoverWarm}`}
+              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-1.5 py-1 text-lg font-semibold text-stone-900 hover:text-stone-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:min-h-0 md:px-1 md:py-0.5 md:pr-1 ${workspaceChromeHoverWarm}`}
             >
               <Image
                 src="/fefe-bird-icon.png"
@@ -78,7 +78,7 @@ export function WorkspaceHeader({
             </span>
           </div>
         </div>
-        <div className="rounded-xl border border-stone-200/80 bg-white/60 p-0.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.74)]">
+        <div className="shrink-0 rounded-xl border border-stone-200/80 bg-white/60 p-0.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.74)]">
           <ProfileDropdown
             email={email}
             roles={roles}

@@ -66,7 +66,7 @@ export function WorkspaceDrawer({
         onClick={onClose}
       />
       <div
-        className={`pointer-events-auto relative z-10 flex h-full w-[min(26rem,calc(100vw-1rem))] max-w-[26rem] flex-col transition-[transform,opacity] duration-[220ms] ease-out motion-reduce:transition-none motion-reduce:transform-none ${
+        className={`pointer-events-auto relative z-10 flex h-full w-[min(28rem,calc(100vw-0.5rem))] max-w-[28rem] flex-col transition-[transform,opacity] duration-[220ms] ease-out motion-reduce:transition-none motion-reduce:transform-none ${
           entered ? "translate-x-0" : "translate-x-full"
         }`}
       >

@@ -157,12 +157,25 @@ export async function owedLineItemRoutes(
         if (wholesalerCheck.rows.length === 0) {
           throw new NotFoundError('Wholesaler', wholesaler_id);
         }
+        const accountResult = await client.query(
+          `SELECT id
+           FROM accounts
+           WHERE type = 'WHOLESALER'
+             AND legacy_wholesaler_id = $1
+             AND deleted_at IS NULL
+           LIMIT 1`,
+          [wholesaler_id]
+        );
+        if (accountResult.rows.length === 0) {
+          throw new NotFoundError('Account', `mapped from wholesaler ${wholesaler_id}`);
+        }
+        const accountId = (accountResult.rows[0] as { id: string }).id;
 
         const result = await client.query(
-          `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, currency, description, due_date, status, created_by, created_via)
-           VALUES ($1, $2, $3, 'USD', $4, $5, 'PENDING', $6, 'API')
+          `INSERT INTO owed_line_items (show_id, wholesaler_id, account_id, amount, currency, description, due_date, status, created_by, created_via)
+           VALUES ($1, $2, $3, $4, 'USD', $5, $6, 'PENDING', $7, 'API')
            RETURNING id, show_id, wholesaler_id, amount, currency, description, due_date, status, created_at, updated_at`,
-          [showId, wholesaler_id, amount, description, due_date ?? null, userId]
+          [showId, wholesaler_id, accountId, amount, description, due_date ?? null, userId]
         );
         return result.rows[0];
       });
@@ -399,6 +412,19 @@ export async function owedLineItemRoutes(
         if (wholesalerCheck.rows.length === 0) {
           throw new NotFoundError('Wholesaler', wholesaler_id);
         }
+        const accountResult = await client.query(
+          `SELECT id
+           FROM accounts
+           WHERE type = 'WHOLESALER'
+             AND legacy_wholesaler_id = $1
+             AND deleted_at IS NULL
+           LIMIT 1`,
+          [wholesaler_id]
+        );
+        if (accountResult.rows.length === 0) {
+          throw new NotFoundError('Account', `mapped from wholesaler ${wholesaler_id}`);
+        }
+        const accountId = (accountResult.rows[0] as { id: string }).id;
 
         await assertNoDuplicateSettlementForWholesaler(client, showId, wholesaler_id);
         const settlementAgg = await loadShowSettlementAggregates(client, showId);
@@ -429,11 +455,11 @@ export async function owedLineItemRoutes(
             settlementAgg.payoutAfterFees
           );
           const result = await client.query(
-            `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
-             SELECT $1, $2, ROUND(sf.payout_after_fees_amount * $3 / 10000, 4), 'USD', $4, 'PENDING', $5, 'API', 'PERCENT_PAYOUT', $3, sf.payout_after_fees_amount
+            `INSERT INTO owed_line_items (show_id, wholesaler_id, account_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
+             SELECT $1, $2, $3, ROUND(sf.payout_after_fees_amount * $4 / 10000, 4), 'USD', $5, 'PENDING', $6, 'API', 'PERCENT_PAYOUT', $4, sf.payout_after_fees_amount
              FROM show_financials sf WHERE sf.show_id = $1
              RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at`,
-            [showId, wholesaler_id, rate_bps, description, userId]
+            [showId, wholesaler_id, accountId, rate_bps, description, userId]
           );
           return result.rows[0];
         }
@@ -460,10 +486,10 @@ export async function owedLineItemRoutes(
             settlementAgg.payoutAfterFees
           );
           const result = await client.query(
-            `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
-             VALUES ($1, $2, $3, 'USD', $4, 'PENDING', $5, 'API', 'ITEMIZED', NULL, NULL)
+            `INSERT INTO owed_line_items (show_id, wholesaler_id, account_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
+             VALUES ($1, $2, $3, $4, 'USD', $5, 'PENDING', $6, 'API', 'ITEMIZED', NULL, NULL)
              RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at`,
-            [showId, wholesaler_id, amountDollars, description, userId]
+            [showId, wholesaler_id, accountId, amountDollars, description, userId]
           );
           const settlementRow = result.rows[0] as {
             id: string;
@@ -505,10 +531,10 @@ export async function owedLineItemRoutes(
           settlementAgg.payoutAfterFees
         );
         const result = await client.query(
-          `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
-           VALUES ($1, $2, $3, 'USD', $4, 'PENDING', $5, 'API', 'MANUAL', NULL, NULL)
+          `INSERT INTO owed_line_items (show_id, wholesaler_id, account_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
+           VALUES ($1, $2, $3, $4, 'USD', $5, 'PENDING', $6, 'API', 'MANUAL', NULL, NULL)
            RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at`,
-          [showId, wholesaler_id, amount, description, userId]
+          [showId, wholesaler_id, accountId, amount, description, userId]
         );
         return result.rows[0];
       });

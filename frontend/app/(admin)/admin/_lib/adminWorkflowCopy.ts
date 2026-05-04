@@ -16,17 +16,16 @@ export function workflowDashboardWeekSubtitle(
 /** Shows page — table column & compact profit line (no “Est.” wording). */
 export const WORKFLOW_SHOWS_PROFIT_LABEL = 'Profit';
 
-export const WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE =
-  'Mark this week as paid?';
+export const WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE = 'Record owner payout?';
 export const WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION =
-  "You're confirming you've paid yourself for this week.";
-export const WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL = 'Mark as paid';
+  'Record this week payout to Owner activity.';
+export const WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL = 'Record payout';
 export const WORKFLOW_SELF_PAY_MARK_PAID_TOGGLE_LABEL = 'Mark paid';
 
-export const WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE = 'Reopen this week payout?';
+export const WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE = 'Void owner payout?';
 export const WORKFLOW_SELF_PAY_REOPEN_DIALOG_DESCRIPTION =
-  'This removes your paid confirmation so this week is back on your payout checklist.';
-export const WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL = 'Reopen week';
+  'This keeps the row in Owner activity as voided for audit history.';
+export const WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL = 'Void payout';
 
 export const WORKFLOW_SELF_PAY_MARKED_PAID_LABEL = 'Marked paid';
 

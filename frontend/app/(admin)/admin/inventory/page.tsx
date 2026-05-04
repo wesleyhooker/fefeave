@@ -24,6 +24,8 @@ import {
   workspaceDateInput,
   workspaceFormLabel,
   workspaceFormLabelSecondary,
+  workspaceMoneyTabular,
+  workspaceTableCellMeta,
   workspaceTextInput,
   workspaceTheadSticky,
   workspaceTableRowInteractive,
@@ -118,33 +120,36 @@ export default function AdminInventoryPage() {
         />
       </AdminPageIntroSection>
       <AdminPageContainer>
-        <section className={`mb-8 p-4 ${workspaceCard}`}>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+        <section className={`mb-8 p-4 sm:p-5 ${workspaceCard}`}>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">
             Add purchase
           </h2>
-          <form onSubmit={handleSubmit} className="flex flex-wrap gap-4">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className={workspaceFormLabel}>Date</span>
+          <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-4">
+            <label className="block min-w-0">
+              <span className={`mb-1.5 block ${workspaceFormLabel}`}>Date</span>
               <input
                 type="date"
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
-                className={workspaceDateInput}
+                className={`w-full min-w-0 ${workspaceDateInput}`}
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className={workspaceFormLabel}>Amount ($)</span>
+            <label className="block min-w-0">
+              <span className={`mb-1.5 block ${workspaceFormLabel}`}>
+                Amount ($)
+              </span>
               <input
                 type="number"
                 step="0.01"
                 min="0.01"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className={`w-28 ${workspaceTextInput}`}
+                className={`w-full min-w-0 max-w-full sm:max-w-[12rem] ${workspaceTextInput}`}
+                inputMode="decimal"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className={workspaceFormLabelSecondary}>
+            <label className="block min-w-0">
+              <span className={`mb-1.5 block ${workspaceFormLabelSecondary}`}>
                 Notes (optional)
               </span>
               <input
@@ -152,16 +157,16 @@ export default function AdminInventoryPage() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g. Pallet #3"
-                className={`min-w-[12rem] ${workspaceTextInput}`}
+                className={`w-full min-w-0 ${workspaceTextInput}`}
               />
             </label>
-            <div className="flex items-end">
+            <div className="pt-1">
               <button
                 type="submit"
                 disabled={submitting}
-                className={`${workspaceActionCompleteMd} disabled:opacity-50`}
+                className={`${workspaceActionCompleteMd} w-full justify-center disabled:opacity-50 sm:w-auto`}
               >
-                {submitting ? "Saving…" : "Add"}
+                {submitting ? "Saving…" : "Add purchase"}
               </button>
             </div>
           </form>
@@ -172,14 +177,16 @@ export default function AdminInventoryPage() {
           ) : null}
         </section>
 
-        <section className={workspaceCard}>
-          <div className="border-b border-gray-100 px-4 py-3">
+        <section className={`min-w-0 overflow-hidden ${workspaceCard}`}>
+          <div className="border-b border-gray-100 px-4 py-3 sm:px-5">
             <h2 className="text-lg font-semibold text-gray-900">
               Recent purchases (last 30 days)
             </h2>
           </div>
           {loading ? (
-            <div className="px-4 py-6 text-sm text-gray-500">Loading…</div>
+            <div className="px-4 py-6 text-sm text-gray-500 sm:px-5">
+              Loading…
+            </div>
           ) : error ? (
             <WorkspaceInlineError
               title="Could not load recent purchases."
@@ -188,54 +195,77 @@ export default function AdminInventoryPage() {
               className="m-4"
             />
           ) : !purchases?.length ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-500">
+            <div className="px-4 py-6 text-center text-sm text-gray-500 sm:px-5">
               No purchases in the last 30 days.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-100">
-                <thead className={workspaceTheadSticky}>
-                  <tr>
-                    <th
-                      className={`${workspaceTableHeaderCellPadding} text-left`}
-                    >
-                      Date
-                    </th>
-                    <th
-                      className={`${workspaceTableHeaderCellPadding} text-right`}
-                    >
-                      Amount
-                    </th>
-                    <th
-                      className={`${workspaceTableHeaderCellPadding} text-left`}
-                    >
-                      Notes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
+            <>
+              <div className="md:hidden">
+                <ul className="divide-y divide-gray-100">
                   {purchases.map((row) => (
-                    <tr key={row.id} className={workspaceTableRowInteractive}>
-                      <td
-                        className={`whitespace-nowrap text-sm text-gray-900 ${workspaceTableBodyCellPadding}`}
-                      >
-                        {formatDate(row.purchase_date)}
-                      </td>
-                      <td
-                        className={`whitespace-nowrap text-right text-sm text-gray-900 ${workspaceTableBodyCellPadding}`}
-                      >
-                        {formatCurrency(parseAmount(row.amount))}
-                      </td>
-                      <td
-                        className={`text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
-                      >
-                        {row.notes ?? "—"}
-                      </td>
-                    </tr>
+                    <li key={row.id} className="min-w-0 px-4 py-4">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <span
+                          className={`text-lg font-semibold tabular-nums text-gray-900 ${workspaceMoneyTabular}`}
+                        >
+                          {formatCurrency(parseAmount(row.amount))}
+                        </span>
+                        <span className={`text-sm ${workspaceTableCellMeta}`}>
+                          {formatDate(row.purchase_date)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm leading-snug text-gray-700">
+                        {row.notes?.trim() ? row.notes : "—"}
+                      </p>
+                    </li>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </ul>
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className={workspaceTheadSticky}>
+                    <tr>
+                      <th
+                        className={`${workspaceTableHeaderCellPadding} text-left`}
+                      >
+                        Date
+                      </th>
+                      <th
+                        className={`${workspaceTableHeaderCellPadding} text-right`}
+                      >
+                        Amount
+                      </th>
+                      <th
+                        className={`${workspaceTableHeaderCellPadding} text-left`}
+                      >
+                        Notes
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {purchases.map((row) => (
+                      <tr key={row.id} className={workspaceTableRowInteractive}>
+                        <td
+                          className={`whitespace-nowrap text-sm text-gray-900 ${workspaceTableBodyCellPadding}`}
+                        >
+                          {formatDate(row.purchase_date)}
+                        </td>
+                        <td
+                          className={`whitespace-nowrap text-right text-sm text-gray-900 ${workspaceTableBodyCellPadding}`}
+                        >
+                          {formatCurrency(parseAmount(row.amount))}
+                        </td>
+                        <td
+                          className={`text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
+                        >
+                          {row.notes ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       </AdminPageContainer>

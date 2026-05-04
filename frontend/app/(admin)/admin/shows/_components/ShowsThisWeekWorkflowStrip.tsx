@@ -5,70 +5,149 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import {
   workspaceActionIconSm,
-  workspaceActionSecondaryMd,
+  workspaceActionPositiveCompleteSm,
+  workspaceListPrimaryMoneyAmountClass,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import {
-  clearSelfPay,
-  loadSelfPay,
-  saveSelfPay,
+  deriveOwnerWeeklyPayoutUiState,
+  loadSelfPayAndPayoutServer,
+  loadWeeklyPayoutStateServer,
+  markSelfPayPaidServer,
+  markSelfPayUnpaidServer,
+  type OwnerWeeklyPayoutState,
   type SelfPayStored,
 } from "@/app/(admin)/admin/dashboard/selfPayStorage";
 import {
   WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL,
-  WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION,
   WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE,
-  WORKFLOW_SELF_PAY_MARKED_PAID_LABEL,
   WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL,
-  WORKFLOW_SELF_PAY_REOPEN_DIALOG_DESCRIPTION,
   WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 
 export function ShowsThisWeekWorkflowStrip({
   weekStartStr,
+  weekEndStr,
   completedWeekProfitForSnapshot,
 }: {
   weekStartStr: string;
+  weekEndStr: string;
   /** Sum of estimated profit for COMPLETED shows this week (same basis as Dashboard self-pay snapshot). */
   completedWeekProfitForSnapshot: number;
 }) {
   const [selfPay, setSelfPay] = useState<SelfPayStored | null>(null);
+  const [weeklyPayoutState, setWeeklyPayoutState] =
+    useState<OwnerWeeklyPayoutState>({
+      amount: 0,
+      canRecordPayout: false,
+    });
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [markUnpaidOpen, setMarkUnpaidOpen] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
 
   useEffect(() => {
-    const read = () => setSelfPay(loadSelfPay(weekStartStr));
-    read();
-    const onStorage = (e: StorageEvent) => {
-      if (e.key != null && e.key.endsWith(weekStartStr)) read();
+    let cancelled = false;
+    const refresh = () => {
+      void loadSelfPayAndPayoutServer({ weekStartYmd: weekStartStr })
+        .then(({ selfPay: selfPayState, payout }) => {
+          if (!cancelled) {
+            setSelfPay(selfPayState);
+            setWeeklyPayoutState(payout);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setSelfPay({ paid: false });
+            setWeeklyPayoutState({ amount: 0, canRecordPayout: false });
+          }
+        });
     };
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("focus", read);
+    refresh();
+    const onFocus = () => {
+      refresh();
+    };
+    window.addEventListener("focus", onFocus);
     return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("focus", read);
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
     };
   }, [weekStartStr]);
 
-  const paid = selfPay?.paid === true;
-  const handleMarkDone = () => {
+  const payoutUiState = deriveOwnerWeeklyPayoutUiState({
+    selfPay,
+    payoutAmount: weeklyPayoutState.amount,
+  });
+  const paid = payoutUiState.isPaid;
+  const markRangeLabel = `${formatDate(weekStartStr)} – ${formatDate(weekEndStr)}`;
+  const markPaidDialogDescription = `Week ${markRangeLabel} · ${formatCurrency(
+    weeklyPayoutState.amount,
+  )}. This records or updates the owner payout in Owner activity.`;
+  const markUnpaidDialogDescription = `Week ${markRangeLabel}. This voids the owner payout, and the row stays visible as voided in Owner activity.`;
+
+  const handleMarkDone = async () => {
+    if (isMutating) return;
     const next: SelfPayStored = {
       paid: true,
       paidAt: new Date().toISOString(),
       profitSnapshot: completedWeekProfitForSnapshot,
     };
-    saveSelfPay(weekStartStr, next);
+    setIsMutating(true);
     setSelfPay(next);
     setMarkPaidOpen(false);
+    try {
+      const serverState = await markSelfPayPaidServer({
+        weekStartYmd: weekStartStr,
+        weekEndYmd: weekEndStr,
+      });
+      setSelfPay(serverState);
+      const payout = await loadWeeklyPayoutStateServer(weekStartStr);
+      setWeeklyPayoutState(payout);
+    } catch {
+      try {
+        const synced = await loadSelfPayAndPayoutServer({
+          weekStartYmd: weekStartStr,
+        });
+        setSelfPay(synced.selfPay);
+        setWeeklyPayoutState(synced.payout);
+      } catch {
+        setSelfPay({ paid: false });
+        setWeeklyPayoutState({ amount: 0, canRecordPayout: false });
+      }
+      throw new Error("Unable to record owner payout");
+    } finally {
+      setIsMutating(false);
+    }
   };
 
-  const handleMarkUndone = () => {
-    clearSelfPay(weekStartStr);
+  const handleMarkUndone = async () => {
+    if (isMutating) return;
+    setIsMutating(true);
     setSelfPay({ paid: false });
     setMarkUnpaidOpen(false);
+    try {
+      const serverState = await markSelfPayUnpaidServer(weekStartStr);
+      setSelfPay(serverState);
+      const payout = await loadWeeklyPayoutStateServer(weekStartStr);
+      setWeeklyPayoutState(payout);
+    } catch {
+      try {
+        const synced = await loadSelfPayAndPayoutServer({
+          weekStartYmd: weekStartStr,
+        });
+        setSelfPay(synced.selfPay);
+        setWeeklyPayoutState(synced.payout);
+      } catch {
+        setSelfPay({ paid: false });
+        setWeeklyPayoutState({ amount: 0, canRecordPayout: false });
+      }
+      throw new Error("Unable to void owner payout");
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   const paidAtLabel =
@@ -83,50 +162,50 @@ export function ShowsThisWeekWorkflowStrip({
 
   return (
     <>
-      <div className="w-full rounded-lg border border-stone-200/90 bg-white/85 px-3 py-2.5 sm:min-w-[13.5rem] sm:w-auto sm:px-3.5 sm:py-3">
-        <div className="flex flex-col items-stretch gap-1.5 sm:items-end">
-          <span className="text-[10px] font-medium uppercase tracking-wide text-stone-500">
-            Status
-          </span>
-          <span
-            className={`inline-flex items-center gap-1.5 text-xs font-medium ${paid ? "text-emerald-800" : "text-stone-700"}`}
+      <div className="w-full px-1 py-1 sm:min-w-[13.5rem] sm:w-auto">
+        <div className="flex flex-col items-stretch gap-2">
+          <p
+            className={`text-[1.35rem] leading-none tracking-tight sm:text-[1.8rem] ${workspaceListPrimaryMoneyAmountClass(
+              weeklyPayoutState.amount,
+            )}`}
           >
-            <span
-              className={`h-1.5 w-1.5 shrink-0 rounded-full ${paid ? "bg-emerald-600/80" : "bg-stone-400/90"}`}
-              aria-hidden
-            />
-            {paid ? WORKFLOW_SELF_PAY_MARKED_PAID_LABEL : "Unpaid"}
-          </span>
-          {paidAtLabel && paid ? (
-            <p className="text-[11px] font-medium tabular-nums text-emerald-800/75 sm:text-right">
-              Confirmed {paidAtLabel}
-            </p>
-          ) : null}
-
+            {formatCurrency(weeklyPayoutState.amount)}
+          </p>
+          <p
+            className={`text-sm font-medium ${paid ? "text-emerald-800" : "text-stone-700"}`}
+          >
+            {paid && paidAtLabel ? `Paid • ${paidAtLabel}` : "Unpaid"}
+          </p>
           {paid ? (
             <button
               type="button"
               onClick={() => setMarkUnpaidOpen(true)}
-              className={`${workspaceActionSecondaryMd} w-full justify-center !py-1.5 sm:w-auto`}
+              disabled={isMutating}
+              className="w-fit rounded-md p-1.5 text-stone-500 transition-colors hover:bg-stone-100/90 hover:text-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300/45 disabled:opacity-60"
+              aria-label="Undo payout"
+              title="Undo payout"
             >
-              <WorkspaceActionLabel
-                icon={<ArrowUturnLeftIcon className={workspaceActionIconSm} />}
-              >
-                Mark as unpaid
-              </WorkspaceActionLabel>
+              <ArrowUturnLeftIcon className={workspaceActionIconSm} />
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={() => setMarkPaidOpen(true)}
-              className={`${workspaceActionSecondaryMd} w-full justify-center !py-1.5 sm:w-auto`}
-            >
-              <WorkspaceActionLabel
-                icon={<CheckCircleIcon className={workspaceActionIconSm} />}
-              >
-                Mark week paid
-              </WorkspaceActionLabel>
-            </button>
+            <>
+              {payoutUiState.canMarkPaid ? (
+                <button
+                  type="button"
+                  onClick={() => setMarkPaidOpen(true)}
+                  disabled={isMutating}
+                  className={`${workspaceActionPositiveCompleteSm} w-full justify-center disabled:opacity-60 sm:w-auto`}
+                >
+                  <WorkspaceActionLabel
+                    icon={<CheckCircleIcon className={workspaceActionIconSm} />}
+                  >
+                    Mark week paid
+                  </WorkspaceActionLabel>
+                </button>
+              ) : (
+                <p className="text-xs text-stone-500">No payout to mark yet</p>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -135,7 +214,7 @@ export function ShowsThisWeekWorkflowStrip({
         open={markPaidOpen}
         onOpenChange={setMarkPaidOpen}
         title={WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE}
-        description={WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION}
+        description={markPaidDialogDescription}
         confirmLabel={WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL}
         onConfirm={handleMarkDone}
         tone="rose"
@@ -145,7 +224,7 @@ export function ShowsThisWeekWorkflowStrip({
         open={markUnpaidOpen}
         onOpenChange={setMarkUnpaidOpen}
         title={WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE}
-        description={WORKFLOW_SELF_PAY_REOPEN_DIALOG_DESCRIPTION}
+        description={markUnpaidDialogDescription}
         confirmLabel={WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL}
         onConfirm={handleMarkUndone}
         tone="stone"

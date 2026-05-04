@@ -28,12 +28,14 @@ function buildUrl(path: string, params?: Record<string, string>): string {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(buildUrl(path), {
+  const url = buildUrl(path);
+  const res = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeaders(),
     },
+    credentials: 'include',
     cache: 'no-store',
   });
   if (!res.ok) {
@@ -50,6 +52,7 @@ export async function apiGetText(
   const res = await fetch(buildUrl(path, params), {
     method: 'GET',
     headers: { ...getAuthHeaders() },
+    credentials: 'include',
     cache: 'no-store',
   });
   if (!res.ok) {

@@ -238,7 +238,9 @@ export function ShowCreateForm({
       <label htmlFor="create-show-payout" className={workspaceFormLabel}>
         Payout after fees ($) <span className="text-red-500">*</span>
       </label>
-      <div className="relative mt-1.5 max-w-[10rem]">
+      <div
+        className={`relative mt-1.5 ${dense ? "max-w-full sm:max-w-[10rem]" : "max-w-[10rem]"}`}
+      >
         <span
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
           aria-hidden
@@ -298,15 +300,15 @@ export function ShowCreateForm({
             </div>
           ) : null}
           {dense ? (
-            <div className="px-3.5 pb-3 pt-3.5">
-              <p className="mb-3 text-xs font-medium leading-snug text-stone-600">
+            <div className="px-4 pb-4 pt-4 sm:px-3.5 sm:pb-3 sm:pt-3.5">
+              <p className="mb-4 text-sm font-medium leading-relaxed text-stone-600 sm:mb-3 sm:text-xs sm:leading-snug">
                 {WORKFLOW_LOG_SHOW_FORM_DRAWER_NOTE}
               </p>
-              <div className="space-y-2">
+              <div className="space-y-3 sm:space-y-2">
                 {dateField}
                 {platformField}
               </div>
-              <div className="mt-4">{payoutField}</div>
+              <div className="mt-5 sm:mt-4">{payoutField}</div>
               <div className="mt-6">{nameField}</div>
             </div>
           ) : (
@@ -335,7 +337,7 @@ export function ShowCreateForm({
       <div
         className={
           dense
-            ? "flex flex-wrap gap-2 border-t border-stone-200/80 pt-3"
+            ? "flex flex-col gap-3 border-t border-stone-200/80 pt-4 sm:flex-row sm:flex-wrap sm:gap-2 sm:pt-3"
             : "flex flex-wrap gap-3 pt-1"
         }
       >

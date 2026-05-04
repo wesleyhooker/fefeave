@@ -24,7 +24,7 @@ export function AdminPageContainer({
 }) {
   return (
     <div className="min-w-0">
-      <div className={`${workspacePageGutter} pb-4 md:pb-6`}>
+      <div className={`${workspacePageGutter} pb-5 md:pb-6`}>
         <div
           className={`${contentWidthClassName} ${contentStackClassName} ${workspacePageIntroToContentGap}`}
         >

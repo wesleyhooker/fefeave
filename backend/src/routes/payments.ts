@@ -81,12 +81,25 @@ export async function paymentRoutes(
         if (wholesalerCheck.rows.length === 0) {
           throw new NotFoundError('Wholesaler', wholesaler_id);
         }
+        const accountResult = await client.query(
+          `SELECT id
+           FROM accounts
+           WHERE type = 'WHOLESALER'
+             AND legacy_wholesaler_id = $1
+             AND deleted_at IS NULL
+           LIMIT 1`,
+          [wholesaler_id]
+        );
+        if (accountResult.rows.length === 0) {
+          throw new NotFoundError('Account', `mapped from wholesaler ${wholesaler_id}`);
+        }
+        const accountId = (accountResult.rows[0] as { id: string }).id;
 
         const result = await client.query(
-          `INSERT INTO payments (wholesaler_id, amount, currency, payment_date, payment_method, reference, notes, created_by, created_via)
-           VALUES ($1, $2, 'USD', $3, 'OTHER', $4, $5, $6, 'API')
+          `INSERT INTO payments (wholesaler_id, account_id, amount, currency, payment_date, payment_method, reference, notes, created_by, created_via)
+           VALUES ($1, $2, $3, 'USD', $4, 'OTHER', $5, $6, $7, 'API')
            RETURNING id, wholesaler_id, amount, currency, payment_date, reference, notes, created_at, updated_at`,
-          [wholesaler_id, amount, payment_date, reference ?? null, notes ?? null, userId]
+          [wholesaler_id, accountId, amount, payment_date, reference ?? null, notes ?? null, userId]
         );
         return result.rows[0];
       });

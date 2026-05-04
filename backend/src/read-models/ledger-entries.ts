@@ -29,7 +29,15 @@ export async function readLedgerEntries(
   const endDate = filters?.endDate ?? null;
 
   const result = await db.query(
-    `SELECT
+    `WITH wholesaler_account AS (
+       SELECT id
+       FROM accounts
+       WHERE type = 'WHOLESALER'
+         AND legacy_wholesaler_id = $1::uuid
+         AND deleted_at IS NULL
+       LIMIT 1
+     )
+     SELECT
        combined.ledger_date AS date,
        combined.wholesaler,
        combined.entry_type AS type,
@@ -40,7 +48,7 @@ export async function readLedgerEntries(
      FROM (
        SELECT
          oli.created_at::date AS ledger_date,
-         w.name AS wholesaler,
+         a.display_name AS wholesaler,
          'OWED'::text AS entry_type,
          s.name AS show_name,
          oli.id::text AS reference_id,
@@ -48,10 +56,14 @@ export async function readLedgerEntries(
          oli.amount::numeric AS amount,
          0 AS type_order
        FROM owed_line_items oli
-       INNER JOIN wholesalers w ON w.id = oli.wholesaler_id AND w.deleted_at IS NULL
+       INNER JOIN accounts a ON a.id = oli.account_id AND a.deleted_at IS NULL
        LEFT JOIN shows s ON s.id = oli.show_id AND s.deleted_at IS NULL
        WHERE oli.deleted_at IS NULL
-         AND ($1::uuid IS NULL OR oli.wholesaler_id = $1::uuid)
+         AND (
+           $1::uuid IS NULL
+           OR oli.account_id = (SELECT id FROM wholesaler_account)
+           OR (oli.account_id IS NULL AND oli.wholesaler_id = $1::uuid)
+         )
          AND ($2::date IS NULL OR oli.created_at::date >= $2::date)
          AND ($3::date IS NULL OR oli.created_at::date <= $3::date)
 
@@ -59,7 +71,7 @@ export async function readLedgerEntries(
 
        SELECT
          p.payment_date AS ledger_date,
-         w.name AS wholesaler,
+         a.display_name AS wholesaler,
          'PAYMENT'::text AS entry_type,
          s.name AS show_name,
          p.id::text AS reference_id,
@@ -67,10 +79,14 @@ export async function readLedgerEntries(
          (-p.amount)::numeric AS amount,
          1 AS type_order
        FROM payments p
-       INNER JOIN wholesalers w ON w.id = p.wholesaler_id AND w.deleted_at IS NULL
+       INNER JOIN accounts a ON a.id = p.account_id AND a.deleted_at IS NULL
        LEFT JOIN shows s ON s.id = p.show_id AND s.deleted_at IS NULL
        WHERE p.deleted_at IS NULL
-         AND ($1::uuid IS NULL OR p.wholesaler_id = $1::uuid)
+         AND (
+           $1::uuid IS NULL
+           OR p.account_id = (SELECT id FROM wholesaler_account)
+           OR (p.account_id IS NULL AND p.wholesaler_id = $1::uuid)
+         )
          AND ($2::date IS NULL OR p.payment_date >= $2::date)
          AND ($3::date IS NULL OR p.payment_date <= $3::date)
      ) combined

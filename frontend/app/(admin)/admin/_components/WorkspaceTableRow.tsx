@@ -31,7 +31,7 @@ const navRowFocus =
   "focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
 
 /** Shared body cell padding — keep in sync across all admin data tables. */
-export const workspaceTableBodyCellPadding = "px-3 py-2.5 sm:px-4";
+export const workspaceTableBodyCellPadding = "px-3 py-3 sm:px-4 sm:py-2.5";
 
 /** Balances index + balance-detail ledger — roomier rows without changing global default. */
 export const workspaceTableBodyCellPaddingComfortable =
@@ -48,7 +48,7 @@ const ledgerAffordanceCellPad = "px-2 py-2.5 align-middle sm:px-2.5";
 
 /** Sticky header cell padding (matches Balances / Payments table headers). */
 export const workspaceTableHeaderCellPadding =
-  "px-3 py-3 text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4";
+  "px-3 py-3.5 text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3";
 
 /**
  * Navigable row: full-row click / Enter / Space, same hover + focus ring as Balances / Payments.

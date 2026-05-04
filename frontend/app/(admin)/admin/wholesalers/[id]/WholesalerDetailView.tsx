@@ -1,6 +1,5 @@
 "use client";
 
-import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -482,7 +481,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
               aria-labelledby="wholesaler-ledger-heading"
             >
               <div
-                className={`${workspaceSectionToolbar} items-start gap-3 sm:items-center`}
+                className={`${workspaceSectionToolbar} flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between`}
               >
                 <div className="min-w-0 flex-1">
                   <h2
@@ -492,7 +491,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     Ledger
                   </h2>
                 </div>
-                <div className="shrink-0 self-center pt-0.5 sm:pt-0">
+                <div className="min-w-0 shrink-0 self-start md:self-center">
                   <WholesalerLedgerExportMenu
                     wholesalerId={id}
                     onStatementError={setStatementExportError}
@@ -815,10 +814,19 @@ export function WholesalerDetailView({ id }: { id: string }) {
                         ? workspaceLedgerRowVendorExpenseSelected
                         : "";
 
+                    const owedStr =
+                      row.amountOwed !== null
+                        ? formatCurrency(row.amountOwed)
+                        : "—";
+                    const paidStr =
+                      row.amountPaid !== null
+                        ? formatCurrency(row.amountPaid)
+                        : "—";
+
                     const card = (
                       <div key={row.entryId}>
                         <div
-                          className={`${rowSurface} ${cardSelectedClass} px-4 py-4 sm:px-5`}
+                          className={`${rowSurface} ${cardSelectedClass} px-3.5 py-3 sm:px-5 sm:py-4`}
                           onClick={
                             isPaymentRowMobile || isVendorExpenseMobile
                               ? () => handleLedgerRowActivate(row)
@@ -828,90 +836,75 @@ export function WholesalerDetailView({ id }: { id: string }) {
                           }
                         >
                           <div className="flex items-start gap-2">
-                            <div className="flex w-9 shrink-0 justify-center pt-0.5 sm:w-10">
+                            <div className="flex w-7 shrink-0 justify-center pt-0.5 sm:w-10">
                               {isItemized ? (
                                 <WorkspaceLedgerDisclosureIcon
                                   expanded={isExpanded}
                                 />
                               ) : (
                                 <span
-                                  className="inline-block w-3.5 sm:w-4"
+                                  className="inline-block w-3 sm:w-4"
                                   aria-hidden
                                 />
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <LedgerEntryTypeLabel row={row} />
-                              <div className="mt-2">{showBlock}</div>
-                              <p
-                                className={`mt-1.5 text-xs ${workspaceTableCellMeta}`}
-                              >
-                                {formatDate(row.date)}
-                              </p>
-                            </div>
-                            {isPaymentRowMobile ? (
-                              <div
-                                className="shrink-0 pt-0.5 text-gray-400 opacity-40 group-hover/ledger-payment:opacity-100"
-                                aria-hidden
-                              >
-                                <PencilSquareIcon className="h-3.5 w-3.5" />
-                              </div>
-                            ) : isVendorExpenseMobile ? (
-                              <div
-                                className="shrink-0 pt-0.5 text-gray-400 opacity-40 group-hover/ledger-vendor-expense:opacity-100"
-                                aria-hidden
-                              >
-                                <PencilSquareIcon className="h-3.5 w-3.5" />
-                              </div>
-                            ) : (
-                              <div
-                                className="w-9 shrink-0 sm:w-10"
-                                aria-hidden
-                              />
-                            )}
-                          </div>
-                          <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                              <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                                {SETTLEMENT_LABELS.amountOwed}
-                              </dt>
-                              <dd
-                                className={`text-right ${moneyOwedClass(row.amountOwed)}`}
-                              >
-                                {row.amountOwed !== null
-                                  ? formatCurrency(row.amountOwed)
-                                  : "—"}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                                Paid
-                              </dt>
-                              <dd
-                                className={`text-right ${moneyPaidClass(row.amountPaid)}`}
-                              >
-                                {row.amountPaid !== null
-                                  ? formatCurrency(row.amountPaid)
-                                  : "—"}
-                              </dd>
-                            </div>
-                            <div className="col-span-2 border-t border-gray-100 pt-2">
-                              <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                                Running balance
-                              </dt>
-                              <dd
-                                className={`text-right ${workspaceLedgerRunningBalanceAmount} ${runningBalanceClass(row.runningBalance)}`}
-                              >
+                              <div className="flex items-start justify-between gap-2">
+                                <LedgerEntryTypeLabel row={row} />
                                 <span
-                                  aria-label={`Running balance ${formatCurrency(row.runningBalance)}`}
+                                  className={`shrink-0 text-xs tabular-nums ${workspaceTableCellMeta}`}
                                 >
-                                  {formatLedgerRunningBalance(
-                                    row.runningBalance,
-                                  )}
+                                  {formatDate(row.date)}
                                 </span>
-                              </dd>
+                              </div>
+                              <div className="mt-1.5 text-[15px] leading-snug">
+                                {showBlock}
+                              </div>
+                              {(isPaymentRowMobile ||
+                                isVendorExpenseMobile) && (
+                                <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                  Tap to edit
+                                </p>
+                              )}
+                              <div className="mt-2.5 border-t border-gray-100/90 pt-2.5">
+                                <p
+                                  className={`text-xs leading-relaxed text-gray-600 ${workspaceMoneyTabular}`}
+                                >
+                                  <span className="text-gray-500">
+                                    {SETTLEMENT_LABELS.amountOwed}{" "}
+                                  </span>
+                                  <span
+                                    className={moneyOwedClass(row.amountOwed)}
+                                  >
+                                    {owedStr}
+                                  </span>
+                                  <span className="text-gray-300"> · </span>
+                                  <span className="text-gray-500">Paid </span>
+                                  <span
+                                    className={moneyPaidClass(row.amountPaid)}
+                                  >
+                                    {paidStr}
+                                  </span>
+                                </p>
+                                <div className="mt-2 flex items-baseline justify-between gap-2">
+                                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                    Running balance
+                                  </span>
+                                  <span
+                                    className={`text-right text-base ${workspaceLedgerRunningBalanceAmount} ${runningBalanceClass(row.runningBalance)}`}
+                                  >
+                                    <span
+                                      aria-label={`Running balance ${formatCurrency(row.runningBalance)}`}
+                                    >
+                                      {formatLedgerRunningBalance(
+                                        row.runningBalance,
+                                      )}
+                                    </span>
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                          </dl>
+                          </div>
                         </div>
                         {isItemized && isExpanded && lineItemsMobile?.length ? (
                           <div className="border-t border-gray-100 px-4 py-3 sm:px-5">

@@ -48,7 +48,7 @@ export const dashboardWeeklyHeroInsetWrapper = `${dashboardPadX} pb-6 sm:pb-7`;
 export const dashboardWeeklyHeroInset =
   'rounded-xl border border-stone-100/95 bg-stone-50/45 p-5 sm:p-6';
 
-export const dashboardWeeklyShowsToolbar = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/45 pb-3.5 pt-4 sm:pt-5`;
+export const dashboardWeeklyShowsToolbar = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/45 pb-3 pt-3.5 max-sm:pt-3 sm:pb-3.5 sm:pt-5`;
 
 export const dashboardPrimaryListShell = 'bg-white/[0.97]';
 
@@ -59,19 +59,19 @@ export const dashboardRowList =
  * Full-width row link — stable hover (no vertical nudge); chevron handles direction.
  * Inset accent: restrained rose (brand) without overriding money semantics in cells.
  */
-export const dashboardClickableRowInner = `group relative flex w-full min-h-11 min-w-0 items-center gap-3 text-left text-inherit no-underline outline-none cursor-pointer [&_*]:cursor-inherit ${workspaceTableRowInteractive} hover:bg-stone-100/90 hover:shadow-[0_4px_14px_-4px_rgba(120,113,108,0.09),inset_3px_0_0_0_rgba(192,38,77,0.12)] active:bg-stone-100/95 ring-inset focus-visible:ring-2 focus-visible:ring-rose-300/45`;
+export const dashboardClickableRowInner = `group relative flex w-full min-w-0 flex-col gap-2.5 py-3.5 text-left text-inherit no-underline outline-none cursor-pointer [&_*]:cursor-inherit sm:min-h-11 sm:flex-row sm:items-center sm:gap-3 sm:py-3.5 ${workspaceTableRowInteractive} hover:bg-stone-100/90 hover:shadow-[0_4px_14px_-4px_rgba(120,113,108,0.09),inset_3px_0_0_0_rgba(192,38,77,0.12)] active:bg-stone-100/95 ring-inset focus-visible:ring-2 focus-visible:ring-rose-300/45`;
 
-export const dashboardRowPad = `${dashboardPadX} py-3 sm:py-3.5`;
+export const dashboardRowPad = `${dashboardPadX} py-3.5 max-sm:px-3.5 sm:py-3.5`;
 
-export const dashboardCardFooterNote = `${dashboardPadX} border-t border-stone-100/90 py-2.5 text-center text-xs text-stone-500`;
+export const dashboardCardFooterNote = `${dashboardPadX} border-t border-stone-100/90 py-3 text-center text-xs text-stone-500 sm:py-2.5`;
 
-export const dashboardWeeklyListToggleBand = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/35 py-3`;
+export const dashboardWeeklyListToggleBand = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/35 py-3 max-sm:py-2.5 sm:py-3`;
 
 // --- Secondary module ----------------------------------------------------------
 
 export const dashboardModulePanel = `min-w-0 w-full overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`;
 
-export const dashboardModulePanelHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/35 py-2.5`;
+export const dashboardModulePanelHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/35 py-3 sm:py-2.5`;
 
 export const dashboardNarrowModuleLayout = 'w-full max-w-sm self-start';
 
@@ -80,6 +80,6 @@ export const dashboardNarrowModuleLayout = 'w-full max-w-sm self-start';
 export const dashboardAnalyticsCard = `min-w-0 overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`;
 
 /** Compact analytics header — light, not a second hero. */
-export const dashboardAnalyticsHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/40 py-3 sm:py-3`;
+export const dashboardAnalyticsHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/40 py-3.5 sm:py-3`;
 
-export const dashboardAnalyticsBody = `${dashboardPadX} py-3 sm:py-3.5`;
+export const dashboardAnalyticsBody = `${dashboardPadX} py-4 sm:py-3.5`;

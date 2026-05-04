@@ -15,7 +15,7 @@ export function DashboardClickableRow({
   children: ReactNode;
 }) {
   return (
-    <li>
+    <li className="relative z-[2]">
       <Link
         href={href}
         aria-label={ariaLabel}

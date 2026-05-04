@@ -31,12 +31,12 @@ export function AdminPageIntro({
   const titleClassName =
     variant === "entity-detail"
       ? "text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl"
-      : "text-2xl font-semibold tracking-tight text-stone-900";
+      : "text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl";
 
   const subtitleClassName =
     variant === "entity-detail"
       ? "max-w-prose text-sm leading-snug text-stone-500"
-      : "max-w-prose text-sm font-medium leading-snug text-stone-600";
+      : "max-w-prose text-sm font-medium leading-relaxed text-stone-600";
 
   const SubtitleContainer = variant === "entity-detail" ? "div" : "p";
 
@@ -68,14 +68,14 @@ export function AdminPageIntro({
       ) : null}
 
       <div className={`relative z-10 ${innerPadding}`}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
           <div
             className={`min-w-0 flex-1 ${effectiveUseAccent ? workspacePageIntroAccent : ""} ${identityBlockClassName}`}
           >
             {breadcrumb ? (
               <div className="mb-1.5 sm:mb-2">{breadcrumb}</div>
             ) : null}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <h1 className={titleClassName}>{title}</h1>
               {subtitle ? (
                 <SubtitleContainer className={subtitleClassName}>
@@ -85,7 +85,7 @@ export function AdminPageIntro({
             </div>
           </div>
           {action ? (
-            <div className="flex w-full shrink-0 justify-start sm:w-auto sm:justify-end sm:self-center">
+            <div className="flex w-full shrink-0 justify-start sm:w-auto sm:justify-end sm:self-center [&>*]:w-full sm:[&>*]:w-auto">
               {action}
             </div>
           ) : null}

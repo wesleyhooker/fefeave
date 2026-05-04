@@ -101,7 +101,7 @@ export function WorkspacePageWithRightPanel({
             onClick={onClose}
           />
           <div
-            className={`pointer-events-auto relative z-10 flex h-full w-[min(26rem,calc(100vw-1rem))] max-w-[26rem] flex-col ease-out motion-reduce:transition-none motion-reduce:translate-x-0 motion-reduce:opacity-100 lg:h-full lg:w-full lg:max-w-none ${
+            className={`pointer-events-auto relative z-10 flex h-full w-[min(28rem,calc(100vw-0.5rem))] max-w-[28rem] flex-col ease-out motion-reduce:transition-none motion-reduce:translate-x-0 motion-reduce:opacity-100 lg:h-full lg:w-full lg:max-w-none ${
               entered
                 ? "translate-x-0 opacity-100 transition-[transform,opacity] duration-[220ms]"
                 : "translate-x-full opacity-100 transition-[transform,opacity] duration-[220ms] max-lg:translate-x-full lg:translate-x-2 lg:opacity-95 lg:transition-[transform,opacity] lg:duration-[220ms]"

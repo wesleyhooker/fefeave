@@ -44,7 +44,7 @@ export function WeekStripStats({
     <p
       className={
         dense
-          ? `mt-1 text-[11px] leading-relaxed ${workspaceThisWeekSupportingMeta}`
+          ? "mt-1.5 text-xs font-medium leading-relaxed text-stone-500 sm:mt-1 sm:text-[11px]"
           : `${workspaceThisWeekTitleToStatsGap} text-xs leading-relaxed ${workspaceThisWeekSupportingMeta}`
       }
     >

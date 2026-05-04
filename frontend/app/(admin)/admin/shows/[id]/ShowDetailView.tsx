@@ -978,7 +978,167 @@ export function ShowDetailView({ id }: { id: string }) {
                             increase total owed until this is resolved.
                           </p>
                         ) : null}
-                        <div className="mt-3 overflow-x-auto rounded-md border border-gray-200/75 bg-white/80">
+                        <div className="mt-3 space-y-3 md:hidden">
+                          {settlements.length === 0 ? (
+                            isClosed ? (
+                              <div
+                                className={`rounded-lg border border-gray-200/80 px-4 py-4 text-sm text-gray-600 ${workspaceMutedStrip}`}
+                              >
+                                No settlements recorded.
+                              </div>
+                            ) : (
+                              <div
+                                className={`space-y-3 rounded-lg border border-gray-200/80 px-4 py-4 ${workspaceMutedStrip}`}
+                              >
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-gray-800">
+                                    No settlements yet
+                                  </p>
+                                  <p className="text-sm leading-relaxed text-gray-600">
+                                    Add the first settlement to allocate payout
+                                    before close-out.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => focusSettlementComposer()}
+                                  className={`${workspaceActionSecondaryMd} w-full justify-center gap-2`}
+                                >
+                                  <PlusIcon
+                                    className={workspaceActionIconMd}
+                                    aria-hidden
+                                  />
+                                  Add settlement
+                                </button>
+                              </div>
+                            )
+                          ) : (
+                            settlements.map((row) => {
+                              const owed = amountOwedFor(payoutAfterFees, row);
+                              const expanded = Boolean(
+                                expandedSettlementIds[row.id],
+                              );
+                              const calcMethod =
+                                calculationMethodFromStructuredType(row.type);
+                              const typeLabel =
+                                settlementMethodPrimaryLabel(calcMethod);
+                              const summaryHint = settlementMethodHint({
+                                calculationMethod: calcMethod,
+                                percentOfPayout:
+                                  row.type === "PERCENT"
+                                    ? row.percent
+                                    : undefined,
+                                lineCount:
+                                  row.type === "ITEMIZED"
+                                    ? row.lines?.length
+                                    : undefined,
+                              });
+                              return (
+                                <div
+                                  key={row.id}
+                                  className="rounded-lg border border-gray-200/90 bg-white p-4 shadow-sm"
+                                >
+                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                                    <div className="min-w-0 flex-1">
+                                      <Link
+                                        href={`/admin/wholesalers/${row.wholesalerId}`}
+                                        className="text-base font-semibold leading-snug text-gray-900 underline-offset-2 decoration-gray-300 hover:text-gray-800 hover:underline"
+                                      >
+                                        {row.wholesaler}
+                                      </Link>
+                                      <p className="mt-1 text-sm font-medium text-gray-800">
+                                        {typeLabel}
+                                      </p>
+                                      {summaryHint ? (
+                                        <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
+                                          {summaryHint}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                        Owed
+                                      </p>
+                                      <p
+                                        className={`text-lg font-semibold tabular-nums text-gray-900 ${workspaceMoneyTabular}`}
+                                      >
+                                        {formatCurrency(owed)}
+                                      </p>
+                                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                        Paid
+                                      </p>
+                                      <p
+                                        className={`text-sm font-medium tabular-nums text-gray-800 ${workspaceMoneyTabular}`}
+                                      >
+                                        {formatCurrency(row.amountPaid)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                    <button
+                                      type="button"
+                                      className={`${workspaceActionSecondaryMd} w-full justify-center sm:w-auto`}
+                                      aria-expanded={expanded}
+                                      aria-controls={`settlement-detail-mobile-${row.id}`}
+                                      onClick={() =>
+                                        toggleSettlementExpanded(row.id)
+                                      }
+                                    >
+                                      <span className="inline-flex items-center gap-2">
+                                        <WorkspaceLedgerDisclosureIcon
+                                          expanded={expanded}
+                                        />
+                                        {expanded ? "Hide details" : "Details"}
+                                      </span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        isClosed ||
+                                        deletingSettlementId === row.id
+                                      }
+                                      onClick={() => setDeleteConfirmId(row.id)}
+                                      className={`${workspaceActionSecondaryMd} w-full justify-center border-rose-200/90 text-rose-800 hover:bg-rose-50/80 sm:w-auto`}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                  {expanded ? (
+                                    <div
+                                      id={`settlement-detail-mobile-${row.id}`}
+                                      className="mt-4 border-t border-gray-100 pt-4"
+                                      role="region"
+                                      aria-label={`Details for ${row.wholesaler}`}
+                                    >
+                                      {row.type === "PERCENT" ? (
+                                        <SettlementPercentExpandedBody
+                                          percentBasisLabel={`${row.percent}% of payout after fees (${formatCurrency(payoutAfterFees)})`}
+                                          amountOwed={owed}
+                                        />
+                                      ) : null}
+                                      {row.type === "FIXED" ? (
+                                        <SettlementFlatExpandedBody
+                                          flatAmount={row.fixedAmount}
+                                          amountOwed={owed}
+                                        />
+                                      ) : null}
+                                      {row.type === "ITEMIZED" ? (
+                                        <SettlementItemizedExpandedBody
+                                          lines={mapShowSettlementLinesToLedgerLineItems(
+                                            row.lines ?? [],
+                                          )}
+                                          amountOwed={owed}
+                                          emptyFallbackAmountOwed={owed}
+                                        />
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        <div className="mt-3 hidden overflow-x-auto rounded-md border border-gray-200/75 bg-white/80 md:block">
                           <table className="min-w-full table-fixed border-collapse text-sm">
                             <colgroup>
                               <col className="w-9 sm:w-10" />
@@ -1219,15 +1379,15 @@ export function ShowDetailView({ id }: { id: string }) {
                           </table>
                         </div>
                         {!isClosed && settlements.length > 0 ? (
-                          <div className="mt-px flex justify-end border-t border-gray-100/90 pt-1.5">
+                          <div className="mt-3 flex border-t border-gray-100/90 pt-3 sm:mt-px sm:justify-end sm:pt-1.5">
                             <button
                               type="button"
                               onClick={() => focusSettlementComposer()}
-                              className="inline-flex h-7 items-center gap-1 rounded-md border border-gray-200/70 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-600 transition-colors hover:border-gray-300/80 hover:bg-gray-50 hover:text-gray-800"
+                              className={`${workspaceActionSecondaryMd} w-full justify-center gap-2 sm:w-auto`}
                               aria-label="Add settlement"
                             >
                               <PlusIcon
-                                className="h-3.5 w-3.5 shrink-0 text-gray-500"
+                                className={workspaceActionIconMd}
                                 aria-hidden
                               />
                               <span>Add settlement</span>
@@ -1518,7 +1678,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                   <p className="text-xs font-medium text-gray-700">
                                     Line items
                                   </p>
-                                  <div className="grid grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] gap-x-1.5 border-b border-gray-100 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                  <div className="hidden border-b border-gray-100 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500 sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] sm:gap-x-1.5">
                                     <span>Item</span>
                                     <span className="text-right">Qty</span>
                                     <span className="text-right">$</span>
@@ -1528,7 +1688,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                     {newRowItemizedLines.map((line) => (
                                       <div
                                         key={line.id}
-                                        className="grid grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] items-center gap-x-1.5 py-1.5 first:pt-0"
+                                        className="flex flex-col gap-3 py-3 first:pt-0 sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] sm:items-center sm:gap-x-1.5 sm:py-1.5"
                                       >
                                         <input
                                           type="text"
@@ -1546,49 +1706,52 @@ export function ShowDetailView({ id }: { id: string }) {
                                             )
                                           }
                                           placeholder="Item name"
-                                          className={`min-w-0 ${workspaceTextInputCompact}`}
+                                          className={`min-w-0 w-full sm:w-auto ${workspaceTextInputCompact}`}
                                         />
-                                        <input
-                                          type="number"
-                                          step="1"
-                                          min={1}
-                                          value={line.quantity}
-                                          onChange={(e) =>
-                                            setNewRowItemizedLines((prev) =>
-                                              prev.map((l) =>
-                                                l.id === line.id
-                                                  ? {
-                                                      ...l,
-                                                      quantity: e.target.value,
-                                                    }
-                                                  : l,
-                                              ),
-                                            )
-                                          }
-                                          placeholder="Qty"
-                                          className={`${workspaceTextInputCompact} text-right tabular-nums`}
-                                        />
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          min={0}
-                                          value={line.unitPriceDollars}
-                                          onChange={(e) =>
-                                            setNewRowItemizedLines((prev) =>
-                                              prev.map((l) =>
-                                                l.id === line.id
-                                                  ? {
-                                                      ...l,
-                                                      unitPriceDollars:
-                                                        e.target.value,
-                                                    }
-                                                  : l,
-                                              ),
-                                            )
-                                          }
-                                          placeholder="Price"
-                                          className={`${workspaceTextInputCompact} text-right tabular-nums`}
-                                        />
+                                        <div className="grid grid-cols-2 gap-2 sm:contents">
+                                          <input
+                                            type="number"
+                                            step="1"
+                                            min={1}
+                                            value={line.quantity}
+                                            onChange={(e) =>
+                                              setNewRowItemizedLines((prev) =>
+                                                prev.map((l) =>
+                                                  l.id === line.id
+                                                    ? {
+                                                        ...l,
+                                                        quantity:
+                                                          e.target.value,
+                                                      }
+                                                    : l,
+                                                ),
+                                              )
+                                            }
+                                            placeholder="Qty"
+                                            className={`${workspaceTextInputCompact} w-full text-right tabular-nums sm:w-auto`}
+                                          />
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min={0}
+                                            value={line.unitPriceDollars}
+                                            onChange={(e) =>
+                                              setNewRowItemizedLines((prev) =>
+                                                prev.map((l) =>
+                                                  l.id === line.id
+                                                    ? {
+                                                        ...l,
+                                                        unitPriceDollars:
+                                                          e.target.value,
+                                                      }
+                                                    : l,
+                                                ),
+                                              )
+                                            }
+                                            placeholder="Price"
+                                            className={`${workspaceTextInputCompact} w-full text-right tabular-nums sm:w-auto`}
+                                          />
+                                        </div>
                                         <button
                                           type="button"
                                           onClick={() =>
@@ -1598,7 +1761,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                               ),
                                             )
                                           }
-                                          className="flex justify-end text-gray-500 hover:text-gray-800"
+                                          className="flex min-h-10 items-center justify-end text-gray-500 hover:text-gray-800 sm:min-h-0 sm:justify-end"
                                           aria-label="Remove item"
                                         >
                                           <TrashIcon
@@ -1723,10 +1886,10 @@ export function ShowDetailView({ id }: { id: string }) {
                         accept=".pdf,image/png,image/jpeg,image/jpg"
                         onChange={handleReceiptFileChange}
                       />
-                      <div className="flex min-h-[1.5rem] flex-wrap items-center gap-x-2 gap-y-1">
+                      <div className="flex min-h-[1.5rem] flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
                         <span
                           id="payout-receipt-heading"
-                          className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-gray-400"
+                          className="shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 sm:text-[11px]"
                         >
                           Receipt{" "}
                           <span className="font-normal normal-case tracking-normal text-gray-400">
@@ -1746,7 +1909,7 @@ export function ShowDetailView({ id }: { id: string }) {
                               type="button"
                               onClick={handleAttachReceipt}
                               disabled={uploadingReceipt}
-                              className="rounded-md px-2 py-0.5 text-[11px] font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 disabled:opacity-60"
+                              className="min-h-10 rounded-md px-3 py-2 text-sm font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 disabled:opacity-60 sm:min-h-0 sm:px-2 sm:py-0.5 sm:text-[11px]"
                             >
                               Attach
                             </button>
@@ -1760,7 +1923,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                 receiptFileInputRef.current?.click();
                               }}
                               disabled={uploadingReceipt}
-                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-60"
+                              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-60 sm:h-7 sm:w-7"
                               aria-label="Choose a different file"
                             >
                               <ArrowUpTrayIcon
@@ -1785,7 +1948,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                     onClick={() =>
                                       handleDownloadAttachment(att)
                                     }
-                                    className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900"
+                                    className="min-h-9 shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 sm:min-h-0 sm:px-1.5 sm:py-0.5 sm:text-[11px]"
                                   >
                                     View
                                   </button>
@@ -1798,7 +1961,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                 onClick={() =>
                                   receiptFileInputRef.current?.click()
                                 }
-                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 sm:h-7 sm:w-7"
                                 aria-label="Replace receipt"
                               >
                                 <ArrowUpTrayIcon
@@ -1817,7 +1980,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                 onClick={() =>
                                   receiptFileInputRef.current?.click()
                                 }
-                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 sm:h-7 sm:w-7"
                                 aria-label="Add receipt"
                               >
                                 <ArrowUpTrayIcon
@@ -1877,7 +2040,7 @@ export function ShowDetailView({ id }: { id: string }) {
                         </span>
                       </div>
                       {settlements.length === 0 ? (
-                        <p className="py-1.5 text-xs leading-relaxed text-gray-500">
+                        <p className="py-2 text-sm leading-relaxed text-gray-500 sm:py-1.5 sm:text-xs">
                           No settlements.
                         </p>
                       ) : (
@@ -1926,7 +2089,7 @@ export function ShowDetailView({ id }: { id: string }) {
                           type="button"
                           onClick={handleCloseShowClick}
                           disabled={closing}
-                          className={`${workspaceActionCompleteMd} mt-5 w-full px-3 py-2 shadow-none disabled:cursor-not-allowed disabled:opacity-50`}
+                          className={`${workspaceActionCompleteMd} mt-5 w-full shadow-none disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                           {closing ? "Closing…" : "Close show"}
                         </button>
