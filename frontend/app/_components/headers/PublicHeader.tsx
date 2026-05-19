@@ -4,8 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
-import { Container, Nav, NavLink } from "@/system";
+import { Container } from "@/system";
 import { PublicAccountDropdown } from "./PublicAccountDropdown";
+import {
+  publicHeaderControlBase,
+  publicNavLinkActive,
+  publicNavLinkBase,
+} from "./publicHeaderControls";
 
 export type PublicHeaderProps = {
   isLoggedIn: boolean;
@@ -13,15 +18,7 @@ export type PublicHeaderProps = {
   email: string | null;
 };
 
-const MAIN_NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/live", label: "Live Shows" },
-  { href: "/how-it-works", label: "How It Works" },
-  { href: "/about", label: "About" },
-] as const;
-
-const primaryButtonClasses =
-  "inline-flex items-center justify-center gap-fefe-1 rounded-fefe-button font-medium font-fefe px-5 py-2.5 text-base bg-fefe-gold text-white border-transparent hover:bg-fefe-gold-hover transition-colors focus-visible:ring-2 focus-visible:ring-fefe-gold focus-visible:ring-offset-2";
+const MAIN_NAV_LINKS = [{ href: "/live", label: "Live" }] as const;
 
 const LogoFallback = () => (
   <span
@@ -66,9 +63,9 @@ export function PublicHeader({
   return (
     <header
       ref={headerRef}
-      className="relative border-b border-fefe-stone bg-white"
+      className="relative shrink-0 border-b border-fefe-stone/40 bg-fefe-cream"
     >
-      <Container className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-fefe-2">
+      <Container className="flex items-center justify-between gap-x-4 py-fefe-2">
         <Link
           href="/"
           className="flex shrink-0 items-center gap-fefe-2 font-fefe text-lg font-semibold text-fefe-charcoal hover:text-fefe-charcoal/90"
@@ -78,34 +75,31 @@ export function PublicHeader({
           ) : (
             <Image
               src="/fefe-ave-logo.png"
-              alt="Fefe Ave"
+              alt=""
               width={32}
               height={32}
               className="h-8 w-8"
               unoptimized
+              aria-hidden
               onError={() => setLogoError(true)}
             />
           )}
           <span>Fefe Ave</span>
         </Link>
 
-
-        <div className="hidden items-center gap-fefe-5 md:flex">
-          <Nav direction="row">
-            {MAIN_NAV_LINKS.map(({ href, label }) => (
-              <NavLink
+        <div className="hidden items-center gap-fefe-4 md:flex">
+          {MAIN_NAV_LINKS.map(({ href, label }) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
                 key={href}
                 href={href}
-                active={href === "/" ? pathname === "/" : pathname.startsWith(href)}
+                className={`inline-flex items-center ${publicNavLinkBase} ${active ? publicNavLinkActive : ""}`}
               >
                 {label}
-              </NavLink>
-            ))}
-          </Nav>
-
-          <Link href="/contact" className={primaryButtonClasses}>
-            Contact Us
-          </Link>
+              </Link>
+            );
+          })}
           <PublicAccountDropdown
             isLoggedIn={isLoggedIn}
             isStaff={isStaff}
@@ -114,12 +108,6 @@ export function PublicHeader({
         </div>
 
         <div className="flex items-center gap-fefe-2 md:hidden">
-          <Link
-            href="/contact"
-            className={`${primaryButtonClasses} px-3 py-1.5 text-sm`}
-          >
-            Contact Us
-          </Link>
           <PublicAccountDropdown
             isLoggedIn={isLoggedIn}
             isStaff={isStaff}
@@ -128,12 +116,11 @@ export function PublicHeader({
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-fefe-button font-fefe text-fefe-charcoal hover:bg-fefe-cream focus-visible:ring-2 focus-visible:ring-fefe-stone focus-visible:ring-offset-2"
+            className={`${publicHeaderControlBase} flex h-9 w-9 items-center justify-center p-0`}
             aria-expanded={mobileOpen}
             aria-controls="public-mobile-nav"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
           >
-
             {mobileOpen ? (
               <svg
                 className="h-5 w-5"
@@ -172,25 +159,26 @@ export function PublicHeader({
       {mobileOpen && (
         <div
           id="public-mobile-nav"
-          className="absolute left-0 right-0 top-full z-50 border-b border-fefe-stone bg-white shadow-fefe-card md:hidden"
+          className="absolute left-0 right-0 top-full z-50 border-b border-fefe-stone/40 bg-fefe-cream shadow-fefe-card md:hidden"
         >
-          <Container className="flex flex-col gap-0 py-fefe-2">
-            <Nav direction="column">
-              {MAIN_NAV_LINKS.map(({ href, label }) => (
+          <Container className="flex flex-col gap-1 py-fefe-2">
+            {MAIN_NAV_LINKS.map(({ href, label }) => {
+              const active =
+                pathname === href || pathname.startsWith(`${href}/`);
+              return (
                 <Link
                   key={href}
                   href={href}
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-fefe-button px-fefe-3 py-2.5 font-fefe text-fefe-charcoal hover:bg-fefe-cream hover:text-fefe-charcoal"
+                  className={`inline-flex items-center ${publicNavLinkBase} ${active ? publicNavLinkActive : ""}`}
                 >
                   {label}
                 </Link>
-              ))}
-            </Nav>
+              );
+            })}
           </Container>
         </div>
       )}
-
     </header>
   );
 }

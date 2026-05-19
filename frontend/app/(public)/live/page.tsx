@@ -1,86 +1,62 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { Card, CardBody, CardTitle, Container, Heading, Prose } from "@/system";
 import {
-  Card,
-  CardBody,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  Container,
-  Heading,
-} from "@/system";
-import {
-  PRIMARY_LINK_CLASSES,
-  SECONDARY_LINK_CLASSES,
-} from "../_components/homeCtaClasses";
+  getLivePlatformLinks,
+  hasLivePlatformLinks,
+} from "@/lib/public/publicLinks";
+import { PRIMARY_LINK_CLASSES } from "../_components/homeCtaClasses";
 
-const PLACEHOLDER_SHOWS = [
-  {
-    id: "1",
-    title: "Curated closet drop",
-    when: "Today at 7 PM",
-    description:
-      "Live clothing & shoes. Wholesale-friendly lots and single finds.",
-  },
-  {
-    id: "2",
-    title: "Weekend vintage & modern",
-    when: "Saturday 2 PM",
-    description: "Mix of vintage and contemporary pieces. Great for resellers.",
-  },
-  {
-    id: "3",
-    title: "Reseller spotlight",
-    when: "Next Tuesday 6 PM",
-    description: "Themed racks and bundles. Perfect for restocking.",
-  },
-] as const;
+export const metadata: Metadata = {
+  title: "Watch live | Fefe Ave",
+  description:
+    "Watch Felicia's live resale drops on Whatnot and TikTok. Follow either platform to catch the next drop.",
+};
 
 export default function LivePage() {
+  const platforms = getLivePlatformLinks();
+
   return (
     <main className="bg-fefe-cream py-fefe-6 md:py-fefe-7">
-      <Container>
+      <Container variant="narrow">
         <Heading level={1} className="mb-fefe-3">
-          Upcoming Live Shows
+          Watch Felicia live.
         </Heading>
-        <p className="font-fefe text-fefe-charcoal/90 mb-fefe-5 max-w-2xl">
-          Join Felicia on Whatnot for live clothing drops and curated finds. See
-          pieces in real time, ask questions, and claim what you love.
-        </p>
-        <ul className="grid gap-fefe-4 sm:grid-cols-2 lg:grid-cols-3">
-          {PLACEHOLDER_SHOWS.map((show) => (
-            <li key={show.id} className="flex">
-              <Card className="flex h-full flex-col transition-shadow duration-200 hover:shadow-lg">
-                <CardHeader>
-                  <CardTitle as="h2">{show.title}</CardTitle>
-                </CardHeader>
-                <CardBody className="flex-1 min-h-0">
-                  <p className="font-fefe text-sm text-fefe-charcoal/80">
-                    {show.when}
-                  </p>
-                  <p className="mt-fefe-1">{show.description}</p>
-                </CardBody>
-                <CardFooter>
-                  <Link href="/shop" className={SECONDARY_LINK_CLASSES}>
-                    View schedule
-                  </Link>
-                </CardFooter>
-              </Card>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-fefe-6 flex flex-wrap gap-fefe-2">
-          <Link
-            href="https://www.whatnot.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={PRIMARY_LINK_CLASSES}
-          >
-            Follow on Whatnot
-          </Link>
-          <Link href="/shop" className={SECONDARY_LINK_CLASSES}>
-            View full schedule
-          </Link>
-        </div>
+        <Prose className="mb-fefe-6 max-w-2xl">
+          <p>
+            Felicia&apos;s live drops happen on Whatnot and TikTok. Follow
+            either platform to catch the next drop.
+          </p>
+        </Prose>
+
+        {hasLivePlatformLinks() ? (
+          <ul className="grid gap-fefe-4 sm:grid-cols-2">
+            {platforms.map((platform) => (
+              <li key={platform.id} className="flex">
+                <Card className="flex h-full w-full flex-col">
+                  <CardBody className="flex flex-1 flex-col gap-fefe-3">
+                    <CardTitle as="h2">{platform.label}</CardTitle>
+                    <p className="font-fefe text-sm text-fefe-charcoal/80">
+                      Opens in a new tab
+                    </p>
+                    <Link
+                      href={platform.href}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className={`${PRIMARY_LINK_CLASSES} mt-auto w-full sm:w-auto`}
+                    >
+                      Watch on {platform.label}
+                    </Link>
+                  </CardBody>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="font-fefe text-fefe-charcoal/90">
+            Live links coming soon.
+          </p>
+        )}
       </Container>
     </main>
   );

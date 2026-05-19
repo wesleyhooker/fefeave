@@ -57,6 +57,8 @@ cd frontend && npm run playwright:screenshot -- /admin/shows my-screen.png
 
 The script loads `.env.local`, hits dev-bootstrap, then opens the target route. Output: timestamped PNG under **`frontend/.playwright-dev/screenshots/`** (gitignored).
 
+**Admin chrome regression check (semantic tokens):** After changing workspace colors, capture desktop `dash.png` / `shows.png` / `balances.png` plus mobile harness (`npm run playwright:screenshot:mobile`). Confirm sidebar near-white text on deep clay, KPI peach/gold readability, warm-but-not-dark shell. Remaining debt is usually stray legacy `admin-brand` references outside the hot path and intentional gray table chrome.
+
 **Flags:** `--full` (default) or `--viewport`; `--storage` to force the older **saved Cognito session** file (`playwright:save-auth`) instead of bootstrap.
 
 **Manual steps you still own**
@@ -96,6 +98,19 @@ If you see `docker: command not found` inside WSL, set up Docker Desktop integra
    - `docker version`
    - `docker compose version`
 
+### Frontend dev server exits immediately (`EADDRINUSE` on port 3001)
+
+This is usually **not a routes problem** — a previous `next dev` (or `make dev-ui` / tmux pane) is still listening on **3001**.
+
+1. Stop stale listeners: `make dev-down` (frees **3000** and **3001** and the `fefeave-dev` tmux session).
+2. Start again: `make dev-ui` (or `make dev`).
+
+`make dev-ui` and `make dev-api` now run a **reclaim** step first: if the port is held only by a stale Node/Next process, it is stopped automatically; if another app owns the port, you get a clear error instead of a silent exit.
+
+### TypeScript errors about missing `.next/types/*.ts`
+
+After cleaning `.next` or switching branches, run `npm run dev` or `npm run build` once in `frontend/` so Next regenerates route types. Or delete `frontend/tsconfig.tsbuildinfo` and retry.
+
 ### Docker/WSL troubleshooting
 
 - **Docker Desktop is running, but `docker` is still missing in WSL**
@@ -109,3 +124,14 @@ If you see `docker: command not found` inside WSL, set up Docker Desktop integra
   - If `docker` works but `docker compose` does not, update Docker Desktop to a recent version.
 
 Dev migrations are **manual** by design. Production migrations are **not** run automatically.
+
+## Public marketing links
+
+The marketing site reads Felicia’s social and live profile URLs from the frontend env (no platform API). Set in `frontend/.env.local` (see `frontend/.env.example`):
+
+- `NEXT_PUBLIC_FEFE_INSTAGRAM_URL` — Instagram profile URL
+- `NEXT_PUBLIC_FEFE_WHATNOT_URL` — Whatnot shop/profile URL
+- `NEXT_PUBLIC_FEFE_TIKTOK_URL` — TikTok profile URL
+- `NEXT_PUBLIC_FEFE_CONTACT_EMAIL` — optional; defaults to `fefeave@outlook.com`
+
+If a URL variable is empty, that link is hidden in the footer, contact page, and `/live` (Instagram is also omitted from the live page supporting line). If both Whatnot and TikTok are empty, `/live` shows “Live links coming soon.” These are public URLs only—not secrets.

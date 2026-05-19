@@ -8,7 +8,7 @@ Neutral warm palette with restrained accents. Most of the UI stays neutral; acce
 
 | Name          | HEX       | Use                                               |
 | ------------- | --------- | ------------------------------------------------- |
-| **Cream**     | `#F6F2EC` | Page backgrounds, cards, airy base                |
+| **Cream**     | `#FAF8F5` | Page backgrounds, cards, airy base                |
 | **Warm Sand** | `#EBDED2` | Secondary backgrounds, trust bar, subtle sections |
 | **Stone**     | `#D1C5B8` | Borders, dividers, secondary UI edges             |
 | **Charcoal**  | `#2C2C2C` | Primary body text, buttons (on light)             |
@@ -38,7 +38,24 @@ Neutral warm palette with restrained accents. Most of the UI stays neutral; acce
   - Subtle hover or secondary emphasis
   - Small decorative or supportive elements
   - Never as the main CTA or dominant block color
-- **Admin dashboard** — Prefer neutrals and charcoal; use gold only for primary actions (e.g. “Save,” “Submit”). Avoid pink/sage unless needed for status or data.
+- **Public marketing site** — Prefer neutrals and charcoal; Soft Gold for primary actions; blush/sage sparingly.
+
+---
+
+## Admin workspace (internal)
+
+Admin uses **additive semantic CSS variables** in [`frontend/system/tokens.css`](../frontend/system/tokens.css) (Tailwind `admin.*`). Legacy rose/blush tokens (`admin-brand`, `surfaceActive`, …) remain for compatibility; **new chrome** prefers:
+
+| Role                           | Token direction                                 | Notes                                                                                        |
+| ------------------------------ | ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Page canvas                    | `--admin-canvas`                                | Warm off-white shell                                                                         |
+| Sidebar                        | `--admin-sidebar-surface`                       | **Deeper clay** than CTAs                                                                    |
+| Primary buttons / accent rails | `--admin-action-primary`                        | **Brighter terracotta** (same family as sidebar, not identical)                              |
+| Content cards                  | `--admin-surface-elevated` + `--admin-border`   | Clean white with warm border                                                                 |
+| KPI tiles                      | `--admin-kpi-soft` / `accent` / `gold` / `sage` | Peach default; stronger peach for liability; gold completed; sage reserved for ops/attention |
+| Muted strips                   | `--admin-muted-strip`                           | Inset chrome bands                                                                           |
+
+Dense ledgers and tables stay **neutral** (gray/stone utilities); semantic greens/reds for money and status are unchanged.
 
 ---
 
