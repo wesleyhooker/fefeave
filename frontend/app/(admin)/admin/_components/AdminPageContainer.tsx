@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import {
+  workspaceMainContentInset,
   workspacePageContentStack,
   workspacePageContentWidth,
   workspacePageEntityIntroZone,
@@ -22,11 +23,16 @@ export function AdminPageContainer({
   /** Override vertical rhythm between page sections (e.g. Shows index). */
   contentStackClassName?: string;
 }) {
+  const frameClass =
+    contentWidthClassName === workspacePageContentWidth
+      ? workspaceMainContentInset
+      : `${workspacePageGutter} ${contentWidthClassName}`;
+
   return (
     <div className="min-w-0">
-      <div className={`${workspacePageGutter} pb-5 md:pb-6`}>
+      <div className={`${frameClass} pb-5 md:pb-6`}>
         <div
-          className={`${contentWidthClassName} ${contentStackClassName} ${workspacePageIntroToContentGap}`}
+          className={`${contentStackClassName} ${workspacePageIntroToContentGap}`}
         >
           {children}
         </div>
@@ -50,12 +56,15 @@ export function AdminPageIntroSection({
       ? workspacePageEntityIntroZone
       : workspacePageIntroZone;
 
+  const frameClass =
+    contentWidthClassName === workspacePageContentWidth
+      ? workspaceMainContentInset
+      : `${workspacePageGutter} ${contentWidthClassName}`;
+
   return (
-    <section className={zoneClassName}>
-      <div className={workspacePageGutter}>
-        <div className={contentWidthClassName}>
-          <div className={workspacePageIntroZoneInner}>{children}</div>
-        </div>
+    <section className={zoneClassName} data-debug-page-intro>
+      <div className={frameClass}>
+        <div className={workspacePageIntroZoneInner}>{children}</div>
       </div>
     </section>
   );

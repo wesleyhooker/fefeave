@@ -477,6 +477,7 @@ export default function AdminDashboardPage() {
       <AdminPageIntroSection>
         <DashboardPageHeader
           weekRangeLabel={formatWeekRangeCompact(weekBounds)}
+          weekStartYmd={weekBounds.startStr}
           newShowPanelOpen={isCreateShowOpen}
           onNewShowClick={() => setIsCreateShowOpen(true)}
         />

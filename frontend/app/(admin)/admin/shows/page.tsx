@@ -1,20 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrentWeekBounds } from "@/lib/weekRange";
 import { ShowsTableSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import {
   fetchShowFinancialSummariesByShowIds,
   type ShowFinancialSummary,
 } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
 import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
+import { useRegisterWorkspaceHeaderActions } from "@/app/_components/headers/WorkspaceHeaderSlots";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
   workspacePageContentWidthWide,
@@ -38,11 +39,30 @@ import {
   WORKFLOW_LOG_SHOW_PANEL_SUBTITLE,
   WORKFLOW_LOG_SHOW_PANEL_TITLE,
   WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
+  WORKFLOW_SHOWS_PAGE_SUBTITLE,
 } from "../_lib/adminWorkflowCopy";
 
 export default function AdminShowsPage() {
   const router = useRouter();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const openLogShowPanel = useCallback(() => {
+    setIsCreateOpen(true);
+  }, []);
+
+  const headerActions = useMemo(
+    () => (
+      <WorkspaceSidePanelTrigger
+        variant="primary"
+        open={isCreateOpen}
+        label={WORKFLOW_LOG_SHOW_TRIGGER_LABEL}
+        onClick={openLogShowPanel}
+      />
+    ),
+    [isCreateOpen, openLogShowPanel],
+  );
+
+  useRegisterWorkspaceHeaderActions(headerActions);
+
   const currentWeek = useMemo(() => getCurrentWeekBounds(), []);
   const [shows, setShows] = useState<ShowViewModel[] | null>(null);
   const [summaries, setSummaries] = useState<
@@ -153,16 +173,9 @@ export default function AdminShowsPage() {
       <AdminPageIntroSection
         contentWidthClassName={workspacePageContentWidthWide}
       >
-        <AdminPageIntro
+        <AdminWorkspacePageIntro
           title="Shows"
-          action={
-            <WorkspaceSidePanelTrigger
-              variant="subtle"
-              open={isCreateOpen}
-              label={WORKFLOW_LOG_SHOW_TRIGGER_LABEL}
-              onClick={() => setIsCreateOpen(true)}
-            />
-          }
+          subtitle={WORKFLOW_SHOWS_PAGE_SUBTITLE}
         />
       </AdminPageIntroSection>
 

@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  dashboardEyebrow,
   dashboardModulePanel,
   dashboardModulePanelHeader,
+  dashboardEyebrow,
   dashboardPadX,
   dashboardRowList,
 } from "./dashboardStructure";
@@ -73,7 +73,7 @@ export function DashboardNotificationsCard({
     >
       <div className={dashboardModulePanelHeader}>
         <h2 className={`flex items-center gap-2 ${dashboardEyebrow}`}>
-          <BellIcon className="h-3.5 w-3.5 text-stone-400" />
+          <BellIcon className="h-3.5 w-3.5 text-stone-500" />
           {WORKFLOW_NEEDS_ATTENTION_HEADING}
         </h2>
       </div>

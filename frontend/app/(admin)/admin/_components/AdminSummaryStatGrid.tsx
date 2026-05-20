@@ -1,19 +1,39 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { workspaceStatEyebrow, workspaceStatTile } from "./workspaceUi";
+import {
+  getWorkspaceSummaryStatSurfaceClass,
+  workspaceStatEyebrow,
+  workspaceStatTileIconWrap,
+  workspaceStatTileKpiLabelBesideIcon,
+  workspaceStatTileKpiTopRow,
+  workspaceStatTileMeta,
+  workspaceStatTileValueSlot,
+  type WorkspaceStatCardSurface,
+} from "./workspaceUi";
 
 export type AdminSummaryStatItem = {
   /** Stable key for list rendering */
   id: string;
   label: string;
   value: ReactNode;
-  /** Optional decoration (e.g. icon circle) — top-right in the tile */
+  /**
+   * KPI stat-card surface — unified token-driven shell (defaults to `profit` when omitted).
+   */
+  surface?: WorkspaceStatCardSurface;
+  /** Optional decoration (e.g. icon circle) — top-left in the tile */
   decoration?: ReactNode;
+  /** Optional supporting line — only when real copy exists (never placeholder metrics). */
+  meta?: ReactNode;
+  /**
+   * Optional comparison / trend slot from real backend/session data only.
+   * Omit when no comparison exists — never placeholder percentages.
+   */
+  delta?: ReactNode;
 };
 
 /**
- * Responsive grid of summary stat tiles — same surface treatment as the dashboard overview row.
+ * Responsive grid of summary stat tiles — shared KPI visual language app-wide.
  */
 export function AdminSummaryStatGrid({
   items,
@@ -24,25 +44,47 @@ export function AdminSummaryStatGrid({
 }) {
   const colClass =
     items.length <= 3
-      ? "grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3"
-      : "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-3";
+      ? "grid grid-cols-1 gap-5 sm:grid-cols-3 sm:gap-5"
+      : "grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 sm:gap-5";
 
   return (
     <section className="min-w-0" aria-label={ariaLabel}>
       <div className={colClass}>
         {items.map((item) => (
-          <div key={item.id} className={workspaceStatTile}>
-            <div className="flex items-start justify-between gap-2">
+          <div
+            key={item.id}
+            className={getWorkspaceSummaryStatSurfaceClass(item.surface)}
+            {...(item.surface === "owed"
+              ? { "data-debug-kpi-owed": true }
+              : {})}
+          >
+            {item.decoration ? (
+              <div className={workspaceStatTileKpiTopRow}>
+                <span className={workspaceStatTileIconWrap}>
+                  {item.decoration}
+                </span>
+                <p
+                  className={`${workspaceStatTileKpiLabelBesideIcon} break-words [hyphens:auto]`}
+                >
+                  {item.label}
+                </p>
+              </div>
+            ) : (
               <p
-                className={`${workspaceStatEyebrow} min-w-0 flex-1 break-words [hyphens:auto]`}
+                className={`${workspaceStatEyebrow} min-w-0 break-words [hyphens:auto]`}
               >
                 {item.label}
               </p>
-              {item.decoration ? (
-                <span className="shrink-0">{item.decoration}</span>
+            )}
+            <div className={workspaceStatTileValueSlot}>
+              {item.value}
+              {item.meta != null ? (
+                <div className={workspaceStatTileMeta}>{item.meta}</div>
+              ) : null}
+              {item.delta != null ? (
+                <div className={workspaceStatTileMeta}>{item.delta}</div>
               ) : null}
             </div>
-            <div className="mt-4 min-h-[2.5rem] flex-1">{item.value}</div>
           </div>
         ))}
       </div>

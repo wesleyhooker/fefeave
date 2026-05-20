@@ -12,7 +12,7 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
   workspaceTableBodyCellPadding,
@@ -106,7 +106,7 @@ export default function AdminInventoryPage() {
   return (
     <>
       <AdminPageIntroSection>
-        <AdminPageIntro
+        <AdminWorkspacePageIntro
           title="Inventory purchases"
           subtitle="Record pallet or lump-sum inventory buys (cash-based, no SKU)."
           action={

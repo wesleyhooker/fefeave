@@ -5,7 +5,7 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { AdminSummaryStatGrid } from "@/app/(admin)/admin/_components/AdminSummaryStatGrid";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
@@ -106,6 +106,7 @@ export default function OwnerActivityPage() {
     return [
       {
         id: "total-paid",
+        surface: "positive" as const,
         label: "Total paid",
         value: (
           <p
@@ -117,6 +118,7 @@ export default function OwnerActivityPage() {
       },
       {
         id: "last-payout",
+        surface: "neutral" as const,
         label: "Last payout",
         value: (
           <p className="text-xl font-semibold text-stone-900 sm:text-2xl">
@@ -126,6 +128,7 @@ export default function OwnerActivityPage() {
       },
       {
         id: "counts",
+        surface: "completed" as const,
         label: "Payouts",
         value: (
           <p className="text-xl font-semibold tabular-nums text-stone-900 sm:text-2xl">
@@ -150,7 +153,10 @@ export default function OwnerActivityPage() {
     return (
       <>
         <AdminPageIntroSection>
-          <AdminPageIntro title="Owner activity" subtitle={introSubtitle} />
+          <AdminWorkspacePageIntro
+            title="Owner activity"
+            subtitle={introSubtitle}
+          />
         </AdminPageIntroSection>
         <AdminPageContainer>
           <OwnerActivitySkeleton />
@@ -163,7 +169,10 @@ export default function OwnerActivityPage() {
     return (
       <>
         <AdminPageIntroSection>
-          <AdminPageIntro title="Owner activity" subtitle={introSubtitle} />
+          <AdminWorkspacePageIntro
+            title="Owner activity"
+            subtitle={introSubtitle}
+          />
         </AdminPageIntroSection>
         <AdminPageContainer>
           <WorkspaceInlineError
@@ -186,7 +195,10 @@ export default function OwnerActivityPage() {
   return (
     <>
       <AdminPageIntroSection>
-        <AdminPageIntro title="Owner activity" subtitle={introSubtitle} />
+        <AdminWorkspacePageIntro
+          title="Owner activity"
+          subtitle={introSubtitle}
+        />
       </AdminPageIntroSection>
       <AdminPageContainer>
         <div className="space-y-6 md:space-y-7">

@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, type MouseEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
   WORKFLOW_EMPTY_WEEK_SCHEDULE,
@@ -11,6 +10,7 @@ import {
   workspaceThisWeekHeaderBand,
   workspaceThisWeekHeaderPadding,
   workspaceThisWeekListZone,
+  workspaceThisWeekShowsListHeader,
   workspaceThisWeekSectionRoot,
   workspaceThisWeekSubtitle,
   workspaceThisWeekTitle,
@@ -42,23 +42,10 @@ export function ShowsThisWeekSection({
     return sum;
   }, [currentShows, summaries]);
 
-  const router = useRouter();
-  const handleThisWeekCardClick = useCallback(
-    (e: MouseEvent<HTMLElement>) => {
-      const el = e.target as HTMLElement | null;
-      if (el == null) return;
-      if (el.closest("a[href], button, [role='link']")) return;
-      router.push("/admin/balances/owner");
-    },
-    [router],
-  );
-
   return (
     <section
-      className={`${workspaceThisWeekSectionRoot} group relative cursor-pointer transition-shadow duration-200 ease-out hover:shadow-[0_6px_32px_-12px_rgba(120,113,108,0.2),0_2px_10px_-6px_rgba(192,38,77,0.08)]`}
+      className={workspaceThisWeekSectionRoot}
       aria-labelledby="shows-this-week-heading"
-      onClick={handleThisWeekCardClick}
-      role="presentation"
     >
       <div
         className={`${workspaceThisWeekHeaderPadding} ${workspaceThisWeekHeaderBand}`}
@@ -69,9 +56,13 @@ export function ShowsThisWeekSection({
               {WORKFLOW_THIS_WEEK_HEADING}
             </h2>
             <p className={workspaceThisWeekSubtitle}>{currentWeek.labelLong}</p>
-            <WeekStripStats shows={currentShows} summaries={summaries} />
+            <WeekStripStats
+              shows={currentShows}
+              summaries={summaries}
+              omitShowCount
+            />
           </div>
-          <WorkspaceRowChevron className="mt-0.5 shrink-0 text-stone-400 transition-colors group-hover:text-stone-600" />
+          <WorkspaceRowChevron className="mt-0.5 shrink-0 text-stone-400" />
         </div>
         <div className="mt-3 w-full">
           <ShowsThisWeekWorkflowStrip
@@ -82,7 +73,7 @@ export function ShowsThisWeekSection({
         </div>
       </div>
       <div className={workspaceThisWeekListZone}>
-        <div className="border-b border-stone-100/90 bg-stone-50/45 px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-stone-600 sm:px-5">
+        <div className={workspaceThisWeekShowsListHeader}>
           Shows ({currentShows.length})
         </div>
         <div className="md:hidden">

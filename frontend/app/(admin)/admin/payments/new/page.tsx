@@ -8,7 +8,7 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { WorkspaceFileUpload } from "@/app/(admin)/admin/_components/WorkspaceFileUpload";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -185,7 +185,7 @@ function RecordPaymentForm() {
   return (
     <>
       <AdminPageIntroSection>
-        <AdminPageIntro
+        <AdminWorkspacePageIntro
           title="Record payment"
           subtitle="Apply a payment to a wholesaler balance."
           breadcrumb={

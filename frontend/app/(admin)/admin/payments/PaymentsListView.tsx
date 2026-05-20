@@ -8,7 +8,7 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
 import {
@@ -94,7 +94,7 @@ export function PaymentsListView() {
   return (
     <>
       <AdminPageIntroSection>
-        <AdminPageIntro
+        <AdminWorkspacePageIntro
           title="Payments"
           subtitle="Recorded wholesaler payments."
           action={

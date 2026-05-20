@@ -14,7 +14,7 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
 import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
@@ -367,7 +367,7 @@ export default function AccountsPage() {
       }
     >
       <AdminPageIntroSection>
-        <AdminPageIntro
+        <AdminWorkspacePageIntro
           title="Accounts"
           subtitle="Manage balance accounts used for payouts, wholesaler balances, and payments."
           action={

@@ -11,7 +11,7 @@ import {
   workspaceThisWeekHeaderPadding,
   workspaceThisWeekSectionRoot,
 } from '@/app/(admin)/admin/_lib/workspaceThisWeekSurface';
-import { workspaceTableRowInteractive } from '@/app/(admin)/admin/_components/workspaceUi';
+import { workspaceTableRowHover } from '@/app/(admin)/admin/_components/workspaceUi';
 
 export const dashboardPadX = 'px-4';
 
@@ -20,11 +20,11 @@ export const dashboardBorderSubtle = 'border-stone-200/90';
 
 /** Shared uppercase label — cards, stats, list section headers. */
 export const dashboardEyebrow =
-  'text-[11px] font-medium uppercase tracking-wider text-stone-500';
+  'text-[11px] font-semibold uppercase tracking-wider text-admin-inkMuted';
 
 /** “Shows” strip under weekly profit — slightly stronger than {@link dashboardEyebrow} (section anchor). */
 export const dashboardWeeklyShowsEyebrow =
-  'text-[11px] font-medium uppercase tracking-wider text-stone-600';
+  'text-[11px] font-semibold uppercase tracking-wider text-admin-inkMuted';
 
 /** Clickable section title (e.g. Shows → list). */
 export const dashboardShowsNavLink =
@@ -59,7 +59,7 @@ export const dashboardRowList =
  * Full-width row link — stable hover (no vertical nudge); chevron handles direction.
  * Inset accent: restrained rose (brand) without overriding money semantics in cells.
  */
-export const dashboardClickableRowInner = `group relative flex w-full min-w-0 flex-col gap-2.5 py-3.5 text-left text-inherit no-underline outline-none cursor-pointer [&_*]:cursor-inherit sm:min-h-11 sm:flex-row sm:items-center sm:gap-3 sm:py-3.5 ${workspaceTableRowInteractive} hover:bg-stone-100/90 hover:shadow-[0_4px_14px_-4px_rgba(120,113,108,0.09),inset_3px_0_0_0_rgba(192,38,77,0.12)] active:bg-stone-100/95 ring-inset focus-visible:ring-2 focus-visible:ring-rose-300/45`;
+export const dashboardClickableRowInner = `group relative flex w-full min-w-0 flex-col gap-2.5 py-3.5 text-left text-inherit no-underline outline-none cursor-pointer [&_*]:cursor-inherit sm:min-h-11 sm:flex-row sm:items-center sm:gap-3 sm:py-3.5 ${workspaceTableRowHover} ring-inset focus-visible:ring-2 focus-visible:ring-admin-actionPrimary/35`;
 
 export const dashboardRowPad = `${dashboardPadX} py-3.5 max-sm:px-3.5 sm:py-3.5`;
 
@@ -71,7 +71,13 @@ export const dashboardWeeklyListToggleBand = `${dashboardPadX} border-t border-s
 
 export const dashboardModulePanel = `min-w-0 w-full overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`;
 
+/** Needs-attention module — olive-sage wash (distinct from neutral white cards). */
+export const dashboardAttentionModulePanel =
+  'min-w-0 w-full overflow-hidden rounded-2xl border border-lime-900/20 bg-admin-kpiSage/40 shadow-workspace-surface-warm-sm';
+
 export const dashboardModulePanelHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/35 py-3 sm:py-2.5`;
+
+export const dashboardAttentionModulePanelHeader = `${dashboardPadX} border-b border-lime-900/15 bg-admin-kpiSage/25 py-3 sm:py-2.5`;
 
 export const dashboardNarrowModuleLayout = 'w-full max-w-sm self-start';
 

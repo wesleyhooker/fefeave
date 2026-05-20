@@ -8,8 +8,9 @@ export function AdminPageIntro({
   title,
   subtitle,
   action,
-  useAccent = true,
-  decoration = "boutique",
+  useAccent = false,
+  /** Boutique wave is opt-in only; default is clean intro matching Dashboard. */
+  decoration = "none",
   variant = "default",
   breadcrumb,
 }: {
@@ -40,10 +41,7 @@ export function AdminPageIntro({
 
   const SubtitleContainer = variant === "entity-detail" ? "div" : "p";
 
-  const identityBlockClassName =
-    variant === "entity-detail"
-      ? "border-l-[4px] border-stone-500/55 pl-3.5 sm:pl-4"
-      : "";
+  const identityBlockClassName = "";
 
   return (
     <header className="relative isolate overflow-x-clip overflow-y-hidden">

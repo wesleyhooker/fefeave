@@ -2,8 +2,7 @@
 
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useState, type MouseEvent } from "react";
+import { useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import type { ShowDTO } from "@/src/lib/api/shows";
 import type { SelfPayStored } from "../selfPayStorage";
@@ -14,7 +13,8 @@ import {
   workspaceActionPositiveCompleteSm,
   workspaceMoneyMuted,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
+import { DashboardRowChevron } from "@/app/(admin)/admin/dashboard/_components/DashboardRowChevron";
+import { dashboardShowsNavLink } from "@/app/(admin)/admin/dashboard/_components/dashboardStructure";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
@@ -82,19 +82,8 @@ export function DashboardThisWeekCard({
 
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [markUnpaidOpen, setMarkUnpaidOpen] = useState(false);
-  const router = useRouter();
 
   const hasShows = showsThisWeek.length > 0;
-
-  const handleThisWeekCardClick = useCallback(
-    (e: MouseEvent<HTMLElement>) => {
-      const el = e.target as HTMLElement | null;
-      if (el == null) return;
-      if (el.closest("a[href], button, [role='link']")) return;
-      router.push("/admin/balances/owner");
-    },
-    [router],
-  );
 
   const paidAtLabel =
     selfPay?.paidAt != null
@@ -121,9 +110,8 @@ export function DashboardThisWeekCard({
       ) : null}
 
       <section
-        className={`${dashboardWeeklyStatusCard} group relative cursor-pointer transition-shadow duration-200 ease-out hover:shadow-[0_6px_32px_-12px_rgba(120,113,108,0.2),0_2px_10px_-6px_rgba(192,38,77,0.08)]`}
-        onClick={handleThisWeekCardClick}
-        role="presentation"
+        className={`${dashboardWeeklyStatusCard} relative`}
+        data-debug-this-week
       >
         <div
           className={`${dashboardWeeklyHeaderBand} flex items-start justify-between gap-3`}
@@ -131,7 +119,13 @@ export function DashboardThisWeekCard({
           <h2 className={workspaceThisWeekTitle}>
             {WORKFLOW_THIS_WEEK_HEADING}
           </h2>
-          <WorkspaceRowChevron className="mt-0.5 shrink-0 text-stone-400 transition-colors group-hover:text-stone-600" />
+          <Link
+            href="/admin/shows"
+            className={`group shrink-0 ${dashboardShowsNavLink}`}
+          >
+            View shows
+            <DashboardRowChevron />
+          </Link>
         </div>
 
         <div

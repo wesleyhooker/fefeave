@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -12,7 +13,7 @@ import {
 export type WorkspaceHeaderSlotsContextValue = {
   /** Optional replacement for the default centered search shell (usually null). */
   centerSlot: ReactNode | null;
-  /** Page-level primary actions rendered ahead of the profile menu. */
+  /** Page-level primary actions in the header right cluster. */
   actionsSlot: ReactNode | null;
   setCenterSlot: (node: ReactNode | null) => void;
   setActionsSlot: (node: ReactNode | null) => void;
@@ -62,4 +63,13 @@ export function useWorkspaceHeaderSlots(): WorkspaceHeaderSlotsContextValue {
     );
   }
   return ctx;
+}
+
+/** Primary actions for {@link WorkspaceHeader} (right cluster). Clears on unmount. Memoize `actions` when practical. */
+export function useRegisterWorkspaceHeaderActions(actions: ReactNode): void {
+  const { setActionsSlot } = useWorkspaceHeaderSlots();
+  useEffect(() => {
+    setActionsSlot(actions);
+    return () => setActionsSlot(null);
+  }, [actions, setActionsSlot]);
 }

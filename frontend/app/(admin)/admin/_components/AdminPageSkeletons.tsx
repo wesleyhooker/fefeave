@@ -27,7 +27,6 @@ import {
   workspaceCard,
   workspaceCardHeader,
   workspacePageContentWidthWide,
-  workspacePageIntroAccent,
   workspaceSectionToolbar,
   workspaceShellBg,
   workspaceStatTile,
@@ -225,7 +224,7 @@ export function BalancesPageSkeleton() {
     <>
       <AdminPageIntroSection>
         <header>
-          <div className={`min-w-0 ${workspacePageIntroAccent}`}>
+          <div className="min-w-0">
             <SkeletonBar className="h-8 w-36 max-w-full" />
             <SkeletonBar className="mt-2 h-4 w-[min(100%,20rem)] max-w-full" />
           </div>
@@ -275,7 +274,7 @@ export function PaymentsTableSkeleton() {
       <AdminPageIntroSection>
         <header>
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-            <div className={`min-w-0 ${workspacePageIntroAccent}`}>
+            <div className="min-w-0">
               <SkeletonBar className="h-8 w-40 max-w-full" />
               <SkeletonBar className="mt-2 h-4 w-48 max-w-full" />
             </div>
@@ -372,7 +371,7 @@ export function ShowsTableSkeleton() {
       >
         <header>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-            <div className={`min-w-0 ${workspacePageIntroAccent}`}>
+            <div className="min-w-0">
               <SkeletonBar className="h-8 w-28 max-w-full" />
             </div>
             <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-44" />

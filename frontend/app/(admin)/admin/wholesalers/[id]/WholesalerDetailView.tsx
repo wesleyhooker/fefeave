@@ -412,7 +412,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
               <div className={workspaceBalanceDetailControlShell}>
                 <div className="grid grid-cols-1 sm:grid-cols-3 sm:items-stretch sm:divide-x sm:divide-gray-200/80">
                   <div className="min-w-0 border-b border-gray-200/80 px-4 py-4 sm:border-b-0 sm:px-5 sm:py-4">
-                    <div className="flex h-full flex-col justify-center border-l-[3px] border-rose-400/50 pl-3 sm:pl-3.5">
+                    <div className="flex h-full flex-col justify-center">
                       <p
                         className={`${workspaceStatEyebrow} min-w-0 break-words [hyphens:auto]`}
                         title="Outstanding amount: total owed minus total paid (matches Balances)."

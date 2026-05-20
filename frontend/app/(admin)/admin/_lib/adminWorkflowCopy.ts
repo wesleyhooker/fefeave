@@ -16,6 +16,10 @@ export function workflowDashboardWeekSubtitle(
 /** Shows page — table column & compact profit line (no “Est.” wording). */
 export const WORKFLOW_SHOWS_PROFIT_LABEL = 'Profit';
 
+/** Shows index — page intro subtitle. */
+export const WORKFLOW_SHOWS_PAGE_SUBTITLE =
+  'Manage live sale records, payouts, and weekly history.';
+
 export const WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE = 'Record owner payout?';
 export const WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_DESCRIPTION =
   'Record this week payout to Owner activity.';
@@ -62,3 +66,6 @@ export const WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL =
 /** Balances index */
 export const WORKFLOW_BALANCES_PAGE_SUBTITLE =
   'Wholesaler balances from your shows.';
+
+/** Balances index — header primary action (plus icon from {@link WorkspaceSidePanelTrigger}). */
+export const WORKFLOW_NEW_WHOLESALER_TRIGGER_LABEL = 'New wholesaler';

@@ -5,7 +5,7 @@
 
 :root {
   /* Neutral palette */
-  --fefe-cream: #f6f2ec;
+  --fefe-cream: #faf8f5;
   --fefe-warm-sand: #ebded2;
   --fefe-stone: #d1c5b8;
   --fefe-charcoal: #2c2c2c;
@@ -35,4 +35,75 @@
   /* Typography — set by next/font in layout (fallbacks for non-App usage) */
   --fefe-font-heading: "Playfair Display", serif;
   --fefe-font-body: "Inter", ui-sans-serif, sans-serif;
+
+  /*
+   * Admin workspace brand tokens (admin-only; do not consume on public site).
+   * Source of truth for the warm-boutique / clean-SaaS admin chrome.
+   *
+   * Stored as space-separated RGB tuples so Tailwind can compose opacity
+   * modifiers via `rgb(var(--admin-*) / <alpha-value>)` (see
+   * `tailwind.config.ts → theme.extend.colors.admin`). This unlocks utilities
+   * like `bg-admin-brand`, `bg-admin-brand/40`, `outline-admin-brand/40`,
+   * `border-admin-borderWarm`, `text-admin-brand`.
+   *
+   * Hex equivalents:
+   *   --admin-brand          #c76570
+   *   --admin-brand-hover    #b45560
+   *   --admin-surface-subtle #faf7f8
+   *   --admin-surface-active #f6edee
+   *   --admin-surface-hover  #f1e4e6
+   *   --admin-border-warm    #e8d4d7
+   */
+  --admin-brand: 199 101 112;
+  --admin-brand-hover: 180 85 96;
+  --admin-surface-subtle: 250 247 242;
+  --admin-surface-active: 246 237 238;
+  --admin-surface-hover: 241 228 230;
+  --admin-border-warm: 232 212 215;
+
+  /*
+   * Semantic admin workspace tokens — warm boutique operations chrome (additive).
+   * Hex equivalents (reference — tune visually against mocks):
+   *   --admin-canvas                    #faf7f2
+   *   --admin-sidebar-surface           #a67c74 (pastel clay; target mock)
+   *   --admin-sidebar-nav-active-surface #fdece4 (light peach pill)
+   *   --admin-sidebar-text              #fffaf7 (warm near-white)
+   *   --admin-sidebar-text-muted        #ffe8de (readable muted on clay)
+   *   --admin-sidebar-divider           #d67a66 @ ~opacity via Tailwind
+   *   --admin-header-surface            #faf7f2 (matches canvas)
+   *   --admin-header-border             #e5d8ce
+   *   --admin-surface-elevated          #ffffff (content cards)
+   *   --admin-border                    #d9cfc4 (warm structural)
+   *   --admin-muted-strip               #f6f1eb
+   *   --admin-ink                       #2d2926
+   *   --admin-ink-muted                 #706b67
+   *   --admin-kpi-soft                  #fde2d2 (profit / default KPI)
+   *   --admin-kpi-accent                #fcd5c1 (vendors owed)
+   *   --admin-kpi-gold                  #fee8c1 (completed / milestones)
+   *   --admin-kpi-sage                  #a8b296 (attention / future ops)
+   *   --admin-action-primary            #d05844 (brighter terracotta CTA)
+   *   --admin-action-primary-hover      #bc4736
+   */
+  --admin-canvas: 250 247 242;
+  /* Pastel clay sidebar — sampled from target mock (~#a67c74) */
+  --admin-sidebar-surface: 166 124 116;
+  --admin-sidebar-surface-deep: 152 110 103;
+  --admin-sidebar-nav-hover-surface: 178 138 131;
+  --admin-sidebar-nav-active-surface: 190 148 140;
+  --admin-sidebar-text: 255 250 247;
+  --admin-sidebar-text-muted: 255 232 222;
+  --admin-sidebar-divider: 214 122 102;
+  --admin-header-surface: 250 247 242;
+  --admin-header-border: 229 216 206;
+  --admin-surface-elevated: 255 255 255;
+  --admin-border: 217 207 196;
+  --admin-muted-strip: 246 241 235;
+  --admin-ink: 45 41 38;
+  --admin-ink-muted: 112 107 103;
+  --admin-kpi-soft: 253 226 210;
+  --admin-kpi-accent: 252 213 193;
+  --admin-kpi-gold: 254 232 193;
+  --admin-kpi-sage: 168 178 150;
+  --admin-action-primary: 208 88 68;
+  --admin-action-primary-hover: 188 71 54;
 }

@@ -1,12 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRegisterWorkspaceHeaderActions } from "@/app/_components/headers/WorkspaceHeaderSlots";
+import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
 import { BalancesPageSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { AdminSummaryStatGrid } from "@/app/(admin)/admin/_components/AdminSummaryStatGrid";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
@@ -19,6 +22,7 @@ import { apiGet } from "@/lib/api";
 import { VENDOR_BALANCES_INVALIDATE_EVENT } from "@/lib/vendorBalancesInvalidate";
 import {
   WORKFLOW_BALANCES_PAGE_SUBTITLE,
+  WORKFLOW_NEW_WHOLESALER_TRIGGER_LABEL,
   WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { BalancesTable, type WholesalerBalanceRow } from "./BalancesTable";
@@ -29,6 +33,21 @@ function parseNum(s: string): number {
 }
 
 export default function AdminBalancesPage() {
+  const router = useRouter();
+
+  const headerActions = useMemo(
+    () => (
+      <WorkspaceSidePanelTrigger
+        variant="primary"
+        label={WORKFLOW_NEW_WHOLESALER_TRIGGER_LABEL}
+        onClick={() => router.push("/admin/balances/accounts?add=1")}
+      />
+    ),
+    [router],
+  );
+
+  useRegisterWorkspaceHeaderActions(headerActions);
+
   const [data, setData] = useState<WholesalerBalanceRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchBusy, setFetchBusy] = useState(false);
@@ -130,6 +149,7 @@ export default function AdminBalancesPage() {
     return [
       {
         id: "outstanding",
+        surface: "negative" as const,
         label: "Outstanding",
         value: (
           <p
@@ -141,6 +161,7 @@ export default function AdminBalancesPage() {
       },
       {
         id: "owed",
+        surface: "owed" as const,
         label: "Owed",
         value: (
           <p
@@ -152,6 +173,7 @@ export default function AdminBalancesPage() {
       },
       {
         id: "paid",
+        surface: "positive" as const,
         label: "Paid",
         value: (
           <p
@@ -163,6 +185,7 @@ export default function AdminBalancesPage() {
       },
       {
         id: "vendors-with-balance",
+        surface: "completed" as const,
         label: WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
         value: (
           <p className="text-xl font-semibold tabular-nums text-stone-900 sm:text-2xl">
@@ -181,7 +204,7 @@ export default function AdminBalancesPage() {
     return (
       <>
         <AdminPageIntroSection>
-          <AdminPageIntro
+          <AdminWorkspacePageIntro
             title="Balances"
             subtitle={WORKFLOW_BALANCES_PAGE_SUBTITLE}
           />
@@ -208,7 +231,7 @@ export default function AdminBalancesPage() {
   return (
     <>
       <AdminPageIntroSection>
-        <AdminPageIntro
+        <AdminWorkspacePageIntro
           title="Balances"
           subtitle={WORKFLOW_BALANCES_PAGE_SUBTITLE}
         />

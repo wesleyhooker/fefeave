@@ -4,41 +4,46 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   workspaceChromeHover,
-  workspaceChromeHoverWarm,
   workspaceGlobalHeaderBar,
+  workspaceHeaderBrandCluster,
+  workspaceHeaderBrandLink,
+  workspacePageGutter,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import { ProfileDropdown } from "./ProfileDropdown";
+import { WorkspaceHeaderSearch } from "./WorkspaceHeaderSearch";
+import { useWorkspaceHeaderSlots } from "./WorkspaceHeaderSlots";
 
 export type WorkspaceHeaderProps = {
   /** Label for the workspace context (e.g. "Workspace"). Shown next to logo. */
   title?: string;
-  email: string | null;
-  roles: string[];
-  envLabel: string;
-  isProduction: boolean;
   /** On mobile, when set, shows a menu button that calls this to open the admin nav. */
   onMenuClick?: () => void;
 };
 
 export function WorkspaceHeader({
   title = "Workspace",
-  email,
-  roles,
-  envLabel,
-  isProduction,
   onMenuClick,
 }: WorkspaceHeaderProps) {
+  const { centerSlot, actionsSlot } = useWorkspaceHeaderSlots();
+
   return (
     <header
-      className={`${workspaceGlobalHeaderBar} px-4 py-3.5 backdrop-blur-[2px] md:px-6 md:py-4`}
+      className={`${workspaceGlobalHeaderBar} ${workspacePageGutter} py-3.5 md:py-4`}
+      data-debug-admin-header
     >
-      <div className="flex flex-nowrap items-center justify-between gap-x-2 gap-y-0 md:flex-wrap md:gap-x-3 md:gap-y-3">
-        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
+      {/*
+        Mobile (< md): search hidden — hamburger + brand; actions `ml-auto`.
+        md+: flex row — brand (left) | `ml-auto` cluster: search/slot + actions, right-aligned as one unit.
+      */}
+      <div
+        className="flex w-full flex-nowrap items-center gap-x-2 md:gap-x-3"
+        data-debug-header-inset
+      >
+        <div className="flex min-w-0 shrink items-center gap-2 md:gap-3">
           {onMenuClick && (
             <button
               type="button"
               onClick={onMenuClick}
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:hidden ${workspaceChromeHover}`}
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-admin-inkMuted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-actionPrimary/45 md:hidden ${workspaceChromeHover}`}
               aria-label="Open menu"
             >
               <svg
@@ -56,11 +61,11 @@ export function WorkspaceHeader({
               </svg>
             </button>
           )}
-          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-stone-200/80 bg-white/65 px-2.5 py-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.78)] md:gap-2.5 md:px-3 md:py-1.5">
+          <div className={workspaceHeaderBrandCluster}>
             <Link
               href="/"
               aria-label="Go to Fefe Ave site"
-              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-1.5 py-1 text-lg font-semibold text-stone-900 hover:text-stone-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 md:min-h-0 md:px-1 md:py-0.5 md:pr-1 ${workspaceChromeHoverWarm}`}
+              className={workspaceHeaderBrandLink}
             >
               <Image
                 src="/fefe-bird-icon.png"
@@ -72,19 +77,21 @@ export function WorkspaceHeader({
               />
               <span className="truncate">Fefe Ave</span>
             </Link>
-            <span className="h-4 w-px shrink-0 bg-stone-300/85" aria-hidden />
-            <span className="truncate text-sm font-medium text-stone-600">
+            <span
+              className="h-1 w-1 shrink-0 rounded-full bg-admin-actionPrimary/70"
+              aria-hidden
+            />
+            <span className="truncate text-sm font-medium text-admin-inkMuted">
               {title}
             </span>
           </div>
         </div>
-        <div className="shrink-0 rounded-xl border border-stone-200/80 bg-white/60 p-0.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.74)]">
-          <ProfileDropdown
-            email={email}
-            roles={roles}
-            envLabel={envLabel}
-            isProduction={isProduction}
-          />
+
+        <div className="ml-auto flex min-w-0 shrink items-center justify-end gap-2 md:gap-2.5">
+          <div className="hidden min-w-0 md:flex md:max-w-full md:items-center md:px-0">
+            {centerSlot ?? <WorkspaceHeaderSearch />}
+          </div>
+          {actionsSlot}
         </div>
       </div>
     </header>

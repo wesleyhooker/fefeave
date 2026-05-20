@@ -1,15 +1,14 @@
 "use client";
 
 import { useId } from "react";
-import {
-  ChevronRightIcon,
-  DocumentPlusIcon,
-} from "@heroicons/react/24/outline";
+import { ChevronDownIcon, PlusIcon } from "@heroicons/react/24/outline";
 import {
   workspaceActionIconMd,
   workspaceSidePanelTriggerOpenDefault,
+  workspaceSidePanelTriggerOpenPrimary,
   workspaceSidePanelTriggerOpenSubtle,
   workspaceSidePanelTriggerShellDefault,
+  workspaceSidePanelTriggerShellPrimary,
   workspaceSidePanelTriggerShellSubtle,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 
@@ -18,8 +17,8 @@ const motionEase = "ease-[cubic-bezier(0.25,0.8,0.25,1)]";
 export type WorkspaceSidePanelTriggerProps = {
   label: string;
   onClick: () => void;
-  /** Default = Shows-style boutique tint; subtle = lower emphasis (e.g. dashboard). */
-  variant?: "default" | "subtle";
+  /** default / subtle = neutral shells; primary = terracotta (same tier as workspaceActionPrimaryMd). */
+  variant?: "default" | "subtle" | "primary";
   /** When the target right panel is open — engaged surface. */
   open?: boolean;
   className?: string;
@@ -40,11 +39,15 @@ export function WorkspaceSidePanelTrigger({
   const shell =
     variant === "subtle"
       ? workspaceSidePanelTriggerShellSubtle
-      : workspaceSidePanelTriggerShellDefault;
+      : variant === "primary"
+        ? workspaceSidePanelTriggerShellPrimary
+        : workspaceSidePanelTriggerShellDefault;
   const engaged =
     variant === "subtle"
       ? workspaceSidePanelTriggerOpenSubtle
-      : workspaceSidePanelTriggerOpenDefault;
+      : variant === "primary"
+        ? workspaceSidePanelTriggerOpenPrimary
+        : workspaceSidePanelTriggerOpenDefault;
 
   return (
     <button
@@ -59,24 +62,30 @@ export function WorkspaceSidePanelTrigger({
         Opens a workflow in the side panel beside this page. You can keep
         working here while the panel is open.
       </span>
-      <span
-        className={`flex min-w-0 w-full items-center gap-1.5 transition-transform duration-200 motion-reduce:transition-none motion-reduce:transform-none ${motionEase} will-change-transform group-hover:translate-x-0.5`}
-      >
+      <span className="flex min-w-0 w-full items-center gap-1.5">
         <span
           className={`inline-flex shrink-0 transition-colors duration-200 motion-reduce:transition-none [&_svg]:h-4 [&_svg]:w-4 ${
-            open
-              ? "text-stone-800"
-              : "text-stone-600 group-hover:text-stone-800"
+            variant === "primary"
+              ? open
+                ? "text-white"
+                : "text-white/90 group-hover:text-white"
+              : open
+                ? "text-stone-800"
+                : "text-stone-600 group-hover:text-stone-800"
           }`}
         >
-          <DocumentPlusIcon className={workspaceActionIconMd} aria-hidden />
+          <PlusIcon className={workspaceActionIconMd} aria-hidden />
         </span>
         <span className="min-w-0 flex-1 truncate">{label}</span>
-        <ChevronRightIcon
-          className={`${workspaceActionIconMd} shrink-0 will-change-transform transition-[transform,color] duration-200 motion-reduce:transition-none motion-reduce:transform-none ${motionEase} group-hover:translate-x-1 ${
-            open
-              ? "text-stone-800"
-              : "text-stone-500 group-hover:text-stone-700"
+        <ChevronDownIcon
+          className={`${workspaceActionIconMd} shrink-0 will-change-transform transition-[transform,color,opacity] duration-200 motion-reduce:transition-none motion-reduce:transform-none ${motionEase} ${
+            variant === "primary"
+              ? open
+                ? "translate-y-px rotate-180 text-white opacity-100"
+                : "translate-y-0 text-white/82 opacity-95 group-hover:translate-y-0.5 group-hover:text-white group-hover:opacity-100"
+              : open
+                ? "translate-y-px rotate-180 text-stone-800"
+                : "translate-y-0 text-stone-500 opacity-95 group-hover:translate-y-0.5 group-hover:text-stone-700 group-hover:opacity-100"
           }`}
           aria-hidden
         />

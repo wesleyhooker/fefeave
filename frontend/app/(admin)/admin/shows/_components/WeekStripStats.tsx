@@ -12,10 +12,13 @@ export function WeekStripStats({
   shows,
   summaries,
   dense = false,
+  omitShowCount = false,
 }: {
   shows: ShowViewModel[];
   summaries: Record<string, ShowFinancialSummary>;
   dense?: boolean;
+  /** When the section already shows `SHOWS (n)`, skip duplicating the count here. */
+  omitShowCount?: boolean;
 }) {
   const closed = shows.filter(
     (s) => (s.status ?? "").toUpperCase() === "COMPLETED",
@@ -33,7 +36,9 @@ export function WeekStripStats({
   profit = roundToCents(profit);
 
   const metaBits: string[] = [];
-  metaBits.push(`${shows.length} ${shows.length === 1 ? "show" : "shows"}`);
+  if (!omitShowCount) {
+    metaBits.push(`${shows.length} ${shows.length === 1 ? "show" : "shows"}`);
+  }
   if (closed.length > 0) metaBits.push(`${closed.length} closed`);
   if (upcoming > 0) metaBits.push(`${upcoming} upcoming`);
 
