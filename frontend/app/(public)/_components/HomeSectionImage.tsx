@@ -4,14 +4,16 @@ import Image from "next/image";
 import { useCallback, useState } from "react";
 
 export type HomeSectionImageProps = {
-  /** Path under public/, e.g. /images/hero.jpg */
+  /** Path under public/, e.g. /images/felicia.jpg */
   src: string;
   alt: string;
-  /** Tailwind aspect ratio class, e.g. aspect-[4/3] or aspect-[3/4] */
-  aspectClass: "aspect-[4/3]" | "aspect-[3/4]";
+  /** Tailwind aspect ratio class, e.g. aspect-[4/3] or aspect-[5/6] */
+  aspectClass: string;
   /** Responsive sizes for next/image */
   sizes: string;
   className?: string;
+  /** object-position for editorial crop, e.g. "50% 28%" */
+  objectPosition?: string;
 };
 
 type LoadState = "loading" | "loaded" | "failed";
@@ -27,6 +29,7 @@ export function HomeSectionImage({
   aspectClass,
   sizes,
   className = "",
+  objectPosition = "center",
 }: HomeSectionImageProps) {
   const [state, setState] = useState<LoadState>("loading");
   const onLoad = useCallback(() => setState("loaded"), []);
@@ -34,8 +37,7 @@ export function HomeSectionImage({
 
   return (
     <div
-      className={`relative ${aspectClass} rounded-fefe-card overflow-hidden bg-fefe-warm-sand ${className}`}
-      aria-hidden
+      className={`relative overflow-hidden rounded-fefe-card bg-fefe-warm-sand ${aspectClass} ${className}`}
     >
       {state !== "failed" && (
         <Image
@@ -44,6 +46,7 @@ export function HomeSectionImage({
           fill
           sizes={sizes}
           className={`object-cover transition-opacity duration-300 ${state === "loaded" ? "opacity-100" : "opacity-0"}`}
+          style={{ objectPosition }}
           onLoad={onLoad}
           onError={onError}
           priority={src.includes("hero")}

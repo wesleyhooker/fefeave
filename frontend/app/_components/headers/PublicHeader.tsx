@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
-import { Container } from "@/system";
+import { HeartIcon } from "@/app/_components/icons/HeartIcon";
+import { HomepageContainer } from "@/app/(public)/_components/homepageShell";
 import { PublicAccountDropdown } from "./PublicAccountDropdown";
 import {
   publicHeaderControlBase,
@@ -25,14 +26,7 @@ const LogoFallback = () => (
     className="flex h-8 w-8 items-center justify-center rounded-full bg-fefe-gold/15 text-fefe-gold"
     aria-hidden
   >
-    <svg
-      className="h-5 w-5"
-      fill="currentColor"
-      viewBox="0 0 24 24"
-      aria-hidden
-    >
-      <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
-    </svg>
+    <HeartIcon className="h-5 w-5" />
   </span>
 );
 
@@ -65,7 +59,7 @@ export function PublicHeader({
       ref={headerRef}
       className="relative shrink-0 border-b border-fefe-stone/40 bg-fefe-cream"
     >
-      <Container className="flex items-center justify-between gap-x-4 py-fefe-2">
+      <HomepageContainer className="flex items-center justify-between gap-x-4 py-fefe-2 md:py-3">
         <Link
           href="/"
           className="flex shrink-0 items-center gap-fefe-2 font-fefe text-lg font-semibold text-fefe-charcoal hover:text-fefe-charcoal/90"
@@ -154,14 +148,14 @@ export function PublicHeader({
             )}
           </button>
         </div>
-      </Container>
+      </HomepageContainer>
 
       {mobileOpen && (
         <div
           id="public-mobile-nav"
           className="absolute left-0 right-0 top-full z-50 border-b border-fefe-stone/40 bg-fefe-cream shadow-fefe-card md:hidden"
         >
-          <Container className="flex flex-col gap-1 py-fefe-2">
+          <HomepageContainer className="flex flex-col gap-1 py-fefe-2">
             {MAIN_NAV_LINKS.map(({ href, label }) => {
               const active =
                 pathname === href || pathname.startsWith(`${href}/`);
@@ -176,7 +170,7 @@ export function PublicHeader({
                 </Link>
               );
             })}
-          </Container>
+          </HomepageContainer>
         </div>
       )}
     </header>

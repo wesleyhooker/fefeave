@@ -1,13 +1,15 @@
+"use client";
+
 import Link from "next/link";
-import { Container } from "@/system";
 import { getPublicFooterLinks } from "@/lib/public/publicLinks";
+import { HomepageContainer } from "./homepageShell";
 
 export function PublicFooter() {
   const links = getPublicFooterLinks();
 
   return (
     <footer className="shrink-0 border-t border-fefe-stone/30 bg-fefe-cream py-fefe-3">
-      <Container className="flex flex-col gap-fefe-2 sm:flex-row sm:items-center sm:justify-between">
+      <HomepageContainer className="flex flex-col gap-fefe-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="font-fefe text-[0.6875rem] text-fefe-charcoal/55">
           © {new Date().getFullYear()} Fefe Ave
         </p>
@@ -37,7 +39,7 @@ export function PublicFooter() {
             ),
           )}
         </nav>
-      </Container>
+      </HomepageContainer>
     </footer>
   );
 }

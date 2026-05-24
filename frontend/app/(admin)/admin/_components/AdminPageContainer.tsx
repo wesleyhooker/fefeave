@@ -62,7 +62,7 @@ export function AdminPageIntroSection({
       : `${workspacePageGutter} ${contentWidthClassName}`;
 
   return (
-    <section className={zoneClassName} data-debug-page-intro>
+    <section className={zoneClassName}>
       <div className={frameClass}>
         <div className={workspacePageIntroZoneInner}>{children}</div>
       </div>

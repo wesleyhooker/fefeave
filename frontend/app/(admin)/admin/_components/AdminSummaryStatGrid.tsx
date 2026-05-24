@@ -54,9 +54,6 @@ export function AdminSummaryStatGrid({
           <div
             key={item.id}
             className={getWorkspaceSummaryStatSurfaceClass(item.surface)}
-            {...(item.surface === "owed"
-              ? { "data-debug-kpi-owed": true }
-              : {})}
           >
             {item.decoration ? (
               <div className={workspaceStatTileKpiTopRow}>

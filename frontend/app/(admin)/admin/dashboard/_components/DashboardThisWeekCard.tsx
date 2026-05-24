@@ -109,10 +109,7 @@ export function DashboardThisWeekCard({
         />
       ) : null}
 
-      <section
-        className={`${dashboardWeeklyStatusCard} relative`}
-        data-debug-this-week
-      >
+      <section className={`${dashboardWeeklyStatusCard} relative`}>
         <div
           className={`${dashboardWeeklyHeaderBand} flex items-start justify-between gap-3`}
         >

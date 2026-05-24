@@ -28,16 +28,12 @@ export function WorkspaceHeader({
   return (
     <header
       className={`${workspaceGlobalHeaderBar} ${workspacePageGutter} py-3.5 md:py-4`}
-      data-debug-admin-header
     >
       {/*
         Mobile (< md): search hidden — hamburger + brand; actions `ml-auto`.
         md+: flex row — brand (left) | `ml-auto` cluster: search/slot + actions, right-aligned as one unit.
       */}
-      <div
-        className="flex w-full flex-nowrap items-center gap-x-2 md:gap-x-3"
-        data-debug-header-inset
-      >
+      <div className="flex w-full flex-nowrap items-center gap-x-2 md:gap-x-3">
         <div className="flex min-w-0 shrink items-center gap-2 md:gap-3">
           {onMenuClick && (
             <button

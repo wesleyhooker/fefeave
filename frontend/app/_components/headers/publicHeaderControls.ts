@@ -9,6 +9,3 @@ export const publicNavLinkActive = 'text-fefe-gold';
 /** Login / account control — warm sand pill on hover. */
 export const publicHeaderControlBase =
   'rounded-fefe-button px-fefe-2 py-1.5 font-fefe text-sm font-medium text-fefe-charcoal no-underline transition-colors duration-200 ease-out hover:bg-fefe-warm-sand/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fefe-gold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-fefe-cream';
-
-/** @deprecated Use publicNavLinkActive for Live. */
-export const publicHeaderControlActive = publicNavLinkActive;

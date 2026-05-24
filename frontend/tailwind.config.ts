@@ -18,6 +18,8 @@ const config: Config = {
           'gold-hover': 'var(--fefe-gold-hover)',
           blush: 'var(--fefe-blush)',
           sage: 'var(--fefe-sage)',
+          'trust-gold': 'var(--fefe-trust-gold)',
+          'icon-well': 'var(--fefe-icon-well)',
         },
         /**
          * Admin workspace brand palette (admin-only).
@@ -76,6 +78,13 @@ const config: Config = {
         fefe: ['var(--fefe-font-body)'],
         'fefe-heading': ['var(--fefe-font-heading)'],
       },
+      fontSize: {
+        /** Size only — pair with tracking on EditorialEyebrow, not footer */
+        'fefe-micro': 'var(--fefe-micro-size)',
+      },
+      letterSpacing: {
+        'fefe-micro': 'var(--fefe-micro-tracking)',
+      },
       borderRadius: {
         'fefe-card': 'var(--fefe-card-radius)',
         'fefe-button': 'var(--fefe-button-radius)',
@@ -83,11 +92,11 @@ const config: Config = {
       maxWidth: {
         'fefe-container': 'var(--fefe-container-max)',
         'fefe-narrow': 'var(--fefe-container-narrow)',
+        'fefe-editorial': 'var(--fefe-editorial-max)',
+        'fefe-editorial-xl': 'var(--fefe-editorial-max-xl)',
       },
       boxShadow: {
         'fefe-card': '0 2px 12px rgba(44, 44, 44, 0.06)',
-        /** Public editorial — warm lift for hero imagery */
-        'fefe-editorial': '0 8px 32px rgba(44, 44, 44, 0.1)',
         /** Admin workspace — soft lift for elevated surfaces */
         'workspace-surface':
           '0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 28px -8px rgba(15, 23, 42, 0.1)',

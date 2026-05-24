@@ -217,7 +217,6 @@ export function AdminSidebar({
       {/* Desktop: fixed-width sidebar */}
       <aside
         className={`hidden w-[15.5rem] shrink-0 flex-col p-4 md:flex ${workspaceSidebarSurface}`}
-        data-debug-admin-sidebar
         aria-label="Admin navigation"
       >
         {brandBlock}

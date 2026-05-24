@@ -108,6 +108,12 @@ async function buildApp() {
     await closePool();
   });
 
+  if (env.NODE_ENV === 'development') {
+    app.get('/', async (_request, reply) => {
+      return reply.redirect('http://localhost:3001/');
+    });
+  }
+
   // Register routes
   await app.register(healthRoutes, { prefix: env.API_PREFIX });
   await app.register(authRoutes, { prefix: env.API_PREFIX });

@@ -32,6 +32,19 @@
   --fefe-container-max: 1200px;
   --fefe-container-narrow: 640px;
 
+  /* Editorial layout (homepage shell) */
+  --fefe-editorial-max: 90rem;
+  --fefe-editorial-max-xl: 96rem;
+
+  /* Micro typography (eyebrow, footer meta) */
+  --fefe-micro-size: 0.6875rem;
+  --fefe-micro-tracking: 0.18em;
+
+  /* Trust row accents */
+  --fefe-trust-gold: #a87522;
+  --fefe-icon-well: #f5ede3;
+  --fefe-accent-border: #a87522;
+
   /* Typography — set by next/font in layout (fallbacks for non-App usage) */
   --fefe-font-heading: "Playfair Display", serif;
   --fefe-font-body: "Inter", ui-sans-serif, sans-serif;
