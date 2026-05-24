@@ -11,7 +11,9 @@ const config: Config = {
       colors: {
         fefe: {
           cream: 'var(--fefe-cream)',
+          'cream-raised': 'var(--fefe-cream-raised)',
           'warm-sand': 'var(--fefe-warm-sand)',
+          'sand-muted': 'var(--fefe-sand-muted)',
           stone: 'var(--fefe-stone)',
           charcoal: 'var(--fefe-charcoal)',
           gold: 'var(--fefe-gold)',
@@ -97,6 +99,9 @@ const config: Config = {
       },
       boxShadow: {
         'fefe-card': '0 2px 12px rgba(44, 44, 44, 0.06)',
+        /** Editorial homepage cards on cream canvas */
+        'fefe-card-editorial':
+          '0 1px 2px rgba(72, 53, 47, 0.05), 0 4px 14px -2px rgba(72, 53, 47, 0.07)',
         /** Admin workspace — soft lift for elevated surfaces */
         'workspace-surface':
           '0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 28px -8px rgba(15, 23, 42, 0.1)',

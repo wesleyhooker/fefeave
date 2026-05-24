@@ -59,9 +59,23 @@ Dense ledgers and tables stay **neutral** (gray/stone utilities); semantic green
 
 ---
 
+## Public marketing site (`public-site`)
+
+The `(public)` layout root uses class `public-site`, which **re-scopes CSS variables** (see `tokens.css`) without changing global `:root` values used elsewhere (e.g. admin).
+
+| Token on `.public-site`             | Effect                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------ |
+| `--fefe-gold` / `--fefe-gold-hover` | Richer trust-gold hue (`#A87522` / `#8F6219`) for CTAs, eyebrows, links, icons |
+| `--fefe-trust-gold`                 | Aliased to public gold (one accent family)                                     |
+| `--fefe-icon-well`                  | Uses `--fefe-sand-muted` for icon wells on cream                               |
+
+**Sand-muted** (`#EDE4D8`) is for micro accents (wells, placeholders, header hover pills), not full-width bands. Large public sections use **Cream** only (Phase A).
+
+---
+
 ## Quick reference
 
-- **Backgrounds:** Cream, Warm Sand.
+- **Backgrounds:** Cream, Warm Sand (public homepage sections → Cream canvas).
 - **Borders / dividers:** Stone.
 - **Body text:** Charcoal.
 - **Primary actions & key icons:** Soft Gold.

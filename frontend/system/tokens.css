@@ -6,7 +6,11 @@
 :root {
   /* Neutral palette */
   --fefe-cream: #faf8f5;
+  /** Homepage raised panels — slightly warmer/darker than canvas cream */
+  --fefe-cream-raised: #f5f0ea;
   --fefe-warm-sand: #ebded2;
+  /** Micro accents on cream (icon wells, image placeholders) — not full section fills */
+  --fefe-sand-muted: #ede4d8;
   --fefe-stone: #d1c5b8;
   --fefe-charcoal: #2c2c2c;
 
@@ -119,4 +123,16 @@
   --admin-kpi-sage: 168 178 150;
   --admin-action-primary: 208 88 68;
   --admin-action-primary-hover: 188 71 54;
+}
+
+/**
+ * Public marketing site (`(public)/layout` root uses class `public-site`).
+ * Stronger gold + sand-muted micro accents; does not change :root for admin/portal.
+ */
+.public-site {
+  --fefe-gold: #a87522;
+  --fefe-gold-hover: #8f6219;
+  --fefe-trust-gold: var(--fefe-gold);
+  --fefe-accent-border: var(--fefe-gold);
+  --fefe-icon-well: var(--fefe-sand-muted);
 }

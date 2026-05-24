@@ -10,6 +10,7 @@ import {
   HOME_WHERE_TO_FIND_LIVE_ID,
   HomepageContainer,
   homepageHeroGridClass,
+  publicEditorialProseClass,
 } from "./homepageShell";
 import {
   HERO_PLAY_ICON_CLASSES,
@@ -66,7 +67,7 @@ function HeroIllustration() {
 export function HomeHeroSection() {
   return (
     <section className="bg-fefe-cream">
-      <HomepageContainer className="overflow-visible pb-fefe-4 pt-fefe-2 md:pb-fefe-5 md:pt-fefe-5">
+      <HomepageContainer className="overflow-visible pb-fefe-6 pt-fefe-2 md:pb-fefe-7 md:pt-fefe-5">
         <div className={homepageHeroGridClass}>
           <div className="relative z-10 flex min-w-0 max-w-xl flex-col items-start md:max-w-none md:justify-self-end md:pt-16 lg:max-w-[40rem] lg:pt-[4.5rem]">
             <EditorialEyebrow>
@@ -80,7 +81,7 @@ export function HomeHeroSection() {
               Curated live <BrushUnderline>resale</BrushUnderline> drops.
             </Heading>
 
-            <Prose className="mt-fefe-3 w-full max-w-md text-base leading-relaxed text-fefe-charcoal/90 md:mt-fefe-4 md:max-w-xl md:text-[1.3125rem] md:leading-[1.7]">
+            <Prose className={publicEditorialProseClass}>
               <p>
                 Quality clothing. Wholesale-friendly lots. Built with clarity
                 and trust.

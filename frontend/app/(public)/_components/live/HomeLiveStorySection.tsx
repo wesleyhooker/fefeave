@@ -1,16 +1,18 @@
 import {
   homepageLiveStoryBlockClass,
-  homepageTrustBandClass,
+  homepageLiveStorySurfaceClass,
 } from "../homepageShell";
 import { HomeLiveExperienceSection } from "./HomeLiveExperienceSection";
 import { HomeWhereToFindLiveSection } from "./HomeWhereToFindLiveSection";
 
 /**
- * Single warm editorial surface: where to find us live + what happens during a live.
+ * Live story on the homepage cream canvas: platforms + experience (no sand band).
  */
 export function HomeLiveStorySection() {
   return (
-    <div className={`${homepageTrustBandClass} ${homepageLiveStoryBlockClass}`}>
+    <div
+      className={`${homepageLiveStorySurfaceClass} ${homepageLiveStoryBlockClass}`}
+    >
       <HomeWhereToFindLiveSection />
       <HomeLiveExperienceSection />
     </div>

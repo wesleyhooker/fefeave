@@ -15,8 +15,11 @@ import { Container } from "@/system";
 export const homepageShellClass =
   "md:max-w-fefe-editorial xl:max-w-fefe-editorial-xl";
 
-/** Full-width warm sand surface (homepage live story block) */
-export const homepageTrustBandClass = "bg-fefe-warm-sand";
+/** Homepage live story block — same canvas as hero (Phase A: unified cream surface) */
+export const homepageLiveStorySurfaceClass = "bg-fefe-cream";
+
+/** @deprecated Use homepageLiveStorySurfaceClass */
+export const homepageTrustBandClass = homepageLiveStorySurfaceClass;
 
 /** Anchor target for hero CTA and in-page links */
 export const HOME_WHERE_TO_FIND_LIVE_ID = "where-to-find-us-live";
@@ -25,11 +28,10 @@ export const HOME_WHERE_TO_FIND_LIVE_ID = "where-to-find-us-live";
 export const homepageSectionClass = "py-fefe-6 md:py-fefe-7";
 
 /**
- * Live story block — warm surface wrapping platforms + experience.
- * Top padding is ~25% tighter than `homepageSectionClass` so hero → live feels connected.
+ * Live story block below hero — extra top padding for clear separation from hero collage.
  */
 export const homepageLiveStoryBlockClass =
-  "pt-fefe-4 md:pt-fefe-5 pb-fefe-6 md:pb-fefe-7";
+  "pt-fefe-6 md:pt-fefe-7 pb-fefe-6 md:pb-fefe-7";
 
 /** Spacing between subsections inside the live story block (no borders) */
 export const homepageLiveStorySubsectionClass = "pt-fefe-5 md:pt-fefe-6";
@@ -40,7 +42,7 @@ export const publicEditorialHeadlineClass =
 
 /** Editorial supporting prose width and scale */
 export const publicEditorialProseClass =
-  "mt-fefe-3 w-full max-w-xl text-base leading-relaxed text-fefe-charcoal/90 md:mt-fefe-4 md:text-[1.3125rem] md:leading-[1.7]";
+  "mt-fefe-3 w-full max-w-xl text-base leading-relaxed text-fefe-charcoal md:mt-fefe-4 md:text-[1.3125rem] md:leading-[1.7]";
 
 /** Hero text | hero collage — matches editorial mockup split */
 export const homepageHeroGridClass =

@@ -20,7 +20,7 @@ type LoadState = "loading" | "loaded" | "failed";
 
 /**
  * Homepage section image with layout-preserving wrapper and production-safe fallback.
- * Image is shown only after successful load; until then (or on error) the warm-sand
+ * Image is shown only after successful load; until then (or on error) the sand-muted
  * background is visible so missing assets never show a broken image.
  */
 export function HomeSectionImage({
@@ -37,7 +37,7 @@ export function HomeSectionImage({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-fefe-card bg-fefe-warm-sand ${aspectClass} ${className}`}
+      className={`relative overflow-hidden rounded-fefe-card bg-fefe-sand-muted ${aspectClass} ${className}`}
     >
       {state !== "failed" && (
         <Image

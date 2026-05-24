@@ -11,12 +11,12 @@ import {
 } from "../homepageShell";
 import { LiveExperienceFeature } from "./LiveExperienceFeature";
 
-const TRUST_ICON_CLASS = "h-6 w-6 text-fefe-trust-gold";
+const LIVE_ACCENT_ICON_CLASS = "h-6 w-6 text-fefe-gold";
 
 function VideoCameraIcon() {
   return (
     <svg
-      className={TRUST_ICON_CLASS}
+      className={LIVE_ACCENT_ICON_CLASS}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -35,7 +35,7 @@ function VideoCameraIcon() {
 function HangerIcon() {
   return (
     <svg
-      className={TRUST_ICON_CLASS}
+      className={LIVE_ACCENT_ICON_CLASS}
       viewBox="0 0 64 64"
       fill="none"
       aria-hidden
@@ -61,7 +61,7 @@ function HangerIcon() {
 function ChatBubbleIcon() {
   return (
     <svg
-      className={TRUST_ICON_CLASS}
+      className={LIVE_ACCENT_ICON_CLASS}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -145,7 +145,7 @@ export function HomeLiveExperienceSection() {
                   className={homepageTrustSeparatorClass}
                 >
                   <span
-                    className="block h-px w-full shrink-0 border-t border-fefe-trust-gold/40 md:h-full md:min-h-[3.5rem] md:w-px md:border-t-0 md:border-l md:border-fefe-trust-gold/40"
+                    className="block h-px w-full shrink-0 border-t border-fefe-gold/45 md:h-full md:min-h-[3.5rem] md:w-px md:border-t-0 md:border-l md:border-fefe-gold/45"
                     aria-hidden
                   />
                 </li>,

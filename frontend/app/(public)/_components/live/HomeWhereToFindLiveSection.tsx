@@ -42,7 +42,7 @@ export function HomeWhereToFindLiveSection() {
             ))}
           </ul>
         ) : (
-          <p className="mt-fefe-5 font-fefe text-base text-fefe-charcoal/90 md:mt-fefe-6">
+          <p className="mt-fefe-5 font-fefe text-base text-fefe-charcoal md:mt-fefe-6">
             Live platform links coming soon.
           </p>
         )}

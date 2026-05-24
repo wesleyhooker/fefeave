@@ -24,7 +24,7 @@ export function LiveExperienceFeature({
         <p className="font-fefe text-sm font-semibold leading-snug text-fefe-charcoal">
           {title}
         </p>
-        <p className="mt-0.5 font-fefe text-sm leading-snug text-fefe-charcoal/65">
+        <p className="mt-0.5 font-fefe text-sm leading-snug text-fefe-charcoal/85">
           {description}
         </p>
       </div>

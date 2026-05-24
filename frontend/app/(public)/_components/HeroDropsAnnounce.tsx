@@ -11,7 +11,7 @@ export function HeroDropsAnnounce() {
   >;
 
   return (
-    <p className="mt-fefe-2 flex w-full max-w-md flex-wrap items-center gap-x-2 gap-y-1 font-fefe text-sm tracking-wide text-fefe-charcoal/70">
+    <p className="mt-fefe-2 flex w-full max-w-md flex-wrap items-center gap-x-2 gap-y-1 font-fefe text-sm tracking-wide text-fefe-charcoal/80">
       {PLATFORM_ORDER.map((id) => {
         const link = byId[id];
         const mark = <PlatformLogo key={id} platform={id} variant="inline" />;

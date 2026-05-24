@@ -31,7 +31,7 @@ function AccountAvatar({ email }: { email: string | null }) {
 
   return (
     <span
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-fefe-warm-sand/70 bg-fefe-warm-sand font-fefe-heading text-sm font-semibold leading-none text-fefe-gold"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-fefe-sand-muted bg-fefe-sand-muted font-fefe-heading text-sm font-semibold leading-none text-fefe-gold"
       aria-hidden
     >
       {initial}
