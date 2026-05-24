@@ -30,7 +30,7 @@ export function getPublicContactEmail(): string {
 
 /**
  * Instagram profile URL for public marketing (optional).
- * Set `NEXT_PUBLIC_FEFE_INSTAGRAM_URL` to show Instagram in footer, contact, and /live.
+ * Set `NEXT_PUBLIC_FEFE_INSTAGRAM_URL` to show Instagram in footer and contact.
  */
 export function getInstagramUrl(): string | null {
   return readEnvUrl(process.env.NEXT_PUBLIC_FEFE_INSTAGRAM_URL);

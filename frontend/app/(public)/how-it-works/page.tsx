@@ -65,8 +65,11 @@ export default function HowItWorksPage() {
           ))}
         </ul>
         <div className="mt-fefe-6">
-          <Link href="/live" className={SECONDARY_LINK_CLASSES}>
-            View upcoming shows
+          <Link
+            href="/#where-to-find-us-live"
+            className={SECONDARY_LINK_CLASSES}
+          >
+            Where to find us live
           </Link>
         </div>
       </Container>

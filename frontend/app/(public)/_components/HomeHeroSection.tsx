@@ -6,11 +6,10 @@ import { Heading, Prose } from "@/system";
 import { BrushUnderline } from "./editorial/BrushUnderline";
 import { EditorialEyebrow } from "./editorial/EditorialEyebrow";
 import { HeroDropsAnnounce } from "./HeroDropsAnnounce";
-import { HomeTrustRow } from "./HomeTrustRow";
 import {
+  HOME_WHERE_TO_FIND_LIVE_ID,
   HomepageContainer,
   homepageHeroGridClass,
-  homepageTrustBandClass,
 } from "./homepageShell";
 import {
   HERO_PLAY_ICON_CLASSES,
@@ -66,8 +65,8 @@ function HeroIllustration() {
 
 export function HomeHeroSection() {
   return (
-    <section className="flex flex-col bg-fefe-cream gap-12 md:gap-14">
-      <HomepageContainer className="overflow-visible pb-0 pt-fefe-2 md:pb-fefe-4 md:pt-fefe-5">
+    <section className="bg-fefe-cream">
+      <HomepageContainer className="overflow-visible pb-fefe-4 pt-fefe-2 md:pb-fefe-5 md:pt-fefe-5">
         <div className={homepageHeroGridClass}>
           <div className="relative z-10 flex min-w-0 max-w-xl flex-col items-start md:max-w-none md:justify-self-end md:pt-16 lg:max-w-[40rem] lg:pt-[4.5rem]">
             <EditorialEyebrow>
@@ -89,7 +88,10 @@ export function HomeHeroSection() {
             </Prose>
 
             <div className="mt-fefe-4 flex w-full max-w-md flex-col items-start md:mt-fefe-5 md:max-w-xl">
-              <Link href="/live" className={HERO_PRIMARY_CTA_CLASSES}>
+              <Link
+                href={`#${HOME_WHERE_TO_FIND_LIVE_ID}`}
+                className={HERO_PRIMARY_CTA_CLASSES}
+              >
                 <span className={HERO_PLAY_ICON_CLASSES}>
                   <PlayIcon />
                 </span>
@@ -104,15 +106,6 @@ export function HomeHeroSection() {
           </div>
         </div>
       </HomepageContainer>
-
-      <div
-        className={homepageTrustBandClass}
-        aria-label="Why shop with Fefe Ave"
-      >
-        <HomepageContainer>
-          <HomeTrustRow />
-        </HomepageContainer>
-      </div>
     </section>
   );
 }

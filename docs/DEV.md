@@ -134,4 +134,4 @@ The marketing site reads Felicia’s social and live profile URLs from the front
 - `NEXT_PUBLIC_FEFE_TIKTOK_URL` — TikTok profile URL
 - `NEXT_PUBLIC_FEFE_CONTACT_EMAIL` — optional; defaults to `fefeave@outlook.com`
 
-If a URL variable is empty, that link is hidden in the footer, contact page, and `/live` (Instagram is also omitted from the live page supporting line). If both Whatnot and TikTok are empty, `/live` shows “Live links coming soon.” These are public URLs only—not secrets.
+If a URL variable is empty, that link is hidden in the footer and contact page (Instagram is also omitted from the homepage hero platform line). If both Whatnot and TikTok are empty, the homepage “Where to find us live” section shows a short fallback message. These are public URLs only—not secrets.
