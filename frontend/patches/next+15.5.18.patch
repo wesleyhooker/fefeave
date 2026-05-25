@@ -1,5 +1,5 @@
 diff --git a/node_modules/next/dist/esm/pages/_document.js b/node_modules/next/dist/esm/pages/_document.js
-index d9e061b..ba4e987 100644
+index 41663ec..c2feb26 100644
 --- a/node_modules/next/dist/esm/pages/_document.js
 +++ b/node_modules/next/dist/esm/pages/_document.js
 @@ -210,8 +210,10 @@ function getNextFontLinkTags(nextFontManifest, dangerousAsPath, assetPrefix = ''
@@ -16,7 +16,7 @@ index d9e061b..ba4e987 100644
          ...appFontsEntry ?? [],
          ...pageFontsEntry ?? []
 diff --git a/node_modules/next/dist/pages/_document.js b/node_modules/next/dist/pages/_document.js
-index 3328a9c..86ecc83 100644
+index dad139f..11be07a 100644
 --- a/node_modules/next/dist/pages/_document.js
 +++ b/node_modules/next/dist/pages/_document.js
 @@ -292,8 +292,10 @@ function getNextFontLinkTags(nextFontManifest, dangerousAsPath, assetPrefix = ''
