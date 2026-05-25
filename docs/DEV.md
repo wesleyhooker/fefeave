@@ -1,5 +1,7 @@
 # FefeAve Dev Commands
 
+See the root [README.md](../README.md) for repo overview. This file is the detailed local development guide.
+
 ## Daily Loop
 
 ```bash
@@ -9,7 +11,9 @@ make dev-api
 make dev-ui
 ```
 
-Open `http://localhost:3001`.
+Or one command (tmux): `make dev` — same ports, includes `dev_bypass` backend.
+
+Open **http://localhost:3001** (UI). API: **http://localhost:3000/api/health**, Swagger: **http://localhost:3000/docs**.
 
 Recommended daily setup is local-only: frontend + backend on your machine, plus local Postgres in Docker. Backend defaults to `AUTH_MODE=dev_bypass` for inner-loop development.
 
@@ -21,8 +25,11 @@ Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). In
 - `make dev-db-down` — stop local Postgres
 - `make dev-db-reset` — reset local Postgres volume and restart
 - `make dev-migrate` — run DB migrations against local Postgres
+- `make dev-seed` — seed sample dev data (after migrate)
+- `make dev` — DB up, migrate, backend + frontend in tmux (`dev_bypass`)
 - `make dev-api` — run backend locally on `:3000` with dev bypass auth
 - `make dev-ui` — run frontend locally on `:3001` (bind `0.0.0.0`)
+- `make dev-cognito` — same as `make dev` but backend `AUTH_MODE=cognito` (see [frontend/AUTH_SETUP.md](../frontend/AUTH_SETUP.md))
 - `make dev-status` — check local backend endpoint HTTP status codes
 - `make test` — run backend tests, then frontend build
 
@@ -38,7 +45,7 @@ Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). In
 
 **One-time setup in `frontend/.env.local`**
 
-1. Keep existing vars (`AUTH_SESSION_SECRET`, `BACKEND_BASE_URL`, etc. — see `AUTH_SETUP.md`).
+1. Keep existing vars (`AUTH_SESSION_SECRET`, `BACKEND_BASE_URL`, etc. — see [frontend/AUTH_SETUP.md](../frontend/AUTH_SETUP.md)).
 2. Add (generate a long random secret for the value):
 
    ```env
@@ -109,7 +116,7 @@ This is usually **not a routes problem** — a previous `next dev` (or `make dev
 
 ### TypeScript errors about missing `.next/types/*.ts`
 
-After cleaning `.next` or switching branches, run `npm run dev` or `npm run build` once in `frontend/` so Next regenerates route types. Or delete `frontend/tsconfig.tsbuildinfo` and retry.
+After cleaning `.next` or switching branches, run `make dev-ui` or `npm run build` once in `frontend/` so Next regenerates route types. Or delete `frontend/tsconfig.tsbuildinfo` and retry.
 
 ### Docker/WSL troubleshooting
 

@@ -1,12 +1,36 @@
-# Cognito Auth Setup (Phase 5.1)
+# Cognito Auth Setup
 
-This app uses Cognito Hosted UI + server-side session cookies.
+This app uses Cognito Hosted UI + server-side session cookies for admin and portal routes.
 
 Never commit `frontend/.env.local`. Keep real values local only.
 
+**Canonical local workflow:** [docs/DEV.md](../docs/DEV.md) and `make dev` (see **Local auth modes** below).
+
+---
+
+## Local auth modes
+
+| Mode                                | How to run                                   | Backend `AUTH_MODE` | Use when                                      |
+| ----------------------------------- | -------------------------------------------- | ------------------- | --------------------------------------------- |
+| **dev_bypass** (default inner loop) | `make dev` or `make dev-api` + `make dev-ui` | `dev_bypass`        | Fast local work; fixed dev user; no Cognito   |
+| **Cognito**                         | `make dev-cognito`                           | `cognito`           | Real Hosted UI, JWT verification, role claims |
+
+Ports (Makefile):
+
+- Backend: `http://localhost:3000` (`make dev-api` / `make dev-api-cognito`)
+- Frontend: `http://localhost:3001` (`make dev-ui` — **not** default `next dev` on 3000)
+- OAuth callback: `http://localhost:3001/api/auth/callback`
+- Logout landing: `http://localhost:3001/login`
+
+Do not use `cd frontend && npm run dev` for Cognito or BFF testing; Next defaults to port **3000**, which conflicts with the API and mismatches Cognito callback URLs.
+
+Optional: **`/api/auth/dev-bootstrap`** (localhost only) mints a session without Cognito when the API is in `dev_bypass`. See [docs/DEV.md](../docs/DEV.md) (Playwright screenshots).
+
+---
+
 ## Required env vars (frontend)
 
-Set these in `frontend/.env.local` for local dev:
+Set these in `frontend/.env.local` for Cognito local dev:
 
 - `AUTH_SESSION_SECRET` - long random secret for signing the `fefeave_session` cookie
 - `COGNITO_DOMAIN` - Cognito Hosted UI domain (no trailing slash)
@@ -16,6 +40,8 @@ Set these in `frontend/.env.local` for local dev:
 - `COGNITO_LOGOUT_URI` - should match Cognito app client sign-out URL exactly (example: `http://localhost:3001/login`)
 - `BACKEND_BASE_URL` - backend origin + API prefix used by auth callback server route (example: `http://localhost:3000/api`)
 - `NEXT_PUBLIC_BACKEND_URL` - **set to `/api`** so browser traffic goes through the frontend BFF proxy
+
+---
 
 ## AWS Console mapping (copy/paste source)
 
@@ -42,13 +68,7 @@ Use Cognito User Pool app client + Hosted UI settings:
 - `NEXT_PUBLIC_BACKEND_URL`
   - Keep `/api` for BFF mode.
 
-## Makefile ports (local)
-
-- Backend runs on `http://localhost:3000` (`make dev-api` / `make dev-api-cognito`)
-- Frontend runs on `http://localhost:3001` (`make dev-ui`)
-- OAuth callback route is frontend-owned: `http://localhost:3001/api/auth/callback`
-- Hosted UI logout landing route should be `http://localhost:3001/login`
-- Keep `BACKEND_BASE_URL=http://localhost:3000/api`
+---
 
 ## Hosted UI Logout
 
@@ -56,12 +76,16 @@ Use Cognito User Pool app client + Hosted UI settings:
 - App logout uses Cognito Hosted UI `/logout` for global sign-out, then returns to `COGNITO_LOGOUT_URI`.
 - This avoids stale Cognito browser sessions and reduces intermittent logout/login redirect flakiness.
 
+---
+
 ## Deploy env guidance
 
 - **Local:** set in `frontend/.env.local`.
-- **Hosted frontend (dev/staging/prod):** set as platform environment variables (for example Vercel/Netlify/your container runtime).
+- **Hosted frontend (dev/staging/prod):** set as platform environment variables (for example ECS task env when `create_backend_infra` is enabled).
 - Keep `NEXT_PUBLIC_BACKEND_URL=/api` in all environments unless intentionally bypassing BFF.
 - Keep secrets (`AUTH_SESSION_SECRET`, `COGNITO_CLIENT_SECRET`) only in server-side env storage, never in client code.
+
+---
 
 ## Auth flow notes
 
@@ -69,12 +93,16 @@ Use Cognito User Pool app client + Hosted UI settings:
 - Middleware gates only `/admin/*` and `/portal/*`.
 - `/login`, `/api/auth/*`, and `/api/auth/health` are not matched by middleware, preventing auth redirect loops.
 
+---
+
 ## Debug endpoint
 
 Use `GET /api/auth/health` to quickly verify session state without exposing tokens:
 
 - `200` -> `{ authenticated: true, user, roles, expiresAt }`
 - `401` -> `{ authenticated: false }`
+
+---
 
 ## Common failure modes
 
@@ -91,35 +119,33 @@ Use `GET /api/auth/health` to quickly verify session state without exposing toke
 - BFF bypass misconfiguration:
   - if `NEXT_PUBLIC_BACKEND_URL` is set to a direct backend URL, browser requests can fail due to CORS/auth context differences.
 
-## Local smoke test
+---
 
-1. Start backend and frontend:
-   - `cd backend && npm run dev`
-   - `cd frontend && npm run dev`
-2. Visit `/admin/dashboard` while signed out -> redirected to `/login`.
-3. Complete Cognito login:
-   - ADMIN/OPERATOR account redirects to `/admin/dashboard`
-   - WHOLESALER account redirects to `/portal/statement`
-4. Check session/debug:
-   - open `/api/auth/health` and verify `authenticated: true`, expected `user`/`roles`, and `expiresAt`.
-5. Try opening a mismatched area:
-   - WHOLESALER visiting `/admin/*` -> `/403`
-   - ADMIN/OPERATOR visiting `/portal/*` -> `/403`
-6. Click logout from admin/portal layout and confirm protected routes redirect to `/login`.
+## Local smoke test (Cognito)
 
-If you use the Makefile flow:
+1. From repo root: `make dev-cognito` (sets backend `AUTH_MODE=cognito` and starts UI on **:3001**).
+2. Open `http://localhost:3001/login`.
+3. Visit `http://localhost:3001/admin/dashboard` while signed out → redirected to `/login`.
+4. Complete Cognito login:
+   - ADMIN/OPERATOR account → `/admin/dashboard`
+   - WHOLESALER account → `/portal/statement`
+5. Check session: `http://localhost:3001/api/auth/health` → `authenticated: true`, expected `user`/`roles`, `expiresAt`.
+6. Forbidden routes: WHOLESALER on `/admin/*` → `/403`; ADMIN on `/portal/*` → `/403`.
+7. Logout from admin/portal layout → protected routes redirect to `/login`.
 
-- `make dev` uses backend `AUTH_MODE=dev_bypass` (fast local loop)
-- `make dev-cognito` runs local stack with backend `AUTH_MODE=cognito` (real Hosted UI/session path)
-- `make dev-cognito` fails fast if required Cognito vars are missing and prints setup hints.
+`make dev-cognito` fails fast if required Cognito vars are missing and prints setup hints.
+
+---
 
 ## Verification
 
-1. `cd ~/dev/fefeave && make dev-cognito`
+1. `make dev-cognito`
 2. Open `http://localhost:3001/login`
 3. Confirm Hosted UI authorize URL uses your real `COGNITO_DOMAIN` and `COGNITO_CLIENT_ID` (not placeholders).
 
-## Phase 5.1 role/link smoke steps
+---
+
+## Role / portal smoke steps
 
 1. Create or identify Cognito test users:
    - one user with `ADMIN` (or `OPERATOR`) role claim

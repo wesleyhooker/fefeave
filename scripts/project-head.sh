@@ -188,10 +188,14 @@ for pkg in package.json backend/package.json frontend/package.json; do
 done
 echo ""
 
-# Roadmap (from context/DELIVERABLES.md)
-echo "## Roadmap (from context/DELIVERABLES.md)"
-if [ -f "$REPO_ROOT/context/DELIVERABLES.md" ]; then
-  sed 's/\xe2\x80\x93/ - /g; s/\xe2\x80\x94/ - /g' "$REPO_ROOT/context/DELIVERABLES.md"
+# Roadmap (from docs/roadmap.md)
+ROADMAP_FILE="$REPO_ROOT/docs/roadmap.md"
+if [ ! -f "$ROADMAP_FILE" ] && [ -f "$REPO_ROOT/context/DELIVERABLES.md" ]; then
+  ROADMAP_FILE="$REPO_ROOT/context/DELIVERABLES.md"
+fi
+echo "## Roadmap (from docs/roadmap.md)"
+if [ -f "$ROADMAP_FILE" ]; then
+  sed 's/\xe2\x80\x93/ - /g; s/\xe2\x80\x94/ - /g' "$ROADMAP_FILE"
 else
   echo "(not found)"
 fi
@@ -200,14 +204,14 @@ echo ""
 # Work Context (auto)
 if [ "$VERSION" != "(unknown)" ] && [ "$PHASE" != "(unknown)" ] && [ "$EPIC" != "(unknown)" ] && [ "$TOPIC" != "(unknown)" ]; then
   PHASE_NAME=""
-  if [ -f "$REPO_ROOT/context/DELIVERABLES.md" ]; then
+  if [ -f "$ROADMAP_FILE" ]; then
     PHASE_NAME="$(PHASE="$PHASE" node -e "
       const fs=require('fs');
       const phase=process.env.PHASE;
       const content=fs.readFileSync(process.argv[1],'utf8');
       const m=content.match(new RegExp('^## Phase '+phase+' [\\\\u2013\\\\u2014\\\\-\\\\s]+(.+)\$','m'));
       process.stdout.write(m ? m[1].trim() : '');
-    " "$REPO_ROOT/context/DELIVERABLES.md" 2>/dev/null)" || true
+    " "$ROADMAP_FILE" 2>/dev/null)" || true
   fi
   if [ -n "$PHASE_NAME" ]; then
     WORK_TARGET="$VERSION / Phase $PHASE ($PHASE_NAME)"
