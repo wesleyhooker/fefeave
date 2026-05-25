@@ -1,7 +1,17 @@
 /**
- * Dashboard-local layout + restrained Fefe Ave internal identity.
+ * Dashboard-local surface styling + restrained Fefe Ave internal identity.
  * Warm stone neutrals, rose accent for chrome/CTA; semantic greens reserved for money/paid.
+ * Page-level stacks/grids live in `admin/_lib/workspacePageRegions.ts`.
+ *
+ * **This week** outer shell is shared with Shows — see `workspaceThisWeekSurface.ts`.
  */
+
+import {
+  workspaceThisWeekHeaderBand as workspaceThisWeekHeaderBandBase,
+  workspaceThisWeekHeaderPadding,
+  workspaceThisWeekSectionRoot,
+} from '@/app/(admin)/admin/_lib/workspaceThisWeekSurface';
+import { workspaceTableRowHover } from '@/app/(admin)/admin/_components/workspaceUi';
 
 export const dashboardPadX = 'px-4';
 
@@ -10,7 +20,11 @@ export const dashboardBorderSubtle = 'border-stone-200/90';
 
 /** Shared uppercase label — cards, stats, list section headers. */
 export const dashboardEyebrow =
-  'text-[11px] font-semibold uppercase tracking-wider text-stone-500';
+  'text-[11px] font-semibold uppercase tracking-wider text-admin-inkMuted';
+
+/** “Shows” strip under weekly profit — slightly stronger than {@link dashboardEyebrow} (section anchor). */
+export const dashboardWeeklyShowsEyebrow =
+  'text-[11px] font-semibold uppercase tracking-wider text-admin-inkMuted';
 
 /** Clickable section title (e.g. Shows → list). */
 export const dashboardShowsNavLink =
@@ -22,21 +36,21 @@ export const dashboardRoundedCard = `rounded-2xl border ${dashboardBorderSubtle}
 export const dashboardCardShadow =
   'shadow-[0_2px_12px_-4px_rgba(120,113,108,0.07),0_1px_2px_rgba(120,113,108,0.04)]';
 
-// --- Weekly primary card -------------------------------------------------------
+// --- Weekly primary card (shell matches Shows “This week”) ---------------------
 
-export const dashboardWeeklyStatusCard = `min-w-0 overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`;
+export const dashboardWeeklyStatusCard = workspaceThisWeekSectionRoot;
 
-export const dashboardWeeklyHeaderBand = `${dashboardPadX} border-b border-stone-100/90 bg-gradient-to-r from-white via-white to-rose-50/20 pb-3 pt-5 sm:pb-3.5 sm:pt-6`;
+export const dashboardWeeklyHeaderBand = `${workspaceThisWeekHeaderPadding} ${workspaceThisWeekHeaderBandBase}`;
 
-export const dashboardWeeklyHeroInsetWrapper = `${dashboardPadX} pb-5 sm:pb-6`;
+export const dashboardWeeklyHeroInsetWrapper = `${dashboardPadX} pb-6 sm:pb-7`;
 
 /** Default weekly summary shell (neutral). Paid state layered in `DashboardThisWeekCard`. */
 export const dashboardWeeklyHeroInset =
   'rounded-xl border border-stone-100/95 bg-stone-50/45 p-5 sm:p-6';
 
-export const dashboardWeeklyShowsToolbar = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/40 py-2.5`;
+export const dashboardWeeklyShowsToolbar = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/45 pb-3 pt-3.5 max-sm:pt-3 sm:pb-3.5 sm:pt-5`;
 
-export const dashboardPrimaryListShell = 'bg-white';
+export const dashboardPrimaryListShell = 'bg-white/[0.97]';
 
 export const dashboardRowList =
   'm-0 list-none divide-y divide-stone-100/90 p-0';
@@ -45,20 +59,25 @@ export const dashboardRowList =
  * Full-width row link — stable hover (no vertical nudge); chevron handles direction.
  * Inset accent: restrained rose (brand) without overriding money semantics in cells.
  */
-export const dashboardClickableRowInner =
-  'group relative flex w-full min-h-11 min-w-0 items-center gap-3 text-left text-inherit no-underline outline-none transition-[background-color,box-shadow] duration-200 ease-out hover:bg-stone-100/90 hover:shadow-[0_4px_14px_-4px_rgba(120,113,108,0.09),inset_3px_0_0_0_rgba(192,38,77,0.12)] active:bg-stone-100/95 ring-inset focus-visible:ring-2 focus-visible:ring-rose-300/45';
+export const dashboardClickableRowInner = `group relative flex w-full min-w-0 flex-col gap-2.5 py-3.5 text-left text-inherit no-underline outline-none cursor-pointer [&_*]:cursor-inherit sm:min-h-11 sm:flex-row sm:items-center sm:gap-3 sm:py-3.5 ${workspaceTableRowHover} ring-inset focus-visible:ring-2 focus-visible:ring-admin-actionPrimary/35`;
 
-export const dashboardRowPad = `${dashboardPadX} py-2.5`;
+export const dashboardRowPad = `${dashboardPadX} py-3.5 max-sm:px-3.5 sm:py-3.5`;
 
-export const dashboardCardFooterNote = `${dashboardPadX} border-t border-stone-100/90 py-2.5 text-center text-xs text-stone-500`;
+export const dashboardCardFooterNote = `${dashboardPadX} border-t border-stone-100/90 py-3 text-center text-xs text-stone-500 sm:py-2.5`;
 
-export const dashboardWeeklyListToggleBand = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/35 py-2.5`;
+export const dashboardWeeklyListToggleBand = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/35 py-3 max-sm:py-2.5 sm:py-3`;
 
 // --- Secondary module ----------------------------------------------------------
 
 export const dashboardModulePanel = `min-w-0 w-full overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`;
 
-export const dashboardModulePanelHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/35 py-2.5`;
+/** Needs-attention module — olive-sage wash (distinct from neutral white cards). */
+export const dashboardAttentionModulePanel =
+  'min-w-0 w-full overflow-hidden rounded-2xl border border-lime-900/20 bg-admin-kpiSage/40 shadow-workspace-surface-warm-sm';
+
+export const dashboardModulePanelHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/35 py-3 sm:py-2.5`;
+
+export const dashboardAttentionModulePanelHeader = `${dashboardPadX} border-b border-lime-900/15 bg-admin-kpiSage/25 py-3 sm:py-2.5`;
 
 export const dashboardNarrowModuleLayout = 'w-full max-w-sm self-start';
 
@@ -67,6 +86,6 @@ export const dashboardNarrowModuleLayout = 'w-full max-w-sm self-start';
 export const dashboardAnalyticsCard = `min-w-0 overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`;
 
 /** Compact analytics header — light, not a second hero. */
-export const dashboardAnalyticsHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/40 py-3 sm:py-3`;
+export const dashboardAnalyticsHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/40 py-3.5 sm:py-3`;
 
-export const dashboardAnalyticsBody = `${dashboardPadX} py-3 sm:py-3.5`;
+export const dashboardAnalyticsBody = `${dashboardPadX} py-4 sm:py-3.5`;

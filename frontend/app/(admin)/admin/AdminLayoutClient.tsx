@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { WorkspaceHeader } from "@/app/_components/headers/WorkspaceHeader";
+import { WorkspaceHeaderSlotsProvider } from "@/app/_components/headers/WorkspaceHeaderSlots";
 import { AdminSidebar } from "./AdminSidebar";
 import {
   workspaceShellBg,
@@ -33,21 +34,23 @@ export function AdminLayoutClient({
       <AdminSidebar
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
+        email={email}
+        roles={roles}
+        envLabel={envLabel}
+        isProduction={isProduction}
       />
       <div className={workspaceShellColumn}>
-        <WorkspaceHeader
-          title={title}
-          email={email}
-          roles={roles}
-          envLabel={envLabel}
-          isProduction={isProduction}
-          onMenuClick={() => setMobileSidebarOpen(true)}
-        />
-        <main className="flex-1">
-          <AdminWorkspaceProvider email={email}>
-            {children}
-          </AdminWorkspaceProvider>
-        </main>
+        <WorkspaceHeaderSlotsProvider>
+          <WorkspaceHeader
+            title={title}
+            onMenuClick={() => setMobileSidebarOpen(true)}
+          />
+          <main className={`flex min-h-0 flex-1 flex-col ${workspaceShellBg}`}>
+            <AdminWorkspaceProvider email={email}>
+              {children}
+            </AdminWorkspaceProvider>
+          </main>
+        </WorkspaceHeaderSlotsProvider>
       </div>
     </div>
   );

@@ -2,12 +2,16 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 export type CardProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
-  /** Use "elevated" for default soft shadow; "flat" for border-only. */
-  variant?: "elevated" | "flat";
+  /**
+   * - `elevated` — white + soft shadow (default public/marketing)
+   * - `flat` — white + stone border
+   * - `editorial` — cream-raised panel on cream canvas (homepage live cards)
+   */
+  variant?: "elevated" | "flat" | "editorial";
 };
 
 /**
- * Card: 12px radius, soft shadow, 24px padding.
+ * Card: 12px radius, 24px padding.
  * Use for feature blocks, trust items, and content sections.
  */
 export function Card({
@@ -17,9 +21,11 @@ export function Card({
   ...props
 }: CardProps) {
   const variantClasses =
-    variant === "elevated"
-      ? "bg-white shadow-fefe-card"
-      : "bg-white border border-fefe-stone";
+    variant === "editorial"
+      ? "border border-fefe-stone/55 bg-fefe-cream-raised shadow-fefe-card-editorial"
+      : variant === "elevated"
+        ? "bg-white shadow-fefe-card"
+        : "border border-fefe-stone bg-white";
   return (
     <div
       className={`rounded-fefe-card p-fefe-3 ${variantClasses} ${className}`}

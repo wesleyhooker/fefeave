@@ -1,39 +1,36 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DashboardSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
   fetchWholesalerBalances,
   type BackendWholesalerBalanceRow,
 } from "@/src/lib/api/wholesalers";
+import { fetchShows, type ShowDTO } from "@/src/lib/api/shows";
 import {
-  fetchShows,
-  fetchShowFinancials,
-  fetchShowSettlements,
-  type ShowDTO,
-} from "@/src/lib/api/shows";
-import {
-  estimatedShowProfit,
-  totalOwedFromSettlements,
-} from "@/lib/showProfit";
+  fetchShowFinancialSummary,
+  type ShowFinancialSummary,
+} from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
   formatWeekRangeCompact,
   getCurrentWeekBounds,
   isDateInWeek,
 } from "@/lib/weekRange";
 import {
-  clearSelfPay,
-  loadSelfPay,
-  saveSelfPay,
+  deriveOwnerWeeklyPayoutUiState,
+  loadSelfPayAndPayoutServer,
+  markSelfPayPaidServer,
+  markSelfPayUnpaidServer,
+  type OwnerWeeklyPayoutState,
   type SelfPayStored,
 } from "./selfPayStorage";
+import { DASHBOARD_THIS_WEEK_SHOWS_LIMIT } from "./constants";
 import {
-  DASHBOARD_PRIMARY_SECONDARY_GRID,
-  DASHBOARD_SUPPORTING_STACK,
-  DASHBOARD_THIS_WEEK_SHOWS_LIMIT,
-  DASHBOARD_TOP_STACK,
-} from "./constants";
-import type { WeekPreviewSummary } from "./types";
+  workspacePagePrimarySecondaryGrid,
+  workspacePageSupportingStack,
+  workspacePageTopStack,
+} from "../_lib/workspacePageRegions";
 import {
   buildCalendarMonthDailySeries,
   type DashboardDayProfitPoint,
@@ -47,6 +44,12 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "../_components/AdminPageContainer";
+import { WorkspacePageWithRightPanel } from "../_components/WorkspacePageWithRightPanel";
+import { ShowCreateForm } from "../shows/new/ShowCreateForm";
+import {
+  WORKFLOW_LOG_SHOW_PANEL_SUBTITLE,
+  WORKFLOW_LOG_SHOW_PANEL_TITLE,
+} from "../_lib/adminWorkflowCopy";
 
 function parseAmount(value: string): number {
   const n = Number(value);
@@ -54,6 +57,8 @@ function parseAmount(value: string): number {
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
+  const [isCreateShowOpen, setIsCreateShowOpen] = useState(false);
   const weekBounds = useMemo(() => getCurrentWeekBounds(), []);
 
   const [balances, setBalances] = useState<
@@ -69,8 +74,13 @@ export default function AdminDashboardPage() {
   const effectRunIdRef = useRef(0);
 
   const [selfPay, setSelfPay] = useState<SelfPayStored | null>(null);
+  const [weeklyPayoutState, setWeeklyPayoutState] =
+    useState<OwnerWeeklyPayoutState>({
+      amount: 0,
+      canRecordPayout: false,
+    });
   const [weekPreviewSummaries, setWeekPreviewSummaries] = useState<
-    Record<string, WeekPreviewSummary>
+    Record<string, ShowFinancialSummary>
   >({});
   const [ytdProfit, setYtdProfit] = useState<number | null>(null);
   const [ytdProfitError, setYtdProfitError] = useState<string | null>(null);
@@ -95,7 +105,23 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
-    setSelfPay(loadSelfPay(weekBounds.startStr));
+    let cancelled = false;
+    void loadSelfPayAndPayoutServer({ weekStartYmd: weekBounds.startStr })
+      .then(({ selfPay: selfPayState, payout }) => {
+        if (!cancelled) {
+          setSelfPay(selfPayState);
+          setWeeklyPayoutState(payout);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSelfPay({ paid: false });
+          setWeeklyPayoutState({ amount: 0, canRecordPayout: false });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [weekBounds.startStr]);
 
   useEffect(() => {
@@ -117,32 +143,14 @@ export default function AdminDashboardPage() {
     let cancelled = false;
     Promise.all(
       list.map(async (show) => {
-        const [fin, settles] = await Promise.all([
-          fetchShowFinancials(show.id).catch(() => null),
-          fetchShowSettlements(show.id).catch(() => []),
-        ]);
-        const payout = fin != null ? Number(fin.payout_after_fees_amount) : 0;
-        const payoutNum = Number.isFinite(payout) ? payout : 0;
-        const totalOwed = totalOwedFromSettlements(payoutNum, settles);
-        const profitVal = estimatedShowProfit(payoutNum, settles);
-        return {
-          id: show.id,
-          payoutAfterFees: payoutNum,
-          totalOwed,
-          estimatedShowProfit: profitVal,
-          settlementCount: settles.length,
-        };
+        const summary = await fetchShowFinancialSummary(show.id);
+        return [show.id, summary] as const;
       }),
-    ).then((results) => {
+    ).then((pairs) => {
       if (cancelled) return;
-      const next: Record<string, WeekPreviewSummary> = {};
-      for (const r of results) {
-        next[r.id] = {
-          payoutAfterFees: r.payoutAfterFees,
-          totalOwed: r.totalOwed,
-          estimatedShowProfit: r.estimatedShowProfit,
-          settlementCount: r.settlementCount,
-        };
+      const next: Record<string, ShowFinancialSummary> = {};
+      for (const [id, summary] of pairs) {
+        next[id] = summary;
       }
       setWeekPreviewSummaries(next);
     });
@@ -169,13 +177,8 @@ export default function AdminDashboardPage() {
     setYtdProfitError(null);
     Promise.all(
       list.map(async (show) => {
-        const [fin, settles] = await Promise.all([
-          fetchShowFinancials(show.id).catch(() => null),
-          fetchShowSettlements(show.id).catch(() => []),
-        ]);
-        const payout = fin != null ? Number(fin.payout_after_fees_amount) : 0;
-        const p = Number.isFinite(payout) ? payout : 0;
-        return estimatedShowProfit(p, settles);
+        const s = await fetchShowFinancialSummary(show.id);
+        return s.estimatedShowProfit;
       }),
     )
       .then((profits) => {
@@ -256,14 +259,8 @@ export default function AdminDashboardPage() {
         try {
           const profits = await Promise.all(
             closedThisWeek.map(async (show) => {
-              const [fin, settles] = await Promise.all([
-                fetchShowFinancials(show.id).catch(() => null),
-                fetchShowSettlements(show.id).catch(() => []),
-              ]);
-              const payout =
-                fin != null ? Number(fin.payout_after_fees_amount) : 0;
-              const p = Number.isFinite(payout) ? payout : 0;
-              return estimatedShowProfit(p, settles);
+              const s = await fetchShowFinancialSummary(show.id);
+              return s.estimatedShowProfit;
             }),
           );
           if (!cancelled && effectRunIdRef.current === runId) {
@@ -314,21 +311,6 @@ export default function AdminDashboardPage() {
     };
   }, [shows, weekBounds.startStr, weekBounds.endStr]);
 
-  const closedThisWeekCount = useMemo(() => {
-    return (shows ?? []).filter((s) => {
-      const st = (s.status ?? "").toUpperCase();
-      return (
-        st === "COMPLETED" &&
-        isDateInWeek(s.show_date, weekBounds.startStr, weekBounds.endStr)
-      );
-    }).length;
-  }, [shows, weekBounds.startStr, weekBounds.endStr]);
-
-  const upcomingThisWeekCount = Math.max(
-    0,
-    showsThisWeekTotal - closedThisWeekCount,
-  );
-
   const completedShowsYtdCount = useMemo(() => {
     return (shows ?? []).filter((s) => {
       if ((s.status ?? "").toUpperCase() !== "COMPLETED") return false;
@@ -366,14 +348,8 @@ export default function AdminDashboardPage() {
     setMonthDailyError(null);
     Promise.all(
       list.map(async (show) => {
-        const [fin, settles] = await Promise.all([
-          fetchShowFinancials(show.id).catch(() => null),
-          fetchShowSettlements(show.id).catch(() => []),
-        ]);
-        const payout = fin != null ? Number(fin.payout_after_fees_amount) : 0;
-        const p = Number.isFinite(payout) ? payout : 0;
-        const profit = estimatedShowProfit(p, settles);
-        return { show_date: show.show_date, profit };
+        const s = await fetchShowFinancialSummary(show.id);
+        return { show_date: show.show_date, profit: s.estimatedShowProfit };
       }),
     )
       .then((rows) => {
@@ -412,27 +388,64 @@ export default function AdminDashboardPage() {
     return balances.reduce((sum, r) => sum + parseAmount(r.balance_owed), 0);
   }, [balances]);
 
-  const handleMarkSelfPayDone = () => {
+  const handleMarkSelfPayDone = async () => {
     const profit = weekProfit ?? 0;
     const next: SelfPayStored = {
       paid: true,
       paidAt: new Date().toISOString(),
       profitSnapshot: profit,
     };
-    saveSelfPay(weekBounds.startStr, next);
     setSelfPay(next);
+    try {
+      const serverState = await markSelfPayPaidServer({
+        weekStartYmd: weekBounds.startStr,
+        weekEndYmd: weekBounds.endStr,
+      });
+      setSelfPay(serverState);
+    } catch {
+      try {
+        const synced = await loadSelfPayAndPayoutServer({
+          weekStartYmd: weekBounds.startStr,
+        });
+        setSelfPay(synced.selfPay);
+        setWeeklyPayoutState(synced.payout);
+      } catch {
+        setSelfPay({ paid: false });
+        setWeeklyPayoutState({ amount: 0, canRecordPayout: false });
+      }
+      throw new Error("Unable to record owner payout");
+    }
   };
 
-  const handleMarkSelfPayUndone = () => {
-    clearSelfPay(weekBounds.startStr);
+  const handleMarkSelfPayUndone = async () => {
     setSelfPay({ paid: false });
+    try {
+      const serverState = await markSelfPayUnpaidServer(weekBounds.startStr);
+      setSelfPay(serverState);
+    } catch {
+      try {
+        const synced = await loadSelfPayAndPayoutServer({
+          weekStartYmd: weekBounds.startStr,
+        });
+        setSelfPay(synced.selfPay);
+        setWeeklyPayoutState(synced.payout);
+      } catch {
+        setSelfPay({ paid: false });
+        setWeeklyPayoutState({ amount: 0, canRecordPayout: false });
+      }
+      throw new Error("Unable to void owner payout");
+    }
   };
 
   if (loading) {
     return <DashboardSkeleton />;
   }
 
-  const selfPaid = selfPay?.paid === true;
+  const payoutUiState = deriveOwnerWeeklyPayoutUiState({
+    selfPay,
+    payoutAmount: weeklyPayoutState.amount,
+  });
+  const selfPaid = payoutUiState.isPaid;
   const weekProfitDisplay =
     weekProfitError != null ? null : weekProfit !== null ? weekProfit : null;
 
@@ -445,15 +458,33 @@ export default function AdminDashboardPage() {
     monthDailyError == null;
 
   return (
-    <>
+    <WorkspacePageWithRightPanel
+      open={isCreateShowOpen}
+      onClose={() => setIsCreateShowOpen(false)}
+      title={WORKFLOW_LOG_SHOW_PANEL_TITLE}
+      panelSubtitle={WORKFLOW_LOG_SHOW_PANEL_SUBTITLE}
+      panel={
+        <ShowCreateForm
+          variant="drawer"
+          onSuccess={(show) => {
+            setIsCreateShowOpen(false);
+            router.push(`/admin/shows/${show.id}`);
+          }}
+          onCancel={() => setIsCreateShowOpen(false)}
+        />
+      }
+    >
       <AdminPageIntroSection>
         <DashboardPageHeader
           weekRangeLabel={formatWeekRangeCompact(weekBounds)}
+          weekStartYmd={weekBounds.startStr}
+          newShowPanelOpen={isCreateShowOpen}
+          onNewShowClick={() => setIsCreateShowOpen(true)}
         />
       </AdminPageIntroSection>
 
       <AdminPageContainer>
-        <div className={DASHBOARD_TOP_STACK}>
+        <div className={workspacePageTopStack}>
           <DashboardOverviewStats
             ytdProfit={ytdProfit}
             ytdProfitError={ytdProfitError}
@@ -465,17 +496,19 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        <div className={DASHBOARD_PRIMARY_SECONDARY_GRID}>
-          <div className="min-w-0">
+        <div className={`${workspacePagePrimarySecondaryGrid} max-lg:gap-7`}>
+          <div className="min-w-0 order-2 lg:order-none">
             <DashboardThisWeekCard
               selfPaid={selfPaid}
               selfPay={selfPay}
               onMarkDone={handleMarkSelfPayDone}
               onMarkUndone={handleMarkSelfPayUndone}
+              weekRangeLabel={formatWeekRangeCompact(weekBounds)}
+              payoutAmount={weeklyPayoutState.amount}
+              canMarkPaid={payoutUiState.canMarkPaid}
+              canMarkUnpaid={payoutUiState.canMarkUnpaid}
               weekProfitError={weekProfitError}
               weekProfitDisplay={weekProfitDisplay}
-              closedThisWeekCount={closedThisWeekCount}
-              upcomingThisWeekCount={upcomingThisWeekCount}
               showsError={showsError}
               onRetryShows={() => setReloadToken((v) => v + 1)}
               showsThisWeek={showsThisWeek}
@@ -484,7 +517,7 @@ export default function AdminDashboardPage() {
               showsLimit={DASHBOARD_THIS_WEEK_SHOWS_LIMIT}
             />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 order-1 lg:order-none">
             <DashboardNotificationsCard
               showsError={showsError}
               balancesError={balancesError}
@@ -495,7 +528,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className={DASHBOARD_SUPPORTING_STACK}>
+        <div className={workspacePageSupportingStack}>
           <DashboardThisMonthDailyEarningsCard
             monthTitle={dashboardCalendar.monthTitle}
             days={monthDailyProfits}
@@ -504,6 +537,6 @@ export default function AdminDashboardPage() {
           />
         </div>
       </AdminPageContainer>
-    </>
+    </WorkspacePageWithRightPanel>
   );
 }

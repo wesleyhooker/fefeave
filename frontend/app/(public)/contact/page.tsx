@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { Container, Heading, Prose } from "@/system";
+import { PublicPageMain } from "../_components/shell/PublicPageMain";
 import {
   PRIMARY_LINK_CLASSES,
   SECONDARY_LINK_CLASSES,
-} from "../_components/homeCtaClasses";
+} from "../_components/shell/publicCtaClasses";
+import { publicInlineLinkClass } from "../_components/shell/publicShell";
 
 export default function ContactPage() {
   return (
-    <main className="bg-fefe-cream py-fefe-6 md:py-fefe-7">
+    <PublicPageMain>
       <Container variant="narrow">
         <Heading level={1} className="mb-fefe-3">
           Contact
@@ -24,7 +26,7 @@ export default function ContactPage() {
             <span className="text-fefe-charcoal/70">Email:</span>{" "}
             <a
               href="mailto:fefeave@outlook.com"
-              className="text-fefe-charcoal hover:text-fefe-gold underline transition-colors"
+              className={publicInlineLinkClass}
             >
               fefeave@outlook.com
             </a>
@@ -35,7 +37,7 @@ export default function ContactPage() {
               href="https://instagram.com/fefe_ave"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-fefe-charcoal hover:text-fefe-gold underline transition-colors"
+              className={publicInlineLinkClass}
             >
               @fefe_ave on Instagram
             </a>
@@ -44,7 +46,7 @@ export default function ContactPage() {
               href="https://www.whatnot.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-fefe-charcoal hover:text-fefe-gold underline transition-colors"
+              className={publicInlineLinkClass}
             >
               Fefe Ave on Whatnot
             </a>
@@ -74,11 +76,11 @@ export default function ContactPage() {
           <Heading level={2} className="mb-fefe-3 text-xl">
             Send a message
           </Heading>
-          <p className="font-fefe text-fefe-charcoal/90 mb-fefe-4 text-sm">
+          <p className="mb-fefe-4 font-fefe text-sm text-fefe-charcoal">
             Inquiry form coming soon. For now, email us at{" "}
             <a
               href="mailto:fefeave@outlook.com"
-              className="text-fefe-charcoal hover:text-fefe-gold underline"
+              className={publicInlineLinkClass}
             >
               fefeave@outlook.com
             </a>
@@ -86,6 +88,6 @@ export default function ContactPage() {
           </p>
         </div>
       </Container>
-    </main>
+    </PublicPageMain>
   );
 }

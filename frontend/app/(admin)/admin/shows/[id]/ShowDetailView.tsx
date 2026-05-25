@@ -1,18 +1,88 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { HelpTooltip } from "@/app/(admin)/admin/_components/HelpTooltip";
-import { ShowStatusPill } from "@/app/(admin)/admin/_components/ShowStatusPill";
 import {
-  WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS,
-  WORKSPACE_DETAIL_SETTLEMENT_STATUS_STYLES,
-  workspaceActionCompleteMd,
+  ArrowUpTrayIcon,
+  PencilSquareIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
+import Link from "next/link";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING,
+  WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY,
+  WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
+  AdminPageContainer,
+  AdminPageIntroSection,
+} from "@/app/(admin)/admin/_components/AdminPageContainer";
+import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import {
+  SettlementFlatExpandedBody,
+  SettlementItemizedExpandedBody,
+  SettlementPercentExpandedBody,
+} from "@/app/(admin)/admin/_components/SettlementExpandedDetail";
+import { ShowStatusPill } from "@/app/(admin)/admin/_components/ShowStatusPill";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
+import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
+import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
+import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import {
   workspaceActionCompleteSm,
+  workspaceActionInlineText,
+  workspaceActionIconMd,
+  workspaceActionIconSm,
+  workspaceActionPositiveCompleteMd,
   workspaceActionSecondaryMd,
-  workspaceMoneyClassForLiability,
+  workspaceLabelEyebrow,
   workspaceMoneyClassForSigned,
+  workspaceMoneyNegative,
+  workspaceMoneyPositive,
+  workspaceMoneyTabular,
+  workspaceMutedStrip,
+  workspacePageContentWidthWide,
+  workspaceSectionTitle,
+  workspaceSectionToolbar,
+  workspaceShowDetailOperatingShell,
+  workspaceShowDetailOutcomeShell,
+  workspaceActionCompleteMd,
+  workspaceTextInput,
+  workspaceTextInputCompact,
+  workspaceTheadSticky,
+  workspaceShowSettlementRowDisclosure,
+  workspaceTableRowInteractive,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import { formatCurrency, formatDate } from "@/lib/format";
+import {
+  WorkspaceLedgerDisclosureIcon,
+  workspaceTableBodyCellPadding,
+  workspaceTableHeaderCellPadding,
+} from "@/app/(admin)/admin/_components/WorkspaceTableRow";
+import {
+  calculationMethodFromStructuredType,
+  mapShowSettlementLinesToLedgerLineItems,
+  settlementMethodHint,
+  settlementMethodPrimaryLabel,
+} from "@/app/(admin)/admin/_lib/settlementUi";
+import { workspacePageShowDetailGrid } from "@/app/(admin)/admin/_lib/workspacePageRegions";
+import {
+  getShowCloseOutBlock,
+  type CloseOutScrollTarget,
+} from "@/app/(admin)/admin/shows/_lib/showCloseOutReadiness";
+import {
+  evaluateSettlementComposerFull,
+  settlementComposerBlockMessage,
+  settlementComposerFieldHints,
+  SHOW_SETTLEMENT_TOTAL_EPS,
+} from "@/app/(admin)/admin/shows/_lib/showSettlementComposer";
+import { formatCurrency, formatCurrencyAbs, formatDate } from "@/lib/format";
 import {
   fetchShowAttachments,
   getAttachmentDownloadUrl,
@@ -34,12 +104,14 @@ import {
   fetchShowSettlements,
   updateShowStatus,
   upsertShowFinancials,
+  type SettlementLineDTO,
   type ShowSettlementDTO,
 } from "@/src/lib/api/shows";
 
 type StructuredSettlement =
   | {
       id: string;
+      wholesalerId: string;
       type: "PERCENT";
       percent: number;
       wholesaler: string;
@@ -47,6 +119,7 @@ type StructuredSettlement =
     }
   | {
       id: string;
+      wholesalerId: string;
       type: "FIXED";
       fixedAmount: number;
       wholesaler: string;
@@ -54,10 +127,12 @@ type StructuredSettlement =
     }
   | {
       id: string;
+      wholesalerId: string;
       type: "ITEMIZED";
       fixedAmount: number;
       wholesaler: string;
       amountPaid: number;
+      lines?: SettlementLineDTO[];
     };
 
 function roundToCents(amount: number): number {
@@ -116,6 +191,7 @@ function mapSettlementRow(
     const rateBps = row.rate_bps ?? 0;
     return {
       id: row.id,
+      wholesalerId: row.wholesaler_id,
       type: "PERCENT",
       percent: rateBps / 100,
       wholesaler,
@@ -126,15 +202,18 @@ function mapSettlementRow(
   if (row.calculation_method === "ITEMIZED") {
     return {
       id: row.id,
+      wholesalerId: row.wholesaler_id,
       type: "ITEMIZED",
       fixedAmount: parsedAmount,
       wholesaler,
       amountPaid: 0,
+      lines: row.lines,
     };
   }
 
   return {
     id: row.id,
+    wholesalerId: row.wholesaler_id,
     type: "FIXED",
     fixedAmount: parsedAmount,
     wholesaler,
@@ -142,9 +221,60 @@ function mapSettlementRow(
   };
 }
 
+function sumPercentRatesFromSettlements(
+  settlements: StructuredSettlement[],
+): number {
+  return settlements
+    .filter(
+      (s): s is StructuredSettlement & { type: "PERCENT" } =>
+        s.type === "PERCENT",
+    )
+    .reduce((sum, s) => sum + s.percent, 0);
+}
+
+function formatPlatformLabel(
+  platform: "WHATNOT" | "INSTAGRAM" | "OTHER" | "",
+): string {
+  if (!platform) return "";
+  const labels: Record<string, string> = {
+    WHATNOT: "Whatnot",
+    INSTAGRAM: "Instagram",
+    OTHER: "Other",
+  };
+  return labels[platform] ?? platform;
+}
+
+function ShowShowsBreadcrumb({ showName }: { showName: string }) {
+  return (
+    <nav aria-label="Breadcrumb" className="text-sm font-medium leading-snug">
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-stone-600">
+        <li>
+          <Link
+            href="/admin/shows"
+            className="rounded-sm text-stone-800 underline decoration-stone-400/80 underline-offset-[3px] transition-colors hover:text-stone-950 hover:decoration-stone-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
+          >
+            Shows
+          </Link>
+        </li>
+        <li className="select-none text-stone-300" aria-hidden>
+          /
+        </li>
+        <li className="min-w-0 max-w-full text-stone-900" aria-current="page">
+          <span className="block truncate font-semibold tracking-tight">
+            {showName || "Show"}
+          </span>
+        </li>
+      </ol>
+    </nav>
+  );
+}
+
 export function ShowDetailView({ id }: { id: string }) {
   const [showName, setShowName] = useState("");
   const [showDate, setShowDate] = useState("");
+  const [platform, setPlatform] = useState<
+    "WHATNOT" | "INSTAGRAM" | "OTHER" | ""
+  >("");
   const [closedAt, setClosedAt] = useState<string | undefined>(undefined);
   const [payoutAfterFees, setPayoutAfterFees] = useState(0);
   const [settlements, setSettlements] = useState<StructuredSettlement[]>([]);
@@ -168,17 +298,23 @@ export function ShowDetailView({ id }: { id: string }) {
   >(null);
   const [closeError, setCloseError] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
-  const [showReopenConfirm, setShowReopenConfirm] = useState(false);
-  const closeOutSectionRef = useRef<HTMLDivElement>(null);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const addSettlementPanelRef = useRef<HTMLDivElement>(null);
+  const breakdownSectionRef = useRef<HTMLElement>(null);
+  const payoutFigureRef = useRef<HTMLDivElement>(null);
+  const settlementsAnchorRef = useRef<HTMLDivElement>(null);
+  const receiptFileInputRef = useRef<HTMLInputElement>(null);
+  /** Tracks which show we last loaded; initial `null` ensures first mount shows the loading state. */
+  const lastLoadedShowIdRef = useRef<string | null>(null);
+  const [addSettlementOpen, setAddSettlementOpen] = useState(false);
   const [newRowWholesalerId, setNewRowWholesalerId] = useState("");
   const [newRowMode, setNewRowMode] = useState<
     "PERCENT" | "FIXED" | "QTY_UNIT"
   >("PERCENT");
   const [newRowPercent, setNewRowPercent] = useState("");
   const [newRowFixed, setNewRowFixed] = useState("");
-  const [newRowQty, setNewRowQty] = useState("");
-  const [newRowUnitPrice, setNewRowUnitPrice] = useState("");
   const [newRowItemizedLines, setNewRowItemizedLines] = useState<
     Array<{
       id: string;
@@ -194,10 +330,20 @@ export function ShowDetailView({ id }: { id: string }) {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [expandedSettlementIds, setExpandedSettlementIds] = useState<
+    Record<string, boolean>
+  >({});
+  /** Brief highlight on payout/settlements block when Close is blocked (scroll target). */
+  const [breakdownFlash, setBreakdownFlash] = useState<
+    "payout" | "settlements" | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    if (lastLoadedShowIdRef.current !== id) {
+      lastLoadedShowIdRef.current = id;
+      setLoading(true);
+    }
     setError(null);
 
     Promise.all([
@@ -218,6 +364,7 @@ export function ShowDetailView({ id }: { id: string }) {
         );
         setShowName(show.name);
         setShowDate(show.show_date);
+        setPlatform(show.platform ?? "");
         const payout = Number(financials?.payout_after_fees_amount ?? "0");
         setPayoutAfterFees(Number.isFinite(payout) ? payout : 0);
         setClosedAt(
@@ -247,6 +394,15 @@ export function ShowDetailView({ id }: { id: string }) {
   const totals = useMemo(
     () => computeTotals(payoutAfterFees, settlements, closedAt),
     [payoutAfterFees, settlements, closedAt],
+  );
+
+  const closeOutBlock = useMemo(
+    () =>
+      getShowCloseOutBlock({
+        payoutAfterFees,
+        settlementsCount: settlements.length,
+      }),
+    [payoutAfterFees, settlements.length],
   );
 
   const isPercentValueValid =
@@ -291,11 +447,125 @@ export function ShowDetailView({ id }: { id: string }) {
     payoutAfterFees,
   ]);
 
+  /** Sum of percent rates on existing percent settlements (0–100). */
+  const totalPercentUsed = useMemo(
+    () => sumPercentRatesFromSettlements(settlements),
+    [settlements],
+  );
+
   const isClosed = Boolean(closedAt);
+
+  const settlementComposerBlock = useMemo(
+    () =>
+      evaluateSettlementComposerFull({
+        isClosed,
+        payoutAfterFees,
+        settlementsExistingTotalOwed: totals.totalOwed,
+        totalPercentUsedOnShow: totalPercentUsed,
+        newRowWholesalerId,
+        wholesalerAlreadyHasSettlement: settlements.some(
+          (s) => s.wholesalerId === newRowWholesalerId,
+        ),
+        newRowMode,
+        newRowPercent,
+        newRowFixed,
+        newRowItemizedLines,
+        newRowTotal,
+        isPercentValueValid,
+      }),
+    [
+      isClosed,
+      payoutAfterFees,
+      totals.totalOwed,
+      totalPercentUsed,
+      newRowWholesalerId,
+      settlements,
+      newRowMode,
+      newRowPercent,
+      newRowFixed,
+      newRowItemizedLines,
+      newRowTotal,
+      isPercentValueValid,
+    ],
+  );
+
+  const addSettlementSubmitBlockedReason = settlementComposerBlock
+    ? settlementComposerBlockMessage(settlementComposerBlock)
+    : null;
+
+  const addSettlementPrimaryDisabled =
+    creatingSettlement || settlementComposerBlock != null;
+
+  const fieldHints = useMemo(
+    () => settlementComposerFieldHints(settlementComposerBlock, newRowMode),
+    [settlementComposerBlock, newRowMode],
+  );
+
+  const showPercentOverCapBanner = totalPercentUsed > 100 + 1e-6;
+  const showTotalOwedOverPayoutBanner =
+    Number.isFinite(payoutAfterFees) &&
+    totals.totalOwed > Math.max(0, payoutAfterFees) + SHOW_SETTLEMENT_TOTAL_EPS;
 
   const handleRetry = useCallback(() => {
     setReloadToken((v) => v + 1);
   }, []);
+
+  const focusSettlementComposer = useCallback(() => {
+    setAddSettlementOpen(true);
+  }, []);
+
+  const scrollToCloseOutHint = useCallback(
+    (target: CloseOutScrollTarget | null) => {
+      if (target === "payout") {
+        payoutFigureRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        payoutFigureRef.current?.focus();
+        return;
+      }
+      if (target === "settlements") {
+        settlementsAnchorRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        settlementsAnchorRef.current?.focus();
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!breakdownFlash) return;
+    const t = window.setTimeout(() => setBreakdownFlash(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [breakdownFlash]);
+
+  const handleCloseShowClick = useCallback(() => {
+    if (closeOutBlock.reason && closeOutBlock.scrollTarget) {
+      setBreakdownFlash(closeOutBlock.scrollTarget);
+      scrollToCloseOutHint(closeOutBlock.scrollTarget);
+      return;
+    }
+    setCloseDialogOpen(true);
+  }, [closeOutBlock, scrollToCloseOutHint]);
+
+  const toggleSettlementExpanded = useCallback((settlementId: string) => {
+    setExpandedSettlementIds((prev) => ({
+      ...prev,
+      [settlementId]: !prev[settlementId],
+    }));
+  }, []);
+
+  useEffect(() => {
+    if (!addSettlementOpen) return;
+    const id = requestAnimationFrame(() => {
+      const root = addSettlementPanelRef.current;
+      root?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      root?.querySelector<HTMLSelectElement>("select")?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [addSettlementOpen]);
 
   const handleAttachReceipt = useCallback(async () => {
     if (!receiptFile) return;
@@ -394,11 +664,10 @@ export function ShowDetailView({ id }: { id: string }) {
       try {
         await createShowSettlement(id, payload);
         setReloadToken((v) => v + 1);
+        setAddSettlementOpen(false);
         setNewRowWholesalerId("");
         setNewRowPercent("");
         setNewRowFixed("");
-        setNewRowQty("");
-        setNewRowUnitPrice("");
         setNewRowItemizedLines([]);
         return true;
       } catch (err) {
@@ -419,10 +688,19 @@ export function ShowDetailView({ id }: { id: string }) {
       setNewRowError("Select a wholesaler.");
       return;
     }
+    if (settlements.some((s) => s.wholesalerId === newRowWholesalerId)) {
+      setNewRowError("This wholesaler already has a settlement.");
+      return;
+    }
     if (newRowMode === "PERCENT") {
       const rate = Number(newRowPercent);
       if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
         setNewRowError("Percent must be between 0 and 100.");
+        return;
+      }
+      const allocated = sumPercentRatesFromSettlements(settlements);
+      if (allocated + rate > 100 + 1e-6) {
+        setNewRowError("Percent shares can’t exceed 100% of payout.");
         return;
       }
       await handleCreateSettlement({
@@ -483,6 +761,8 @@ export function ShowDetailView({ id }: { id: string }) {
     });
   }, [
     isClosed,
+    settlements,
+    payoutAfterFees,
     newRowWholesalerId,
     newRowMode,
     newRowPercent,
@@ -491,9 +771,8 @@ export function ShowDetailView({ id }: { id: string }) {
     handleCreateSettlement,
   ]);
 
-  const handleDeleteSettlement = useCallback(
+  const executeDeleteSettlement = useCallback(
     async (settlementId: string) => {
-      if (!window.confirm("Delete this settlement?")) return;
       setDeletingSettlementId(settlementId);
       setDeleteSettlementError(null);
       try {
@@ -503,6 +782,7 @@ export function ShowDetailView({ id }: { id: string }) {
         setDeleteSettlementError(toInlineWriteError(err));
       } finally {
         setDeletingSettlementId(null);
+        setDeleteConfirmId(null);
       }
     },
     [id, toInlineWriteError],
@@ -536,758 +816,1350 @@ export function ShowDetailView({ id }: { id: string }) {
     }
   }, [id, toInlineWriteError]);
 
+  const platformLabel = formatPlatformLabel(platform);
+
   if (loading) {
-    return <p className="text-gray-600">Loading show details...</p>;
+    return (
+      <>
+        <AdminPageIntroSection variant="entity-detail">
+          <AdminPageIntro variant="entity-detail" title="Loading…" />
+        </AdminPageIntroSection>
+        <AdminPageContainer
+          contentWidthClassName={workspacePageContentWidthWide}
+        >
+          <p className="text-sm text-stone-600">Loading show details…</p>
+        </AdminPageContainer>
+      </>
+    );
   }
 
   if (error) {
     return (
-      <div
-        className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-        role="alert"
-      >
-        <p className="font-medium">Could not load show detail.</p>
-        <p className="mt-1">{error}</p>
-        <button
-          type="button"
-          onClick={handleRetry}
-          className="mt-3 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+      <>
+        <AdminPageIntroSection variant="entity-detail">
+          <AdminPageIntro
+            variant="entity-detail"
+            breadcrumb={<ShowShowsBreadcrumb showName="Show" />}
+            title="Unable to load show"
+          />
+        </AdminPageIntroSection>
+        <AdminPageContainer
+          contentWidthClassName={workspacePageContentWidthWide}
         >
-          Retry
-        </button>
-      </div>
+          <WorkspaceInlineError
+            title="Could not load show detail."
+            message={error}
+            onRetry={handleRetry}
+          />
+        </AdminPageContainer>
+      </>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header: title, date, status, primary action when open */}
-      <div className="border-b border-gray-100 pb-4">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          {showName || "Show"}
-        </h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Date: {showDate ? formatDate(showDate) : "—"}
-        </p>
-        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm text-gray-600">
-          Status: <ShowStatusPill status={isClosed ? "COMPLETED" : "ACTIVE"} />
-        </p>
-        {!isClosed && (
-          <p className="mt-2">
-            <button
-              type="button"
-              onClick={() => {
-                closeOutSectionRef.current?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
-              }}
-              className="text-sm font-medium text-gray-600 underline decoration-gray-400 underline-offset-2 hover:text-gray-900 hover:decoration-gray-600"
-            >
-              Go to close out →
-            </button>
-          </p>
-        )}
-        {isClosed && (
-          <p className="mt-3 text-sm text-gray-600">
-            This show is closed. Payout and settlements are locked; you can
-            still record payments.
-          </p>
-        )}
-      </div>
-
-      {/* Show receipt (e.g. Whatnot payout screenshot) */}
-      <section className="rounded-lg border border-gray-200 bg-white shadow-workspace-surface p-4">
-        <h2 className="text-base font-semibold text-gray-900">Show receipt</h2>
-        <p className="mt-0.5 text-xs text-gray-500">
-          Attach a PDF or image (e.g. Whatnot payout screenshot), max{" "}
-          {Math.round(getMaxUploadBytes() / 1024 / 1024)} MB.
-        </p>
-        {showAttachments.length > 0 && (
-          <ul className="mt-3 space-y-1.5">
-            {showAttachments.map((att) => (
-              <li key={att.id} className="flex items-center gap-2 text-sm">
-                <span className="min-w-0 truncate text-gray-700">
-                  {att.filename}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleDownloadAttachment(att)}
-                  className="shrink-0 rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
-                >
-                  Download
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <input
-            type="file"
-            accept=".pdf,image/png,image/jpeg,image/jpg"
-            onChange={handleReceiptFileChange}
-            className="w-full min-w-0 rounded-lg border border-gray-100 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 sm:max-w-xs"
-            aria-describedby={receiptError ? "show-receipt-error" : undefined}
-          />
-          <button
-            type="button"
-            onClick={handleAttachReceipt}
-            disabled={!receiptFile || uploadingReceipt}
-            className={`${workspaceActionCompleteMd} disabled:opacity-60`}
-          >
-            {uploadingReceipt ? "Uploading…" : "Attach"}
-          </button>
-        </div>
-        {receiptError && (
-          <p
-            id="show-receipt-error"
-            className="mt-2 text-xs text-red-600"
-            role="alert"
-          >
-            {receiptError}
-          </p>
-        )}
-      </section>
-
-      {/* 1. Payout after fees */}
-      <section
-        className={`rounded-lg border border-gray-200 p-4 shadow-workspace-surface ${
-          isClosed ? "bg-gray-50/50" : "bg-white"
-        }`}
-      >
-        <h2 className="text-base font-semibold text-gray-900">
-          Payout after fees
-        </h2>
-        {isClosed && (
-          <p className="mt-1 text-xs text-gray-500">
-            Locked — reopen show to edit.
-          </p>
-        )}
-        <EditablePayout
-          payoutAfterFees={payoutAfterFees}
-          saving={savingPayout}
-          disabled={isClosed}
-          onSave={handleSavePayout}
-        />
-        {savePayoutError && (
-          <p className="mt-2 text-sm text-amber-700" role="alert">
-            {savePayoutError}
-          </p>
-        )}
-      </section>
-
-      {/* 2. Settlements — structured financial grid */}
-      <section
-        className={`rounded-lg border border-gray-200 shadow-workspace-surface ${
-          isClosed ? "bg-gray-50/50" : "bg-white"
-        }`}
-      >
-        <div className="flex items-center gap-1.5 border-b border-gray-200 bg-gray-50/40 px-4 py-3">
-          <h2 className="text-base font-semibold text-gray-900">Settlements</h2>
-          {isClosed && (
-            <p className="text-xs text-gray-500">
-              Locked — reopen show to add or remove.
+    <>
+      <AdminPageIntroSection variant="entity-detail">
+        <AdminPageIntro
+          variant="entity-detail"
+          breadcrumb={<ShowShowsBreadcrumb showName={showName || "Show"} />}
+          title={
+            <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <ShowStatusPill status={isClosed ? "COMPLETED" : "ACTIVE"} />
+              <span className="min-w-0">{showName || "Show"}</span>
+            </span>
+          }
+          subtitle={
+            <p className="text-[13px] leading-relaxed text-stone-500">
+              {showDate ? formatDate(showDate) : "—"}
+              {platformLabel ? ` · ${platformLabel}` : null}
             </p>
-          )}
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="sticky top-0 z-10 bg-[#F3F4F6]">
-              <tr>
-                <th className="px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Wholesaler
-                </th>
-                <th className="px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Deal type
-                </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Qty
-                </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Unit price
-                </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Percent
-                </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Amount
-                </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Total
-                </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Paid
-                </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Balance
-                </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {settlements.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={10}
-                    className="px-4 py-4 text-center text-sm text-gray-500"
-                  >
-                    No settlements yet.
-                    {!isClosed && " Add a row below."}
-                  </td>
-                </tr>
-              ) : (
-                settlements.map((row) => {
-                  const owed = amountOwedFor(payoutAfterFees, row);
-                  const balance = roundToCents(owed - row.amountPaid);
-                  return (
-                    <tr
-                      key={row.id}
-                      className="transition-colors duration-200 ease-out hover:bg-gray-200/45"
-                    >
-                      <td className="whitespace-nowrap px-3 py-2.5 text-sm font-medium text-gray-900">
-                        {row.wholesaler}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-sm text-gray-600">
-                        {row.type === "PERCENT"
-                          ? "Percent"
-                          : row.type === "ITEMIZED"
-                            ? "Itemized"
-                            : "Flat"}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-500 tabular-nums">
-                        —
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-500 tabular-nums">
-                        —
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-600 tabular-nums">
-                        {row.type === "PERCENT" ? `${row.percent}%` : "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-600 tabular-nums">
-                        {row.type === "FIXED"
-                          ? formatCurrency(row.fixedAmount)
-                          : "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-gray-900 tabular-nums">
-                        {formatCurrency(owed)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm text-gray-600 tabular-nums">
-                        {formatCurrency(row.amountPaid)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-gray-900 tabular-nums">
-                        {formatCurrency(balance)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm">
-                        <button
-                          type="button"
-                          disabled={isClosed || deletingSettlementId === row.id}
-                          onClick={() => void handleDeleteSettlement(row.id)}
-                          className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35 disabled:cursor-not-allowed disabled:text-gray-400"
+          }
+        />
+      </AdminPageIntroSection>
+
+      <AdminPageContainer contentWidthClassName={workspacePageContentWidthWide}>
+        <div className="flex min-w-0 flex-col gap-5 md:gap-6">
+          <div className={workspacePageShowDetailGrid}>
+            {/* Main column: unified show finances (payout + settlements) */}
+            <div className="min-w-0">
+              <section
+                ref={breakdownSectionRef}
+                className="min-w-0 scroll-mt-4"
+                aria-labelledby="show-finances-heading"
+              >
+                <div
+                  className={`min-w-0 overflow-hidden ${workspaceShowDetailOperatingShell} ${
+                    isClosed ? "bg-gray-50/50" : ""
+                  }`}
+                >
+                  <h2 id="show-finances-heading" className="sr-only">
+                    Payout and settlements
+                  </h2>
+                  {isClosed ? (
+                    <div className="border-b border-stone-200/80 bg-stone-50/50 px-4 py-2 sm:px-5">
+                      <p className="text-xs text-gray-600">
+                        Locked — reopen below to edit payout or settlements.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-stone-200/85 bg-gradient-to-b from-stone-50/50 via-white/90 to-stone-50/30 p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.65)] sm:p-4">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-500">
+                            Payout <span className="sr-only">after fees</span>
+                          </p>
+                          <div
+                            ref={payoutFigureRef}
+                            tabIndex={-1}
+                            className={`scroll-mt-20 -mx-0.5 rounded-md outline-none transition-[box-shadow] duration-300 ${
+                              breakdownFlash === "payout"
+                                ? "ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
+                                : ""
+                            } ${
+                              addSettlementOpen &&
+                              fieldHints.payoutFigure &&
+                              breakdownFlash !== "payout"
+                                ? "ring-2 ring-amber-300/90 ring-offset-2 ring-offset-white"
+                                : ""
+                            }`}
+                          >
+                            <EditablePayout
+                              payoutAfterFees={payoutAfterFees}
+                              saving={savingPayout}
+                              disabled={isClosed}
+                              onSave={handleSavePayout}
+                              displayVariant="moneyCard"
+                              embedded
+                            />
+                          </div>
+                          {savePayoutError ? (
+                            <p className="text-sm text-amber-700" role="alert">
+                              {savePayoutError}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div
+                        ref={settlementsAnchorRef}
+                        tabIndex={-1}
+                        className={`scroll-mt-20 rounded-lg border border-stone-200/75 bg-white/[0.98] p-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)] outline-none transition-[box-shadow] duration-300 sm:p-3.5 ${
+                          breakdownFlash === "settlements"
+                            ? "ring-2 ring-rose-400/90 ring-offset-2 ring-offset-white"
+                            : ""
+                        }`}
+                      >
+                        <h3
+                          id="settlements-heading"
+                          className={workspaceLabelEyebrow}
                         >
-                          {deletingSettlementId === row.id
-                            ? "Deleting…"
-                            : "Delete"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-              {!isClosed && (
-                <tr className="bg-gray-50/70 transition-colors duration-200 ease-out hover:bg-gray-200/40">
-                  <td className="px-3 py-2.5">
-                    <select
-                      value={newRowWholesalerId}
-                      onChange={(e) => setNewRowWholesalerId(e.target.value)}
-                      className="w-full min-w-[120px] rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
-                    >
-                      <option value="">Select wholesaler</option>
-                      {wholesalers.map((w) => (
-                        <option key={w.wholesaler_id} value={w.wholesaler_id}>
-                          {w.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <select
-                      value={newRowMode}
-                      onChange={(e) => {
-                        const v = e.target.value as
-                          | "PERCENT"
-                          | "FIXED"
-                          | "QTY_UNIT";
-                        setNewRowMode(
-                          v === "FIXED" || v === "QTY_UNIT" ? v : "PERCENT",
-                        );
-                        if (
-                          v === "QTY_UNIT" &&
-                          newRowItemizedLines.length === 0
-                        ) {
-                          setNewRowItemizedLines([
-                            {
-                              id: crypto.randomUUID(),
-                              itemName: "",
-                              quantity: "",
-                              unitPriceDollars: "",
-                            },
-                          ]);
-                        }
-                      }}
-                      className="w-full min-w-[100px] rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
-                    >
-                      <option value="PERCENT">Percent of payout</option>
-                      <option value="FIXED">Flat amount ($)</option>
-                      <option value="QTY_UNIT">Qty × unit price</option>
-                    </select>
-                  </td>
-                  {newRowMode === "QTY_UNIT" ? (
-                    <td colSpan={8} className="px-3 py-2.5 align-top">
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-gray-500">
-                          Itemized lines (item × qty × unit price $)
-                        </p>
-                        {newRowItemizedLines.map((line) => {
-                          const qty = Number(line.quantity);
-                          const unit = Number(line.unitPriceDollars);
-                          const lineTotal =
-                            Number.isFinite(qty) &&
-                            qty > 0 &&
-                            Number.isFinite(unit) &&
-                            unit >= 0
-                              ? roundToCents(qty * unit)
-                              : null;
-                          return (
-                            <div
-                              key={line.id}
-                              className="flex flex-wrap items-center gap-2 rounded border border-gray-100 bg-white px-2 py-1.5"
-                            >
-                              <input
-                                type="text"
-                                value={line.itemName}
-                                onChange={(e) =>
-                                  setNewRowItemizedLines((prev) =>
-                                    prev.map((l) =>
-                                      l.id === line.id
-                                        ? { ...l, itemName: e.target.value }
-                                        : l,
-                                    ),
-                                  )
-                                }
-                                placeholder="Item name"
-                                className="min-w-[120px] rounded border border-gray-200 px-2 py-1.5 text-sm"
-                              />
-                              <input
-                                type="number"
-                                step="1"
-                                min={1}
-                                value={line.quantity}
-                                onChange={(e) =>
-                                  setNewRowItemizedLines((prev) =>
-                                    prev.map((l) =>
-                                      l.id === line.id
-                                        ? { ...l, quantity: e.target.value }
-                                        : l,
-                                    ),
-                                  )
-                                }
-                                placeholder="Qty"
-                                className="w-16 rounded border border-gray-200 px-2 py-1.5 text-right text-sm tabular-nums"
-                              />
-                              <span className="text-sm text-gray-500">×</span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min={0}
-                                value={line.unitPriceDollars}
-                                onChange={(e) =>
-                                  setNewRowItemizedLines((prev) =>
-                                    prev.map((l) =>
-                                      l.id === line.id
-                                        ? {
-                                            ...l,
-                                            unitPriceDollars: e.target.value,
+                          Settlements
+                        </h3>
+                        {showPercentOverCapBanner ? (
+                          <p
+                            className="mt-2 rounded-md border border-amber-200/90 bg-amber-50/70 px-2.5 py-1.5 text-xs font-medium text-amber-950/90"
+                            role="status"
+                          >
+                            Saved percent settlements total over 100% of payout
+                            — adjust or remove a percent row before relying on
+                            new percent lines.
+                          </p>
+                        ) : null}
+                        {showTotalOwedOverPayoutBanner ? (
+                          <p
+                            className="mt-2 rounded-md border border-amber-200/90 bg-amber-50/70 px-2.5 py-1.5 text-xs font-medium text-amber-950/90"
+                            role="status"
+                          >
+                            Total owed from settlements is above payout after
+                            fees ({formatCurrency(payoutAfterFees)}). You can
+                            still review history; new settlements can&apos;t
+                            increase total owed until this is resolved.
+                          </p>
+                        ) : null}
+                        <div className="mt-3 space-y-3 md:hidden">
+                          {settlements.length === 0 ? (
+                            isClosed ? (
+                              <div
+                                className={`rounded-lg border border-gray-200/80 px-4 py-4 text-sm text-gray-600 ${workspaceMutedStrip}`}
+                              >
+                                No settlements recorded.
+                              </div>
+                            ) : (
+                              <div
+                                className={`space-y-3 rounded-lg border border-gray-200/80 px-4 py-4 ${workspaceMutedStrip}`}
+                              >
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-gray-800">
+                                    No settlements yet
+                                  </p>
+                                  <p className="text-sm leading-relaxed text-gray-600">
+                                    Add the first settlement to allocate payout
+                                    before close-out.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => focusSettlementComposer()}
+                                  className={`${workspaceActionSecondaryMd} w-full justify-center gap-2`}
+                                >
+                                  <PlusIcon
+                                    className={workspaceActionIconMd}
+                                    aria-hidden
+                                  />
+                                  Add settlement
+                                </button>
+                              </div>
+                            )
+                          ) : (
+                            settlements.map((row) => {
+                              const owed = amountOwedFor(payoutAfterFees, row);
+                              const expanded = Boolean(
+                                expandedSettlementIds[row.id],
+                              );
+                              const calcMethod =
+                                calculationMethodFromStructuredType(row.type);
+                              const typeLabel =
+                                settlementMethodPrimaryLabel(calcMethod);
+                              const summaryHint = settlementMethodHint({
+                                calculationMethod: calcMethod,
+                                percentOfPayout:
+                                  row.type === "PERCENT"
+                                    ? row.percent
+                                    : undefined,
+                                lineCount:
+                                  row.type === "ITEMIZED"
+                                    ? row.lines?.length
+                                    : undefined,
+                              });
+                              return (
+                                <div
+                                  key={row.id}
+                                  className="rounded-lg border border-gray-200/90 bg-white p-4 shadow-sm"
+                                >
+                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                                    <div className="min-w-0 flex-1">
+                                      <Link
+                                        href={`/admin/wholesalers/${row.wholesalerId}`}
+                                        className="text-base font-semibold leading-snug text-gray-900 underline-offset-2 decoration-gray-300 hover:text-gray-800 hover:underline"
+                                      >
+                                        {row.wholesaler}
+                                      </Link>
+                                      <p className="mt-1 text-sm font-medium text-gray-800">
+                                        {typeLabel}
+                                      </p>
+                                      {summaryHint ? (
+                                        <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
+                                          {summaryHint}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                        Owed
+                                      </p>
+                                      <p
+                                        className={`text-lg font-semibold tabular-nums text-gray-900 ${workspaceMoneyTabular}`}
+                                      >
+                                        {formatCurrency(owed)}
+                                      </p>
+                                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                        Paid
+                                      </p>
+                                      <p
+                                        className={`text-sm font-medium tabular-nums text-gray-800 ${workspaceMoneyTabular}`}
+                                      >
+                                        {formatCurrency(row.amountPaid)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                    <button
+                                      type="button"
+                                      className={`${workspaceActionSecondaryMd} w-full justify-center sm:w-auto`}
+                                      aria-expanded={expanded}
+                                      aria-controls={`settlement-detail-mobile-${row.id}`}
+                                      onClick={() =>
+                                        toggleSettlementExpanded(row.id)
+                                      }
+                                    >
+                                      <span className="inline-flex items-center gap-2">
+                                        <WorkspaceLedgerDisclosureIcon
+                                          expanded={expanded}
+                                        />
+                                        {expanded ? "Hide details" : "Details"}
+                                      </span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        isClosed ||
+                                        deletingSettlementId === row.id
+                                      }
+                                      onClick={() => setDeleteConfirmId(row.id)}
+                                      className={`${workspaceActionSecondaryMd} w-full justify-center border-rose-200/90 text-rose-800 hover:bg-rose-50/80 sm:w-auto`}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                  {expanded ? (
+                                    <div
+                                      id={`settlement-detail-mobile-${row.id}`}
+                                      className="mt-4 border-t border-gray-100 pt-4"
+                                      role="region"
+                                      aria-label={`Details for ${row.wholesaler}`}
+                                    >
+                                      {row.type === "PERCENT" ? (
+                                        <SettlementPercentExpandedBody
+                                          percentBasisLabel={`${row.percent}% of payout after fees (${formatCurrency(payoutAfterFees)})`}
+                                          amountOwed={owed}
+                                        />
+                                      ) : null}
+                                      {row.type === "FIXED" ? (
+                                        <SettlementFlatExpandedBody
+                                          flatAmount={row.fixedAmount}
+                                          amountOwed={owed}
+                                        />
+                                      ) : null}
+                                      {row.type === "ITEMIZED" ? (
+                                        <SettlementItemizedExpandedBody
+                                          lines={mapShowSettlementLinesToLedgerLineItems(
+                                            row.lines ?? [],
+                                          )}
+                                          amountOwed={owed}
+                                          emptyFallbackAmountOwed={owed}
+                                        />
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        <div className="mt-3 hidden overflow-x-auto rounded-md border border-gray-200/75 bg-white/80 md:block">
+                          <table className="min-w-full table-fixed border-collapse text-sm">
+                            <colgroup>
+                              <col className="w-9 sm:w-10" />
+                              <col className="min-w-0" />
+                              <col className="w-1 max-w-[4px] p-0" />
+                              <col className="w-[6.5rem] sm:w-[7rem]" />
+                              <col className="min-w-0 max-w-[10.5rem]" />
+                              <col className="w-9 sm:w-10" />
+                            </colgroup>
+                            <thead className={workspaceTheadSticky}>
+                              <tr className="border-b border-gray-200">
+                                <th
+                                  scope="col"
+                                  className={`w-9 ${workspaceTableHeaderCellPadding} !py-2 text-left sm:w-10`}
+                                >
+                                  <span className="sr-only">Expand</span>
+                                </th>
+                                <th
+                                  scope="col"
+                                  className={`${workspaceTableHeaderCellPadding} !py-2 text-left`}
+                                >
+                                  Vendor
+                                </th>
+                                <th
+                                  scope="col"
+                                  className="w-1 max-w-[4px] p-0"
+                                  aria-hidden
+                                >
+                                  <span className="sr-only"> </span>
+                                </th>
+                                <th
+                                  scope="col"
+                                  className={`${workspaceTableHeaderCellPadding} !py-2 text-right`}
+                                >
+                                  Amount owed
+                                </th>
+                                <th
+                                  scope="col"
+                                  className={`${workspaceTableHeaderCellPadding} !py-2 pl-0 text-left sm:pr-3`}
+                                >
+                                  Type
+                                </th>
+                                <th
+                                  scope="col"
+                                  className={`${workspaceTableHeaderCellPadding} !py-2 text-right sm:pr-3`}
+                                >
+                                  <span className="sr-only">Remove</span>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 bg-white">
+                              {settlements.length === 0 ? (
+                                <tr>
+                                  <td
+                                    colSpan={6}
+                                    className={`${workspaceTableBodyCellPadding} py-6 text-left text-sm text-gray-600`}
+                                  >
+                                    {isClosed ? (
+                                      <div
+                                        className={`rounded-md border border-gray-200/80 px-3 py-2.5 text-sm ${workspaceMutedStrip}`}
+                                      >
+                                        No settlements recorded.
+                                      </div>
+                                    ) : (
+                                      <div
+                                        className={`flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200/80 px-3 py-2.5 ${workspaceMutedStrip}`}
+                                      >
+                                        <div className="space-y-0.5">
+                                          <p className="text-sm font-medium text-gray-700">
+                                            No settlements yet
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            Add the first settlement to allocate
+                                            payout before close-out.
+                                          </p>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            focusSettlementComposer()
                                           }
-                                        : l,
-                                    ),
-                                  )
-                                }
-                                placeholder="Unit $"
-                                className="w-20 rounded border border-gray-200 px-2 py-1.5 text-right text-sm tabular-nums"
-                                title="Unit price ($)"
+                                          className={`${workspaceActionInlineText} inline-flex items-center gap-1.5 whitespace-nowrap`}
+                                        >
+                                          <PlusIcon
+                                            className={workspaceActionIconSm}
+                                          />
+                                          Add settlement
+                                        </button>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              ) : (
+                                settlements.map((row) => {
+                                  const owed = amountOwedFor(
+                                    payoutAfterFees,
+                                    row,
+                                  );
+                                  const expanded = Boolean(
+                                    expandedSettlementIds[row.id],
+                                  );
+                                  const calcMethod =
+                                    calculationMethodFromStructuredType(
+                                      row.type,
+                                    );
+                                  const typeLabel =
+                                    settlementMethodPrimaryLabel(calcMethod);
+                                  const summaryHint = settlementMethodHint({
+                                    calculationMethod: calcMethod,
+                                    percentOfPayout:
+                                      row.type === "PERCENT"
+                                        ? row.percent
+                                        : undefined,
+                                    lineCount:
+                                      row.type === "ITEMIZED"
+                                        ? row.lines?.length
+                                        : undefined,
+                                  });
+                                  return (
+                                    <Fragment key={row.id}>
+                                      <tr
+                                        className={`${workspaceShowSettlementRowDisclosure} ${expanded ? "bg-gray-50/80" : ""}`}
+                                      >
+                                        <td
+                                          className={`w-9 ${workspaceTableBodyCellPadding} !py-1.5 align-middle sm:w-10`}
+                                        >
+                                          <button
+                                            type="button"
+                                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-200/80 hover:text-gray-900 sm:h-8 sm:w-8"
+                                            aria-expanded={expanded}
+                                            aria-controls={`settlement-detail-${row.id}`}
+                                            aria-label={
+                                              expanded
+                                                ? "Collapse settlement details"
+                                                : "Expand settlement details"
+                                            }
+                                            onClick={() =>
+                                              toggleSettlementExpanded(row.id)
+                                            }
+                                          >
+                                            <WorkspaceLedgerDisclosureIcon
+                                              expanded={expanded}
+                                            />
+                                          </button>
+                                        </td>
+                                        <td
+                                          className={`min-w-0 ${workspaceTableBodyCellPadding} !py-1.5 align-middle`}
+                                        >
+                                          <Link
+                                            href={`/admin/wholesalers/${row.wholesalerId}`}
+                                            className="block min-w-0 truncate text-sm font-semibold leading-snug text-gray-900 underline-offset-2 decoration-gray-300 transition-colors hover:text-gray-800 hover:underline"
+                                          >
+                                            {row.wholesaler}
+                                          </Link>
+                                        </td>
+                                        <td
+                                          className="w-1 max-w-[4px] p-0"
+                                          aria-hidden
+                                        />
+                                        <td
+                                          className={`whitespace-nowrap ${workspaceTableBodyCellPadding} !py-1.5 text-right align-middle text-sm font-semibold text-gray-900 ${workspaceMoneyTabular}`}
+                                        >
+                                          {formatCurrency(owed)}
+                                        </td>
+                                        <td
+                                          className={`min-w-0 ${workspaceTableBodyCellPadding} !py-1.5 pl-0 align-middle sm:pr-3`}
+                                        >
+                                          <div className="text-sm font-medium leading-snug text-gray-900">
+                                            {typeLabel}
+                                          </div>
+                                          <div className="text-[11px] leading-snug text-gray-500">
+                                            {summaryHint}
+                                          </div>
+                                        </td>
+                                        <td
+                                          className={`${workspaceTableBodyCellPadding} !py-1.5 text-right align-middle sm:pr-3`}
+                                        >
+                                          <div className="flex min-h-[1.75rem] items-center justify-end sm:min-h-[2rem]">
+                                            <button
+                                              type="button"
+                                              disabled={
+                                                isClosed ||
+                                                deletingSettlementId === row.id
+                                              }
+                                              onClick={() =>
+                                                setDeleteConfirmId(row.id)
+                                              }
+                                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-rose-700/90 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:w-8"
+                                              aria-label="Remove settlement"
+                                            >
+                                              <TrashIcon
+                                                className={`${workspaceActionIconMd} shrink-0`}
+                                                aria-hidden
+                                              />
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      {expanded ? (
+                                        <tr className="bg-gray-50/90">
+                                          <td colSpan={6} className="p-0">
+                                            <div
+                                              id={`settlement-detail-${row.id}`}
+                                              className="px-2 py-2 sm:px-3"
+                                              role="region"
+                                              aria-label={`Details for ${row.wholesaler}`}
+                                            >
+                                              {row.type === "PERCENT" ? (
+                                                <SettlementPercentExpandedBody
+                                                  percentBasisLabel={`${row.percent}% of payout after fees (${formatCurrency(payoutAfterFees)})`}
+                                                  amountOwed={owed}
+                                                />
+                                              ) : null}
+                                              {row.type === "FIXED" ? (
+                                                <SettlementFlatExpandedBody
+                                                  flatAmount={row.fixedAmount}
+                                                  amountOwed={owed}
+                                                />
+                                              ) : null}
+                                              {row.type === "ITEMIZED" ? (
+                                                <SettlementItemizedExpandedBody
+                                                  lines={mapShowSettlementLinesToLedgerLineItems(
+                                                    row.lines ?? [],
+                                                  )}
+                                                  amountOwed={owed}
+                                                  emptyFallbackAmountOwed={owed}
+                                                />
+                                              ) : null}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      ) : null}
+                                    </Fragment>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                        {!isClosed && settlements.length > 0 ? (
+                          <div className="mt-3 flex border-t border-gray-100/90 pt-3 sm:mt-px sm:justify-end sm:pt-1.5">
+                            <button
+                              type="button"
+                              onClick={() => focusSettlementComposer()}
+                              className={`${workspaceActionSecondaryMd} w-full justify-center gap-2 sm:w-auto`}
+                              aria-label="Add settlement"
+                            >
+                              <PlusIcon
+                                className={workspaceActionIconMd}
+                                aria-hidden
                               />
-                              <span className="text-sm text-gray-500">=</span>
-                              <span className="w-20 text-right text-sm font-medium tabular-nums text-gray-900">
-                                {lineTotal != null
-                                  ? formatCurrency(lineTotal)
-                                  : "—"}
-                              </span>
+                              <span>Add settlement</span>
+                            </button>
+                          </div>
+                        ) : null}
+                        {!isClosed && addSettlementOpen ? (
+                          <div
+                            ref={addSettlementPanelRef}
+                            className={`mt-4 rounded-lg border bg-stone-50/40 px-3 py-3 sm:px-4 sm:py-3.5 ${
+                              addSettlementSubmitBlockedReason &&
+                              !creatingSettlement
+                                ? "border-amber-200/90 ring-1 ring-amber-200/70"
+                                : "border-gray-200/90"
+                            }`}
+                          >
+                            <p className="text-sm font-semibold text-gray-900">
+                              Add settlement
+                            </p>
+                            <p className="mt-0.5 text-xs text-gray-500">
+                              One primary save — fields below match the selected
+                              type.
+                            </p>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:gap-4">
+                              <div>
+                                <label
+                                  htmlFor="new-settlement-wholesaler"
+                                  className="mb-1 block text-xs font-medium text-gray-600"
+                                >
+                                  Vendor
+                                </label>
+                                <WorkspaceNativeSelect
+                                  id="new-settlement-wholesaler"
+                                  value={newRowWholesalerId}
+                                  onChange={(e) =>
+                                    setNewRowWholesalerId(e.target.value)
+                                  }
+                                  className={`!h-9 w-full text-sm ${
+                                    fieldHints.wholesaler
+                                      ? "ring-2 ring-amber-300/90 ring-offset-1"
+                                      : ""
+                                  }`}
+                                >
+                                  <option value="">Select vendor</option>
+                                  {wholesalers.map((w) => {
+                                    const taken = settlements.some(
+                                      (s) => s.wholesalerId === w.wholesaler_id,
+                                    );
+                                    return (
+                                      <option
+                                        key={w.wholesaler_id}
+                                        value={w.wholesaler_id}
+                                        disabled={taken}
+                                      >
+                                        {taken
+                                          ? `${w.name} (already added)`
+                                          : w.name}
+                                      </option>
+                                    );
+                                  })}
+                                </WorkspaceNativeSelect>
+                                {fieldHints.wholesaler &&
+                                settlementComposerBlock ? (
+                                  <p
+                                    className="mt-1.5 text-xs font-medium text-amber-900/90"
+                                    role="status"
+                                  >
+                                    {settlementComposerBlockMessage(
+                                      settlementComposerBlock,
+                                    )}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <div>
+                                <label
+                                  htmlFor="new-settlement-type"
+                                  className="mb-1 block text-xs font-medium text-gray-600"
+                                >
+                                  Type
+                                </label>
+                                <WorkspaceNativeSelect
+                                  id="new-settlement-type"
+                                  value={newRowMode}
+                                  onChange={(e) => {
+                                    const v = e.target.value as
+                                      | "PERCENT"
+                                      | "FIXED"
+                                      | "QTY_UNIT";
+                                    setNewRowMode(
+                                      v === "FIXED" || v === "QTY_UNIT"
+                                        ? v
+                                        : "PERCENT",
+                                    );
+                                    if (
+                                      v === "QTY_UNIT" &&
+                                      newRowItemizedLines.length === 0
+                                    ) {
+                                      setNewRowItemizedLines([
+                                        {
+                                          id: crypto.randomUUID(),
+                                          itemName: "",
+                                          quantity: "",
+                                          unitPriceDollars: "",
+                                        },
+                                      ]);
+                                    }
+                                  }}
+                                  className="!h-9 w-full text-sm"
+                                >
+                                  <option value="PERCENT">
+                                    Percent of payout
+                                  </option>
+                                  <option value="FIXED">Flat amount</option>
+                                  <option value="QTY_UNIT">
+                                    Itemized (qty × price)
+                                  </option>
+                                </WorkspaceNativeSelect>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 space-y-3 border-t border-gray-200/80 pt-3">
+                              {settlementComposerBlock?.kind ===
+                              "historically_over_payout" ? (
+                                <p
+                                  className="rounded-md border border-amber-200/70 bg-amber-50/50 px-2.5 py-1.5 text-xs font-medium text-amber-950/90"
+                                  role="status"
+                                >
+                                  {settlementComposerBlockMessage(
+                                    settlementComposerBlock,
+                                  )}
+                                </p>
+                              ) : null}
+                              {newRowMode === "PERCENT" ? (
+                                <div className="space-y-2">
+                                  <p className="text-xs leading-relaxed text-gray-600">
+                                    <span className="font-medium text-gray-800">
+                                      Percent basis:
+                                    </span>{" "}
+                                    the full{" "}
+                                    <span className="font-medium">
+                                      payout after fees
+                                    </span>{" "}
+                                    for this show (
+                                    {formatCurrency(payoutAfterFees)}). Percent
+                                    lines add up; you can’t assign more than
+                                    100% across percent settlements.
+                                  </p>
+                                  {payoutAfterFees > 0 &&
+                                  totalPercentUsed > 0 ? (
+                                    <p className="text-xs text-gray-600">
+                                      Already allocated in other rows:{" "}
+                                      <span className="font-medium tabular-nums text-gray-800">
+                                        {Number.isInteger(totalPercentUsed)
+                                          ? totalPercentUsed
+                                          : totalPercentUsed.toFixed(1)}
+                                        %
+                                      </span>
+                                      {" · "}
+                                      <span className="tabular-nums">
+                                        up to{" "}
+                                        {Math.max(
+                                          0,
+                                          100 - totalPercentUsed,
+                                        ).toFixed(1)}
+                                        % left for this percent line
+                                      </span>
+                                      {totalPercentUsed >= 100 - 1e-6 ? (
+                                        <span className="ml-1 font-medium text-amber-800">
+                                          (100% used — use flat/itemized or
+                                          remove a percent row.)
+                                        </span>
+                                      ) : null}
+                                    </p>
+                                  ) : null}
+                                  <label
+                                    htmlFor="new-settlement-pct"
+                                    className="mb-1 block text-xs font-medium text-gray-600"
+                                  >
+                                    Percent (0–100)
+                                  </label>
+                                  <input
+                                    id="new-settlement-pct"
+                                    type="number"
+                                    step="0.01"
+                                    min={0}
+                                    max={100}
+                                    value={newRowPercent}
+                                    onChange={(e) =>
+                                      setNewRowPercent(e.target.value)
+                                    }
+                                    className={`w-full max-w-[8rem] ${workspaceTextInputCompact} text-right tabular-nums ${
+                                      fieldHints.percent ||
+                                      (payoutAfterFees > 0 &&
+                                        !isPercentValueValid)
+                                        ? "ring-2 ring-amber-300/90 ring-offset-1"
+                                        : ""
+                                    }`}
+                                    placeholder="0"
+                                    aria-invalid={
+                                      payoutAfterFees > 0 &&
+                                      !isPercentValueValid
+                                    }
+                                  />
+                                  {payoutAfterFees <= 0 ? (
+                                    <p className="mt-1.5 text-xs text-amber-800/90">
+                                      {WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST}
+                                    </p>
+                                  ) : fieldHints.percent &&
+                                    settlementComposerBlock ? (
+                                    <p
+                                      className="mt-1.5 text-xs font-medium text-amber-900/90"
+                                      role="status"
+                                    >
+                                      {settlementComposerBlockMessage(
+                                        settlementComposerBlock,
+                                      )}
+                                    </p>
+                                  ) : newRowTotal != null ? (
+                                    <p className="mt-1.5 text-xs text-gray-600">
+                                      {newRowPercent || "0"}% ×{" "}
+                                      {formatCurrency(payoutAfterFees)} →{" "}
+                                      <span className="font-medium text-gray-900">
+                                        {formatCurrency(newRowTotal)} owed
+                                      </span>
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {newRowMode === "FIXED" ? (
+                                <div>
+                                  <label
+                                    htmlFor="new-settlement-flat"
+                                    className="mb-1 block text-xs font-medium text-gray-700"
+                                  >
+                                    Dollar amount owed
+                                  </label>
+                                  <div className="relative max-w-[11rem]">
+                                    <span
+                                      className="pointer-events-none absolute left-2.5 top-1/2 z-[1] -translate-y-1/2 text-sm text-gray-500"
+                                      aria-hidden
+                                    >
+                                      $
+                                    </span>
+                                    <input
+                                      id="new-settlement-flat"
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={newRowFixed}
+                                      onChange={(e) => {
+                                        const v = e.target.value.replace(
+                                          /[^0-9.]/g,
+                                          "",
+                                        );
+                                        const parts = v.split(".");
+                                        if (parts.length > 2) return;
+                                        if (parts[1]?.length > 2) return;
+                                        setNewRowFixed(v);
+                                      }}
+                                      className={`${workspaceTextInputCompact} w-full border border-gray-200 bg-white pl-7 text-right tabular-nums shadow-sm ${
+                                        fieldHints.flat
+                                          ? "ring-2 ring-amber-300/90 ring-offset-1"
+                                          : ""
+                                      }`}
+                                      placeholder="0.00"
+                                    />
+                                  </div>
+                                  {fieldHints.flat &&
+                                  settlementComposerBlock ? (
+                                    <p
+                                      className="mt-1.5 text-xs font-medium text-amber-900/90"
+                                      role="status"
+                                    >
+                                      {settlementComposerBlockMessage(
+                                        settlementComposerBlock,
+                                      )}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {newRowMode === "QTY_UNIT" ? (
+                                <div
+                                  className={`space-y-2 rounded-md border px-2 py-2 sm:px-3 ${
+                                    fieldHints.itemized
+                                      ? "border-amber-300/80 bg-amber-50/40"
+                                      : "border-gray-200/80 bg-white/80"
+                                  }`}
+                                >
+                                  <p className="text-xs font-medium text-gray-700">
+                                    Line items
+                                  </p>
+                                  <div className="hidden border-b border-gray-100 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500 sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] sm:gap-x-1.5">
+                                    <span>Item</span>
+                                    <span className="text-right">Qty</span>
+                                    <span className="text-right">$</span>
+                                    <span className="sr-only">Remove line</span>
+                                  </div>
+                                  <div className="divide-y divide-gray-100">
+                                    {newRowItemizedLines.map((line) => (
+                                      <div
+                                        key={line.id}
+                                        className="flex flex-col gap-3 py-3 first:pt-0 sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] sm:items-center sm:gap-x-1.5 sm:py-1.5"
+                                      >
+                                        <input
+                                          type="text"
+                                          value={line.itemName}
+                                          onChange={(e) =>
+                                            setNewRowItemizedLines((prev) =>
+                                              prev.map((l) =>
+                                                l.id === line.id
+                                                  ? {
+                                                      ...l,
+                                                      itemName: e.target.value,
+                                                    }
+                                                  : l,
+                                              ),
+                                            )
+                                          }
+                                          placeholder="Item name"
+                                          className={`min-w-0 w-full sm:w-auto ${workspaceTextInputCompact}`}
+                                        />
+                                        <div className="grid grid-cols-2 gap-2 sm:contents">
+                                          <input
+                                            type="number"
+                                            step="1"
+                                            min={1}
+                                            value={line.quantity}
+                                            onChange={(e) =>
+                                              setNewRowItemizedLines((prev) =>
+                                                prev.map((l) =>
+                                                  l.id === line.id
+                                                    ? {
+                                                        ...l,
+                                                        quantity:
+                                                          e.target.value,
+                                                      }
+                                                    : l,
+                                                ),
+                                              )
+                                            }
+                                            placeholder="Qty"
+                                            className={`${workspaceTextInputCompact} w-full text-right tabular-nums sm:w-auto`}
+                                          />
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min={0}
+                                            value={line.unitPriceDollars}
+                                            onChange={(e) =>
+                                              setNewRowItemizedLines((prev) =>
+                                                prev.map((l) =>
+                                                  l.id === line.id
+                                                    ? {
+                                                        ...l,
+                                                        unitPriceDollars:
+                                                          e.target.value,
+                                                      }
+                                                    : l,
+                                                ),
+                                              )
+                                            }
+                                            placeholder="Price"
+                                            className={`${workspaceTextInputCompact} w-full text-right tabular-nums sm:w-auto`}
+                                          />
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setNewRowItemizedLines((prev) =>
+                                              prev.filter(
+                                                (l) => l.id !== line.id,
+                                              ),
+                                            )
+                                          }
+                                          className="flex min-h-10 items-center justify-end text-gray-500 hover:text-gray-800 sm:min-h-0 sm:justify-end"
+                                          aria-label="Remove item"
+                                        >
+                                          <TrashIcon
+                                            className={workspaceActionIconSm}
+                                          />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setNewRowItemizedLines((prev) => [
+                                        ...prev,
+                                        {
+                                          id: crypto.randomUUID(),
+                                          itemName: "",
+                                          quantity: "",
+                                          unitPriceDollars: "",
+                                        },
+                                      ])
+                                    }
+                                    className={`${workspaceActionSecondaryMd} !gap-1 !px-2 !py-1 text-xs`}
+                                  >
+                                    <WorkspaceActionLabel
+                                      icon={
+                                        <PlusIcon
+                                          className={workspaceActionIconSm}
+                                        />
+                                      }
+                                    >
+                                      Add item
+                                    </WorkspaceActionLabel>
+                                  </button>
+                                  <p className="text-xs font-medium text-gray-800">
+                                    Line total:{" "}
+                                    <span className="tabular-nums">
+                                      {newRowTotal != null
+                                        ? formatCurrency(newRowTotal)
+                                        : "—"}
+                                    </span>
+                                  </p>
+                                  {fieldHints.itemized &&
+                                  settlementComposerBlock ? (
+                                    <p
+                                      className="text-xs font-medium text-amber-900/90"
+                                      role="status"
+                                    >
+                                      {settlementComposerBlockMessage(
+                                        settlementComposerBlock,
+                                      )}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+
+                            <div className="mt-4 flex flex-col gap-2 border-t border-gray-200/80 pt-3">
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  disabled={addSettlementPrimaryDisabled}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    void handleAddRow();
+                                  }}
+                                  className={`${workspaceActionCompleteSm} disabled:cursor-not-allowed disabled:opacity-50`}
+                                >
+                                  {creatingSettlement
+                                    ? "Saving…"
+                                    : "Save settlement"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAddSettlementOpen(false);
+                                    setNewRowWholesalerId("");
+                                    setNewRowPercent("");
+                                    setNewRowFixed("");
+                                    setNewRowItemizedLines([]);
+                                    setNewRowError(null);
+                                  }}
+                                  className={workspaceActionSecondaryMd}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                        {deleteSettlementError ||
+                        createSettlementError ||
+                        newRowError ? (
+                          <p
+                            className="mt-3 rounded-md border border-amber-200/80 bg-amber-50/50 px-3 py-2 text-sm text-amber-800"
+                            role="alert"
+                          >
+                            {deleteSettlementError ??
+                              (createSettlementError
+                                ?.toLowerCase()
+                                .includes("financials")
+                                ? WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY
+                                : createSettlementError) ??
+                              (newRowError?.toLowerCase().includes("financials")
+                                ? WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY
+                                : newRowError)}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Receipt — secondary, outside payout/settlements cluster */}
+                    <div
+                      className="mt-8 border-t border-dashed border-gray-200/90 pt-5"
+                      aria-labelledby="payout-receipt-heading"
+                    >
+                      <input
+                        ref={receiptFileInputRef}
+                        id="show-receipt-file"
+                        type="file"
+                        className="sr-only"
+                        accept=".pdf,image/png,image/jpeg,image/jpg"
+                        onChange={handleReceiptFileChange}
+                      />
+                      <div className="flex min-h-[1.5rem] flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
+                        <span
+                          id="payout-receipt-heading"
+                          className="shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 sm:text-[11px]"
+                        >
+                          Receipt{" "}
+                          <span className="font-normal normal-case tracking-normal text-gray-400">
+                            (optional)
+                          </span>
+                        </span>
+                        {uploadingReceipt ? (
+                          <span className="text-xs text-gray-500">
+                            Uploading…
+                          </span>
+                        ) : receiptFile ? (
+                          <>
+                            <span className="min-w-0 max-w-[min(100%,14rem)] truncate text-xs text-gray-800">
+                              {receiptFile.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleAttachReceipt}
+                              disabled={uploadingReceipt}
+                              className="min-h-10 rounded-md px-3 py-2 text-sm font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 disabled:opacity-60 sm:min-h-0 sm:px-2 sm:py-0.5 sm:text-[11px]"
+                            >
+                              Attach
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReceiptFile(null);
+                                if (receiptFileInputRef.current) {
+                                  receiptFileInputRef.current.value = "";
+                                }
+                                receiptFileInputRef.current?.click();
+                              }}
+                              disabled={uploadingReceipt}
+                              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-60 sm:h-7 sm:w-7"
+                              aria-label="Choose a different file"
+                            >
+                              <ArrowUpTrayIcon
+                                className={workspaceActionIconSm}
+                                aria-hidden
+                              />
+                            </button>
+                          </>
+                        ) : showAttachments.length > 0 ? (
+                          <>
+                            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                              {showAttachments.map((att) => (
+                                <span
+                                  key={att.id}
+                                  className="inline-flex max-w-full items-center gap-1"
+                                >
+                                  <span className="max-w-[9rem] truncate text-xs text-gray-800">
+                                    {att.filename}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDownloadAttachment(att)
+                                    }
+                                    className="min-h-9 shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 sm:min-h-0 sm:px-1.5 sm:py-0.5 sm:text-[11px]"
+                                  >
+                                    View
+                                  </button>
+                                </span>
+                              ))}
+                            </span>
+                            {!isClosed ? (
                               <button
                                 type="button"
                                 onClick={() =>
-                                  setNewRowItemizedLines((prev) =>
-                                    prev.filter((l) => l.id !== line.id),
-                                  )
+                                  receiptFileInputRef.current?.click()
                                 }
-                                className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200/55 active:bg-gray-300/35"
+                                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 sm:h-7 sm:w-7"
+                                aria-label="Replace receipt"
                               >
-                                Remove
+                                <ArrowUpTrayIcon
+                                  className={workspaceActionIconSm}
+                                  aria-hidden
+                                />
                               </button>
-                            </div>
-                          );
-                        })}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setNewRowItemizedLines((prev) => [
-                                ...prev,
-                                {
-                                  id: crypto.randomUUID(),
-                                  itemName: "",
-                                  quantity: "",
-                                  unitPriceDollars: "",
-                                },
-                              ])
-                            }
-                            className="rounded border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35"
-                          >
-                            + Add line
-                          </button>
-                          <span className="text-sm font-medium text-gray-700">
-                            Total settlement ={" "}
-                            {newRowTotal != null
-                              ? formatCurrency(newRowTotal)
-                              : "—"}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={
-                              creatingSettlement ||
-                              !newRowWholesalerId ||
-                              newRowTotal == null ||
-                              newRowItemizedLines.length === 0
-                            }
-                            onClick={() => void handleAddRow()}
-                            className={`${workspaceActionCompleteSm} disabled:cursor-not-allowed disabled:opacity-50`}
-                          >
-                            {creatingSettlement ? "Adding…" : "Add row"}
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  ) : (
-                    <>
-                      <td className="px-3 py-2.5 text-right">
-                        <span className="text-sm text-gray-400">—</span>
-                      </td>
-                      <td className="px-3 py-2.5 text-right">
-                        <span className="text-sm text-gray-400">—</span>
-                      </td>
-                      <td className="px-3 py-2.5 text-right">
-                        {newRowMode === "PERCENT" ? (
-                          <div className="flex flex-col items-end gap-0.5">
-                            <input
-                              type="number"
-                              step="0.01"
-                              min={0}
-                              max={100}
-                              value={newRowPercent}
-                              onChange={(e) => setNewRowPercent(e.target.value)}
-                              className="w-16 rounded border border-gray-200 px-2 py-1.5 text-right text-sm tabular-nums"
-                              placeholder="0"
-                              aria-label="Percent of payout"
-                            />
-                            {payoutAfterFees <= 0 ? (
-                              <span className="text-xs text-amber-600">
-                                Save payout above first
-                              </span>
-                            ) : newRowTotal != null ? (
-                              <span className="text-xs text-gray-500">
-                                {newRowPercent || "0"}% of{" "}
-                                {formatCurrency(payoutAfterFees)} ={" "}
-                                {formatCurrency(newRowTotal)}
-                              </span>
                             ) : null}
-                          </div>
+                          </>
                         ) : (
-                          <span className="text-sm text-gray-400">—</span>
+                          <>
+                            <span className="text-xs text-gray-500">None</span>
+                            {!isClosed ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  receiptFileInputRef.current?.click()
+                                }
+                                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 sm:h-7 sm:w-7"
+                                aria-label="Add receipt"
+                              >
+                                <ArrowUpTrayIcon
+                                  className={workspaceActionIconSm}
+                                  aria-hidden
+                                />
+                              </button>
+                            ) : null}
+                          </>
                         )}
-                      </td>
-                      <td className="px-3 py-2.5 text-right">
-                        {newRowMode === "FIXED" ? (
-                          <div className="inline-flex items-center rounded border border-gray-200 bg-white">
-                            <span className="pl-2 text-sm text-gray-500">
-                              $
-                            </span>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={newRowFixed}
-                              onChange={(e) => {
-                                const v = e.target.value.replace(
-                                  /[^0-9.]/g,
-                                  "",
-                                );
-                                const parts = v.split(".");
-                                if (parts.length > 2) return;
-                                if (parts[1]?.length > 2) return;
-                                setNewRowFixed(v);
-                              }}
-                              className="w-20 rounded py-1.5 pr-2 text-right text-sm tabular-nums"
-                              placeholder="0.00"
-                              aria-label="Amount (USD)"
-                            />
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-gray-900 tabular-nums">
-                        {newRowTotal != null
-                          ? formatCurrency(newRowTotal)
-                          : "—"}
-                      </td>
-                      <td className="px-3 py-2.5 text-right text-sm text-gray-400">
-                        —
-                      </td>
-                      <td className="px-3 py-2.5 text-right text-sm text-gray-400">
-                        —
-                      </td>
-                      <td className="px-3 py-2.5 text-right">
+                        {receiptError ? (
+                          <span className="text-xs text-rose-700">
+                            {receiptError}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-[10px] leading-tight text-gray-400">
+                        PDF or image · max{" "}
+                        {Math.round(getMaxUploadBytes() / 1024 / 1024)} MB
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            {/* Supporting column: review → close out (one finalization surface) */}
+            <div className="min-w-0 lg:flex lg:min-h-full lg:flex-col">
+              <section
+                className={`flex min-h-full min-w-0 flex-col overflow-hidden ${workspaceShowDetailOutcomeShell}`}
+                aria-labelledby="review-profit-heading"
+              >
+                <div
+                  className={`${workspaceSectionToolbar.replace(/\bpy-3\b/, "py-4")} border-stone-200/80 bg-gradient-to-r from-white via-rose-50/[0.08] to-amber-50/[0.06]`}
+                >
+                  <h2
+                    id="review-profit-heading"
+                    className={`min-w-0 ${workspaceSectionTitle}`}
+                  >
+                    {WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING}
+                  </h2>
+                </div>
+                <div className="flex flex-1 flex-col px-5 py-5 sm:px-6 sm:py-6">
+                  <div
+                    className="flex flex-1 flex-col text-sm"
+                    role="region"
+                    aria-label="Payout and profit"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className={workspaceLabelEyebrow}>Payout</span>
+                        <span
+                          className={`shrink-0 text-right text-lg font-semibold ${workspaceMoneyTabular} ${workspaceMoneyPositive}`}
+                          aria-label={`Payout after fees ${formatCurrency(payoutAfterFees)}`}
+                        >
+                          {formatCurrencyAbs(payoutAfterFees)}
+                        </span>
+                      </div>
+                      {settlements.length === 0 ? (
+                        <p className="py-2 text-sm leading-relaxed text-gray-500 sm:py-1.5 sm:text-xs">
+                          No settlements.
+                        </p>
+                      ) : (
+                        <ul className="space-y-1 border-t border-gray-100/90 pt-3">
+                          {settlements.map((s) => {
+                            const owed = amountOwedFor(payoutAfterFees, s);
+                            return (
+                              <li
+                                key={s.id}
+                                className="flex items-baseline justify-between gap-2"
+                              >
+                                <Link
+                                  href={`/admin/wholesalers/${s.wholesalerId}`}
+                                  className="min-w-0 truncate text-[13px] font-medium text-gray-800 underline-offset-2 decoration-gray-300 transition-colors hover:text-gray-950 hover:underline"
+                                >
+                                  {s.wholesaler}
+                                </Link>
+                                <span
+                                  className={`shrink-0 text-right text-[15px] font-medium ${workspaceMoneyTabular} ${workspaceMoneyNegative}`}
+                                  aria-label={`Amount owed to ${s.wholesaler} ${formatCurrency(owed)}`}
+                                >
+                                  {formatCurrencyAbs(owed)}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="mt-4 border-t border-stone-200/70 pt-3.5">
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
+                          Est. profit
+                        </span>
+                        <span
+                          className={`text-left text-[1.5rem] font-bold leading-none tracking-tight sm:text-[1.85rem] ${workspaceMoneyTabular} ${workspaceMoneyClassForSigned(totals.profitEstimate)}`}
+                          aria-label={`Profit ${formatCurrency(totals.profitEstimate)}`}
+                        >
+                          {formatCurrencyAbs(totals.profitEstimate)}
+                        </span>
+                      </div>
+
+                      {totals.status === "Open" ? (
                         <button
                           type="button"
-                          disabled={
-                            creatingSettlement ||
-                            !newRowWholesalerId ||
-                            newRowTotal == null ||
-                            (newRowMode === "PERCENT" &&
-                              payoutAfterFees <= 0) ||
-                            !isPercentValueValid
-                          }
-                          onClick={() => void handleAddRow()}
-                          className={`${workspaceActionCompleteSm} disabled:cursor-not-allowed disabled:opacity-50`}
-                          title={
-                            newRowMode === "PERCENT" && !isPercentValueValid
-                              ? "Enter a percent (0–100) to add row"
-                              : undefined
-                          }
+                          onClick={handleCloseShowClick}
+                          disabled={closing}
+                          className={`${workspaceActionCompleteMd} mt-5 w-full shadow-none disabled:cursor-not-allowed disabled:opacity-50`}
                         >
-                          {creatingSettlement ? "Adding…" : "Add row"}
+                          {closing ? "Closing…" : "Close show"}
                         </button>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {(deleteSettlementError || createSettlementError || newRowError) && (
-          <p className="px-4 py-3 text-sm text-amber-700" role="alert">
-            {deleteSettlementError ??
-              (createSettlementError?.toLowerCase().includes("financials")
-                ? "Save payout after fees above, then try adding the settlement again."
-                : createSettlementError) ??
-              (newRowError?.toLowerCase().includes("financials")
-                ? "Save payout after fees above, then try adding the settlement again."
-                : newRowError)}
-          </p>
-        )}
-      </section>
-
-      {/* 3. Review & profit */}
-      <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-workspace-surface">
-        <h2 className="text-base font-semibold text-gray-900">
-          Review & profit
-        </h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full border-collapse text-sm">
-            <tbody className="divide-y divide-gray-100">
-              <tr>
-                <td className="py-2 pr-4 font-medium text-gray-500">
-                  Payout after fees
-                </td>
-                <td className="w-28 py-2 text-right tabular-nums text-gray-900">
-                  {formatCurrency(payoutAfterFees)}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-2 pr-4 font-medium text-gray-500">
-                  Total owed
-                </td>
-                <td className="w-28 py-2 text-right tabular-nums text-gray-900">
-                  {formatCurrency(totals.totalOwed)}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-2 pr-4 font-medium text-gray-500">
-                  Total paid
-                </td>
-                <td className="w-28 py-2 text-right tabular-nums text-gray-900">
-                  {formatCurrency(totals.totalPaid)}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-2 pr-4 font-medium text-gray-500">
-                  Balance remaining
-                </td>
-                <td
-                  className={`w-28 py-2 text-right tabular-nums ${workspaceMoneyClassForLiability(totals.balanceRemaining)}`}
-                >
-                  {formatCurrency(totals.balanceRemaining)}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-2 pr-4 font-medium text-gray-500">Status</td>
-                <td className="w-28 py-2 text-right">
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${
-                      WORKSPACE_DETAIL_SETTLEMENT_STATUS_STYLES[
-                        totals.status
-                      ] ?? "border border-gray-200/80 bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    {WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS[totals.status] && (
-                      <span
-                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS[totals.status]}`}
-                        aria-hidden
-                      />
-                    )}
-                    {totals.status}
-                  </span>
-                </td>
-              </tr>
-              <tr className="border-t border-gray-100">
-                <td className="py-3 pr-4 font-medium text-gray-700">
-                  <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
-                    <span className="inline-flex items-center gap-1">
-                      Profit
-                      <span
-                        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500"
-                        aria-hidden
-                      >
-                        i
-                      </span>
-                    </span>
-                  </HelpTooltip>
-                </td>
-                <td
-                  className={`w-28 py-3 text-right font-semibold tabular-nums ${workspaceMoneyClassForSigned(totals.profitEstimate)}`}
-                >
-                  {formatCurrency(totals.profitEstimate)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* 4. Close / Reopen */}
-      <section
-        ref={closeOutSectionRef}
-        className="rounded-lg border border-gray-200 bg-white p-4 shadow-workspace-surface"
-      >
-        <h2 className="text-base font-semibold text-gray-900">
-          Close out show
-        </h2>
-        {totals.status === "Open" ? (
-          showCloseConfirm ? (
-            <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              <p className="font-medium">
-                Payout and settlements will be locked until you reopen. You can
-                still record payments.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCloseConfirm(false);
-                    void handleCloseShow();
-                  }}
-                  disabled={closing}
-                  className={`${workspaceActionCompleteMd} disabled:opacity-50`}
-                >
-                  {closing ? "Closing…" : "Close out show"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCloseConfirm(false)}
-                  disabled={closing}
-                  className={`${workspaceActionSecondaryMd} disabled:opacity-50`}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <p className="mt-1 text-sm text-gray-600">
-                Lock payout and settlements so they can&apos;t be changed.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowCloseConfirm(true)}
-                disabled={closing}
-                className={`${workspaceActionCompleteMd} mt-3 disabled:opacity-50`}
-              >
-                Close out show
-              </button>
-            </div>
-          )
-        ) : showReopenConfirm ? (
-          <div className="mt-3 rounded border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-800">
-            <p className="font-medium">
-              Reopening will allow you to edit payout and settlements again.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowReopenConfirm(false);
-                  void handleReopenShow();
-                }}
-                disabled={closing}
-                className={`${workspaceActionCompleteMd} disabled:opacity-50`}
-              >
-                {closing
-                  ? "Reopening…"
-                  : "Reopen show (unlocks payout and settlements)"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowReopenConfirm(false)}
-                disabled={closing}
-                className={`${workspaceActionSecondaryMd} disabled:opacity-50`}
-              >
-                Cancel
-              </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setReopenDialogOpen(true)}
+                          disabled={closing}
+                          className={`${workspaceActionSecondaryMd} mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50`}
+                        >
+                          Reopen show
+                        </button>
+                      )}
+                      {closeError ? (
+                        <p className="text-sm text-amber-800" role="alert">
+                          {closeError}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
-        ) : (
-          <>
-            <p className="mt-1 text-sm text-gray-600">
-              Reopen to edit payout or settlements.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowReopenConfirm(true)}
-              disabled={closing}
-              className={`${workspaceActionSecondaryMd} mt-3 disabled:opacity-50`}
-            >
-              Reopen show (unlocks payout and settlements)
-            </button>
-          </>
-        )}
-        {closeError && (
-          <p className="mt-3 text-sm text-amber-700" role="alert">
-            {closeError}
-          </p>
-        )}
-      </section>
-    </div>
+        </div>
+      </AdminPageContainer>
+
+      <WorkspaceConfirmDialog
+        open={deleteConfirmId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirmId(null);
+        }}
+        onConfirm={async () => {
+          if (deleteConfirmId) await executeDeleteSettlement(deleteConfirmId);
+        }}
+        title="Delete this settlement?"
+        description="This removes the wholesaler obligation for this show. You can add it again while the show is open."
+        confirmLabel="Delete"
+        tone="danger"
+        icon="!"
+      />
+      <WorkspaceConfirmDialog
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+        onConfirm={async () => {
+          await handleCloseShow();
+        }}
+        title="Close this show?"
+        description="Payout and settlements will be locked until you reopen the show."
+        confirmLabel={closing ? "Closing…" : "Close show"}
+        tone="rose"
+        icon="✓"
+      />
+      <WorkspaceConfirmDialog
+        open={reopenDialogOpen}
+        onOpenChange={setReopenDialogOpen}
+        onConfirm={async () => {
+          await handleReopenShow();
+        }}
+        title="Reopen this show?"
+        description="Editing will be enabled."
+        confirmLabel={
+          closing
+            ? "Reopening…"
+            : "Reopen show (unlocks payout and settlements)"
+        }
+        tone="stone"
+        icon="↺"
+      />
+    </>
   );
 }
 
@@ -1296,11 +2168,16 @@ function EditablePayout({
   saving,
   disabled,
   onSave,
+  displayVariant = "default",
+  embedded = false,
 }: {
   payoutAfterFees: number;
   saving: boolean;
   disabled?: boolean;
   onSave: (amount: number) => Promise<boolean>;
+  displayVariant?: "default" | "moneyCard";
+  /** Inside grouped breakdown — lighter chrome, compact edit. */
+  embedded?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState(String(payoutAfterFees));
@@ -1309,32 +2186,145 @@ function EditablePayout({
     setInput(String(payoutAfterFees));
   }, [payoutAfterFees]);
 
+  const parsed = Number(input.replace(/,/g, ""));
+  const canSave = Number.isFinite(parsed) && parsed >= 0;
+
+  const onInputChange = (v: string) => {
+    const cleaned = v.replace(/[^0-9.]/g, "");
+    const parts = cleaned.split(".");
+    if (parts.length > 2) return;
+    if (parts[1]?.length > 2) return;
+    setInput(cleaned);
+  };
+
+  if (displayVariant === "moneyCard") {
+    const shell = embedded
+      ? `rounded-md transition-all duration-200 ${
+          editing
+            ? "bg-white/95 py-2 pl-2 pr-2 ring-1 ring-stone-300/60 sm:pr-2.5"
+            : "bg-transparent py-1"
+        }`
+      : `rounded-lg border border-stone-200/75 px-3 py-2 sm:px-3.5 sm:py-2.5 transition-all duration-200 ${
+          editing
+            ? "min-h-[7.75rem] bg-white shadow-sm"
+            : "min-h-[7.75rem] bg-stone-50/50"
+        } flex flex-col justify-center`;
+
+    return (
+      <div className={shell}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            {!embedded ? (
+              <p className={workspaceLabelEyebrow}>Payout after fees</p>
+            ) : null}
+            <div className="mt-0.5 min-h-[1.625rem]">
+              {!editing ? (
+                <p
+                  className={`font-semibold tabular-nums tracking-tight text-stone-800 transition-opacity duration-200 ${
+                    embedded ? "text-lg" : "text-xl"
+                  }`}
+                >
+                  {formatCurrency(payoutAfterFees)}
+                </p>
+              ) : (
+                <div className="relative max-w-[14rem]">
+                  <span
+                    className="pointer-events-none absolute left-0 top-1/2 z-[1] -translate-y-1/2 text-sm text-stone-400"
+                    aria-hidden
+                  >
+                    $
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={input}
+                    onChange={(e) => onInputChange(e.target.value)}
+                    disabled={disabled}
+                    className={`w-full border-0 border-b border-stone-300 bg-transparent py-0.5 pl-5 pr-0.5 font-semibold tabular-nums tracking-tight text-stone-800 placeholder:text-stone-300 focus:border-stone-500 focus:outline-none focus:ring-0 disabled:opacity-50 ${
+                      embedded ? "text-lg" : "text-xl"
+                    }`}
+                    placeholder="0.00"
+                    aria-label="Payout amount in dollars"
+                  />
+                </div>
+              )}
+            </div>
+            {editing ? (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!canSave || saving || disabled) return;
+                    const ok = await onSave(roundToCents(Number(parsed)));
+                    if (ok) setEditing(false);
+                  }}
+                  disabled={disabled || !canSave || saving}
+                  className={`${workspaceActionCompleteSm} disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  {saving ? "Saving…" : "Apply"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInput(String(payoutAfterFees));
+                    setEditing(false);
+                  }}
+                  className={`${workspaceActionSecondaryMd} !py-1.5 text-xs`}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : null}
+          </div>
+          {!editing && !disabled ? (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-gray-200/90 bg-white px-2 py-1 text-[11px] font-medium text-gray-600 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+              aria-label="Adjust payout after fees"
+            >
+              <PencilSquareIcon className="h-3.5 w-3.5" aria-hidden />
+              <span className="hidden sm:inline">Adjust</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   if (!editing) {
     return (
-      <div className="mt-3 flex items-center gap-3">
-        <span className="text-lg font-semibold text-gray-900">
-          {formatCurrency(payoutAfterFees)}
-        </span>
+      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={workspaceLabelEyebrow}>Payout after fees</p>
+          <p className="text-lg font-semibold tabular-nums text-gray-900">
+            {formatCurrency(payoutAfterFees)}
+          </p>
+        </div>
         <button
           type="button"
           disabled={disabled}
           onClick={() => setEditing(true)}
-          className="rounded border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35 disabled:cursor-not-allowed disabled:opacity-50"
+          className={`${workspaceActionSecondaryMd} shrink-0 disabled:cursor-not-allowed disabled:opacity-50`}
+          aria-label="Edit payout after fees"
         >
-          Edit
+          <WorkspaceActionLabel
+            icon={
+              <PencilSquareIcon className={workspaceActionIconMd} aria-hidden />
+            }
+          >
+            Edit
+          </WorkspaceActionLabel>
         </button>
       </div>
     );
   }
 
-  const parsed = Number(input.replace(/,/g, ""));
-  const canSave = Number.isFinite(parsed) && parsed >= 0;
-
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
-      <div className="relative">
+      <div className="relative min-w-0">
         <span
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+          className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-sm text-gray-500"
           aria-hidden
         >
           $
@@ -1343,15 +2333,9 @@ function EditablePayout({
           type="text"
           inputMode="decimal"
           value={input}
-          onChange={(e) => {
-            const v = e.target.value.replace(/[^0-9.]/g, "");
-            const parts = v.split(".");
-            if (parts.length > 2) return;
-            if (parts[1]?.length > 2) return;
-            setInput(v);
-          }}
+          onChange={(e) => onInputChange(e.target.value)}
           disabled={disabled}
-          className="w-28 rounded border border-gray-200 py-2 pl-7 pr-3 text-sm tabular-nums text-gray-900 disabled:opacity-50"
+          className={`${workspaceTextInput} w-36 pl-7 tabular-nums disabled:opacity-50`}
           placeholder="0.00"
           aria-label="Payout amount in dollars"
         />
@@ -1364,9 +2348,9 @@ function EditablePayout({
           if (ok) setEditing(false);
         }}
         disabled={disabled || !canSave || saving}
-        className="rounded border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35 disabled:cursor-not-allowed disabled:opacity-50"
+        className={`${workspaceActionPositiveCompleteMd} disabled:cursor-not-allowed disabled:opacity-50`}
       >
-        {saving ? "Saving..." : "Save"}
+        {saving ? "Saving…" : "Save"}
       </button>
       <button
         type="button"
@@ -1374,7 +2358,7 @@ function EditablePayout({
           setInput(String(payoutAfterFees));
           setEditing(false);
         }}
-        className="rounded border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200/55 active:bg-gray-300/35"
+        className={workspaceActionSecondaryMd}
       >
         Cancel
       </button>

@@ -1,187 +1,176 @@
-# Fefeave
+# FefeAve
 
-Reseller business system: React + Next.js (App Router) + TypeScript frontend, Fastify backend, Postgres, Terraform-provisioned AWS (S3 + CloudFront for static assets).
+FefeAve is a monorepo for operating a live-resale business. A **PostgreSQL-backed API** records show payouts, per-wholesaler settlements, payments, and balances; a **Next.js** app provides an admin workspace for operators, a read-only wholesaler portal, and public marketing pages. Attachments (payout evidence) use **S3 presigned URLs** when configured.
 
----
-
-## 1. Project Overview
-
-| Component | Stack                                            |
-| --------- | ------------------------------------------------ |
-| Frontend  | React 19, Next.js 15 (App Router), TypeScript    |
-| Backend   | Fastify, Node.js, Postgres                       |
-| Infra     | Terraform, S3, CloudFront, GitHub Actions (OIDC) |
-
-Monorepo layout: `frontend/`, `backend/`, `infra/`.
+**Financial rules and permissions are enforced on the server.** The UI reflects API state; it does not define balances, settlement caps, or role access.
 
 ---
 
-## Roadmap & Branching Strategy
+## System at a glance
 
-Roadmap uses **Version → Phase → Epic** and lives in `context/DELIVERABLES.md`.
-
-**Branch naming:** `feature/v<version>-<phase>.<epic>-short-description`
-
-Examples:
-
-- `feature/v1-2.1-s3-uploads` — Phase 2, Epic 1 (S3 uploads)
-- `feature/v1-3.2-show-workflow-ui` — Phase 3, Epic 2 (Show workflow UI)
-- `feature/v1-1.3-settlement-api` — Phase 1, Epic 3 (Settlement API)
-
-Legacy `deliverable-*` branches may exist historically; all new work should use `feature/v1-*` naming.
+| Layer          | Technology                                                            |
+| -------------- | --------------------------------------------------------------------- |
+| Frontend       | Next.js 15 (App Router), React 19, TypeScript                         |
+| Backend        | Fastify, Node.js                                                      |
+| Database       | PostgreSQL (`node-pg-migrate`)                                        |
+| Infrastructure | Terraform on AWS (`us-west-2`)                                        |
+| Attachments    | S3 (presigned upload/download when configured)                        |
+| Auth           | Cognito-ready JWT verification; local `dev_bypass` for inner-loop dev |
 
 ---
 
-## PROJECT HEAD Snapshot (ChatGPT context reset)
+## Architecture summary
 
-A repo-grounded markdown snapshot for starting a new ChatGPT (or similar) thread without long-context lag. Includes git identity, uncommitted working tree changes, and branch delta vs base (PR view).
+```text
+Browser
+  → Next.js (public | admin | portal | /api/auth/*)
+      → dev: /api/* rewritten to Fastify :3000
+  → Fastify API (/api/*)
+      → PostgreSQL
+      → S3 (attachments, when configured)
+```
 
-**Snapshot contents:**
+**Surfaces**
 
-- **Roadmap** from `context/DELIVERABLES.md` (Version → Phase → Epic)
-- **Version/Phase/Epic/Topic** auto-detected from branch name (e.g. `feature/v1-2.1-s3-uploads`)
-- **Work Context (auto)** — objective, status, and constraints derived from git state (no manual fill-in)
+| Surface | Routes           | Access                                        |
+| ------- | ---------------- | --------------------------------------------- |
+| Public  | `(public)/`      | Marketing pages; env-driven social/live links |
+| Admin   | `(admin)/admin/` | Session cookie; `ADMIN` or `OPERATOR`         |
+| Portal  | `(portal)/`      | Session cookie; `WHOLESALER`                  |
+| API     | `/api/*`         | Bearer token from session; guards per route   |
 
-**Run from WSL terminal:**
+Aggregations and balance math live in backend **read models** (`backend/src/read-models/`). Route handlers validate input; services enforce invariants (e.g. settlement payout caps, closed-show freeze). See [docs/roadmap.md](docs/roadmap.md) for V1 scope.
+
+---
+
+## Repository layout
+
+```text
+fefeave/
+├── backend/              # Fastify API, migrations, tests
+├── frontend/           # Next.js (public, admin, portal, auth)
+├── infra/                # Terraform (S3, CloudFront, optional ECS/RDS)
+├── docs/                 # Technical documentation (start: docs/README.md)
+├── design/               # Brand and UI specs (marketing + tokens reference)
+├── scripts/              # Repo automation (format, project-head, etc.)
+├── .github/workflows/    # CI and deploy workflows
+├── Makefile              # Canonical dev and quality commands
+└── docker-compose.yml    # Local Postgres
+```
+
+| Path        | Purpose                                                        |
+| ----------- | -------------------------------------------------------------- |
+| `backend/`  | REST API, Swagger at `/docs`, integration tests                |
+| `frontend/` | App Router route groups, session BFF, `@/system` UI primitives |
+| `infra/`    | AWS resources; local-first defaults in `dev.tfvars`            |
+| `docs/`     | Setup, roadmap, UX history, and deeper guides                  |
+| `design/`   | Color, typography, and homepage guidance for the public site   |
+
+The `context/` directory holds legacy pointers; active roadmap and agent conventions live under `docs/`.
+
+---
+
+## Local development
+
+Prerequisites: Node.js 20+, Docker (for Postgres), `make`.
 
 ```bash
-./scripts/copy-project-head.sh
-./scripts/copy-project-head.sh origin/main   # custom base ref
+docker compose up -d postgres
+make dev-migrate
+make dev-seed          # optional sample data
+make dev             # backend :3000 + frontend :3001 (tmux)
 ```
 
-**Run from Cursor / VS Code:**
-`Run Task` → **Copy PROJECT HEAD to Clipboard** (prompts for base ref; default `origin/main`).
+| URL                              | Service     |
+| -------------------------------- | ----------- |
+| http://localhost:3001            | Frontend UI |
+| http://localhost:3000/api/health | API health  |
+| http://localhost:3000/docs       | Swagger UI  |
 
-**Automated test:** `npm run test:project-head`  
-Enforced in CI via `backend-ci.yml`, so no manual verification required.
+Copy env templates before first run: `backend/.env.example` → `backend/.env`, `frontend/.env.example` → `frontend/.env.local`.
 
-Useful mid-milestone and after merge.
+Full setup, Cognito flow, WSL/Docker notes, and troubleshooting: **[docs/DEV.md](docs/DEV.md)**.
 
 ---
 
-## 2. Local Development
+## Configuration
 
-### Frontend
+| File                    | Role                                               |
+| ----------------------- | -------------------------------------------------- |
+| `backend/.env.example`  | Database URL, `AUTH_MODE`, S3 attachment vars      |
+| `frontend/.env.example` | Backend URL, session secret, public marketing URLs |
+
+**`AUTH_MODE`** (backend):
+
+| Value        | Use                                                |
+| ------------ | -------------------------------------------------- |
+| `off`        | No auth plugin enforcement (limited routes)        |
+| `dev_bypass` | Local default; fixed dev user via env (`make dev`) |
+| `cognito`    | JWT verification against Cognito                   |
+
+Cognito console mapping and session cookies: **[frontend/AUTH_SETUP.md](frontend/AUTH_SETUP.md)**.
+
+---
+
+## Testing and quality
 
 ```bash
-cd frontend && npm install && npm run dev
+make check    # format check, lint, backend unit tests, frontend build (CI-aligned)
 ```
 
-App at `http://localhost:3000/`. Hot reload on save.
+| Command                                  | Scope                                                            |
+| ---------------------------------------- | ---------------------------------------------------------------- |
+| `make test` / `cd backend && npm test`   | Unit tests (no database)                                         |
+| `cd backend && npm run test:integration` | Full integration suite (Docker Postgres, isolated `test` schema) |
 
-### Backend
+**CI** (`.github/workflows/`) runs backend unit tests and frontend build on push; **integration tests are local-only** today. Run them before changes that touch ledger, settlements, or migrations.
+
+Details: **[docs/testing.md](docs/testing.md)** and **[backend/README.md](backend/README.md)**.
+
+---
+
+## Database
+
+Local Postgres runs via `docker compose`. Migrations and seed:
 
 ```bash
-cd backend && npm install && npm run dev
+make dev-migrate
+make dev-seed
 ```
 
-API at `http://localhost:3000/api`. Requires Postgres and `DATABASE_URL` (or `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+Reset: `make dev-db-reset` then migrate again. Migration conventions (timestamps, soft delete): **[backend/README.md](backend/README.md)** § Migrations.
 
 ---
 
-## 3. Available Scripts
+## Infrastructure
 
-### Frontend (`frontend/`)
+**Local-first by default.** `infra/dev.tfvars` sets `create_backend_infra = false` (no NAT/ALB/ECS/RDS until opted in). Terraform still provisions shared low-cost resources (e.g. S3 site bucket, CloudFront, attachment bucket policies) per workspace.
 
-| Script          | Command                              |
-| --------------- | ------------------------------------ |
-| `npm run dev`   | Dev server (`next dev`)              |
-| `npm run build` | Production build                     |
-| `npm start`     | Run production server (`next start`) |
-
-### Backend (`backend/`)
-
-| Script                     | Command                                 |
-| -------------------------- | --------------------------------------- |
-| `npm run dev`              | Dev server with watch                   |
-| `npm run build`            | Compile to `dist/`                      |
-| `npm start`                | Run compiled app                        |
-| `npm run lint`             | ESLint                                  |
-| `npm run format`           | Prettier                                |
-| `npm test`                 | Unit tests (Jest, excludes DB smoke)    |
-| `npm run test:integration` | DB smoke test (requires `DATABASE_URL`) |
-| `npm run migrate:up`       | Run DB migrations                       |
-| `npm run migrate:down`     | Rollback last migration                 |
-| `npm run migrate:create`   | Create new migration                    |
+Hosted backend and RDS are **feature-flagged** in tfvars. Deploy workflows and `make plan-dev` / `make apply-dev`: **[infra/README.md](infra/README.md)**.
 
 ---
 
-## 4. Deployment Overview
+## Documentation
 
-- Push to `main` → **Frontend CI** (build, lint, test) → **Frontend Deploy (dev)** auto-runs.
-- Prod deploy: run workflow manually or via `make deploy-prod`.
-- GitHub Actions uses OIDC to assume an AWS role (no long-lived secrets). Terraform provisions S3, CloudFront, and the OIDC deploy role.
+| Document                                                                                      | Contents                                         |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| [docs/README.md](docs/README.md)                                                              | Documentation index                              |
+| [docs/architecture.md](docs/architecture.md)                                                  | System structure, layers, auth, financial domain |
+| [docs/testing.md](docs/testing.md)                                                            | Tests, `make check`, CI vs local                 |
+| [docs/DEV.md](docs/DEV.md)                                                                    | Daily dev commands, ports, troubleshooting       |
+| [docs/roadmap.md](docs/roadmap.md)                                                            | V1 phases, epics, completion criteria            |
+| [backend/README.md](backend/README.md)                                                        | API env vars, migrations, tests                  |
+| [infra/README.md](infra/README.md)                                                            | Terraform variables, outputs, deploy             |
+| [frontend/AUTH_SETUP.md](frontend/AUTH_SETUP.md)                                              | Cognito and session setup                        |
+| [design/](design/)                                                                            | Brand tokens and public UI specs                 |
+| [frontend/app/(public)/\_components/README.md](<frontend/app/(public)/_components/README.md>) | Public marketing component map                   |
 
----
-
-## 5. Infrastructure
-
-Terraform lives in `infra/` with workspaces `dev` and `prod`. AWS region: `us-west-2`.
-
-### Deployment flow
-
-```mermaid
-flowchart TD
-    Dev[Developer] -->|push to main| GitHub[GitHub]
-    GitHub --> CI[Frontend CI]
-    CI --> Deploy[Frontend Deploy]
-    Deploy -->|OIDC AssumeRole| IAM[AWS IAM Role]
-    IAM --> S3[(S3 Bucket)]
-    S3 --> CF[CloudFront]
-    CF --> User[End Users]
-```
-
-### Terraform files → AWS resources
-
-```mermaid
-flowchart LR
-    subgraph TF[infra/]
-        P[providers.tf]
-        M[main.tf]
-        OUT[outputs.tf]
-    end
-
-    subgraph AWS[AWS]
-        B[(S3 Bucket)]
-        D[(CloudFront)]
-        R[(IAM Role)]
-        OIDC[OIDC Provider]
-    end
-
-    M --> B
-    M --> D
-    M --> R
-    M --> OIDC
-    P --> M
-```
-
-### Make targets (run from repo root)
-
-| Target                                   | Purpose                                               |
-| ---------------------------------------- | ----------------------------------------------------- |
-| `make init`                              | Terraform init (after provider changes)               |
-| `make plan-dev` / `make apply-dev`       | Plan/apply dev                                        |
-| `make plan-prod` / `make apply-prod`     | Plan/apply prod                                       |
-| `make output-dev` / `make output-prod`   | Show outputs                                          |
-| `make gh-sync-dev` / `make gh-sync-prod` | Sync TF outputs → GitHub env vars (requires `gh` CLI) |
-| `make deploy-dev` / `make deploy-prod`   | Trigger deploy workflow via `gh`                      |
+Branch naming for features: `feature/v<version>-<phase>.<epic>-short-description` (see [docs/roadmap.md](docs/roadmap.md)).
 
 ---
 
-## 6. Dev → Prod Workflow
+## Roadmap and scope
 
-1. **Daily loop:** Code → commit → push. Frontend CI runs; dev deploy runs on CI success.
-2. **Promote to prod:** `make deploy-prod` or run “Frontend Deploy (prod)” in GitHub Actions.
-3. **Infra changes:** `make plan-dev` → `make apply-dev` → verify → `make plan-prod` → `make apply-prod`.
+Version 1 is an **admin financial control system**: reliable show settlements, wholesaler obligations, payments, and balances—replacing spreadsheet tracking. Optional phases cover portals, exports, and analytics.
 
----
-
-## 7. Troubleshooting
-
-| Issue                            | Fix                                                                               |
-| -------------------------------- | --------------------------------------------------------------------------------- |
-| Backend fails to start           | Ensure Postgres is running and `DATABASE_URL` (or split DB vars) is set.          |
-| `npm run test:integration` fails | Set `DATABASE_URL` to a Postgres instance.                                        |
-| Dev deploy not running           | Confirm workflow “Frontend Deploy (dev)” is triggered by “Frontend CI” on `main`. |
-| `make gh-sync-*` fails           | Install `gh` CLI and authenticate (`gh auth login`).                              |
-| Terraform apply fails            | Run `make init` after pulling provider or module changes.                         |
+Current phase/epic breakdown and completion criteria: **[docs/roadmap.md](docs/roadmap.md)**.

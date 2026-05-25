@@ -1,5 +1,7 @@
 # FefeAve Dev Commands
 
+See the root [README.md](../README.md) for repo overview. This file is the detailed local development guide.
+
 ## Daily Loop
 
 ```bash
@@ -9,7 +11,9 @@ make dev-api
 make dev-ui
 ```
 
-Open `http://localhost:3001`.
+Or one command (tmux): `make dev` — same ports, includes `dev_bypass` backend.
+
+Open **http://localhost:3001** (UI). API: **http://localhost:3000/api/health**, Swagger: **http://localhost:3000/docs**.
 
 Recommended daily setup is local-only: frontend + backend on your machine, plus local Postgres in Docker. Backend defaults to `AUTH_MODE=dev_bypass` for inner-loop development.
 
@@ -21,10 +25,56 @@ Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). In
 - `make dev-db-down` — stop local Postgres
 - `make dev-db-reset` — reset local Postgres volume and restart
 - `make dev-migrate` — run DB migrations against local Postgres
+- `make dev-seed` — seed sample dev data (after migrate)
+- `make dev` — DB up, migrate, backend + frontend in tmux (`dev_bypass`)
 - `make dev-api` — run backend locally on `:3000` with dev bypass auth
 - `make dev-ui` — run frontend locally on `:3001` (bind `0.0.0.0`)
+- `make dev-cognito` — same as `make dev` but backend `AUTH_MODE=cognito` (see [frontend/AUTH_SETUP.md](../frontend/AUTH_SETUP.md))
 - `make dev-status` — check local backend endpoint HTTP status codes
 - `make test` — run backend tests, then frontend build
+
+## Local UI screenshots (Playwright, dev-only)
+
+**Normal workflow:** keep using `make dev` (or `make dev-ui` + `make dev-api`). No change to that. Screenshots layer on top.
+
+**What the code enforces automatically**
+
+- The preferred path uses **`/api/auth/dev-bootstrap`** (development only, localhost, opt-in env, shared secret). Before minting `fefeave_session`, the server **calls your local API `/users/me`** with the dev bootstrap bearer token. If the backend is not in **`AUTH_MODE=dev_bypass`** or is unreachable, bootstrap **fails with a clear JSON error** — no half-broken cookie.
+- Session **roles and user** are taken from **`/users/me`**, so the cookie matches the backend dev-bypass identity.
+- Production is unaffected: wrong `NODE_ENV`, missing opt-in, wrong host, or wrong secret → **no cookie** (404/403).
+
+**One-time setup in `frontend/.env.local`**
+
+1. Keep existing vars (`AUTH_SESSION_SECRET`, `BACKEND_BASE_URL`, etc. — see [frontend/AUTH_SETUP.md](../frontend/AUTH_SETUP.md)).
+2. Add (generate a long random secret for the value):
+
+   ```env
+   AUTH_DEV_BOOTSTRAP_ENABLED=1
+   AUTH_DEV_BOOTSTRAP_SECRET=<your-long-random-secret>
+   ```
+
+3. After `npm install` in `frontend/`, install Chromium once: `npm run playwright:install`.
+
+**Capture a screenshot** (paths are app routes under `http://localhost:3001`):
+
+```bash
+cd frontend && npm run playwright:screenshot -- /admin/dashboard
+cd frontend && npm run playwright:screenshot -- /admin/shows my-screen.png
+```
+
+The script loads `.env.local`, hits dev-bootstrap, then opens the target route. Output: timestamped PNG under **`frontend/.playwright-dev/screenshots/`** (gitignored).
+
+**Admin chrome regression check (semantic tokens):** After changing workspace colors, capture desktop `dash.png` / `shows.png` / `balances.png` plus mobile harness (`npm run playwright:screenshot:mobile`). Confirm sidebar near-white text on deep clay, KPI peach/gold readability, warm-but-not-dark shell. Remaining debt is usually stray legacy `admin-brand` references outside the hot path and intentional gray table chrome.
+
+**Flags:** `--full` (default) or `--viewport`; `--storage` to force the older **saved Cognito session** file (`playwright:save-auth`) instead of bootstrap.
+
+**Manual steps you still own**
+
+- Put the two bootstrap lines in **`.env.local`** (not committed).
+- Run **`make dev`** so API + UI are up; bootstrap requires **`dev_bypass`** API (default for `make dev-api`).
+- For real Cognito-only API (`make dev-api-cognito`), use **`npm run playwright:save-auth`** once and **`--storage`**, or rely on Hosted UI — bootstrap is not compatible with Cognito API mode.
+
+**Cognito-only fallback (optional):** `npm run playwright:save-auth` saves **`frontend/.playwright-dev/auth.json`** after you sign in manually; use `playwright:screenshot -- --storage /admin/...`.
 
 ## Troubleshooting
 
@@ -36,6 +86,9 @@ Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). In
 - **Migrations failed**
   - Confirm DB status with `docker compose ps`.
   - Retry `make dev-migrate`.
+- **Migration ordering / duplicate timestamp**
+  - Each file in `backend/migrations/` must have a **unique** numeric prefix (the part before the first `_`). Two migrations must not share the same prefix (e.g. colliding with another branch’s `1771120000000_*`).
+  - Prefer `npm run migrate:create -- <name>` from `backend/` so `node-pg-migrate` generates a fresh timestamp; avoid copying another file’s prefix when adding migrations by hand.
 - **Reset local DB**
   - Run `make dev-db-reset`, then `make dev-migrate`.
 
@@ -52,6 +105,19 @@ If you see `docker: command not found` inside WSL, set up Docker Desktop integra
    - `docker version`
    - `docker compose version`
 
+### Frontend dev server exits immediately (`EADDRINUSE` on port 3001)
+
+This is usually **not a routes problem** — a previous `next dev` (or `make dev-ui` / tmux pane) is still listening on **3001**.
+
+1. Stop stale listeners: `make dev-down` (frees **3000** and **3001** and the `fefeave-dev` tmux session).
+2. Start again: `make dev-ui` (or `make dev`).
+
+`make dev-ui` and `make dev-api` now run a **reclaim** step first: if the port is held only by a stale Node/Next process, it is stopped automatically; if another app owns the port, you get a clear error instead of a silent exit.
+
+### TypeScript errors about missing `.next/types/*.ts`
+
+After cleaning `.next` or switching branches, run `make dev-ui` or `npm run build` once in `frontend/` so Next regenerates route types. Or delete `frontend/tsconfig.tsbuildinfo` and retry.
+
 ### Docker/WSL troubleshooting
 
 - **Docker Desktop is running, but `docker` is still missing in WSL**
@@ -65,3 +131,14 @@ If you see `docker: command not found` inside WSL, set up Docker Desktop integra
   - If `docker` works but `docker compose` does not, update Docker Desktop to a recent version.
 
 Dev migrations are **manual** by design. Production migrations are **not** run automatically.
+
+## Public marketing links
+
+The marketing site reads Felicia’s social and live profile URLs from the frontend env (no platform API). Set in `frontend/.env.local` (see `frontend/.env.example`):
+
+- `NEXT_PUBLIC_FEFE_INSTAGRAM_URL` — Instagram profile URL
+- `NEXT_PUBLIC_FEFE_WHATNOT_URL` — Whatnot shop/profile URL
+- `NEXT_PUBLIC_FEFE_TIKTOK_URL` — TikTok profile URL
+- `NEXT_PUBLIC_FEFE_CONTACT_EMAIL` — optional; defaults to `fefeave@outlook.com`
+
+If a URL variable is empty, that link is hidden in the footer and contact page (Instagram is also omitted from the homepage hero platform line). If both Whatnot and TikTok are empty, the homepage “Where to find us live” section shows a short fallback message. These are public URLs only—not secrets.

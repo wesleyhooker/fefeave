@@ -216,7 +216,7 @@ describe('Wholesalers API integration', () => {
       const show1Res = await app.inject({
         method: 'POST',
         url: `${prefix}/shows`,
-        payload: { name: 'Closed Show', show_date: '2025-10-01' },
+        payload: { name: 'Closed Show', show_date: '2025-10-01', platform: 'WHATNOT' },
       });
       expect(show1Res.statusCode).toBe(201);
       const show1 = JSON.parse(show1Res.payload);
@@ -239,7 +239,7 @@ describe('Wholesalers API integration', () => {
       const show2Res = await app.inject({
         method: 'POST',
         url: `${prefix}/shows`,
-        payload: { name: 'Active Show', show_date: '2025-10-15' },
+        payload: { name: 'Active Show', show_date: '2025-10-15', platform: 'WHATNOT' },
       });
       expect(show2Res.statusCode).toBe(201);
       const show2 = JSON.parse(show2Res.payload);

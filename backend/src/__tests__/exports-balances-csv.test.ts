@@ -155,10 +155,11 @@ describe('Balances CSV export integration', () => {
     expect(lines[0]).toBe('Wholesaler,Owed Total,Paid Total,Balance Owed,Last Payment Date');
     expect(lines.length).toBeGreaterThanOrEqual(3);
 
-    const firstName = lines[1].split(',')[0];
-    const secondName = lines[2].split(',')[0];
-    expect(firstName).toBe('Alpha Wholesaler');
-    expect(secondName).toBe('Zulu Wholesaler');
+    const namesAsc = lines
+      .slice(1)
+      .map((line) => line.split(',')[0])
+      .filter((name) => name === 'Alpha Wholesaler' || name === 'Zulu Wholesaler');
+    expect(namesAsc).toEqual(['Alpha Wholesaler', 'Zulu Wholesaler']);
   });
 
   test('balances endpoint and balances.csv return consistent numeric values', async () => {

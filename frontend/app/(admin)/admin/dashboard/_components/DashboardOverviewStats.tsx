@@ -1,15 +1,23 @@
-import { formatCurrency, formatCurrencyAbs } from "@/lib/format";
+import { formatCurrencyAbs } from "@/lib/format";
 import {
+  AdminSummaryStatGrid,
+  type AdminSummaryStatItem,
+} from "@/app/(admin)/admin/_components/AdminSummaryStatGrid";
+import {
+  workspaceDashboardStatIconCompleted,
+  workspaceDashboardStatIconOwed,
+  workspaceDashboardStatIconPositive,
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
   workspaceMoneyMuted,
+  workspaceMoneyNegative,
+  workspaceStatTileValue,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import { dashboardEyebrow } from "./dashboardStructure";
 
 function IconDollarCircle({ className }: { className?: string }) {
   return (
     <span
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100/85 text-sm font-bold text-emerald-800 ${className ?? ""}`}
+      className={`${workspaceDashboardStatIconPositive} ${className ?? ""}`}
       aria-hidden
     >
       $
@@ -20,7 +28,7 @@ function IconDollarCircle({ className }: { className?: string }) {
 function IconVendorsCircle({ className }: { className?: string }) {
   return (
     <span
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-100/70 text-rose-800/90 ${className ?? ""}`}
+      className={`${workspaceDashboardStatIconOwed} ${className ?? ""}`}
       aria-hidden
     >
       <svg
@@ -28,7 +36,6 @@ function IconVendorsCircle({ className }: { className?: string }) {
         fill="none"
         stroke="currentColor"
         strokeWidth="1.75"
-        className="h-4 w-4"
       >
         <path
           strokeLinecap="round"
@@ -43,7 +50,7 @@ function IconVendorsCircle({ className }: { className?: string }) {
 function IconCompletedCircle({ className }: { className?: string }) {
   return (
     <span
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-200/55 text-stone-700 ${className ?? ""}`}
+      className={`${workspaceDashboardStatIconCompleted} ${className ?? ""}`}
       aria-hidden
     >
       <svg
@@ -51,7 +58,6 @@ function IconCompletedCircle({ className }: { className?: string }) {
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
-        className="h-4 w-4"
       >
         <path
           d="M5 10.5l3 3 6.5-6.5"
@@ -64,11 +70,8 @@ function IconCompletedCircle({ className }: { className?: string }) {
 }
 
 /**
- * Three equal-weight stat tiles — no dominant accent border; cues via soft icon circles only.
+ * Three equal-weight KPI tiles — surfaces from `workspaceStatTile*` via `AdminSummaryStatGrid` `surface`.
  */
-const statTile =
-  "flex min-h-[7.75rem] flex-col rounded-xl border border-stone-200/80 bg-white px-4 py-4 shadow-[0_1px_3px_rgba(120,113,108,0.06)] sm:min-h-[8rem] sm:px-5 sm:py-5";
-
 export function DashboardOverviewStats({
   ytdProfit,
   ytdProfitError,
@@ -86,73 +89,79 @@ export function DashboardOverviewStats({
   showsError: string | null;
   completedShowsYtdCount: number;
 }) {
+  const items: AdminSummaryStatItem[] = [
+    {
+      id: "ytd-profit",
+      surface: "positive",
+      label: "YTD profit",
+      decoration: <IconDollarCircle />,
+      value: (
+        <>
+          {ytdProfitError != null ? (
+            <p className={`text-sm leading-snug ${workspaceMoneyNegative}`}>
+              {ytdProfitError}
+            </p>
+          ) : ytdProfitPending ? (
+            <p className={`${workspaceStatTileValue} ${workspaceMoneyMuted}`}>
+              …
+            </p>
+          ) : (
+            <p
+              className={`${workspaceStatTileValue} ${workspaceListPrimaryMoneyAmountClass(ytdProfit ?? 0)}`}
+            >
+              {formatCurrencyAbs(ytdProfit ?? 0)}
+            </p>
+          )}
+        </>
+      ),
+    },
+    {
+      id: "vendors-owed",
+      surface: "owed",
+      label: "Vendors owed",
+      decoration: <IconVendorsCircle />,
+      value: (
+        <>
+          {balancesError != null ? (
+            <p className={`text-sm leading-snug ${workspaceMoneyNegative}`}>
+              {balancesError}
+            </p>
+          ) : totalVendorBalance === null ? (
+            <p className={`${workspaceStatTileValue} ${workspaceMoneyMuted}`}>
+              …
+            </p>
+          ) : (
+            <p
+              className={`${workspaceStatTileValue} ${workspaceMoneyClassForLiability(totalVendorBalance)}`}
+            >
+              {formatCurrencyAbs(totalVendorBalance)}
+            </p>
+          )}
+        </>
+      ),
+    },
+    {
+      id: "completed-ytd",
+      surface: "completed",
+      label: "Completed (YTD)",
+      decoration: <IconCompletedCircle />,
+      value: (
+        <>
+          {showsError != null ? (
+            <p className={`text-sm leading-snug ${workspaceMoneyNegative}`}>
+              {showsError}
+            </p>
+          ) : (
+            <p className={`${workspaceStatTileValue} text-admin-ink`}>
+              {completedShowsYtdCount}
+            </p>
+          )}
+        </>
+      ),
+    },
+  ];
+
   return (
-    <section className="min-w-0" aria-label="Year-to-date summary">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3">
-        <div className={statTile}>
-          <div className="flex items-start justify-between gap-2">
-            <p className={dashboardEyebrow}>YTD profit</p>
-            <IconDollarCircle />
-          </div>
-          <div className="mt-4 min-h-[2.5rem] flex-1">
-            {ytdProfitError != null ? (
-              <p className="text-sm text-rose-800/90">{ytdProfitError}</p>
-            ) : ytdProfitPending ? (
-              <p
-                className={`text-xl font-semibold tabular-nums sm:text-2xl ${workspaceMoneyMuted}`}
-              >
-                …
-              </p>
-            ) : (
-              <p
-                className={`text-xl font-semibold tabular-nums sm:text-2xl ${workspaceListPrimaryMoneyAmountClass(ytdProfit ?? 0)}`}
-              >
-                {formatCurrencyAbs(ytdProfit ?? 0)}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className={statTile}>
-          <div className="flex items-start justify-between gap-2">
-            <p className={dashboardEyebrow}>Vendors owed</p>
-            <IconVendorsCircle />
-          </div>
-          <div className="mt-4 min-h-[2.5rem] flex-1">
-            {balancesError != null ? (
-              <p className="text-sm text-rose-800/90">{balancesError}</p>
-            ) : totalVendorBalance === null ? (
-              <p
-                className={`text-xl font-semibold tabular-nums sm:text-2xl ${workspaceMoneyMuted}`}
-              >
-                …
-              </p>
-            ) : (
-              <p
-                className={`text-xl font-semibold tabular-nums sm:text-2xl ${workspaceMoneyClassForLiability(totalVendorBalance)}`}
-              >
-                {formatCurrencyAbs(totalVendorBalance)}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className={statTile}>
-          <div className="flex items-start justify-between gap-2">
-            <p className={dashboardEyebrow}>Completed (YTD)</p>
-            <IconCompletedCircle />
-          </div>
-          <div className="mt-4 min-h-[2.5rem] flex-1">
-            {showsError != null ? (
-              <p className="text-sm text-rose-800/90">{showsError}</p>
-            ) : (
-              <p className="text-xl font-semibold tabular-nums text-stone-900 sm:text-2xl">
-                {completedShowsYtdCount}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
+    <AdminSummaryStatGrid aria-label="Year-to-date summary" items={items} />
   );
 }

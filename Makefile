@@ -5,6 +5,7 @@ TF_DIR := infra
 DEV_VARS := dev.tfvars
 PROD_VARS := prod.tfvars
 TF := terraform -chdir=$(TF_DIR)
+# Legacy URL for one-off curls; unused when infra/dev.tfvars has create_backend_infra=false (local dev is default).
 DEV_ALB_FALLBACK := http://fefeave-backend-dev-379356847.us-west-2.elb.amazonaws.com
 
 REPO := wesleyhooker/fefeave
@@ -71,8 +72,9 @@ help:
 	@echo "    make dev-migrate        Run migrations against local DB"
 	@echo "    make dev-seed           Seed dev data (after dev-migrate)"
 	@echo ""
-	@echo "  Outer-loop / AWS:"
-	@echo "    make dev-plan, dev-apply, ui-aws, dev-backend-health, dev-backend-wholesalers"
+	@echo "  Outer-loop / AWS (low-cost hosting; use plan-dev/plan-prod to preview cost-related changes):"
+	@echo "    Local: build/run via make dev*; AWS prod/dev workspaces are S3/CloudFront-first unless you opt into ECS in tfvars."
+	@echo "    make dev-plan, dev-apply, ui-aws, dev-backend-health, dev-backend-wholesalers (backend health targets need AWS ECS if enabled)"
 	@echo "    init, plan-dev, apply-dev, output-dev, gh-sync-dev, deploy-dev (and prod variants)"
 
 # ------------------------------------------------------------------------------
@@ -152,6 +154,10 @@ frontend-check: frontend-lint frontend-build
 # ------------------------------------------------------------------------------
 # Terraform / outer-loop
 # ------------------------------------------------------------------------------
+# Local Cursor/Docker (make dev*) is the default dev loop. Terraform workspaces dev/prod
+# in infra/ are for low-cost AWS (S3 + CloudFront + attachments + IAM; dev also has Cognito).
+# NAT, ALB, ECS, RDS are opt-in via create_backend_infra / create_rds in *.tfvars when cost is justified.
+# Use `make plan-dev` / `make plan-prod` before apply to review destroys (e.g. RDS) — never apply blindly.
 init:
 	$(TF) init
 

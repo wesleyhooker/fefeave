@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { getPool } from '../db';
 import { ValidationError } from '../utils/errors';
+import { toYyyyMmDd } from '../utils/pg-date';
 
 const postInventoryPurchaseSchema = z.object({
   purchase_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'purchase_date must be YYYY-MM-DD'),
@@ -81,7 +82,7 @@ export async function inventoryPurchaseRoutes(
       };
       return reply.status(201).send({
         id: row.id,
-        purchase_date: row.purchase_date,
+        purchase_date: toYyyyMmDd(row.purchase_date),
         amount: row.amount,
         notes: row.notes ?? undefined,
         created_at: row.created_at,
@@ -149,7 +150,7 @@ export async function inventoryPurchaseRoutes(
       return reply.send(
         rows.map((r) => ({
           id: r.id,
-          purchase_date: r.purchase_date,
+          purchase_date: toYyyyMmDd(r.purchase_date),
           amount: r.amount,
           notes: r.notes ?? undefined,
           created_at: r.created_at,

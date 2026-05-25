@@ -28,6 +28,12 @@ export interface BackendStatementSettlementLine {
   line_total_cents: number;
 }
 
+/** Matches backend `ledger_entry_kind` on statement entries. */
+export type LedgerEntryKind = 'SHOW_OBLIGATION' | 'VENDOR_EXPENSE' | 'PAYMENT';
+
+/** OWED rows only; payments omit. */
+export type ObligationKind = 'SHOW_LINKED' | 'VENDOR_EXPENSE';
+
 export interface BackendWholesalerStatementRow {
   type: 'OWED' | 'PAYMENT';
   date: string;
@@ -38,12 +44,19 @@ export interface BackendWholesalerStatementRow {
   calculation_method?: string;
   show_name?: string;
   lines?: BackendStatementSettlementLine[];
+  ledger_entry_kind?: LedgerEntryKind;
+  obligation_kind?: ObligationKind;
+  /** OWED: description / note on the obligation line. */
+  description?: string;
 }
 
 export interface WholesalerListRowView {
   id: string;
   name: string;
+  /** Outstanding balance (liability). */
   balanceOwed: number;
+  /** Lifetime total owed (from balance row). */
+  totalOwed: number;
   totalPaid: number;
   pay_schedule: PaySchedule;
   /** ISO date (YYYY-MM-DD) of most recent payment, if any */
@@ -60,6 +73,8 @@ export interface StatementSettlementLineView {
 export interface WholesalerStatementRowView {
   date: string;
   type: 'OWED' | 'PAYMENT';
+  /** Present when the entry is tied to a show. */
+  showId?: string;
   showName: string;
   amountOwed: number | null;
   amountPaid: number | null;
@@ -67,6 +82,10 @@ export interface WholesalerStatementRowView {
   entryId: string;
   calculationMethod?: string;
   lines?: StatementSettlementLineView[];
+  ledgerEntryKind: LedgerEntryKind;
+  obligationKind?: ObligationKind;
+  /** OWED: obligation description (vendor expense text, settlement label). */
+  description?: string;
 }
 
 function parseAmount(value: string): number {
@@ -119,6 +138,7 @@ export function mapBalanceRowToListView(
     id: row.wholesaler_id,
     name: row.name,
     balanceOwed: parseAmount(row.balance_owed),
+    totalOwed: parseAmount(row.owed_total),
     totalPaid: parseAmount(row.paid_total),
     pay_schedule: (row.pay_schedule ?? 'AD_HOC') as PaySchedule,
     last_payment_date: row.last_payment_date ?? null,
@@ -129,15 +149,30 @@ export function mapStatementRowToDetailView(
   row: BackendWholesalerStatementRow,
 ): WholesalerStatementRowView {
   const amount = parseAmount(row.amount);
+  const ledgerEntryKind: LedgerEntryKind =
+    row.ledger_entry_kind ??
+    (row.type === 'PAYMENT'
+      ? 'PAYMENT'
+      : row.obligation_kind === 'VENDOR_EXPENSE'
+        ? 'VENDOR_EXPENSE'
+        : 'SHOW_OBLIGATION');
+  const showNameDefault =
+    ledgerEntryKind === 'VENDOR_EXPENSE'
+      ? row.description?.trim() || 'Vendor expense'
+      : (row.show_name ?? '—');
   return {
     date: row.date,
     type: row.type,
-    showName: row.show_name ?? '—',
+    showId: row.show_id,
+    showName: showNameDefault,
     amountOwed: row.type === 'OWED' ? amount : null,
     amountPaid: row.type === 'PAYMENT' ? amount : null,
     runningBalance: parseAmount(row.running_balance),
     entryId: row.entry_id,
     calculationMethod: row.calculation_method,
+    ledgerEntryKind,
+    obligationKind: row.obligation_kind,
+    description: row.description,
     lines:
       row.lines?.map((l) => ({
         itemName: l.item_name,

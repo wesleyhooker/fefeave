@@ -118,6 +118,8 @@ export function getEnv(): Env {
   return env;
 }
 
+const DEFAULT_LOCAL_DEV_DATABASE_URL = 'postgres://fefeave:fefeave@localhost:5432/fefeave';
+
 /** Build database URL from env. Returns null if no DB config. */
 export function getDatabaseUrl(): string | null {
   const e = getEnv();
@@ -126,6 +128,11 @@ export function getDatabaseUrl(): string | null {
     const user = encodeURIComponent(e.DB_USER.trim());
     const password = encodeURIComponent(e.DB_PASSWORD ?? '');
     return `postgres://${user}:${password}@${e.DB_HOST.trim()}:${e.DB_PORT}/${e.DB_NAME.trim()}`;
+  }
+  // Local dev convenience: match docker-compose defaults so `npm run dev` works
+  // without a .env file. Production must always set DATABASE_URL (or split vars).
+  if (e.NODE_ENV === 'development') {
+    return DEFAULT_LOCAL_DEV_DATABASE_URL;
   }
   return null;
 }

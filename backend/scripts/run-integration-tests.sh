@@ -75,7 +75,7 @@ reset_test_schema
 echo "Running integration tests..."
 cd "$BACKEND_DIR"
 set +e
-DATABASE_URL="$DATABASE_URL" npx jest --runInBand --testPathPattern="(db-smoke|shows-integration|wholesalers-integration|owed-line-items-integration|settlement-ledger-integration|closed-show-freeze-integration|inventory-purchases-integration|portal-integration|exports-balances-csv)"
+DATABASE_URL="$DATABASE_URL" npx jest --runInBand --testPathPattern="(db-smoke|shows-integration|wholesalers-integration|owed-line-items-integration|settlement-ledger-integration|vendor-expense-ledger-integration|closed-show-freeze-integration|inventory-purchases-integration|portal-integration|exports-balances-csv)"
 EXIT_CODE=$?
 set -e
 

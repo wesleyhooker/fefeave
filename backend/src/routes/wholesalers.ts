@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
-import { getPool } from '../db';
+import { getPool, withTx } from '../db';
 import { readUnpaidClosedShowsForWholesaler } from '../read-models/unpaid-closed-shows';
 import { getWholesalerBalancesView } from '../services/balancesView';
 import { getWholesalerStatement } from '../services/wholesaler-statement';
@@ -70,23 +70,45 @@ export async function wholesalerRoutes(
       const { name, contact_email, contact_phone, notes } = parsed.data;
       const email = contact_email?.trim() || null;
 
-      const pool = getPool();
-      const result = await pool.query(
-        `INSERT INTO wholesalers (name, contact_email, contact_phone, notes)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, name, contact_email, contact_phone, notes, pay_schedule, created_at, updated_at`,
-        [name, email, contact_phone ?? null, notes ?? null]
-      );
-      const row = result.rows[0] as {
-        id: string;
-        name: string;
-        contact_email: string | null;
-        contact_phone: string | null;
-        notes: string | null;
-        pay_schedule: string;
-        created_at: Date;
-        updated_at: Date;
-      };
+      const row = await withTx(async (client) => {
+        const result = await client.query(
+          `INSERT INTO wholesalers (name, contact_email, contact_phone, notes)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, name, contact_email, contact_phone, notes, pay_schedule, created_at, updated_at`,
+          [name, email, contact_phone ?? null, notes ?? null]
+        );
+        const inserted = result.rows[0] as {
+          id: string;
+          name: string;
+          contact_email: string | null;
+          contact_phone: string | null;
+          notes: string | null;
+          pay_schedule: string;
+          created_at: Date;
+          updated_at: Date;
+        };
+        await client.query(
+          `INSERT INTO accounts (
+             display_name,
+             type,
+             status,
+             notes,
+             pay_schedule,
+             legacy_wholesaler_id
+           )
+           VALUES ($1, 'WHOLESALER', 'ACTIVE', $2, $3, $4)
+           ON CONFLICT (legacy_wholesaler_id)
+           DO UPDATE SET
+             display_name = EXCLUDED.display_name,
+             notes = EXCLUDED.notes,
+             pay_schedule = EXCLUDED.pay_schedule,
+             status = 'ACTIVE',
+             updated_at = NOW(),
+             deleted_at = NULL`,
+          [inserted.name, inserted.notes, inserted.pay_schedule ?? 'AD_HOC', inserted.id]
+        );
+        return inserted;
+      });
 
       return reply.status(201).send({
         id: row.id,
@@ -256,12 +278,22 @@ export async function wholesalerRoutes(
         throw new ConflictError('Wholesaler is already linked to another user');
       }
 
-      await pool.query(
-        `UPDATE users
-         SET wholesaler_id = $1, updated_at = NOW()
-         WHERE id = $2`,
-        [wholesalerId, user.id]
-      );
+      await withTx(async (client) => {
+        await client.query(
+          `UPDATE users
+           SET wholesaler_id = $1, updated_at = NOW()
+           WHERE id = $2`,
+          [wholesalerId, user.id]
+        );
+        await client.query(
+          `UPDATE accounts
+           SET linked_user_id = $1, updated_at = NOW()
+           WHERE type = 'WHOLESALER'
+             AND legacy_wholesaler_id = $2
+             AND deleted_at IS NULL`,
+          [user.id, wholesalerId]
+        );
+      });
 
       return reply.send({
         ok: true,
@@ -407,6 +439,14 @@ export async function wholesalerRoutes(
       if (!row) {
         throw new NotFoundError('Wholesaler', id);
       }
+      await pool.query(
+        `UPDATE accounts
+         SET pay_schedule = $1, updated_at = NOW()
+         WHERE type = 'WHOLESALER'
+           AND legacy_wholesaler_id = $2
+           AND deleted_at IS NULL`,
+        [pay_schedule, id]
+      );
       return reply.send({
         id: row.id,
         name: row.name,
@@ -540,8 +580,14 @@ export async function wholesalerRoutes(
                 show_id: { type: 'string' },
                 running_balance: { type: 'string' },
                 entry_id: { type: 'string' },
+                ledger_entry_kind: {
+                  type: 'string',
+                  enum: ['SHOW_OBLIGATION', 'VENDOR_EXPENSE', 'PAYMENT'],
+                },
+                obligation_kind: { type: 'string', enum: ['SHOW_LINKED', 'VENDOR_EXPENSE'] },
                 calculation_method: { type: 'string' },
                 show_name: { type: 'string' },
+                description: { type: 'string' },
                 lines: {
                   type: 'array',
                   items: {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
+  workspaceActionPositiveCompleteMd,
   workspaceActionQuietOutlineMd,
   workspaceActionWarmPrimaryMd,
 } from "./workspaceUi";
@@ -19,22 +20,29 @@ export function WorkspaceConfirmDialog({
 }: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title: string;
   description: string;
   confirmLabel: string;
   cancelLabel?: string;
-  tone?: "rose" | "stone";
+  /** `rose` = positive completion (emerald confirm). `stone` = neutral. `danger` = destructive (rose confirm). */
+  tone?: "rose" | "stone" | "danger";
   icon?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const [entered, setEntered] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     if (open && !el.open) {
+      setEntered(false);
+      setSubmitting(false);
       el.showModal();
+      const id = requestAnimationFrame(() => setEntered(true));
+      return () => cancelAnimationFrame(id);
     } else if (!open && el.open) {
       el.close();
     }
@@ -51,19 +59,27 @@ export function WorkspaceConfirmDialog({
   const iconToneClass =
     tone === "stone"
       ? "bg-stone-200/75 text-stone-700"
-      : "bg-emerald-100/90 text-emerald-800";
+      : tone === "danger"
+        ? "bg-rose-100/90 text-rose-800"
+        : "bg-emerald-100/90 text-emerald-800";
   const confirmToneClass =
     tone === "stone"
-      ? "inline-flex items-center justify-center gap-1.5 rounded-lg bg-stone-700 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(28,25,23,0.22)] transition-colors duration-200 hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 active:bg-stone-900"
-      : workspaceActionWarmPrimaryMd;
+      ? "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-stone-700 px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(28,25,23,0.22)] transition-colors duration-200 hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400/55 active:bg-stone-900 sm:min-h-10 sm:py-2"
+      : tone === "danger"
+        ? workspaceActionWarmPrimaryMd
+        : workspaceActionPositiveCompleteMd;
 
   return (
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className="w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-stone-200/90 bg-white p-0 text-stone-900 shadow-[0_18px_50px_-24px_rgba(28,25,23,0.35)] open:backdrop:bg-stone-900/25"
+      className={`workspace-confirm-dialog w-[calc(100%-1.5rem)] max-w-md rounded-2xl border border-stone-200/90 bg-white p-0 text-stone-900 shadow-[0_18px_50px_-24px_rgba(28,25,23,0.35)] transition-[opacity,transform] duration-[220ms] ease-out motion-reduce:transition-none motion-reduce:transform-none open:backdrop:bg-stone-900/25 open:backdrop:transition-colors open:backdrop:duration-[220ms] open:backdrop:ease-out sm:w-[calc(100%-2rem)] ${
+        entered
+          ? "opacity-100 translate-y-0 scale-100"
+          : "opacity-0 translate-y-1 scale-[0.99]"
+      }`}
     >
-      <div className="px-6 pb-5 pt-7 sm:px-7 sm:pb-6 sm:pt-8">
+      <div className="px-5 pb-5 pt-6 sm:px-7 sm:pb-6 sm:pt-8">
         <div className="flex justify-center">
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ${iconToneClass}`}
@@ -81,10 +97,11 @@ export function WorkspaceConfirmDialog({
         <p className="mt-2 text-center text-sm leading-relaxed text-stone-600">
           {description}
         </p>
-        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:gap-3">
+        <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
           <button
             type="button"
             className={workspaceActionQuietOutlineMd}
+            disabled={submitting}
             onClick={() => onOpenChange(false)}
           >
             {cancelLabel}
@@ -92,12 +109,19 @@ export function WorkspaceConfirmDialog({
           <button
             type="button"
             className={confirmToneClass}
-            onClick={() => {
-              onConfirm();
-              onOpenChange(false);
+            disabled={submitting}
+            onClick={async () => {
+              if (submitting) return;
+              setSubmitting(true);
+              try {
+                await Promise.resolve(onConfirm());
+                onOpenChange(false);
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            {confirmLabel}
+            {submitting ? "Saving..." : confirmLabel}
           </button>
         </div>
       </div>

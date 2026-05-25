@@ -1,8 +1,15 @@
 "use client";
 
+import { BanknotesIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
+import {
+  AdminPageContainer,
+  AdminPageIntroSection,
+} from "@/app/(admin)/admin/_components/AdminPageContainer";
+import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { WorkspaceFileUpload } from "@/app/(admin)/admin/_components/WorkspaceFileUpload";
 import { formatCurrency } from "@/lib/format";
 import {
   uploadFile,
@@ -12,9 +19,19 @@ import {
 } from "@/src/lib/api/attachments";
 import { createPayment } from "@/src/lib/api/payments";
 import { fetchWholesalerBalances } from "@/src/lib/api/wholesalers";
+import { dispatchVendorBalancesInvalidate } from "@/lib/vendorBalancesInvalidate";
+import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
   workspaceActionCompleteMd,
+  workspaceActionIconMd,
   workspaceActionSecondaryMd,
+  workspaceCard,
+  workspaceDateInput,
+  workspaceFormLabel,
+  workspaceFormLabelSecondary,
+  workspaceTextInput,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 
 const METHODS = ["Cash", "Zelle", "Venmo", "Check", "Other"] as const;
@@ -128,11 +145,13 @@ function RecordPaymentForm() {
             `Payment saved. Receipt upload failed: ${msg}. Redirecting…`,
           );
           setTimeout(() => {
+            dispatchVendorBalancesInvalidate();
             router.push(`/admin/wholesalers/${wholesalerId}`);
           }, 3000);
           return;
         }
       }
+      dispatchVendorBalancesInvalidate();
       router.push(`/admin/wholesalers/${wholesalerId}`);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : String(error));
@@ -164,265 +183,238 @@ function RecordPaymentForm() {
   }
 
   return (
-    <div>
-      <nav className="mb-2 text-sm text-gray-500" aria-label="Breadcrumb">
-        <Link href="/admin/payments" className="hover:text-gray-700">
-          Payments
-        </Link>
-        <span className="mx-1.5">/</span>
-        <span aria-current="page">Record payment</span>
-      </nav>
-      <h1 className="mb-6 text-2xl font-semibold text-gray-900">
-        Record payment
-      </h1>
+    <>
+      <AdminPageIntroSection>
+        <AdminWorkspacePageIntro
+          title="Record payment"
+          subtitle="Apply a payment to a wholesaler balance."
+          breadcrumb={
+            <nav className="text-sm text-stone-500" aria-label="Breadcrumb">
+              <Link href="/admin/balances" className="hover:text-stone-700">
+                Balances
+              </Link>
+              <span className="mx-1.5">/</span>
+              <span aria-current="page">Record payment</span>
+            </nav>
+          }
+        />
+      </AdminPageIntroSection>
 
-      {loadError && (
-        <div
-          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-          role="alert"
+      <AdminPageContainer>
+        {loadError ? (
+          <WorkspaceInlineError
+            title="Could not load wholesalers."
+            message={loadError}
+            onRetry={() => setReloadToken((v) => v + 1)}
+          />
+        ) : null}
+
+        {submitError ? (
+          <WorkspaceInlineError
+            title="Could not record payment."
+            message={submitError}
+          />
+        ) : null}
+
+        <form
+          onSubmit={handleSubmit}
+          className={`mx-auto min-w-0 max-w-full space-y-5 p-4 sm:max-w-xl sm:space-y-4 sm:p-6 ${workspaceCard}`}
         >
-          <p className="font-medium">Could not load wholesalers.</p>
-          <p className="mt-1">{loadError}</p>
-          <button
-            type="button"
-            onClick={() => setReloadToken((v) => v + 1)}
-            className="mt-3 rounded border border-amber-400 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {submitError && (
-        <div
-          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-          role="alert"
-        >
-          <p className="font-medium">Could not record payment.</p>
-          <p className="mt-1">{submitError}</p>
-        </div>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="max-w-xl space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-workspace-surface"
-      >
-        <div>
-          <label
-            htmlFor="wholesaler"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Wholesaler <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="wholesaler"
-            required
-            value={wholesalerId}
-            onChange={(e) => setWholesalerId(e.target.value)}
-            disabled={loadingWholesalers || wholesalers.length === 0}
-            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-          >
-            <option value="">Select wholesaler</option>
-            {wholesalers.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-          {errors.wholesalerId && (
-            <p className="mt-0.5 text-xs text-red-600">{errors.wholesalerId}</p>
-          )}
-          {wholesalerId &&
-            (() => {
-              const w = wholesalers.find((x) => x.id === wholesalerId);
-              if (!w) return null;
-              const amt = amount === "" ? NaN : Number(amount);
-              const validAmount = Number.isFinite(amt) && amt > 0;
-              const projected = validAmount
-                ? Math.round((w.balanceOwed - amt) * 100) / 100
-                : null;
-              const isOverage = validAmount && amt > w.balanceOwed;
-              return (
-                <div className="mt-2 rounded border border-gray-200 bg-[#F9FAFB] px-3 py-2 text-sm text-gray-700">
-                  <p>
-                    Current balance owed:{" "}
-                    <strong className="text-gray-900">
-                      {formatCurrency(w.balanceOwed)}
-                    </strong>
-                  </p>
-                  {projected !== null && (
-                    <p className="mt-1">
-                      After this payment:{" "}
+          <div>
+            <label
+              htmlFor="wholesaler"
+              className={`mb-1 block ${workspaceFormLabel}`}
+            >
+              Wholesaler <span className="text-red-500">*</span>
+            </label>
+            <WorkspaceNativeSelect
+              id="wholesaler"
+              required
+              value={wholesalerId}
+              onChange={(e) => setWholesalerId(e.target.value)}
+              disabled={loadingWholesalers || wholesalers.length === 0}
+            >
+              <option value="">Select wholesaler</option>
+              {wholesalers.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </WorkspaceNativeSelect>
+            {errors.wholesalerId && (
+              <p className="mt-0.5 text-xs text-red-600">
+                {errors.wholesalerId}
+              </p>
+            )}
+            {wholesalerId &&
+              (() => {
+                const w = wholesalers.find((x) => x.id === wholesalerId);
+                if (!w) return null;
+                const amt = amount === "" ? NaN : Number(amount);
+                const validAmount = Number.isFinite(amt) && amt > 0;
+                const projected = validAmount
+                  ? Math.round((w.balanceOwed - amt) * 100) / 100
+                  : null;
+                const isOverage = validAmount && amt > w.balanceOwed;
+                return (
+                  <div className="mt-2 rounded border border-gray-200 bg-[#F9FAFB] px-3 py-2 text-sm text-gray-700">
+                    <p>
+                      Current balance owed:{" "}
                       <strong className="text-gray-900">
-                        {formatCurrency(projected)}
+                        {formatCurrency(w.balanceOwed)}
                       </strong>
                     </p>
-                  )}
-                  {isOverage && (
-                    <p className="mt-2 text-amber-700" role="alert">
-                      This payment exceeds the current balance and will create a
-                      credit.
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
-        </div>
+                    {projected !== null && (
+                      <p className="mt-1">
+                        After this payment:{" "}
+                        <strong className="text-gray-900">
+                          {formatCurrency(projected)}
+                        </strong>
+                      </p>
+                    )}
+                    {isOverage && (
+                      <p className="mt-2 text-amber-700" role="alert">
+                        This payment exceeds the current balance and will create
+                        a credit.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+          </div>
 
-        <div>
-          <label
-            htmlFor="amount"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Amount <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <span
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
-              aria-hidden
+          <div>
+            <label
+              htmlFor="amount"
+              className={`mb-1 block ${workspaceFormLabel}`}
             >
-              $
-            </span>
+              Amount <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <span
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+                aria-hidden
+              >
+                $
+              </span>
+              <input
+                id="amount"
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                required
+                value={amount}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9.]/g, "");
+                  const parts = v.split(".");
+                  if (parts.length > 2) return;
+                  if (parts[1]?.length > 2) return;
+                  setAmount(v);
+                }}
+                className={`w-full min-w-0 max-w-full pl-7 tabular-nums sm:max-w-[10rem] ${workspaceTextInput}`}
+                placeholder="0.00"
+                aria-label="Amount in dollars"
+              />
+            </div>
+            {errors.amount && (
+              <p className="mt-0.5 text-xs text-red-600">{errors.amount}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="date"
+              className={`mb-1 block ${workspaceFormLabel}`}
+            >
+              Date <span className="text-red-500">*</span>
+            </label>
             <input
-              id="amount"
-              type="text"
-              inputMode="decimal"
-              autoComplete="off"
+              id="date"
+              type="date"
               required
-              value={amount}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^0-9.]/g, "");
-                const parts = v.split(".");
-                if (parts.length > 2) return;
-                if (parts[1]?.length > 2) return;
-                setAmount(v);
-              }}
-              className="w-full max-w-[8rem] rounded-md border border-gray-200 py-2 pl-7 pr-3 text-sm tabular-nums shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-              placeholder="0.00"
-              aria-label="Amount in dollars"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={workspaceDateInput}
+            />
+            {errors.date && (
+              <p className="mt-0.5 text-xs text-red-600">{errors.date}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="method"
+              className={`mb-1 block ${workspaceFormLabelSecondary}`}
+            >
+              Method
+            </label>
+            <WorkspaceNativeSelect
+              id="method"
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+            >
+              {METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </WorkspaceNativeSelect>
+          </div>
+
+          <div>
+            <label
+              htmlFor="reference"
+              className={`mb-1 block ${workspaceFormLabelSecondary}`}
+            >
+              Reference
+            </label>
+            <input
+              id="reference"
+              type="text"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              className={workspaceTextInput}
+              placeholder="Optional"
             />
           </div>
-          {errors.amount && (
-            <p className="mt-0.5 text-xs text-red-600">{errors.amount}</p>
-          )}
-        </div>
 
-        <div>
-          <label
-            htmlFor="date"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Date <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="date"
-            type="date"
-            required
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-          />
-          {errors.date && (
-            <p className="mt-0.5 text-xs text-red-600">{errors.date}</p>
-          )}
-        </div>
-
-        <div>
-          <label
-            htmlFor="method"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Method
-          </label>
-          <select
-            id="method"
-            value={method}
-            onChange={(e) => setMethod(e.target.value)}
-            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-          >
-            {METHODS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label
-            htmlFor="reference"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Reference
-          </label>
-          <input
-            id="reference"
-            type="text"
-            value={reference}
-            onChange={(e) => setReference(e.target.value)}
-            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            placeholder="Optional"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="receipt"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Receipt (optional)
-          </label>
-          <p className="mb-2 text-xs text-gray-500">
-            PDF or image (PNG/JPEG), max {MAX_MB} MB.
-          </p>
-          <input
+          <WorkspaceFileUpload
             id="receipt"
-            type="file"
+            label="Receipt (optional)"
+            helperText={`PDF or image (PNG/JPEG), max ${MAX_MB} MB.`}
             accept={ACCEPT_RECEIPT}
             onChange={handleReceiptChange}
-            className="w-full rounded-lg border border-gray-100 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            aria-describedby={
-              receiptError
-                ? "receipt-error"
-                : receiptFile
-                  ? "receipt-name"
-                  : undefined
-            }
+            error={receiptError}
+            fileName={receiptFile?.name ?? null}
+            tone="flush"
           />
-          {receiptError && (
-            <p
-              id="receipt-error"
-              role="alert"
-              className={
-                receiptError.startsWith("Payment saved")
-                  ? "mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
-                  : "mt-2 text-xs text-red-600"
-              }
-            >
-              {receiptError}
-            </p>
-          )}
-          {receiptFile && !receiptError && (
-            <p id="receipt-name" className="mt-2 text-xs text-gray-600">
-              {receiptFile.name}
-            </p>
-          )}
-        </div>
 
-        <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={submitting || loadingWholesalers}
-            className={`${workspaceActionCompleteMd} disabled:opacity-60`}
-          >
-            {submitting ? "Saving..." : "Record payment"}
-          </button>
-          <Link href="/admin/payments" className={workspaceActionSecondaryMd}>
-            Cancel
-          </Link>
-        </div>
-      </form>
-    </div>
+          <div className="flex flex-col-reverse gap-2 pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:pt-2">
+            <Link
+              href="/admin/balances"
+              className={`${workspaceActionSecondaryMd} flex w-full justify-center sm:w-auto`}
+            >
+              <WorkspaceActionLabel
+                icon={<XMarkIcon className={workspaceActionIconMd} />}
+              >
+                Cancel
+              </WorkspaceActionLabel>
+            </Link>
+            <button
+              type="submit"
+              disabled={submitting || loadingWholesalers}
+              className={`${workspaceActionCompleteMd} w-full justify-center disabled:opacity-60 sm:w-auto`}
+            >
+              <WorkspaceActionLabel
+                icon={<BanknotesIcon className={workspaceActionIconMd} />}
+              >
+                {submitting ? "Saving..." : "Record payment"}
+              </WorkspaceActionLabel>
+            </button>
+          </div>
+        </form>
+      </AdminPageContainer>
+    </>
   );
 }
 

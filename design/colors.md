@@ -8,7 +8,7 @@ Neutral warm palette with restrained accents. Most of the UI stays neutral; acce
 
 | Name          | HEX       | Use                                               |
 | ------------- | --------- | ------------------------------------------------- |
-| **Cream**     | `#F6F2EC` | Page backgrounds, cards, airy base                |
+| **Cream**     | `#FAF8F5` | Page backgrounds, cards, airy base                |
 | **Warm Sand** | `#EBDED2` | Secondary backgrounds, trust bar, subtle sections |
 | **Stone**     | `#D1C5B8` | Borders, dividers, secondary UI edges             |
 | **Charcoal**  | `#2C2C2C` | Primary body text, buttons (on light)             |
@@ -38,13 +38,44 @@ Neutral warm palette with restrained accents. Most of the UI stays neutral; acce
   - Subtle hover or secondary emphasis
   - Small decorative or supportive elements
   - Never as the main CTA or dominant block color
-- **Admin dashboard** — Prefer neutrals and charcoal; use gold only for primary actions (e.g. “Save,” “Submit”). Avoid pink/sage unless needed for status or data.
+- **Public marketing site** — Prefer neutrals and charcoal; Soft Gold for primary actions; blush/sage sparingly.
+
+---
+
+## Admin workspace (internal)
+
+Admin uses **additive semantic CSS variables** in [`frontend/system/tokens.css`](../frontend/system/tokens.css) (Tailwind `admin.*`). Legacy rose/blush tokens (`admin-brand`, `surfaceActive`, …) remain for compatibility; **new chrome** prefers:
+
+| Role                           | Token direction                                 | Notes                                                                                        |
+| ------------------------------ | ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Page canvas                    | `--admin-canvas`                                | Warm off-white shell                                                                         |
+| Sidebar                        | `--admin-sidebar-surface`                       | **Deeper clay** than CTAs                                                                    |
+| Primary buttons / accent rails | `--admin-action-primary`                        | **Brighter terracotta** (same family as sidebar, not identical)                              |
+| Content cards                  | `--admin-surface-elevated` + `--admin-border`   | Clean white with warm border                                                                 |
+| KPI tiles                      | `--admin-kpi-soft` / `accent` / `gold` / `sage` | Peach default; stronger peach for liability; gold completed; sage reserved for ops/attention |
+| Muted strips                   | `--admin-muted-strip`                           | Inset chrome bands                                                                           |
+
+Dense ledgers and tables stay **neutral** (gray/stone utilities); semantic greens/reds for money and status are unchanged.
+
+---
+
+## Public marketing site (`public-site`)
+
+The `(public)` layout root uses class `public-site`, which **re-scopes CSS variables** (see `tokens.css`) without changing global `:root` values used elsewhere (e.g. admin).
+
+| Token on `.public-site`             | Effect                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------ |
+| `--fefe-gold` / `--fefe-gold-hover` | Richer trust-gold hue (`#A87522` / `#8F6219`) for CTAs, eyebrows, links, icons |
+| `--fefe-trust-gold`                 | Aliased to public gold (one accent family)                                     |
+| `--fefe-icon-well`                  | Uses `--fefe-sand-muted` for icon wells on cream                               |
+
+**Sand-muted** (`#F2ECE4`, light band) wraps the homepage platform cards below the hero. The **“Real time”** feature row uses **Cream** for readability. Sand-muted is also used for placeholders and header hover pills. Platform cards use **white** elevated surfaces on the band.
 
 ---
 
 ## Quick reference
 
-- **Backgrounds:** Cream, Warm Sand.
+- **Backgrounds:** Cream, Warm Sand (public homepage sections → Cream canvas).
 - **Borders / dividers:** Stone.
 - **Body text:** Charcoal.
 - **Primary actions & key icons:** Soft Gold.

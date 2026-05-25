@@ -222,14 +222,22 @@ export async function exportRoutes(
 
       const entries = await getWholesalerStatement(pool, wholesalerId);
       const header = ['Date', 'Show', 'Type', 'Amount Owed', 'Amount Paid', 'Balance'];
-      const csvRows = entries.map((e) => [
-        normalizeDateYyyyMmDd(e.date),
-        e.show_name ?? '',
-        e.type === 'OWED' ? 'Settlement' : 'Payment',
-        e.type === 'OWED' ? formatCurrency2dp(e.amount) : '',
-        e.type === 'PAYMENT' ? formatCurrency2dp(e.amount) : '',
-        formatCurrency2dp(e.running_balance),
-      ]);
+      const csvRows = entries.map((e) => {
+        const typeLabel =
+          e.type === 'PAYMENT'
+            ? 'Payment'
+            : e.ledger_entry_kind === 'VENDOR_EXPENSE'
+              ? 'Vendor expense'
+              : 'Settlement';
+        return [
+          normalizeDateYyyyMmDd(e.date),
+          e.show_name ?? '',
+          typeLabel,
+          e.type === 'OWED' ? formatCurrency2dp(e.amount) : '',
+          e.type === 'PAYMENT' ? formatCurrency2dp(e.amount) : '',
+          formatCurrency2dp(e.running_balance),
+        ];
+      });
       const csvText = toCsvText(header, csvRows);
       const body = '\uFEFF' + csvText;
       const filename = `wholesaler-statement-${todayFileDate()}.csv`;

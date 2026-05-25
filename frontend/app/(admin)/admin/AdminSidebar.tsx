@@ -1,37 +1,58 @@
 "use client";
 
+import {
+  ArrowRightOnRectangleIcon,
+  CalendarDaysIcon,
+  HomeIcon,
+  ScaleIcon,
+} from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
-  workspaceChromeHover,
+  workspaceActionIconMd,
   workspaceChromeHoverWarm,
+  workspaceNavIconActive,
+  workspaceNavIconInactive,
+  workspaceNavItemActive,
+  workspaceNavItemBase,
+  workspaceNavItemInactive,
+  workspaceSidebarAccountSection,
+  workspaceSidebarAccountSignOutCluster,
+  workspaceSidebarAvatar,
+  workspaceSidebarRolePill,
+  workspaceSidebarSignOut,
+  workspaceSidebarSurface,
+  workspaceSidebarUserDisplayName,
 } from "./_components/workspaceUi";
 
 const NAV_ITEMS: {
   href: string;
   label: string;
+  Icon: typeof HomeIcon;
   match: (path: string) => boolean;
 }[] = [
   {
     href: "/admin",
     label: "Home",
+    Icon: HomeIcon,
     match: (p) => p === "/admin" || p === "/admin/dashboard",
   },
   {
     href: "/admin/shows",
     label: "Shows",
+    Icon: CalendarDaysIcon,
     match: (p) => p.startsWith("/admin/shows"),
   },
   {
     href: "/admin/balances",
     label: "Balances",
-    match: (p) => p === "/admin/balances" || p.startsWith("/admin/wholesalers"),
-  },
-  {
-    href: "/admin/payments",
-    label: "Payments",
-    match: (p) => p.startsWith("/admin/payments"),
+    Icon: ScaleIcon,
+    match: (p) =>
+      p === "/admin/balances" ||
+      p.startsWith("/admin/balances/") ||
+      p.startsWith("/admin/wholesalers") ||
+      p.startsWith("/admin/payments"),
   },
 ];
 
@@ -44,21 +65,27 @@ function NavLinks({
 }) {
   return (
     <>
-      {NAV_ITEMS.map(({ href, label, match }) => {
+      {NAV_ITEMS.map(({ href, label, Icon, match }) => {
         const isActive = match(pathname ?? "");
         return (
           <Link
             key={href}
             href={href}
             onClick={onNavigate}
-            className={`block rounded-lg px-3 py-2 text-sm ${
-              isActive
-                ? "bg-rose-50/80 font-semibold text-stone-900 transition-[color,background-color] duration-200 ease-out"
-                : `text-gray-700 ${workspaceChromeHover}`
+            className={`${workspaceNavItemBase} ${
+              isActive ? workspaceNavItemActive : workspaceNavItemInactive
             }`}
             aria-current={isActive ? "page" : undefined}
           >
-            {label}
+            <span
+              className={
+                isActive ? workspaceNavIconActive : workspaceNavIconInactive
+              }
+              aria-hidden
+            >
+              <Icon className={workspaceActionIconMd} />
+            </span>
+            <span className="min-w-0 flex-1 leading-snug">{label}</span>
           </Link>
         );
       })}
@@ -69,13 +96,89 @@ function NavLinks({
 export type AdminSidebarProps = {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  email: string | null;
+  roles: string[];
+  envLabel: string;
+  isProduction: boolean;
 };
+
+function sidebarAvatarInitial(email: string | null): string {
+  const s = email?.trim();
+  if (!s) return "?";
+  const alnum = s.match(/[a-zA-Z0-9]/);
+  return (alnum?.[0] ?? s[0]).toUpperCase();
+}
+
+function SidebarAccountBlock({
+  email,
+  roles,
+  onNavigate,
+}: {
+  email: string | null;
+  roles: string[];
+  onNavigate?: () => void;
+}) {
+  const displayLine = email?.trim() || "Signed in";
+
+  return (
+    <div className={workspaceSidebarAccountSection}>
+      <div className="flex min-w-0 items-start gap-2.5">
+        <span className={workspaceSidebarAvatar} aria-hidden>
+          {sidebarAvatarInitial(email)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className={workspaceSidebarUserDisplayName}>{displayLine}</p>
+          {roles.length > 0 ? (
+            <div
+              className="mt-1.5 flex flex-wrap gap-1"
+              aria-label="Your roles"
+            >
+              {roles.map((role) => (
+                <span key={role} className={workspaceSidebarRolePill}>
+                  {role}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className={workspaceSidebarAccountSignOutCluster}>
+        <Link
+          href="/api/auth/logout"
+          onClick={onNavigate}
+          className={workspaceSidebarSignOut}
+        >
+          <ArrowRightOnRectangleIcon
+            className={workspaceActionIconMd}
+            aria-hidden
+          />
+          <span>Sign out</span>
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 export function AdminSidebar({
   mobileOpen = false,
   onMobileClose,
+  email,
+  roles,
+  envLabel: _envLabel,
+  isProduction: _isProduction,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [mobileEntered, setMobileEntered] = useState(false);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      setMobileEntered(false);
+      return;
+    }
+    const id = requestAnimationFrame(() => setMobileEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -95,19 +198,35 @@ export function AdminSidebar({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [mobileOpen, onMobileClose]);
 
+  const brandBlock = (
+    <div className="mb-5 border-b border-admin-sidebarDivider/35 pb-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-admin-sidebarText">
+        Fefe Ave
+      </p>
+      <p className="mt-1 text-sm font-semibold tracking-tight text-admin-sidebarText">
+        Workspace
+      </p>
+      <p className="mt-1 text-xs leading-snug text-admin-sidebarTextMuted">
+        Boutique operations
+      </p>
+    </div>
+  );
+
   return (
     <>
       {/* Desktop: fixed-width sidebar */}
       <aside
-        className="hidden w-56 shrink-0 border-r border-gray-200 bg-white p-4 md:block"
+        className={`hidden w-[15.5rem] shrink-0 flex-col p-4 md:flex ${workspaceSidebarSurface}`}
         aria-label="Admin navigation"
       >
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">
-          Admin
-        </h2>
-        <nav className="flex flex-col gap-1" aria-label="Admin navigation">
+        {brandBlock}
+        <nav
+          className="flex min-h-0 flex-1 flex-col gap-1.5"
+          aria-label="Admin navigation"
+        >
           <NavLinks pathname={pathname ?? ""} />
         </nav>
+        <SidebarAccountBlock email={email} roles={roles} />
       </aside>
 
       {/* Mobile: overlay drawer when open */}
@@ -121,18 +240,26 @@ export function AdminSidebar({
           <button
             type="button"
             onClick={onMobileClose}
-            className="absolute inset-0 bg-black/40"
+            className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+              mobileEntered ? "opacity-100" : "opacity-0"
+            }`}
             aria-label="Close menu"
           />
-          <div className="absolute left-0 top-0 z-10 h-full w-64 border-r border-gray-200 bg-white p-4 shadow-lg">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-                Admin
-              </h2>
+          <div
+            className={`absolute left-0 top-0 z-10 flex h-full w-[17rem] flex-col p-4 shadow-xl transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${workspaceSidebarSurface} ${
+              mobileEntered
+                ? "translate-x-0 opacity-100"
+                : "-translate-x-3 opacity-0"
+            }`}
+          >
+            <div className="mb-4 flex shrink-0 items-center justify-between">
+              <p className="text-sm font-semibold text-admin-sidebarText">
+                Menu
+              </p>
               <button
                 type="button"
                 onClick={onMobileClose}
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-stone-600 ${workspaceChromeHoverWarm}`}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-admin-sidebarTextMuted ${workspaceChromeHoverWarm}`}
                 aria-label="Close menu"
               >
                 <svg
@@ -150,9 +277,15 @@ export function AdminSidebar({
                 </svg>
               </button>
             </div>
-            <nav className="flex flex-col gap-1">
+            {brandBlock}
+            <nav className="flex min-h-0 flex-1 flex-col gap-1.5">
               <NavLinks pathname={pathname ?? ""} onNavigate={onMobileClose} />
             </nav>
+            <SidebarAccountBlock
+              email={email}
+              roles={roles}
+              onNavigate={onMobileClose}
+            />
           </div>
         </div>
       )}

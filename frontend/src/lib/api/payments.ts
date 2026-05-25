@@ -1,4 +1,4 @@
-import { backendGetJson } from './backend';
+import { backendGetJson, backendMutateJson } from './backend';
 
 export interface PaymentDTO {
   id: string;
@@ -20,6 +20,14 @@ export interface CreatePaymentDTO {
   notes?: string;
 }
 
+/** Update body for PATCH /payments/:id (no wholesaler change). */
+export interface UpdatePaymentDTO {
+  amount: number;
+  payment_date: string;
+  reference?: string;
+  notes?: string;
+}
+
 export interface PaymentListRowView {
   id: string;
   wholesalerId: string;
@@ -34,7 +42,8 @@ function parseAmount(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function extractMethodFromNotes(notes?: string): string {
+/** Method label embedded in `notes` by admin payment forms (`Method: …`). */
+export function paymentMethodFromNotes(notes?: string): string {
   if (!notes) return 'Other';
   const match = notes.match(/(?:^|\|\s*)Method:\s*([^|]+)/i);
   if (!match) return 'Other';
@@ -54,12 +63,32 @@ export async function fetchPayments(params?: {
 export async function createPayment(
   dto: CreatePaymentDTO,
 ): Promise<PaymentDTO> {
-  return backendGetJson<PaymentDTO>('/payments', {
+  return backendMutateJson<PaymentDTO>('/payments', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(dto),
+  }) as Promise<PaymentDTO>;
+}
+
+export async function updatePayment(
+  paymentId: string,
+  dto: UpdatePaymentDTO,
+): Promise<PaymentDTO> {
+  return backendMutateJson<PaymentDTO>(
+    `/payments/${encodeURIComponent(paymentId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto),
+    },
+  ) as Promise<PaymentDTO>;
+}
+
+export async function deletePayment(paymentId: string): Promise<void> {
+  await backendMutateJson(`/payments/${encodeURIComponent(paymentId)}`, {
+    method: 'DELETE',
   });
 }
 
@@ -69,7 +98,7 @@ export function mapPaymentToListRowView(dto: PaymentDTO): PaymentListRowView {
     wholesalerId: dto.wholesaler_id,
     amount: parseAmount(dto.amount),
     date: dto.payment_date,
-    method: extractMethodFromNotes(dto.notes),
+    method: paymentMethodFromNotes(dto.notes),
     reference: dto.reference ?? '',
   };
 }

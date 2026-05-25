@@ -5,6 +5,7 @@ import { UnauthorizedError } from '../utils/errors';
 import { APP_ROLE_VALUES, type AuthUser, type AppRole } from '../auth/types';
 
 const COGNITO_ISSUER_PREFIX = 'https://cognito-idp.';
+const LOCAL_DEV_BOOTSTRAP_ACCESS_TOKEN = 'fefeave-local-dev-bootstrap';
 
 function getCognitoIssuer(region: string, userPoolId: string): string {
   return `${COGNITO_ISSUER_PREFIX}${region}.amazonaws.com/${userPoolId}`;
@@ -45,6 +46,30 @@ export async function authPlugin(
 
   fastify.addHook('onRequest', async (request: FastifyRequest, _reply: FastifyReply) => {
     const env = getEnv();
+    const authHeader = request.headers.authorization;
+
+    // Local dev compatibility: support frontend dev-bootstrap token even when
+    // backend AUTH_MODE is not strictly dev_bypass (e.g. mixed local setups).
+    // This keeps admin workspace routes functional in development without
+    // relaxing production behavior.
+    if (
+      env.NODE_ENV === 'development' &&
+      authHeader?.startsWith('Bearer ') &&
+      authHeader.slice(7) === LOCAL_DEV_BOOTSTRAP_ACCESS_TOKEN
+    ) {
+      const configuredRole = env.AUTH_DEV_BYPASS_ROLE;
+      const role: AppRole =
+        configuredRole && (APP_ROLE_VALUES as readonly string[]).includes(configuredRole)
+          ? configuredRole
+          : 'ADMIN';
+      request.user = {
+        cognitoSub: env.AUTH_DEV_BYPASS_USER_ID ?? 'local-dev-user',
+        email: env.AUTH_DEV_BYPASS_EMAIL ?? 'local@fefeave.local',
+        roles: [role],
+      };
+      return;
+    }
+
     if (env.AUTH_MODE === 'off') {
       return;
     }
@@ -85,7 +110,6 @@ export async function authPlugin(
     }
 
     if (env.AUTH_MODE === 'cognito' && jwks) {
-      const authHeader = request.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         // No Bearer token: leave request.user undefined (public routes work)
         return;

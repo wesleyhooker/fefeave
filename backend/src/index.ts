@@ -18,12 +18,15 @@ import { wholesalerRoutes } from './routes/wholesalers';
 import { showRoutes } from './routes/shows';
 import { showFinancialsRoutes } from './routes/show-financials';
 import { owedLineItemRoutes } from './routes/owed-line-items';
+import { vendorExpenseRoutes } from './routes/vendor-expenses';
 import { paymentRoutes } from './routes/payments';
 import { adjustmentRoutes } from './routes/adjustments';
 import { attachmentRoutes } from './routes/attachments';
 import { exportRoutes } from './routes/exports';
 import { inventoryPurchaseRoutes } from './routes/inventory-purchases';
 import { portalRoutes } from './routes/portal';
+import { accountRoutes } from './routes/accounts';
+import { ownerSelfPayRoutes } from './routes/owner-self-pay';
 
 async function buildApp() {
   // Load and validate environment variables (fail fast)
@@ -105,6 +108,12 @@ async function buildApp() {
     await closePool();
   });
 
+  if (env.NODE_ENV === 'development') {
+    app.get('/', async (_request, reply) => {
+      return reply.redirect('http://localhost:3001/');
+    });
+  }
+
   // Register routes
   await app.register(healthRoutes, { prefix: env.API_PREFIX });
   await app.register(authRoutes, { prefix: env.API_PREFIX });
@@ -113,12 +122,15 @@ async function buildApp() {
   await app.register(showRoutes, { prefix: env.API_PREFIX });
   await app.register(showFinancialsRoutes, { prefix: env.API_PREFIX });
   await app.register(owedLineItemRoutes, { prefix: env.API_PREFIX });
+  await app.register(vendorExpenseRoutes, { prefix: env.API_PREFIX });
   await app.register(paymentRoutes, { prefix: env.API_PREFIX });
   await app.register(adjustmentRoutes, { prefix: env.API_PREFIX });
   await app.register(attachmentRoutes, { prefix: env.API_PREFIX });
   await app.register(exportRoutes, { prefix: env.API_PREFIX });
   await app.register(inventoryPurchaseRoutes, { prefix: env.API_PREFIX });
   await app.register(portalRoutes, { prefix: env.API_PREFIX });
+  await app.register(accountRoutes, { prefix: env.API_PREFIX });
+  await app.register(ownerSelfPayRoutes, { prefix: env.API_PREFIX });
 
   return app;
 }

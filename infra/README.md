@@ -1,136 +1,162 @@
 # Fefeave Infrastructure
 
-Terraform-managed AWS resources: frontend static hosting (S3, CloudFront, OIDC); optional backend (VPC, ECR, ALB, ECS Fargate, RDS) for DEV.
-
----
-
-## 1. Overview
-
-**Frontend (always):** S3 bucket, CloudFront distribution, GitHub OIDC deploy role, attachments S3 bucket, backend task IAM role.
-
-**Backend (when `create_backend_infra = true`, e.g. DEV):** VPC, ECR repo, ALB (HTTP 80), ECS Fargate cluster/service, optional RDS Postgres with Secrets Manager for `DATABASE_URL`, and a separate GitHub OIDC role for backend deploy (ECR push + ECS update).
-
-| Resource                 | Purpose                                                   |
-| ------------------------ | --------------------------------------------------------- |
-| S3 bucket                | Static site hosting (Next.js build output)                |
-| CloudFront               | CDN, HTTPS, SPA fallback                                  |
-| IAM OIDC role (frontend) | GitHub Actions deploy without long-lived secrets          |
-| ECR                      | Backend container images (scan on push)                   |
-| ALB + target group       | HTTP 80 → ECS backend                                     |
-| ECS Fargate              | Backend API (Fastify)                                     |
-| RDS Postgres             | DEV database; `DATABASE_URL` in Secrets Manager           |
-| IAM OIDC role (backend)  | GitHub Actions backend deploy: ECR push + ECS update only |
+Terraform-managed AWS resources for FefeAve. **Day-to-day development is local** (`make dev`, Docker Postgres). This stack is for shared AWS resources and optional hosted runtime.
 
 Workspaces: `dev`, `prod`. Region: `us-west-2`.
 
 ---
 
-## 2. File Layout
+## 1. Overview
+
+### Local-first (default)
+
+`infra/dev.tfvars` and `infra/prod.tfvars` both set:
+
+```hcl
+create_backend_infra = false
+create_rds           = false
+```
+
+With that configuration, Terraform provisions **low-cost shared resources only** (no VPC, NAT, ALB, ECS, or RDS). You run the API and UI on your machine.
+
+### Always provisioned (both workspaces, current tfvars)
+
+| Resource                     | Purpose                                                                    |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| S3 site bucket               | Static asset origin (CloudFront OAC)                                       |
+| CloudFront                   | CDN, HTTPS, SPA fallback for static site bucket                            |
+| S3 attachments bucket        | Backend payout evidence (presigned access; not public)                     |
+| IAM task role (`backend`)    | Lets the API access the attachments bucket when `ATTACHMENTS_*` env is set |
+| Cognito (dev workspace only) | Dev user pool, app client, Hosted UI domain (`cognito-dev.tf`)             |
+
+### Optional: hosted runtime (`create_backend_infra = true`)
+
+When enabled in `*.tfvars`, Terraform also creates:
+
+| Resource                     | Purpose                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| VPC, NAT, subnets            | Private networking for ECS                                               |
+| ECR (backend + frontend)     | Container images for deploy workflows                                    |
+| ALB (HTTP 80)                | Routes `/api/*` → backend ECS; default → frontend ECS                    |
+| ECS Fargate                  | Backend API and Next.js frontend services                                |
+| RDS (if `create_rds = true`) | Postgres; `DATABASE_URL` in Secrets Manager                              |
+| OIDC roles                   | `backend_deploy_role_arn`, `frontend_deploy_role_arn` for GitHub Actions |
+
+Opt-in by uncommenting the block at the bottom of `dev.tfvars` (and setting `alb_ingress_cidrs` for dev).
+
+---
+
+## 2. File layout
 
 ```text
 infra/
-├── main.tf      # S3, CloudFront, attachments bucket, GitHub OIDC, backend task role
-├── vpc.tf       # VPC, subnets, IGW, NAT (backend only)
-├── ecr.tf       # ECR repository for backend images
-├── alb.tf       # ALB, target group, listener, ALB SG
-├── ecs.tf       # ECS cluster, task execution role, task def, service, ECS SG
-├── rds.tf                # RDS Postgres, Secrets Manager DATABASE_URL (optional)
-├── backend-deploy-role.tf # GitHub OIDC role for backend deploy (ECR + ECS)
-├── providers.tf          # AWS + random providers
-├── variables.tf # Input variables
-├── outputs.tf   # S3, CF, role ARN; backend_api_base_url, backend_ecr_repo_url, rds_endpoint
-├── dev.tfvars   # Dev (create_backend_infra = true, create_rds = true)
-└── prod.tfvars  # Prod (frontend only by default)
+├── main.tf                 # S3 site, CloudFront, attachments bucket, backend task IAM role
+├── cognito-dev.tf          # Dev Cognito user pool (dev workspace only)
+├── vpc.tf, ecr.tf, alb.tf, ecs.tf, rds.tf   # When create_backend_infra = true
+├── backend-deploy-role.tf, frontend-deploy-role.tf
+├── providers.tf, variables.tf, outputs.tf
+├── dev.tfvars              # Default: create_backend_infra = false
+└── prod.tfvars             # Default: create_backend_infra = false
 ```
 
 ---
 
-## 3. Local Usage
+## 3. Local usage (Terraform)
 
-Run from **repo root** via Make:
+Run from **repo root**:
 
-| Target                                   | Purpose                                            |
-| ---------------------------------------- | -------------------------------------------------- |
-| `make init`                              | Terraform init                                     |
-| `make plan-dev`                          | Plan dev                                           |
-| `make apply-dev`                         | Apply dev                                          |
-| `make plan-prod`                         | Plan prod                                          |
-| `make apply-prod`                        | Apply prod                                         |
-| `make output-dev` / `make output-prod`   | Show outputs                                       |
-| `make gh-sync-dev` / `make gh-sync-prod` | Sync outputs → GitHub env vars (requires `gh` CLI) |
+| Target                                   | Purpose                                                     |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| `make init`                              | Terraform init                                              |
+| `make plan-dev` / `make apply-dev`       | Plan/apply dev workspace                                    |
+| `make plan-prod` / `make apply-prod`     | Plan/apply prod workspace                                   |
+| `make output-dev` / `make output-prod`   | Show outputs                                                |
+| `make gh-sync-dev` / `make gh-sync-prod` | Sync some outputs → GitHub environment variables (`gh` CLI) |
+
+Application development does **not** require `terraform apply` with the default tfvars.
 
 ---
 
-## 4. Variables
+## 4. Variables (selected)
 
-| Variable                    | Description                                    | Default                |
-| --------------------------- | ---------------------------------------------- | ---------------------- |
-| `project_name`              | Base name for resources                        | `fefeave-frontend`     |
-| `env`                       | Environment (`dev`, `prod`)                    | —                      |
-| `aws_region`                | AWS region                                     | `us-west-2`            |
-| `github_repo`               | Repo for OIDC trust                            | `wesleyhooker/fefeave` |
-| `github_branch`             | Branch for OIDC trust                          | `main`                 |
-| `create_github_deploy_role` | Create IAM OIDC role                           | `true`                 |
-| `create_backend_infra`      | Create VPC, ECR, ALB, ECS (and optionally RDS) | `false`                |
-| `backend_image_tag`         | Backend Docker image tag for task definition   | `latest`               |
-| `backend_desired_count`     | ECS service desired count                      | `1`                    |
-| `vpc_cidr`                  | CIDR for backend VPC                           | `10.0.0.0/16`          |
-| `create_rds`                | Create RDS Postgres + Secrets Manager secret   | `false`                |
-| `db_name`                   | Postgres database name                         | `fefeave`              |
-| `db_username`               | Postgres master username                       | `fefeave`              |
+| Variable                    | Description                                                   | Default in code |
+| --------------------------- | ------------------------------------------------------------- | --------------- |
+| `create_backend_infra`      | VPC, ECR, ALB, ECS, deploy OIDC roles                         | `false`         |
+| `create_rds`                | RDS + Secrets Manager `DATABASE_URL` (requires backend infra) | `false`         |
+| `create_github_deploy_role` | OIDC provider data used by deploy roles when infra is on      | `true`          |
 
-Values come from `dev.tfvars` and `prod.tfvars`. DEV enables backend + RDS; prod leaves them disabled unless overridden.
+Committed tfvars (`dev.tfvars`, `prod.tfvars`) keep **`create_backend_infra = false`** unless you opt in.
 
 ---
 
 ## 5. Outputs
 
-| Output                       | Use                                                       |
-| ---------------------------- | --------------------------------------------------------- |
-| `s3_bucket_name`             | Upload target for GitHub Actions                          |
-| `cloudfront_distribution_id` | Invalidation target                                       |
-| `github_actions_role_arn`    | OIDC assume-role ARN for Actions                          |
-| `attachments_bucket_name`    | S3 bucket for backend attachments                         |
-| `backend_api_base_url`       | Backend API base URL (ALB DNS; use `http://<this>/api`)   |
-| `backend_ecr_repo_url`       | ECR repository URL for backend images (CI push target)    |
-| `backend_ecs_cluster_name`   | ECS cluster name (for GitHub Actions / CLI)               |
-| `backend_ecs_service_name`   | ECS service name (for GitHub Actions / CLI)               |
-| `backend_deploy_role_arn`    | OIDC role ARN for GitHub Actions backend deploy           |
-| `rds_endpoint`               | RDS endpoint (when RDS created)                           |
-| `database_url_secret_arn`    | Secrets Manager ARN for `DATABASE_URL` (used by ECS task) |
+| Output                                                          | When set                                |
+| --------------------------------------------------------------- | --------------------------------------- |
+| `s3_bucket_name`, `cloudfront_distribution_id`                  | Always                                  |
+| `attachments_bucket_name`, `backend_role_name`                  | Always                                  |
+| `user_pool_id`, `app_client_id`, `cognito_domain`, …            | Dev workspace                           |
+| `backend_*`, `frontend_*` (ECR, ECS, ALB URL, deploy role ARNs) | `create_backend_infra = true`           |
+| `rds_endpoint`, `database_url_secret_arn`                       | `create_backend_infra` and `create_rds` |
 
 ---
 
-## 6. Workflow
+## 6. Deployment paths (GitHub Actions)
 
-1. **First time:** `make init` → `make plan-dev` → `make apply-dev`
-2. **Sync to GitHub:** `make gh-sync-dev` (writes **frontend** env vars for Actions).
-3. **Backend deploy (dev):** For workflow `Backend Deploy (dev)` set GitHub environment **dev** variables from Terraform outputs (see **DEV vars** below). Dev auto-deploys on push to `main` (backend/infra paths); also runnable via `workflow_dispatch`.
-4. **Prod:** `make plan-prod` → `make apply-prod` → `make gh-sync-prod`. **PROD deploy is manual only** — backend is deployed only via the `Backend Deploy (prod)` workflow (Actions → Run workflow). No push triggers.
+| Workflow                   | Trigger                                   | Requires                                                                                                                                                                                  |
+| -------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Backend CI**             | Push/PR (`backend/**`)                    | Unit tests, lint, format (no AWS)                                                                                                                                                         |
+| **Frontend CI**            | Push/PR (`frontend/**`)                   | `npm run build`, audit (no AWS)                                                                                                                                                           |
+| **Backend Deploy (dev)**   | Push to `main` (`backend/**`, `infra/**`) | `create_backend_infra = true`; GitHub **dev** vars: `BACKEND_DEPLOY_ROLE_ARN`, `BACKEND_ECR_REPO_URL`, `BACKEND_ECS_CLUSTER`, `BACKEND_ECS_SERVICE`, `BACKEND_API_BASE_URL`, `AWS_REGION` |
+| **Backend Deploy (prod)**  | Manual `workflow_dispatch` only           | Same vars in **prod** when ECS enabled                                                                                                                                                    |
+| **Frontend Deploy (dev)**  | After Frontend CI on `main`, or manual    | ECS enabled; **dev** vars: `FRONTEND_DEPLOY_ROLE_ARN`, `FRONTEND_ECR_REPO_URL`, `FRONTEND_ECS_CLUSTER`, `FRONTEND_ECS_SERVICE`, `AWS_REGION`                                              |
+| **Frontend Deploy (prod)** | Manual only                               | Same in **prod** when ECS enabled                                                                                                                                                         |
+| **Backend Migrate (dev)**  | Separate workflow                         | RDS/ECS when enabled                                                                                                                                                                      |
+
+With default tfvars, **ECS deploy workflows have nothing to deploy to** until you enable `create_backend_infra` and set GitHub environment variables from `terraform output`.
+
+### `make gh-sync-dev` / `make gh-sync-prod`
+
+- Always attempts to sync `S3_BUCKET`, `CF_DIST_ID`, and `AWS_REGION` from Terraform outputs.
+- When `backend_deploy_role_arn` is non-null, also syncs backend ECS deploy vars (`BACKEND_*`).
+- Does **not** sync frontend ECS vars (`FRONTEND_*`); set those manually from `frontend_deploy_role_arn`, `frontend_ecr_repo_url`, `frontend_ecs_cluster_name`, and `frontend_ecs_service_name` when ECS is enabled.
 
 ---
 
 ## 7. GitHub environment variables
 
-**DEV (backend deploy)** — set in GitHub environment **dev** (from Terraform outputs when `create_backend_infra = true`):
+### When `create_backend_infra = true` (backend deploy)
 
-| Variable                  | Source / use                             |
-| ------------------------- | ---------------------------------------- |
-| `BACKEND_DEPLOY_ROLE_ARN` | OIDC role for ECR push + ECS update      |
-| `AWS_REGION`              | e.g. `us-west-2`                         |
-| `BACKEND_ECR_REPO_URL`    | ECR repository URL (push target)         |
-| `BACKEND_ECS_CLUSTER`     | ECS cluster name                         |
-| `BACKEND_ECS_SERVICE`     | ECS service name                         |
-| `BACKEND_API_BASE_URL`    | Backend API base URL (e.g. `http://...`) |
+| Variable                  | Source                     |
+| ------------------------- | -------------------------- |
+| `BACKEND_DEPLOY_ROLE_ARN` | `backend_deploy_role_arn`  |
+| `BACKEND_ECR_REPO_URL`    | `backend_ecr_repo_url`     |
+| `BACKEND_ECS_CLUSTER`     | `backend_ecs_cluster_name` |
+| `BACKEND_ECS_SERVICE`     | `backend_ecs_service_name` |
+| `BACKEND_API_BASE_URL`    | `backend_api_base_url`     |
+| `AWS_REGION`              | e.g. `us-west-2`           |
 
-**PROD (backend deploy)** — set in GitHub environment **prod** when backend infra is enabled in prod (same names as above, from prod Terraform outputs). Used only by the manual `Backend Deploy (prod)` workflow.
+### When `create_backend_infra = true` (frontend deploy)
+
+| Variable                   | Source                      |
+| -------------------------- | --------------------------- |
+| `FRONTEND_DEPLOY_ROLE_ARN` | `frontend_deploy_role_arn`  |
+| `FRONTEND_ECR_REPO_URL`    | `frontend_ecr_repo_url`     |
+| `FRONTEND_ECS_CLUSTER`     | `frontend_ecs_cluster_name` |
+| `FRONTEND_ECS_SERVICE`     | `frontend_ecs_service_name` |
+| `AWS_REGION`               | e.g. `us-west-2`            |
+
+### Static site outputs (always)
+
+S3 and CloudFront outputs exist for future or manual static deploys; there is **no** automated “upload to S3” workflow in `.github/workflows/` today. Hosted app deploys use **ECS** when infra is enabled.
 
 ---
 
 ## 8. Troubleshooting
 
-| Issue                        | Fix                                                                                                                             |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `terraform plan` fails       | Run `make init` after provider changes.                                                                                         |
-| `make gh-sync-*` fails       | Install `gh` CLI and run `gh auth login`.                                                                                       |
-| OIDC assume fails in Actions | Confirm GitHub env vars (`S3_BUCKET`, `CF_DIST_ID`, `AWS_ROLE_ARN`, `AWS_REGION`) are set; repo/branch in `variables.tf` match. |
+| Issue                            | Fix                                                                                           |
+| -------------------------------- | --------------------------------------------------------------------------------------------- |
+| `terraform plan` fails           | Run `make init` after provider changes.                                                       |
+| `make gh-sync-*` fails           | Install `gh` CLI and run `gh auth login`.                                                     |
+| Deploy workflow missing env vars | Enable `create_backend_infra`, `make apply-dev`, `make output-dev`, set GitHub vars (see §7). |
+| OIDC assume fails in Actions     | Confirm repo/branch in `variables.tf` match; role ARNs match Terraform outputs.               |

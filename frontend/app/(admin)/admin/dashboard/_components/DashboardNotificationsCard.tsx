@@ -1,12 +1,17 @@
 "use client";
 
 import {
-  dashboardEyebrow,
   dashboardModulePanel,
   dashboardModulePanelHeader,
+  dashboardEyebrow,
   dashboardPadX,
   dashboardRowList,
 } from "./dashboardStructure";
+import {
+  WORKFLOW_ACTIVE_SHOWS_ROW_LABEL,
+  WORKFLOW_NEEDS_ATTENTION_HEADING,
+  WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { DashboardNotificationRow } from "./DashboardNotificationRow";
 
 function BellIcon({ className }: { className?: string }) {
@@ -62,11 +67,14 @@ export function DashboardNotificationsCard({
   vendorsOwingCount: number;
 }) {
   return (
-    <aside className={dashboardModulePanel} aria-label="Notifications">
+    <aside
+      className={dashboardModulePanel}
+      aria-label={WORKFLOW_NEEDS_ATTENTION_HEADING}
+    >
       <div className={dashboardModulePanelHeader}>
         <h2 className={`flex items-center gap-2 ${dashboardEyebrow}`}>
-          <BellIcon className="h-3.5 w-3.5 text-stone-400" />
-          Notifications
+          <BellIcon className="h-3.5 w-3.5 text-stone-500" />
+          {WORKFLOW_NEEDS_ATTENTION_HEADING}
         </h2>
       </div>
       <ul className={dashboardRowList}>
@@ -79,7 +87,7 @@ export function DashboardNotificationsCard({
         <DashboardNotificationRow
           href="/admin/shows"
           iconClassName="bg-stone-400/45"
-          title="Open shows"
+          title={WORKFLOW_ACTIVE_SHOWS_ROW_LABEL}
           valueLabel={String(openShowsCount)}
           valueClassName={
             openShowsCount > 0 ? "text-stone-800" : "text-stone-400"
@@ -88,7 +96,7 @@ export function DashboardNotificationsCard({
         <DashboardNotificationRow
           href="/admin/balances"
           iconClassName="bg-amber-300/55"
-          title="Vendors with balance"
+          title={WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL}
           valueLabel={String(vendorsOwingCount)}
           valueClassName={
             vendorsOwingCount > 0 ? "text-rose-800/90" : "text-stone-400"

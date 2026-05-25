@@ -51,6 +51,13 @@ describe('DB smoke test', () => {
       );
       const wholesaler = wholesalerRes.rows[0];
       expect(wholesaler.name).toBe('Test Wholesaler');
+      const accountRes = await client.query(
+        `INSERT INTO accounts (display_name, type, status, legacy_wholesaler_id)
+         VALUES ($1, 'WHOLESALER', 'ACTIVE', $2)
+         RETURNING id`,
+        [wholesaler.name, wholesaler.id]
+      );
+      const accountId = accountRes.rows[0].id;
 
       const showRes = await client.query(
         `INSERT INTO shows (name, show_date, created_by) VALUES ($1, $2, $3)
@@ -62,10 +69,10 @@ describe('DB smoke test', () => {
       expect(show.show_date).toBe('2025-03-15');
 
       const lineItemRes = await client.query(
-        `INSERT INTO owed_line_items (show_id, wholesaler_id, amount, description, created_by)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO owed_line_items (show_id, wholesaler_id, account_id, amount, description, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, amount::numeric(12,2)::text AS amount, description`,
-        [show.id, wholesaler.id, '1250.50', 'Booth rental', userId]
+        [show.id, wholesaler.id, accountId, '1250.50', 'Booth rental', userId]
       );
       const lineItem = lineItemRes.rows[0];
       expect(lineItem.amount).toBe('1250.50');

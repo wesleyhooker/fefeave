@@ -1,62 +1,59 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import { useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import type { ShowDTO } from "@/src/lib/api/shows";
 import type { SelfPayStored } from "../selfPayStorage";
-import type { WeekPreviewSummary } from "../types";
+import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
+  workspaceActionIconSm,
   workspaceListPrimaryMoneyAmountClass,
-  workspaceActionWarmPrimaryMd,
+  workspaceActionPositiveCompleteSm,
   workspaceMoneyMuted,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import { DashboardRowChevron } from "@/app/(admin)/admin/dashboard/_components/DashboardRowChevron";
+import { dashboardShowsNavLink } from "@/app/(admin)/admin/dashboard/_components/dashboardStructure";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
-import { DashboardRetryBanner } from "./DashboardRetryBanner";
+import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import {
+  WORKFLOW_EMPTY_WEEK_SCHEDULE,
+  WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL,
+  WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE,
+  WORKFLOW_SELF_PAY_MARK_PAID_TOGGLE_LABEL,
+  WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL,
+  WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE,
+  WORKFLOW_THIS_WEEK_HEADING,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
+  workspaceThisWeekSupportingMeta,
+  workspaceThisWeekTitle,
+} from "@/app/(admin)/admin/_lib/workspaceThisWeekSurface";
 import { DashboardShowRow } from "./DashboardShowRow";
 import {
   dashboardCardFooterNote,
-  dashboardEyebrow,
   dashboardPadX,
   dashboardPrimaryListShell,
   dashboardRowList,
-  dashboardShowsNavLink,
+  dashboardWeeklyShowsEyebrow,
   dashboardWeeklyHeaderBand,
   dashboardWeeklyHeroInsetWrapper,
-  dashboardWeeklyListToggleBand,
   dashboardWeeklyShowsToolbar,
   dashboardWeeklyStatusCard,
 } from "./dashboardStructure";
-
-const textLink =
-  "text-xs font-medium text-stone-600 underline decoration-stone-300/90 underline-offset-2 hover:text-stone-900";
-
-function ShowsChevronIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path
-        fillRule="evenodd"
-        d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
 
 export function DashboardThisWeekCard({
   selfPaid,
   selfPay,
   onMarkDone,
   onMarkUndone,
+  weekRangeLabel,
+  payoutAmount,
+  canMarkPaid,
+  canMarkUnpaid,
   weekProfitError,
   weekProfitDisplay,
-  closedThisWeekCount,
-  upcomingThisWeekCount,
   showsError,
   onRetryShows,
   showsThisWeek,
@@ -66,54 +63,27 @@ export function DashboardThisWeekCard({
 }: {
   selfPaid: boolean;
   selfPay: SelfPayStored | null;
-  onMarkDone: () => void;
-  onMarkUndone: () => void;
+  onMarkDone: () => Promise<void>;
+  onMarkUndone: () => Promise<void>;
+  weekRangeLabel: string;
+  payoutAmount: number;
+  canMarkPaid: boolean;
+  canMarkUnpaid: boolean;
   weekProfitError: string | null;
   weekProfitDisplay: number | null;
-  closedThisWeekCount: number;
-  upcomingThisWeekCount: number;
   showsError: string | null;
   onRetryShows: () => void;
   showsThisWeek: ShowDTO[];
-  weekPreviewSummaries: Record<string, WeekPreviewSummary>;
+  weekPreviewSummaries: Record<string, ShowFinancialSummary>;
   showsThisWeekTotal: number;
   showsLimit: number;
 }) {
   const moreThanPreview = Math.max(0, showsThisWeekTotal - showsLimit);
 
-  const [weeklyShowsOpen, setWeeklyShowsOpen] = useState(!selfPaid);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [markUnpaidOpen, setMarkUnpaidOpen] = useState(false);
-  const [paidStatePulse, setPaidStatePulse] = useState(false);
-  const prevPaidRef = useRef(selfPaid);
-
-  useEffect(() => {
-    if (selfPaid) {
-      setWeeklyShowsOpen(false);
-    } else {
-      setWeeklyShowsOpen(true);
-    }
-  }, [selfPaid]);
-
-  useEffect(() => {
-    if (prevPaidRef.current !== selfPaid) {
-      prevPaidRef.current = selfPaid;
-      setMarkPaidOpen(false);
-      setMarkUnpaidOpen(false);
-      setPaidStatePulse(true);
-      const t = window.setTimeout(() => setPaidStatePulse(false), 260);
-      return () => window.clearTimeout(t);
-    }
-  }, [selfPaid]);
 
   const hasShows = showsThisWeek.length > 0;
-  const showListBlock = !hasShows || !selfPaid || weeklyShowsOpen;
-  const showCollapseChrome = selfPaid && hasShows;
-
-  const hasProfitSummary =
-    weekProfitError == null && weekProfitDisplay !== null;
-
-  const summaryPaidComplete = Boolean(selfPaid && hasProfitSummary);
 
   const paidAtLabel =
     selfPay?.paidAt != null
@@ -124,22 +94,39 @@ export function DashboardThisWeekCard({
           minute: "2-digit",
         })
       : null;
+  const markPaidDialogDescription = `Week ${weekRangeLabel} · ${formatCurrency(
+    payoutAmount,
+  )}. This records or updates the owner payout in Owner activity.`;
+  const markUnpaidDialogDescription = `Week ${weekRangeLabel}. This voids the owner payout, and the row stays visible as voided in Owner activity.`;
 
   return (
     <div className="space-y-3">
       {showsError != null ? (
-        <DashboardRetryBanner message={showsError} onRetry={onRetryShows} />
+        <WorkspaceInlineError
+          title="Could not refresh shows."
+          message={showsError}
+          onRetry={onRetryShows}
+        />
       ) : null}
 
-      <section className={dashboardWeeklyStatusCard}>
-        <div className={dashboardWeeklyHeaderBand}>
-          <h2 className="text-base font-semibold tracking-tight text-stone-900 sm:text-lg">
-            This week
+      <section className={`${dashboardWeeklyStatusCard} relative`}>
+        <div
+          className={`${dashboardWeeklyHeaderBand} flex items-start justify-between gap-3`}
+        >
+          <h2 className={workspaceThisWeekTitle}>
+            {WORKFLOW_THIS_WEEK_HEADING}
           </h2>
+          <Link
+            href="/admin/shows"
+            className={`group shrink-0 ${dashboardShowsNavLink}`}
+          >
+            View shows
+            <DashboardRowChevron />
+          </Link>
         </div>
 
         <div
-          className={`${dashboardWeeklyHeroInsetWrapper} rounded-xl bg-stone-50/45 p-1 sm:p-1.5`}
+          className={`${dashboardWeeklyHeroInsetWrapper} rounded-xl bg-stone-50/45 p-2.5 sm:p-2.5`}
         >
           {weekProfitError != null ? (
             <div className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-sm sm:p-6">
@@ -149,86 +136,56 @@ export function DashboardThisWeekCard({
             </div>
           ) : weekProfitDisplay !== null ? (
             <>
-              <div
-                className={`w-full overflow-hidden rounded-[0.65rem] border text-left shadow-sm transition-[border-color,background-color,box-shadow,opacity] duration-300 ease-out ${
-                  summaryPaidComplete
-                    ? "border-emerald-500/45 bg-emerald-50/45 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.82),0_2px_14px_-6px_rgba(5,100,78,0.1)]"
-                    : "border-stone-200/95 bg-white"
-                } ${paidStatePulse ? "opacity-[0.97]" : "opacity-100"}`}
-              >
-                <div className="px-6 pb-6 pt-6 sm:px-7 sm:pb-7 sm:pt-7">
-                  <div className={dashboardEyebrow}>Est. week profit</div>
-                  <div className="mt-3 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-x-4">
-                    <p
-                      className={`min-w-0 text-3xl leading-none tracking-tight sm:text-[2.35rem] ${workspaceListPrimaryMoneyAmountClass(weekProfitDisplay)}`}
-                    >
-                      {formatCurrency(weekProfitDisplay)}
-                    </p>
-                    <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
-                      {summaryPaidComplete ? (
-                        <>
-                          <span className="inline-flex items-center justify-center gap-2 self-stretch rounded-lg border border-emerald-400/45 bg-emerald-100/85 px-3 py-2 text-center text-xs font-semibold text-emerald-900 shadow-[inset_0_0_0_1px_rgba(5,95,72,0.08)] sm:self-end sm:py-1.5">
-                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/70 text-emerald-800">
-                              <svg
-                                className="h-3.5 w-3.5 shrink-0"
-                                viewBox="0 0 12 12"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.2"
-                                aria-hidden
-                              >
-                                <path
-                                  d="M2 6l3 3 5-5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </span>
-                            <span>Marked paid</span>
-                          </span>
-                          {paidAtLabel ? (
-                            <p className="text-center text-[11px] font-medium tabular-nums text-emerald-800/75 sm:text-right">
-                              Confirmed {paidAtLabel}
-                            </p>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() => setMarkUnpaidOpen(true)}
-                            className="text-center text-xs font-medium text-stone-500/90 underline decoration-stone-300/70 underline-offset-2 transition-colors hover:text-stone-700 sm:text-right"
-                          >
-                            Mark as unpaid
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setMarkPaidOpen(true)}
-                          className={`${workspaceActionWarmPrimaryMd} sm:py-2`}
-                        >
-                          Mark as paid
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs tabular-nums leading-relaxed text-stone-500">
-                    <span className="text-stone-700">
-                      {closedThisWeekCount}
-                    </span>{" "}
-                    closed
-                    <span className="mx-1.5 text-stone-300">·</span>
-                    <span className="text-stone-700">
-                      {upcomingThisWeekCount}
-                    </span>{" "}
-                    upcoming
+              <div className="px-4 pb-5 pt-6 sm:px-8 sm:pb-8 sm:pt-10">
+                <p className={`text-sm ${workspaceThisWeekSupportingMeta}`}>
+                  {weekRangeLabel}
+                </p>
+                <p
+                  className={`mt-2 min-w-0 text-[1.5rem] leading-none tracking-tight sm:text-[2.2rem] ${workspaceListPrimaryMoneyAmountClass(weekProfitDisplay)}`}
+                >
+                  {formatCurrency(weekProfitDisplay)}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-stone-200/60 pt-3">
+                  <p
+                    className={`text-sm font-medium ${selfPaid ? "text-emerald-800" : "text-stone-700"}`}
+                  >
+                    {selfPaid && paidAtLabel
+                      ? `Paid • ${paidAtLabel}`
+                      : "Unpaid"}
                   </p>
+                  {selfPaid ? (
+                    canMarkUnpaid ? (
+                      <button
+                        type="button"
+                        onClick={() => setMarkUnpaidOpen(true)}
+                        className="ml-auto rounded-md p-1.5 text-stone-500 transition-colors hover:bg-stone-100/90 hover:text-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300/45"
+                        aria-label="Undo payout"
+                        title="Undo payout"
+                      >
+                        <ArrowUturnLeftIcon className={workspaceActionIconSm} />
+                      </button>
+                    ) : null
+                  ) : canMarkPaid ? (
+                    <button
+                      type="button"
+                      onClick={() => setMarkPaidOpen(true)}
+                      className={`${workspaceActionPositiveCompleteSm} ml-auto w-full justify-center sm:w-auto`}
+                    >
+                      {WORKFLOW_SELF_PAY_MARK_PAID_TOGGLE_LABEL}
+                    </button>
+                  ) : (
+                    <p className="ml-auto text-xs text-stone-500">
+                      No payout to mark yet
+                    </p>
+                  )}
                 </div>
               </div>
               <WorkspaceConfirmDialog
                 open={markPaidOpen}
                 onOpenChange={setMarkPaidOpen}
-                title="Mark this week as paid?"
-                description="You're confirming you've paid yourself for this week."
-                confirmLabel="Mark as paid"
+                title={WORKFLOW_SELF_PAY_MARK_PAID_DIALOG_TITLE}
+                description={markPaidDialogDescription}
+                confirmLabel={WORKFLOW_SELF_PAY_MARK_PAID_CONFIRM_LABEL}
                 onConfirm={onMarkDone}
                 tone="rose"
                 icon="$"
@@ -236,9 +193,9 @@ export function DashboardThisWeekCard({
               <WorkspaceConfirmDialog
                 open={markUnpaidOpen}
                 onOpenChange={setMarkUnpaidOpen}
-                title="Reopen this week payout?"
-                description="This will remove the paid status and reopen this week for payout tracking."
-                confirmLabel="Reopen week"
+                title={WORKFLOW_SELF_PAY_REOPEN_DIALOG_TITLE}
+                description={markUnpaidDialogDescription}
+                confirmLabel={WORKFLOW_SELF_PAY_REOPEN_CONFIRM_LABEL}
                 onConfirm={onMarkUndone}
                 tone="stone"
                 icon="↺"
@@ -251,70 +208,49 @@ export function DashboardThisWeekCard({
           )}
         </div>
 
-        {showCollapseChrome && !weeklyShowsOpen ? (
-          <div className={dashboardWeeklyListToggleBand}>
-            <button
-              type="button"
-              onClick={() => setWeeklyShowsOpen(true)}
-              className={textLink}
-            >
-              Show {showsThisWeekTotal}{" "}
-              {showsThisWeekTotal === 1 ? "show" : "shows"}
-            </button>
-          </div>
-        ) : null}
-
-        {showCollapseChrome && weeklyShowsOpen ? (
-          <div className={dashboardWeeklyListToggleBand}>
-            <button
-              type="button"
-              onClick={() => setWeeklyShowsOpen(false)}
-              className={textLink}
-            >
-              Hide shows
-            </button>
-          </div>
-        ) : null}
-
-        {showListBlock ? (
+        {hasShows ? (
           <>
             <div className={dashboardWeeklyShowsToolbar}>
-              <Link
-                href="/admin/shows"
-                className={`${dashboardEyebrow} ${dashboardShowsNavLink}`}
+              <div
+                className={`${dashboardWeeklyShowsEyebrow} w-full justify-between`}
               >
-                Shows
-                <ShowsChevronIcon className="h-3 w-3 text-stone-500 opacity-70" />
-              </Link>
+                <span className="inline-flex items-center gap-1.5">
+                  Shows
+                  <span className="text-stone-500">({showsThisWeekTotal})</span>
+                </span>
+              </div>
             </div>
-            <ul className={`${dashboardPrimaryListShell} ${dashboardRowList}`}>
-              {showsThisWeek.length === 0 ? (
-                <li
-                  className={`${dashboardPadX} py-6 text-center text-sm text-stone-500`}
-                >
-                  None scheduled this week.
-                </li>
-              ) : (
-                showsThisWeek.map((show) => (
-                  <DashboardShowRow
-                    key={show.id}
-                    show={show}
-                    summary={weekPreviewSummaries[show.id]}
-                  />
-                ))
-              )}
+            <ul
+              className={`relative z-[2] ${dashboardPrimaryListShell} ${dashboardRowList}`}
+            >
+              {showsThisWeek.map((show) => (
+                <DashboardShowRow
+                  key={show.id}
+                  show={show}
+                  summary={weekPreviewSummaries[show.id]}
+                />
+              ))}
             </ul>
 
             {moreThanPreview > 0 && hasShows ? (
-              <div className={dashboardCardFooterNote}>
+              <div className={`${dashboardCardFooterNote} relative z-[2]`}>
                 +{moreThanPreview} more ·{" "}
-                <Link href="/admin/shows" className={textLink}>
+                <Link
+                  href="/admin/shows"
+                  className="font-medium text-stone-600 underline decoration-stone-300/90 underline-offset-2 hover:text-stone-900"
+                >
                   View all
                 </Link>
               </div>
             ) : null}
           </>
-        ) : null}
+        ) : (
+          <div className={dashboardWeeklyShowsToolbar}>
+            <p className="text-sm text-stone-500">
+              {WORKFLOW_EMPTY_WEEK_SCHEDULE}
+            </p>
+          </div>
+        )}
       </section>
     </div>
   );
