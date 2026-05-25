@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { Container, Heading, Prose } from "@/system";
 import { HomeSectionImage } from "../_components/HomeSectionImage";
-import { TERTIARY_LINK_CLASSES } from "../_components/homeCtaClasses";
+import { ArrowRightIcon } from "../_components/icons/PublicUiIcons";
+import { PublicPageMain } from "../_components/shell/PublicPageMain";
+import { TERTIARY_LINK_CLASSES } from "../_components/shell/publicCtaClasses";
 
 const FELICIA_IMAGE_SRC = "/images/felicia.jpg";
 
 export default function AboutPage() {
   return (
-    <main className="bg-fefe-cream py-fefe-6 md:py-fefe-7">
+    <PublicPageMain>
       <Container className="flex flex-col gap-fefe-5 md:flex-row md:items-center md:gap-fefe-6">
         <div className="min-w-0 flex-1">
           <Heading level={1} className="mb-fefe-3">
@@ -37,20 +39,7 @@ export default function AboutPage() {
             className={`mt-fefe-4 ${TERTIARY_LINK_CLASSES}`}
           >
             Get in touch
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
-              />
-            </svg>
+            <ArrowRightIcon />
           </Link>
         </div>
         <div className="flex-shrink-0 md:max-w-sm">
@@ -62,6 +51,6 @@ export default function AboutPage() {
           />
         </div>
       </Container>
-    </main>
+    </PublicPageMain>
   );
 }

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { HeartIcon } from "@/app/_components/icons/HeartIcon";
-import { HomepageContainer } from "@/app/(public)/_components/homepageShell";
+import { HomepageContainer } from "@/app/(public)/_components/shell/publicShell";
 import { PublicAccountDropdown } from "./PublicAccountDropdown";
 
 export type PublicHeaderProps = {

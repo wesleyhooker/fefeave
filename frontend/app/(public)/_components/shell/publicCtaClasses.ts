@@ -1,7 +1,6 @@
 /**
- * Shared CTA link class strings for the public homepage.
- * Matches system Button variants (primary, secondary, tertiary) for visual consistency.
- * Use for <Link> elements that should look like buttons without adding system primitives.
+ * CTA class strings for public marketing pages.
+ * Use on `<Link>` elements that mirror system `Button` variants.
  */
 
 export const PRIMARY_LINK_CLASSES =
@@ -13,7 +12,7 @@ export const SECONDARY_LINK_CLASSES =
 export const TERTIARY_LINK_CLASSES =
   'inline-flex items-center gap-fefe-1 font-fefe text-fefe-charcoal hover:text-fefe-gold hover:underline transition-colors focus-visible:ring-2 focus-visible:ring-fefe-stone focus-visible:ring-offset-2 rounded-fefe-button';
 
-/** Hero primary CTA — gold button aligned with copy column */
+/** Homepage hero primary CTA */
 export const HERO_PRIMARY_CTA_CLASSES =
   'group inline-flex items-center gap-fefe-2 rounded-fefe-button bg-fefe-gold px-5 py-2.5 font-fefe text-base font-medium text-white transition-colors duration-200 ease-out hover:bg-fefe-gold-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fefe-gold focus-visible:ring-offset-2 focus-visible:ring-offset-fefe-cream';
 

@@ -6,18 +6,19 @@ import { Heading, Prose } from "@/system";
 import { BrushUnderline } from "./editorial/BrushUnderline";
 import { EditorialEyebrow } from "./editorial/EditorialEyebrow";
 import { HeroDropsAnnounce } from "./HeroDropsAnnounce";
-import {
-  HOME_WHERE_TO_FIND_LIVE_ID,
-  HomepageContainer,
-  homepageHeroGridClass,
-  publicEditorialProseClass,
-} from "./homepageShell";
+import { PlayIcon } from "./icons/PublicUiIcons";
 import {
   HERO_PLAY_ICON_CLASSES,
   HERO_PRIMARY_CTA_CLASSES,
-} from "./homeCtaClasses";
+} from "./shell/publicCtaClasses";
+import {
+  HOME_WHERE_TO_FIND_LIVE_ID,
+  HomepageContainer,
+  publicEditorialHeadlineClass,
+  publicEditorialProseClass,
+  publicHomeHeroGridClass,
+} from "./shell/publicShell";
 
-/** Final hero collage — public/images/hero-collage.png (3200×2133 RGBA) */
 const HERO_COLLAGE_SRC = "/images/hero-collage.png";
 const HERO_COLLAGE_FILE = join(
   process.cwd(),
@@ -26,24 +27,9 @@ const HERO_COLLAGE_FILE = join(
   "hero-collage.png",
 );
 const HERO_COLLAGE_READY = existsSync(HERO_COLLAGE_FILE);
-
 const HERO_COLLAGE_WIDTH = 3200;
 const HERO_COLLAGE_HEIGHT = 2133;
 
-function PlayIcon() {
-  return (
-    <svg
-      className="h-3.5 w-3.5 transition-transform duration-200 ease-out group-hover:translate-x-px"
-      fill="currentColor"
-      viewBox="0 0 16 16"
-      aria-hidden
-    >
-      <path d="M5.5 4.25v7.5L12.25 8 5.5 4.25z" />
-    </svg>
-  );
-}
-
-/** Single complete hero illustration — no CSS collage layers. */
 function HeroIllustration() {
   if (!HERO_COLLAGE_READY) {
     return null;
@@ -68,16 +54,13 @@ export function HomeHeroSection() {
   return (
     <section className="bg-fefe-cream">
       <HomepageContainer className="overflow-visible pb-fefe-6 pt-fefe-2 md:pb-fefe-7 md:pt-fefe-5">
-        <div className={homepageHeroGridClass}>
+        <div className={publicHomeHeroGridClass}>
           <div className="relative z-10 flex min-w-0 max-w-xl flex-col items-start md:max-w-none md:justify-self-end md:pt-16 lg:max-w-[40rem] lg:pt-[4.5rem]">
             <EditorialEyebrow>
               <span>YOUR VIRTUAL SHOPPING AVENUE</span>
             </EditorialEyebrow>
 
-            <Heading
-              level={1}
-              className="w-full text-[2.125rem] leading-[1.12] tracking-tight sm:text-[2.625rem] md:text-[3.5rem] md:leading-[1.08] lg:text-[4rem]"
-            >
+            <Heading level={1} className={publicEditorialHeadlineClass}>
               Curated live <BrushUnderline>resale</BrushUnderline> drops.
             </Heading>
 

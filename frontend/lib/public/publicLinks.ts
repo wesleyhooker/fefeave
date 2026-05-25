@@ -1,5 +1,11 @@
 export type LivePlatformId = 'whatnot' | 'tiktok';
 
+/** Display order for inline hero marks and announce row */
+export const LIVE_PLATFORM_DISPLAY_ORDER: readonly LivePlatformId[] = [
+  'whatnot',
+  'tiktok',
+];
+
 export type LivePlatformLink = {
   id: LivePlatformId;
   label: string;

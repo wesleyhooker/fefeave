@@ -9,8 +9,8 @@
   /** Homepage raised panels — slightly warmer/darker than canvas cream */
   --fefe-cream-raised: #f5f0ea;
   --fefe-warm-sand: #ebded2;
-  /** Micro accents on cream (icon wells, image placeholders) — not full section fills */
-  --fefe-sand-muted: #ede4d8;
+  /** Soft band + placeholders — lighter than warm sand for readable type on top */
+  --fefe-sand-muted: #f2ece4;
   --fefe-stone: #d1c5b8;
   --fefe-charcoal: #2c2c2c;
 

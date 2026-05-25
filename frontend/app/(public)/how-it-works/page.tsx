@@ -8,7 +8,9 @@ import {
   Heading,
   Prose,
 } from "@/system";
-import { SECONDARY_LINK_CLASSES } from "../_components/homeCtaClasses";
+import { PublicPageMain } from "../_components/shell/PublicPageMain";
+import { SECONDARY_LINK_CLASSES } from "../_components/shell/publicCtaClasses";
+import { HOME_WHERE_TO_FIND_LIVE_ID } from "../_components/shell/publicShell";
 
 const STEPS = [
   {
@@ -39,7 +41,7 @@ const STEPS = [
 
 export default function HowItWorksPage() {
   return (
-    <main className="bg-fefe-cream py-fefe-6 md:py-fefe-7">
+    <PublicPageMain>
       <Container>
         <Heading level={1} className="mb-fefe-3">
           How it works
@@ -66,13 +68,13 @@ export default function HowItWorksPage() {
         </ul>
         <div className="mt-fefe-6">
           <Link
-            href="/#where-to-find-us-live"
+            href={`/#${HOME_WHERE_TO_FIND_LIVE_ID}`}
             className={SECONDARY_LINK_CLASSES}
           >
             Where to find us live
           </Link>
         </div>
       </Container>
-    </main>
+    </PublicPageMain>
   );
 }

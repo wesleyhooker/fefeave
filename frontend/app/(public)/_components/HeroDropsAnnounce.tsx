@@ -1,18 +1,19 @@
 import Link from "next/link";
-import { getLivePlatformLinks } from "@/lib/public/publicLinks";
+import {
+  getLivePlatformLinks,
+  LIVE_PLATFORM_DISPLAY_ORDER,
+} from "@/lib/public/publicLinks";
 import { PlatformLogo } from "./platform-logos";
-
-const PLATFORM_ORDER = ["whatnot", "tiktok"] as const;
 
 export function HeroDropsAnnounce() {
   const links = getLivePlatformLinks();
   const byId = Object.fromEntries(links.map((l) => [l.id, l])) as Partial<
-    Record<(typeof PLATFORM_ORDER)[number], (typeof links)[number]>
+    Record<(typeof LIVE_PLATFORM_DISPLAY_ORDER)[number], (typeof links)[number]>
   >;
 
   return (
     <p className="mt-fefe-2 flex w-full max-w-md flex-wrap items-center gap-x-2 gap-y-1 font-fefe text-sm tracking-wide text-fefe-charcoal/80">
-      {PLATFORM_ORDER.map((id) => {
+      {LIVE_PLATFORM_DISPLAY_ORDER.map((id) => {
         const link = byId[id];
         const mark = <PlatformLogo key={id} platform={id} variant="inline" />;
         if (!link) {

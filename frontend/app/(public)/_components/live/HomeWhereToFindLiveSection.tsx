@@ -1,15 +1,12 @@
-import { Heading } from "@/system";
 import {
   getLivePlatformLinks,
   hasLivePlatformLinks,
 } from "@/lib/public/publicLinks";
-import { EditorialEyebrow } from "../editorial/EditorialEyebrow";
 import {
-  HOME_WHERE_TO_FIND_LIVE_ID,
   HomepageContainer,
-  homepageSectionHeaderClass,
-  homepageSectionHeadingClass,
-} from "../homepageShell";
+  HOME_WHERE_TO_FIND_LIVE_ID,
+} from "../shell/publicShell";
+import { PublicSectionHeader } from "../editorial/PublicSectionHeader";
 import { LivePlatformShowcaseCard } from "./LivePlatformShowcaseCard";
 
 export function HomeWhereToFindLiveSection() {
@@ -21,17 +18,11 @@ export function HomeWhereToFindLiveSection() {
       aria-labelledby="where-to-find-live-heading"
     >
       <HomepageContainer>
-        <div className={homepageSectionHeaderClass}>
-          <EditorialEyebrow centered>
-            <span>Where to find us live</span>
-          </EditorialEyebrow>
-
-          <div id="where-to-find-live-heading">
-            <Heading level={2} className={homepageSectionHeadingClass}>
-              Two ways to shop with Felicia.
-            </Heading>
-          </div>
-        </div>
+        <PublicSectionHeader
+          eyebrow="Where to find us live"
+          title="Two ways to shop with Felicia."
+          headingId="where-to-find-live-heading"
+        />
 
         {hasLivePlatformLinks() ? (
           <ul className="mt-fefe-5 grid gap-fefe-4 sm:grid-cols-2 md:mt-fefe-6">

@@ -1,19 +1,18 @@
-import {
-  homepageLiveStoryBlockClass,
-  homepageLiveStorySurfaceClass,
-} from "../homepageShell";
+import { publicLivePlatformsBandClass } from "../shell/publicShell";
 import { HomeLiveExperienceSection } from "./HomeLiveExperienceSection";
 import { HomeWhereToFindLiveSection } from "./HomeWhereToFindLiveSection";
 
 /**
- * Live story on the homepage cream canvas: platforms + experience (no sand band).
+ * Homepage live story: sand-muted platform band, then cream experience row.
  */
 export function HomeLiveStorySection() {
   return (
-    <div
-      className={`${homepageLiveStorySurfaceClass} ${homepageLiveStoryBlockClass}`}
-    >
-      <HomeWhereToFindLiveSection />
+    <div>
+      <div
+        className={`${publicLivePlatformsBandClass} pt-fefe-6 pb-fefe-5 md:pt-fefe-7 md:pb-fefe-6`}
+      >
+        <HomeWhereToFindLiveSection />
+      </div>
       <HomeLiveExperienceSection />
     </div>
   );

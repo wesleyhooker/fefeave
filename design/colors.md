@@ -69,7 +69,7 @@ The `(public)` layout root uses class `public-site`, which **re-scopes CSS varia
 | `--fefe-trust-gold`                 | Aliased to public gold (one accent family)                                     |
 | `--fefe-icon-well`                  | Uses `--fefe-sand-muted` for icon wells on cream                               |
 
-**Sand-muted** (`#EDE4D8`) is for micro accents (wells, placeholders, header hover pills), not full-width bands. Large public sections use **Cream** only (Phase A).
+**Sand-muted** (`#F2ECE4`, light band) wraps the homepage platform cards below the hero. The **“Real time”** feature row uses **Cream** for readability. Sand-muted is also used for placeholders and header hover pills. Platform cards use **white** elevated surfaces on the band.
 
 ---
 

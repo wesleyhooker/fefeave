@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth/session.node";
 import { PublicHeader } from "../_components/headers/PublicHeader";
 import { PublicFooter } from "./_components/PublicFooter";
-import { publicSiteClass } from "./_components/publicSite";
+import { publicSiteClass } from "./_components/shell/publicShell";
 
 export default async function PublicLayout({
   children,
