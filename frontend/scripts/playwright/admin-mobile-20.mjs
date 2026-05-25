@@ -141,7 +141,9 @@ try {
   await snap(page, i++, "balances");
 
   if (wholesalerId) {
-    const vendorLink = page.locator(`a[href="/admin/wholesalers/${wholesalerId}"]`);
+    const vendorLink = page.locator(
+      `a[href="/admin/wholesalers/${wholesalerId}"]`,
+    );
     if (await vendorLink.count()) {
       await vendorLink.first().scrollIntoViewIfNeeded();
       await page.waitForTimeout(160);

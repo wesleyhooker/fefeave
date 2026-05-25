@@ -5,17 +5,17 @@
  * (see docs/DEV.md) when using make dev + dev_bypass API.
  * Dev-only; does not change production auth.
  */
-import fs from 'node:fs';
-import readline from 'node:readline/promises';
-import { stdin as input, stdout as output } from 'node:process';
-import { chromium } from 'playwright';
+import fs from "node:fs";
+import readline from "node:readline/promises";
+import { stdin as input, stdout as output } from "node:process";
+import { chromium } from "playwright";
 
 import {
   AUTH_STATE_PATH,
   PLAYWRIGHT_DEV_DIR,
   getBaseUrl,
   loadOptionalEnvLocal,
-} from './constants.mjs';
+} from "./constants.mjs";
 
 loadOptionalEnvLocal();
 
@@ -48,10 +48,10 @@ try {
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
+  await page.goto(loginUrl, { waitUntil: "domcontentloaded" });
 
   await rl.question(
-    'When you are logged in and see the admin UI, press Enter here to save auth… ',
+    "When you are logged in and see the admin UI, press Enter here to save auth… ",
   );
 
   await context.storageState({ path: AUTH_STATE_PATH });
@@ -59,7 +59,7 @@ try {
 
   console.log(`\nSaved auth state to ${AUTH_STATE_PATH}`);
   console.log(
-    'Next: npm run playwright:screenshot -- --storage /admin/<route> [more route / output pairs…]\n',
+    "Next: npm run playwright:screenshot -- --storage /admin/<route> [more route / output pairs…]\n",
   );
 } catch (err) {
   console.error(err);

@@ -125,9 +125,12 @@ try {
   }
 
   // 4) Modal behavior on show detail (rest -> trigger hover -> dialog open)
-  const closeShowBtn = page.getByRole("button", { name: /^close show$/i }).first();
+  const closeShowBtn = page
+    .getByRole("button", { name: /^close show$/i })
+    .first();
   const reopenBtn = page.getByRole("button", { name: /^reopen show/i }).first();
-  const modalTrigger = (await closeShowBtn.count()) > 0 ? closeShowBtn : reopenBtn;
+  const modalTrigger =
+    (await closeShowBtn.count()) > 0 ? closeShowBtn : reopenBtn;
   if ((await modalTrigger.count()) > 0) {
     await modalTrigger.waitFor({ state: "visible", timeout: 10000 });
     await page.screenshot({

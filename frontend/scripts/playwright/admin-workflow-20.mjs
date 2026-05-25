@@ -57,7 +57,8 @@ try {
   await bootstrap(page, "/admin/dashboard");
   const showsRes = await page.request.get(`${baseUrl}/api/shows`);
   const showsJson = await showsRes.json();
-  const showId = Array.isArray(showsJson) && showsJson[0]?.id ? showsJson[0].id : null;
+  const showId =
+    Array.isArray(showsJson) && showsJson[0]?.id ? showsJson[0].id : null;
   const wholesalersRes = await page.request.get(`${baseUrl}/api/wholesalers`);
   const wholesalersJson = await wholesalersRes.json();
   const wholesalerId =
@@ -68,7 +69,9 @@ try {
   let i = 1;
 
   // Dashboard workflow + interactions
-  await page.goto(`${baseUrl}/admin/dashboard`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/admin/dashboard`, {
+    waitUntil: "domcontentloaded",
+  });
   await page.waitForLoadState("networkidle");
   await snap(page, i++, "dashboard-rest");
   const logShow = page.getByRole("button", { name: /log show/i }).first();
@@ -116,7 +119,9 @@ try {
     });
     await page.waitForLoadState("networkidle");
     await snap(page, i++, "show-detail-rest");
-    const settlementAdd = page.getByRole("button", { name: /add settlement/i }).first();
+    const settlementAdd = page
+      .getByRole("button", { name: /add settlement/i })
+      .first();
     if (await settlementAdd.count()) {
       await settlementAdd.hover();
       await page.waitForTimeout(120);
@@ -124,7 +129,9 @@ try {
     } else {
       await snap(page, i++, "show-detail-empty-settlement-state");
     }
-    const closeShow = page.getByRole("button", { name: /^close show$/i }).first();
+    const closeShow = page
+      .getByRole("button", { name: /^close show$/i })
+      .first();
     if (await closeShow.count()) {
       await closeShow.click();
       await page.waitForTimeout(240);
@@ -132,7 +139,9 @@ try {
       await page.keyboard.press("Escape");
       await page.waitForTimeout(160);
     } else {
-      const reopen = page.getByRole("button", { name: /^reopen show/i }).first();
+      const reopen = page
+        .getByRole("button", { name: /^reopen show/i })
+        .first();
       if (await reopen.count()) {
         await reopen.click();
         await page.waitForTimeout(240);
@@ -150,7 +159,9 @@ try {
   }
 
   // Balances
-  await page.goto(`${baseUrl}/admin/balances`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/admin/balances`, {
+    waitUntil: "domcontentloaded",
+  });
   await page.waitForLoadState("networkidle");
   await snap(page, i++, "balances-rest");
   const balRow = page.locator("tbody tr[role='link']").first();
@@ -163,7 +174,9 @@ try {
   }
 
   // Wholesalers + detail + batch pay
-  await page.goto(`${baseUrl}/admin/wholesalers`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/admin/wholesalers`, {
+    waitUntil: "domcontentloaded",
+  });
   await page.waitForLoadState("networkidle");
   await snap(page, i++, "wholesalers-index");
 
@@ -184,13 +197,19 @@ try {
   }
 
   // Payments + inventory + admin home
-  await page.goto(`${baseUrl}/admin/payments`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/admin/payments`, {
+    waitUntil: "domcontentloaded",
+  });
   await page.waitForLoadState("networkidle");
   await snap(page, i++, "payments-index");
-  await page.goto(`${baseUrl}/admin/payments/new`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/admin/payments/new`, {
+    waitUntil: "domcontentloaded",
+  });
   await page.waitForLoadState("networkidle");
   await snap(page, i++, "payments-new");
-  await page.goto(`${baseUrl}/admin/inventory`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/admin/inventory`, {
+    waitUntil: "domcontentloaded",
+  });
   await page.waitForLoadState("networkidle");
   await snap(page, i++, "inventory");
   await page.goto(`${baseUrl}/admin`, { waitUntil: "domcontentloaded" });

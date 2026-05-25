@@ -7,11 +7,11 @@
  *
  * One command clears that folder once, then writes one or more PNGs.
  */
-import { execFileSync, spawnSync } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
+import { execFileSync, spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 
-import { chromium } from 'playwright';
+import { chromium } from "playwright";
 
 import {
   AUTH_STATE_PATH,
@@ -20,7 +20,7 @@ import {
   getBaseUrl,
   loadOptionalEnvLocal,
   normalizeRoutePath,
-} from './constants.mjs';
+} from "./constants.mjs";
 
 loadOptionalEnvLocal();
 
@@ -65,13 +65,13 @@ function parseArgs(argv) {
   const positional = [];
 
   for (const a of args) {
-    if (a === '--full') {
+    if (a === "--full") {
       fullPage = true;
-    } else if (a === '--viewport') {
+    } else if (a === "--viewport") {
       fullPage = false;
-    } else if (a === '--storage' || a === '--no-bootstrap') {
+    } else if (a === "--storage" || a === "--no-bootstrap") {
       forceStorage = true;
-    } else if (a === '-h' || a === '--help') {
+    } else if (a === "-h" || a === "--help") {
       return { help: true };
     } else {
       positional.push(a);
@@ -81,7 +81,7 @@ function parseArgs(argv) {
   if (positional.length === 0) {
     return {
       error:
-        'Missing route(s). Example: npm run playwright:screenshot -- /admin/dashboard',
+        "Missing route(s). Example: npm run playwright:screenshot -- /admin/dashboard",
     };
   }
 
@@ -103,7 +103,7 @@ function parseArgs(argv) {
   } else {
     return {
       error:
-        'Invalid arguments: use one route, or pairs of <route> <output.png> for each capture.',
+        "Invalid arguments: use one route, or pairs of <route> <output.png> for each capture.",
     };
   }
 
@@ -112,7 +112,7 @@ function parseArgs(argv) {
 
 function canUseBootstrap() {
   return (
-    process.env.AUTH_DEV_BOOTSTRAP_ENABLED === '1' &&
+    process.env.AUTH_DEV_BOOTSTRAP_ENABLED === "1" &&
     Boolean(process.env.AUTH_DEV_BOOTSTRAP_SECRET?.trim())
   );
 }
@@ -120,7 +120,7 @@ function canUseBootstrap() {
 function readBootstrapErrorBody(text) {
   try {
     const j = JSON.parse(text);
-    if (j && typeof j.message === 'string') return j.message;
+    if (j && typeof j.message === "string") return j.message;
   } catch {
     /* ignore */
   }
@@ -132,23 +132,23 @@ function readBootstrapErrorBody(text) {
  */
 async function gotoAndSettleForScreenshot(page, url) {
   const res = await page.goto(url, {
-    waitUntil: 'domcontentloaded',
+    waitUntil: "domcontentloaded",
     timeout: 60_000,
   });
-  await page.waitForLoadState('networkidle', { timeout: 60_000 });
+  await page.waitForLoadState("networkidle", { timeout: 60_000 });
   await page.waitForTimeout(300);
   try {
     await page
-      .locator('main')
+      .locator("main")
       .first()
-      .waitFor({ state: 'visible', timeout: 15_000 });
+      .waitFor({ state: "visible", timeout: 15_000 });
   } catch {
     /* optional */
   }
   try {
     await page
       .locator('aside[aria-label="Admin navigation"]')
-      .waitFor({ state: 'visible', timeout: 15_000 });
+      .waitFor({ state: "visible", timeout: 15_000 });
   } catch {
     /* optional: non-admin routes */
   }
@@ -161,7 +161,7 @@ function clearScreenshotsDir(dir) {
     fs.mkdirSync(dir, { recursive: true });
   } catch (err) {
     console.warn(
-      'playwright:screenshot — could not create screenshots directory:',
+      "playwright:screenshot — could not create screenshots directory:",
       err instanceof Error ? err.message : err,
     );
     return;
@@ -182,7 +182,7 @@ function clearScreenshotsDir(dir) {
     }
   } catch (err) {
     console.warn(
-      'playwright:screenshot — could not clear screenshots directory:',
+      "playwright:screenshot — could not clear screenshots directory:",
       err instanceof Error ? err.message : err,
     );
   }
@@ -192,7 +192,7 @@ function shouldOpenScreenshotsFolderInExplorer() {
   if (process.env.CI) {
     return false;
   }
-  if (process.env.PLAYWRIGHT_SCREENSHOT_NO_OPEN === '1') {
+  if (process.env.PLAYWRIGHT_SCREENSHOT_NO_OPEN === "1") {
     return false;
   }
   return true;
@@ -201,28 +201,28 @@ function shouldOpenScreenshotsFolderInExplorer() {
 function openScreenshotsFolderInExplorer() {
   if (!shouldOpenScreenshotsFolderInExplorer()) {
     console.log(
-      'playwright:screenshot — Explorer: skipped (set CI or PLAYWRIGHT_SCREENSHOT_NO_OPEN=1).',
+      "playwright:screenshot — Explorer: skipped (set CI or PLAYWRIGHT_SCREENSHOT_NO_OPEN=1).",
     );
     return;
   }
   const dirAbs = path.resolve(SCREENSHOTS_DIR);
   try {
-    const winPath = execFileSync('wslpath', ['-w', dirAbs], {
-      encoding: 'utf8',
+    const winPath = execFileSync("wslpath", ["-w", dirAbs], {
+      encoding: "utf8",
     }).trim();
     if (!winPath) {
       console.warn(
-        'playwright:screenshot — Explorer: wslpath returned empty; not opening.',
+        "playwright:screenshot — Explorer: wslpath returned empty; not opening.",
       );
       return;
     }
-    const result = spawnSync('explorer.exe', [winPath], {
-      stdio: 'ignore',
+    const result = spawnSync("explorer.exe", [winPath], {
+      stdio: "ignore",
       windowsHide: true,
     });
     if (result.error) {
       console.warn(
-        'playwright:screenshot — Explorer: failed to spawn:',
+        "playwright:screenshot — Explorer: failed to spawn:",
         result.error.message,
       );
       return;
@@ -231,11 +231,11 @@ function openScreenshotsFolderInExplorer() {
       `playwright:screenshot — Explorer: launched for Windows path: ${winPath}`,
     );
     console.log(
-      'playwright:screenshot — (If no window appears, check WSL interop / an existing Explorer window.)',
+      "playwright:screenshot — (If no window appears, check WSL interop / an existing Explorer window.)",
     );
   } catch (err) {
     console.warn(
-      'playwright:screenshot — Explorer: error (wslpath or Explorer not available?):',
+      "playwright:screenshot — Explorer: error (wslpath or Explorer not available?):",
       err instanceof Error ? err.message : err,
     );
   }
@@ -248,22 +248,22 @@ function resolveOutputBasename(
 ) {
   if (capture.outBasename) {
     const b = capture.outBasename;
-    return b.endsWith('.png') ? b : `${b}.png`;
+    return b.endsWith(".png") ? b : `${b}.png`;
   }
   const slug = capture.route
-    .replace(/^\//, '')
-    .replace(/\//g, '-')
-    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^\//, "")
+    .replace(/\//g, "-")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
     .slice(0, 80);
-  return `capture-${stamp}-${slug || 'page'}-${index}.png`;
+  return `capture-${stamp}-${slug || "page"}-${index}.png`;
 }
 
 const parsed = parseArgs(process.argv);
-if ('help' in parsed && parsed.help) {
+if ("help" in parsed && parsed.help) {
   printUsage();
   process.exit(0);
 }
-if ('error' in parsed && parsed.error) {
+if ("error" in parsed && parsed.error) {
   console.error(parsed.error);
   printUsage();
   process.exit(1);
@@ -271,7 +271,7 @@ if ('error' in parsed && parsed.error) {
 
 const { captures, fullPage, forceStorage } = parsed;
 if (!captures || captures.length === 0) {
-  console.error('Internal error: no captures.');
+  console.error("Internal error: no captures.");
   process.exit(1);
 }
 
@@ -295,14 +295,14 @@ if (!useBootstrap && !hasStorageFile) {
 if (forceStorage && !hasStorageFile) {
   console.error(
     `Auth state not found:\n  ${AUTH_STATE_PATH}\n\n` +
-      'Run: npm run playwright:save-auth\n',
+      "Run: npm run playwright:save-auth\n",
   );
   process.exit(1);
 }
 
 clearScreenshotsDir(SCREENSHOTS_DIR);
 
-const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const writtenFiles = [];
 
 const browser = await chromium.launch({ headless: true });
@@ -318,34 +318,34 @@ try {
 
   if (useBootstrap) {
     const secret = process.env.AUTH_DEV_BOOTSTRAP_SECRET.trim();
-    const bootstrap = new URL('/api/auth/dev-bootstrap', baseUrl);
-    bootstrap.searchParams.set('secret', secret);
-    bootstrap.searchParams.set('next', captures[0].route);
+    const bootstrap = new URL("/api/auth/dev-bootstrap", baseUrl);
+    bootstrap.searchParams.set("secret", secret);
+    bootstrap.searchParams.set("next", captures[0].route);
 
     const res = await page.goto(bootstrap.toString(), {
-      waitUntil: 'load',
+      waitUntil: "load",
       timeout: 90_000,
     });
 
     if (res && res.status() === 404) {
       console.error(
-        'Dev bootstrap returned 404. Set AUTH_DEV_BOOTSTRAP_ENABLED=1 and AUTH_DEV_BOOTSTRAP_SECRET in frontend/.env.local (see docs/DEV.md).',
+        "Dev bootstrap returned 404. Set AUTH_DEV_BOOTSTRAP_ENABLED=1 and AUTH_DEV_BOOTSTRAP_SECRET in frontend/.env.local (see docs/DEV.md).",
       );
       process.exit(1);
     }
     if (res && res.status() === 403) {
       const body = await res.text();
       console.error(
-        'Dev bootstrap failed:',
-        readBootstrapErrorBody(body || ''),
+        "Dev bootstrap failed:",
+        readBootstrapErrorBody(body || ""),
       );
       process.exit(1);
     }
     if (res && (res.status() === 503 || res.status() === 500)) {
       const body = await res.text();
       console.error(
-        'Dev bootstrap unavailable:',
-        readBootstrapErrorBody(body || ''),
+        "Dev bootstrap unavailable:",
+        readBootstrapErrorBody(body || ""),
       );
       process.exit(1);
     }
@@ -356,14 +356,14 @@ try {
     const targetUrl = `${baseUrl}${cap.route}`;
     const navRes = await gotoAndSettleForScreenshot(page, targetUrl);
     if (!navRes || !navRes.ok()) {
-      const status = navRes ? navRes.status() : 'no response';
+      const status = navRes ? navRes.status() : "no response";
       console.warn(`Warning: HTTP ${status} for ${targetUrl}`);
     }
 
     const pathAfter = new URL(page.url()).pathname;
-    if (pathAfter.startsWith('/login')) {
+    if (pathAfter.startsWith("/login")) {
       console.error(
-        'Aborted: still on /login — no authenticated session. Fix bootstrap env, backend dev_bypass, or use npm run playwright:save-auth with --storage.',
+        "Aborted: still on /login — no authenticated session. Fix bootstrap env, backend dev_bypass, or use npm run playwright:save-auth with --storage.",
       );
       process.exit(1);
     }
@@ -374,11 +374,13 @@ try {
     writtenFiles.push(basename);
   }
 
-  const mode = useBootstrap ? 'bootstrap' : 'storageState';
+  const mode = useBootstrap ? "bootstrap" : "storageState";
   console.log(`playwright:screenshot — done (${mode})`);
-  console.log(`playwright:screenshot — frontend root: ${FRONTEND_PACKAGE_ROOT}`);
+  console.log(
+    `playwright:screenshot — frontend root: ${FRONTEND_PACKAGE_ROOT}`,
+  );
   console.log(`playwright:screenshot — output directory: ${SCREENSHOTS_DIR}`);
-  console.log('playwright:screenshot — files written:');
+  console.log("playwright:screenshot — files written:");
   for (const f of writtenFiles) {
     console.log(`  ${path.join(SCREENSHOTS_DIR, f)}`);
   }
