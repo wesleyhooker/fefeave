@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchMe } from '@/lib/auth/backendUser';
 import { appendSessionCookieClearHeaders } from '@/lib/auth/session-cookie-options';
-import { setSessionCookie } from '@/lib/auth/session.node';
+import { attachSessionCookieToResponse } from '@/lib/auth/session-cookie-response';
 
 function envOrThrow(name: string): string {
   const value = process.env[name]?.trim();
@@ -139,7 +139,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         ? tokenJson.expires_in
         : 3600;
     const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
-    await setSessionCookie({
+    const session = {
       access_token: tokenJson.access_token,
       expires_at: expiresAt,
       roles: me.roles,
@@ -147,10 +147,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         id: me.id,
         email: me.email,
       },
-    });
+    };
+
     const destination = getPostLoginPath(me.roles ?? []);
     const origin = getAppOrigin();
-    return NextResponse.redirect(new URL(destination, origin));
+    const redirectTarget = new URL(destination, origin);
+
+    // Cookie must be set on the redirect response (not cookies().set() alone).
+    const response = NextResponse.redirect(redirectTarget);
+    const cookieMeta = attachSessionCookieToResponse(response, session);
+
+    console.info('[auth/callback]', {
+      ...cookieMeta,
+      redirectTarget: redirectTarget.toString(),
+      cookieName: 'fefeave_session',
+    });
+
+    return response;
   } catch {
     return redirectAuthFailed(request);
   }

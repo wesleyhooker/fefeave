@@ -124,3 +124,22 @@ export function applySessionCookieClear(
     cookieStore.set(options.name, options.value, options);
   }
 }
+
+/** Estimate Set-Cookie header length without logging the cookie value. */
+export function estimateSessionSetCookieHeaderLength(
+  cookieName: string,
+  cookieValueLength: number,
+  expires: Date,
+): number {
+  const options = getSessionCookieSetOptions(expires);
+  const domainPart = options.domain ? `; Domain=${options.domain}` : '';
+  const expiresPart = `; Expires=${expires.toUTCString()}`;
+  const securePart = options.secure ? '; Secure' : '';
+  const attrs = `${domainPart}${expiresPart}; HttpOnly; SameSite=Lax${securePart}; Path=${options.path}`;
+  return (
+    Buffer.byteLength(cookieName, 'utf8') +
+    1 +
+    cookieValueLength +
+    Buffer.byteLength(attrs, 'utf8')
+  );
+}

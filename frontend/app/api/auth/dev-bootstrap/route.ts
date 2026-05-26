@@ -5,7 +5,7 @@ import {
   safeNextPath,
   validateNextMatchesRoles,
 } from '@/lib/auth/dev-bootstrap';
-import { setSessionCookie } from '@/lib/auth/session.node';
+import { attachSessionCookieToResponse } from '@/lib/auth/session-cookie-response';
 import type { AppRole } from '@/lib/auth/session.types';
 
 /** Strip IPv6 brackets and lowercase for stable comparison (localhost is case-insensitive). */
@@ -145,16 +145,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const expiresInSec = 8 * 3600;
   const expiresAt = Math.floor(Date.now() / 1000) + expiresInSec;
 
+  const session = {
+    access_token: LOCAL_DEV_BOOTSTRAP_ACCESS_TOKEN,
+    expires_at: expiresAt,
+    roles,
+    user: {
+      id: me.id,
+      email: me.email,
+    },
+  };
+
   try {
-    await setSessionCookie({
-      access_token: LOCAL_DEV_BOOTSTRAP_ACCESS_TOKEN,
-      expires_at: expiresAt,
-      roles,
-      user: {
-        id: me.id,
-        email: me.email,
-      },
-    });
+    const redirectTarget = new URL(nextPath, request.nextUrl.origin);
+    const response = NextResponse.redirect(redirectTarget);
+    attachSessionCookieToResponse(response, session);
+    return response;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
@@ -168,6 +173,4 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       { status: 500 },
     );
   }
-
-  return NextResponse.redirect(new URL(nextPath, request.nextUrl.origin));
 }
