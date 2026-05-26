@@ -61,6 +61,8 @@ For full stack (frontend + `AUTH_MODE=dev_bypass`), from repo root: `make dev-mi
 
 **CI:** GitHub Actions does **not** run integration tests today; run them locally before ledger, settlement, or migration changes.
 
+**Neon (serverless migration Phase 1):** Run the same integration suite against a throwaway Neon branch — see [docs/deployment/neon-phase1.md](../docs/deployment/neon-phase1.md). Optional wrapper: `./scripts/run-neon-integration-tests.sh` (requires `NEON_INTEGRATION_CONFIRM=1`).
+
 ---
 
 ## 4. Database

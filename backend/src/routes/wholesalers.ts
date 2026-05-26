@@ -97,7 +97,7 @@ export async function wholesalerRoutes(
              legacy_wholesaler_id
            )
            VALUES ($1, 'WHOLESALER', 'ACTIVE', $2, $3, $4)
-           ON CONFLICT (legacy_wholesaler_id)
+           ON CONFLICT (legacy_wholesaler_id) WHERE (legacy_wholesaler_id IS NOT NULL)
            DO UPDATE SET
              display_name = EXCLUDED.display_name,
              notes = EXCLUDED.notes,

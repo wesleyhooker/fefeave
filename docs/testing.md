@@ -51,6 +51,8 @@ Run via `npm run test:integration` → `backend/scripts/run-integration-tests.sh
 - Each suite migrates into PostgreSQL schema **`test`** (`search_path=test`, `node-pg-migrate -s test`).
 - Exercises HTTP handlers end-to-end against a running app instance with real SQL.
 
+**Neon branch validation (Phase 1):** Same command with `DATABASE_URL` set to a **non-production** Neon branch (`sslmode=require`). See [deployment/neon-phase1.md](deployment/neon-phase1.md).
+
 **Suites included in the integration runner** (Jest `--testPathPattern` in `run-integration-tests.sh`):
 
 | Pattern / file                              | Focus                                      |

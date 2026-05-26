@@ -3,22 +3,8 @@
  * Requires Postgres running and DATABASE_URL set.
  * Run with: npm run test:integration
  */
-import { execSync } from 'child_process';
-import path from 'path';
 import { Pool } from 'pg';
-
-const TEST_SCHEMA = 'test';
-
-function runMigrations(databaseUrl: string): void {
-  execSync(
-    `npx node-pg-migrate up -m migrations -s ${TEST_SCHEMA} --create-schema --create-migrations-schema`,
-    {
-      env: { ...process.env, DATABASE_URL: databaseUrl },
-      cwd: path.resolve(__dirname, '../..'),
-      stdio: 'pipe',
-    }
-  );
-}
+import { runTestSchemaMigrations, TEST_SCHEMA } from './helpers';
 
 describe('DB smoke test', () => {
   let pool: Pool;
@@ -33,7 +19,7 @@ describe('DB smoke test', () => {
   });
 
   test('runs migrate:up and inserts wholesaler, show, owed_line_item', async () => {
-    runMigrations(databaseUrl);
+    runTestSchemaMigrations(databaseUrl);
 
     const client = await pool.connect();
     try {

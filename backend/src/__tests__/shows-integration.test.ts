@@ -2,26 +2,11 @@
  * Shows API integration tests: POST/GET /api/shows.
  * Requires Postgres and DATABASE_URL. Run with: npm run test:integration
  */
-import { execSync } from 'child_process';
-import path from 'path';
 import type { FastifyInstance } from 'fastify';
-import { buildAppForTest, buildUniqueDevBypassIdentity } from './helpers';
-
-const TEST_SCHEMA = 'test';
+import { buildAppForTest, buildUniqueDevBypassIdentity, runTestSchemaMigrations } from './helpers';
 
 function toYyyyMmDd(value: string): string {
   return new Date(value).toISOString().slice(0, 10);
-}
-
-function runMigrations(databaseUrl: string): void {
-  execSync(
-    `npx node-pg-migrate up -m migrations -s ${TEST_SCHEMA} --create-schema --create-migrations-schema`,
-    {
-      env: { ...process.env, DATABASE_URL: databaseUrl },
-      cwd: path.resolve(__dirname, '../..'),
-      stdio: 'pipe',
-    }
-  );
 }
 
 describe('Shows API integration', () => {
@@ -34,7 +19,7 @@ describe('Shows API integration', () => {
     if (!databaseUrl) {
       throw new Error('DATABASE_URL is required. Run: npm run test:integration');
     }
-    runMigrations(databaseUrl);
+    runTestSchemaMigrations(databaseUrl);
   });
 
   beforeEach(async () => {
