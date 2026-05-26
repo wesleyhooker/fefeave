@@ -103,15 +103,16 @@ Committed tfvars (`dev.tfvars`, `prod.tfvars`) keep **`create_backend_infra = fa
 
 ## 6. Deployment paths (GitHub Actions)
 
-| Workflow                   | Trigger                                   | Requires                                                                                                                                                                                  |
-| -------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Backend CI**             | Push/PR (`backend/**`)                    | Unit tests, lint, format (no AWS)                                                                                                                                                         |
-| **Frontend CI**            | Push/PR (`frontend/**`)                   | `npm run build`, audit (no AWS)                                                                                                                                                           |
-| **Backend Deploy (dev)**   | Push to `main` (`backend/**`, `infra/**`) | `create_backend_infra = true`; GitHub **dev** vars: `BACKEND_DEPLOY_ROLE_ARN`, `BACKEND_ECR_REPO_URL`, `BACKEND_ECS_CLUSTER`, `BACKEND_ECS_SERVICE`, `BACKEND_API_BASE_URL`, `AWS_REGION` |
-| **Backend Deploy (prod)**  | Manual `workflow_dispatch` only           | Same vars in **prod** when ECS enabled                                                                                                                                                    |
-| **Frontend Deploy (dev)**  | After Frontend CI on `main`, or manual    | ECS enabled; **dev** vars: `FRONTEND_DEPLOY_ROLE_ARN`, `FRONTEND_ECR_REPO_URL`, `FRONTEND_ECS_CLUSTER`, `FRONTEND_ECS_SERVICE`, `AWS_REGION`                                              |
-| **Frontend Deploy (prod)** | Manual only                               | Same in **prod** when ECS enabled                                                                                                                                                         |
-| **Backend Migrate (dev)**  | Separate workflow                         | RDS/ECS when enabled                                                                                                                                                                      |
+**Local dev + CI only for dev.** Dev CD workflows (`*Deploy*dev*`, `Backend Migrate (dev)`) were removed. Production ECS deploy is **manual** (`workflow_dispatch`) only.
+
+| Workflow                   | Trigger                         | Requires                                                                                              |
+| -------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Backend CI**             | Push/PR (`backend/**`, etc.)    | Unit tests, lint, format (no AWS)                                                                     |
+| **Frontend CI**            | Push/PR (`frontend/**`)         | `npm run build`, audit (no AWS)                                                                       |
+| **Backend Deploy (prod)**  | Manual `workflow_dispatch` only | `create_backend_infra = true` in **prod** tfvars when ready; **prod** vars: `BACKEND_*`, `AWS_REGION` |
+| **Frontend Deploy (prod)** | Manual `workflow_dispatch` only | Same in **prod** when ECS enabled; **prod** vars: `FRONTEND_*`, `AWS_REGION`                          |
+
+**Prod tfvars today:** `create_backend_infra = false` (see `prod.tfvars`). Prod deploy workflows exist but need infra enabled plus GitHub **prod** environment variables from `terraform output` before they are usable.
 
 With default tfvars, **ECS deploy workflows have nothing to deploy to** until you enable `create_backend_infra` and set GitHub environment variables from `terraform output`.
 

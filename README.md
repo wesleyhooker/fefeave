@@ -146,7 +146,7 @@ Reset: `make dev-db-reset` then migrate again. Migration conventions (timestamps
 
 **Local-first by default.** `infra/dev.tfvars` sets `create_backend_infra = false` (no NAT/ALB/ECS/RDS until opted in). Terraform still provisions shared low-cost resources (e.g. S3 site bucket, CloudFront, attachment bucket policies) per workspace.
 
-Hosted backend and RDS are **feature-flagged** in tfvars. Deploy workflows and `make plan-dev` / `make apply-dev`: **[infra/README.md](infra/README.md)**.
+Hosted backend and RDS are **feature-flagged** in tfvars. **Dev:** local `make dev` + CI only (no auto deploy on merge). **Prod:** manual ECS deploy workflows when infra is enabled — **[infra/README.md](infra/README.md)**.
 
 ---
 

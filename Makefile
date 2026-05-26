@@ -75,7 +75,7 @@ help:
 	@echo "  Outer-loop / AWS (low-cost hosting; use plan-dev/plan-prod to preview cost-related changes):"
 	@echo "    Local: build/run via make dev*; AWS prod/dev workspaces are S3/CloudFront-first unless you opt into ECS in tfvars."
 	@echo "    make dev-plan, dev-apply, ui-aws, dev-backend-health, dev-backend-wholesalers (backend health targets need AWS ECS if enabled)"
-	@echo "    init, plan-dev, apply-dev, output-dev, gh-sync-dev, deploy-dev (and prod variants)"
+	@echo "    init, plan-dev, apply-dev, output-dev, gh-sync-dev, deploy-prod (manual prod ECS deploy)"
 
 # ------------------------------------------------------------------------------
 # Repo hygiene (whole-repo)
@@ -220,8 +220,8 @@ gh-sync-prod: ws-prod
 	  echo "Synced prod env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_ROLE_ARN=$$ROLE"
 
 deploy-dev:
-	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)
-	gh workflow run "Frontend Deploy (dev)" -R $(REPO)
+	@echo "Dev CD deploy is disabled. Use make dev for local development; CI runs tests/build only."
+	@exit 1
 
 deploy-prod:
 	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)

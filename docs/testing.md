@@ -185,7 +185,7 @@ Integration tests focus on **ledger and API correctness**: shows, show financial
 
 ### Backend CI (`.github/workflows/backend-ci.yml`)
 
-**Triggers:** push/PR affecting `backend/**`, `scripts/**`, `context/**`, root `package.json`, or the workflow file.
+**Triggers:** push/PR affecting `backend/**`, `scripts/**`, root `package.json`, or the workflow file.
 
 **Runs on GitHub:**
 
@@ -225,7 +225,7 @@ Integration tests focus on **ledger and API correctness**: shows, show financial
 
 ### Deploy workflows
 
-`Backend Deploy`, `Frontend Deploy`, and `Backend Migrate` workflows are deployment/ops paths, not test gates. See [infra/README.md](../infra/README.md).
+**Prod only (manual):** `Backend Deploy (prod)` and `Frontend Deploy (prod)` via `workflow_dispatch`. Dev CD deploy workflows were removed; CI does not deploy on success. Deploy workflows are ops paths, not test gates. See [infra/README.md](../infra/README.md).
 
 ---
 

@@ -6,7 +6,6 @@ on:
     paths:
       - "backend/**"
       - "scripts/**"
-      - "context/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/backend-ci.yml"
@@ -14,7 +13,6 @@ on:
     paths:
       - "backend/**"
       - "scripts/**"
-      - "context/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/backend-ci.yml"

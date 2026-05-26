@@ -1,4 +1,5 @@
-# Backend deploy to PROD: manual only. Build image, push immutable :<shortsha>, register new task def, update ECS.
+# Prod deploy is manual-only (workflow_dispatch). Does not run on merge or CI success.
+# Backend deploy to PROD: build image, push immutable :<shortsha>, register new task def, update ECS.
 # Uses OIDC. Requires GitHub env "prod" vars: BACKEND_DEPLOY_ROLE_ARN, AWS_REGION, BACKEND_ECR_REPO_URL,
 # BACKEND_ECS_CLUSTER, BACKEND_ECS_SERVICE, BACKEND_API_BASE_URL.
 # PROD deploy is manual only — no push triggers.
