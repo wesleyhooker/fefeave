@@ -1,26 +1,20 @@
-# AWS "prod" workspace — low-traffic full app on ECS + RDS behind ALB.
-# Plan/apply manually; prod deploy workflows are workflow_dispatch only.
+# AWS "prod" workspace — serverless backend (Lambda + API Gateway + Neon secret container).
+# Plan/apply manually. Do not commit Neon URLs or secret values.
 #
-# Cognito is NOT created by Terraform in prod (see cognito-dev.tf; env == "dev" only).
-# After apply, create a prod User Pool (console or future cognito-prod.tf) and inject
-# COGNITO_* / AUTH_SESSION_SECRET into ECS task definitions — see docs/deployment/prod-release.md.
-#
-# RDS: instance_class is db.t3.micro in rds.tf (smallest practical Postgres 16, ~20 GiB).
-# ALB: prod HTTP ingress is 0.0.0.0/0 (alb.tf); alb_ingress_cidrs applies only when env=dev.
+# Before first apply: cd backend && npm run package:lambda
+# After apply: populate Neon DATABASE_URL (see docs/deployment/lambda-phase3.md)
+# Cognito prod is NOT in Terraform — set cognito_* placeholders after manual pool setup.
 
 env                       = "prod"
 project_name              = "fefeave-frontend"
 aws_region                = "us-west-2"
 create_github_deploy_role = true
 
-create_backend_infra = true
-create_rds           = true
+create_backend_infra      = false
+create_rds                = false
+create_serverless_backend = true
 
-backend_image_tag                = "prod-latest"
-backend_desired_count            = 1
-frontend_image_tag               = "prod-latest"
-frontend_desired_count           = 1
-frontend_next_public_backend_url = "/api"
-
-db_name     = "fefeave"
-db_username = "fefeave"
+# Placeholders until prod Cognito exists (update Lambda env or tfvars before auth works).
+cognito_region        = "us-west-2"
+cognito_user_pool_id  = "REPLACE_ME"
+cognito_app_client_id = "REPLACE_ME"

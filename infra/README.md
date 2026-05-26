@@ -44,6 +44,19 @@ When enabled in `*.tfvars`, Terraform also creates:
 
 Opt-in by uncommenting the block at the bottom of `dev.tfvars` (and setting `alb_ingress_cidrs` for dev).
 
+### Serverless backend (`create_serverless_backend = true`)
+
+When enabled (prod `prod.tfvars`):
+
+| Resource             | Purpose                                                          |
+| -------------------- | ---------------------------------------------------------------- |
+| Lambda + log group   | Fastify API (`dist/lambda.handler`, `backend/lambda.zip`)        |
+| API Gateway HTTP API | Public `/api/*` routes                                           |
+| Secrets Manager      | Neon `DATABASE_URL` secret **container** (value set after apply) |
+| Lambda IAM role      | CloudWatch logs, secret read, S3 attachments                     |
+
+No VPC, NAT, ALB, ECS, ECR, or RDS.
+
 ---
 
 ## 2. File layout
@@ -53,6 +66,7 @@ infra/
 ├── main.tf                 # S3 site, CloudFront, attachments bucket, backend task IAM role
 ├── cognito-dev.tf          # Dev Cognito user pool (dev workspace only)
 ├── vpc.tf, ecr.tf, alb.tf, ecs.tf, rds.tf   # When create_backend_infra = true
+├── lambda-api.tf, apigateway.tf, secrets.tf, serverless-backend-iam.tf  # When create_serverless_backend = true
 ├── backend-deploy-role.tf, frontend-deploy-role.tf
 ├── providers.tf, variables.tf, outputs.tf
 ├── dev.tfvars              # Default: create_backend_infra = false
@@ -82,22 +96,26 @@ Application development does **not** require `terraform apply` with the default 
 | Variable                    | Description                                                   | Default in code |
 | --------------------------- | ------------------------------------------------------------- | --------------- |
 | `create_backend_infra`      | VPC, ECR, ALB, ECS, deploy OIDC roles                         | `false`         |
+| `create_serverless_backend` | Lambda, API Gateway HTTP API, Neon secret container           | `false`         |
 | `create_rds`                | RDS + Secrets Manager `DATABASE_URL` (requires backend infra) | `false`         |
 | `create_github_deploy_role` | OIDC provider data used by deploy roles when infra is on      | `true`          |
 
-Committed tfvars (`dev.tfvars`, `prod.tfvars`) keep **`create_backend_infra = false`** unless you opt in.
+`create_backend_infra` and `create_serverless_backend` are **mutually exclusive**.
+
+Committed tfvars: **dev** keeps all backend flags `false` (local-first). **prod** uses `create_serverless_backend = true` (see `prod.tfvars`). See [docs/deployment/lambda-phase3.md](../docs/deployment/lambda-phase3.md).
 
 ---
 
 ## 5. Outputs
 
-| Output                                                          | When set                                |
-| --------------------------------------------------------------- | --------------------------------------- |
-| `s3_bucket_name`, `cloudfront_distribution_id`                  | Always                                  |
-| `attachments_bucket_name`, `backend_role_name`                  | Always                                  |
-| `user_pool_id`, `app_client_id`, `cognito_domain`, …            | Dev workspace                           |
-| `backend_*`, `frontend_*` (ECR, ECS, ALB URL, deploy role ARNs) | `create_backend_infra = true`           |
-| `rds_endpoint`, `database_url_secret_arn`                       | `create_backend_infra` and `create_rds` |
+| Output                                                                                                             | When set                                |
+| ------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| `s3_bucket_name`, `cloudfront_distribution_id`                                                                     | Always                                  |
+| `attachments_bucket_name`, `backend_role_name`                                                                     | Always                                  |
+| `user_pool_id`, `app_client_id`, `cognito_domain`, …                                                               | Dev workspace                           |
+| `backend_*`, `frontend_*` (ECR, ECS, ALB URL, deploy role ARNs)                                                    | `create_backend_infra = true`           |
+| `rds_endpoint`, `database_url_secret_arn`                                                                          | `create_backend_infra` and `create_rds` |
+| `backend_lambda_*`, `backend_api_gateway_url`, `neon_database_url_secret_*`, `github_prod_backend_serverless_vars` | `create_serverless_backend`             |
 
 ---
 
@@ -112,9 +130,9 @@ Committed tfvars (`dev.tfvars`, `prod.tfvars`) keep **`create_backend_infra = fa
 | **Backend Deploy (prod)**  | Manual `workflow_dispatch` only | `create_backend_infra = true` in **prod** tfvars when ready; **prod** vars: `BACKEND_*`, `AWS_REGION` |
 | **Frontend Deploy (prod)** | Manual `workflow_dispatch` only | Same in **prod** when ECS enabled; **prod** vars: `FRONTEND_*`, `AWS_REGION`                          |
 
-**Prod tfvars:** `prod.tfvars` enables low-traffic ECS + RDS (`create_backend_infra = true`, `create_rds = true`). Cognito for prod is **not** in Terraform — see [docs/deployment/prod-release.md](../docs/deployment/prod-release.md). Prod deploy workflows need `make apply-prod`, `make gh-sync-prod`, manual Cognito/ECS auth env, then manual workflow dispatch.
+**Prod tfvars:** `prod.tfvars` enables serverless backend (`create_serverless_backend = true`; ECS/RDS off). Package `backend/lambda.zip` before plan/apply. Cognito for prod is **not** in Terraform — see [docs/deployment/prod-release.md](../docs/deployment/prod-release.md) and [lambda-phase3.md](../docs/deployment/lambda-phase3.md).
 
-With default tfvars, **ECS deploy workflows have nothing to deploy to** until you enable `create_backend_infra` and set GitHub environment variables from `terraform output`.
+**ECS path (legacy):** opt in via `create_backend_infra = true` in tfvars; mutually exclusive with serverless.
 
 ### `make gh-sync-dev` / `make gh-sync-prod`
 

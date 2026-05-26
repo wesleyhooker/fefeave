@@ -1,34 +1,31 @@
-# Production release (low-traffic full app)
+# Production release (serverless backend path)
 
-Manual path to run Felicia’s full app on AWS: public homepage, admin login (Cognito), ledger API, Postgres (RDS), ECS behind ALB. **No automated prod deploy on merge** — only `workflow_dispatch` workflows.
+Manual path to run Felicia’s full app on AWS: static site (S3/CloudFront), admin login (Cognito), ledger API on **Lambda + API Gateway**, Postgres on **Neon**. **No automated prod deploy on merge** in Phase 3 — workflows come in Phase 4/5.
 
-Local development stays unchanged (`make dev`, `create_backend_infra = false` in `infra/dev.tfvars`).
+Local development stays unchanged (`make dev`, `create_serverless_backend = false` in `infra/dev.tfvars`).
+
+> **Phase docs:** [lambda-phase3.md](lambda-phase3.md) (Terraform), [lambda-phase2.md](lambda-phase2.md) (runtime). Consolidate before final merge.
 
 ---
 
-## What Terraform provisions
+## What Terraform provisions (current `infra/prod.tfvars`)
 
-### With current `infra/prod.tfvars` (`create_backend_infra = true`, `create_rds = true`)
+| Layer              | Resources                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| Always             | S3 site bucket, CloudFront, attachments S3, ECS-oriented backend IAM role (unused by Lambda)  |
+| Serverless backend | Lambda `fefeave-backend-prod`, API Gateway HTTP API, Neon `DATABASE_URL` **secret container** |
+| Not created        | VPC, **NAT**, ALB, ECS, ECR, RDS                                                              |
 
-| Layer              | Resources                                                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| Always (unchanged) | S3 site bucket, CloudFront, attachments S3, backend ECS **task role** (S3 attachments)                             |
-| Networking         | VPC, IGW, 2 AZ public/private subnets, **single NAT** + EIP                                                        |
-| Compute            | ECR `fefeave-backend-prod`, `fefeave-frontend-prod`; ECS cluster; Fargate services (desired count **1** each)      |
-| Load balancing     | Internet ALB HTTP :80 — `/api/*` → backend, default → frontend                                                     |
-| Data               | RDS Postgres 16 **`db.t3.micro`**, 20 GiB; `DATABASE_URL` in Secrets Manager                                       |
-| CI/CD IAM          | OIDC roles `fefeave-backend-deploy-prod`, `fefeave-frontend-deploy-prod` (when `create_github_deploy_role = true`) |
+### After apply (manual, not in Terraform)
 
-### Not provisioned by Terraform (prod gap)
+1. `aws secretsmanager put-secret-value` for Neon pooler `DATABASE_URL` — see [lambda-phase3.md](lambda-phase3.md).
+2. `cd backend && npm run package:lambda` before each Lambda code update.
+3. Prod **Cognito** User Pool (manual); update Lambda `COGNITO_*` placeholders.
+4. Frontend/OpenNext + API Gateway CORS/CloudFront proxy — Phase 4/5.
 
-- **Cognito User Pool** — `infra/cognito-dev.tf` runs only when `env == "dev"`. Prod needs a **manual** pool (AWS Console) or a future `cognito-prod.tf`.
-- **Auth env on ECS tasks** — Terraform sets `AUTH_MODE=cognito` on the backend task, but **does not** inject `COGNITO_*`, `AUTH_SESSION_SECRET`, or frontend OAuth vars. Set these on ECS task definitions (console, CLI, or extended Terraform) before auth works.
-- **HTTPS / custom domain** — ALB is HTTP only; add ACM + listener 443 separately if needed.
-- **DB migrations workflow** — no `Backend Migrate (prod)` workflow; run migrations manually (see below).
+### Legacy ECS path (`create_backend_infra = true`)
 
-### What prod used to create (`create_backend_infra = false`)
-
-S3 + CloudFront + attachments bucket + backend task IAM role only — **no** VPC, NAT, ALB, ECS, RDS, or deploy OIDC roles.
+Opt-in only; mutually exclusive with `create_serverless_backend`. Creates VPC, NAT, ALB, ECS, ECR, optional RDS — see commented blocks in `infra/README.md`.
 
 ---
 

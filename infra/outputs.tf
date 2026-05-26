@@ -80,6 +80,48 @@ output "database_url_secret_arn" {
   value       = (var.create_backend_infra && var.create_rds) ? aws_secretsmanager_secret.db_url[0].arn : null
 }
 
+# --- Serverless backend (Lambda + API Gateway) ---
+output "backend_lambda_function_name" {
+  description = "Backend Lambda function name"
+  value       = var.create_serverless_backend ? aws_lambda_function.backend[0].function_name : null
+}
+
+output "backend_lambda_function_arn" {
+  description = "Backend Lambda function ARN"
+  value       = var.create_serverless_backend ? aws_lambda_function.backend[0].arn : null
+}
+
+output "backend_lambda_execution_role_arn" {
+  description = "IAM execution role ARN for backend Lambda"
+  value       = var.create_serverless_backend ? aws_iam_role.lambda_backend[0].arn : null
+}
+
+output "backend_api_gateway_url" {
+  description = "API Gateway HTTP API invoke URL (append /api/... paths)"
+  value       = var.create_serverless_backend ? aws_apigatewayv2_api.backend[0].api_endpoint : null
+}
+
+output "neon_database_url_secret_name" {
+  description = "Secrets Manager secret name for Neon DATABASE_URL (populate after apply)"
+  value       = var.create_serverless_backend ? aws_secretsmanager_secret.neon_database_url[0].name : null
+}
+
+output "neon_database_url_secret_arn" {
+  description = "Secrets Manager ARN for Neon DATABASE_URL (populate after apply)"
+  value       = var.create_serverless_backend ? aws_secretsmanager_secret.neon_database_url[0].arn : null
+}
+
+output "github_prod_backend_serverless_vars" {
+  description = "Suggested GitHub prod environment variables for Phase 4/5 Lambda deploy workflows (non-secret)"
+  value = var.create_serverless_backend ? {
+    AWS_REGION                    = var.aws_region
+    BACKEND_LAMBDA_FUNCTION_NAME  = aws_lambda_function.backend[0].function_name
+    BACKEND_API_GATEWAY_URL       = aws_apigatewayv2_api.backend[0].api_endpoint
+    NEON_DATABASE_URL_SECRET_NAME = aws_secretsmanager_secret.neon_database_url[0].name
+    S3_ATTACHMENTS_BUCKET         = aws_s3_bucket.attachments.bucket
+  } : null
+}
+
 # --- Cognito (DEV) ---
 output "user_pool_id" {
   description = "Cognito User Pool ID for dev auth."
