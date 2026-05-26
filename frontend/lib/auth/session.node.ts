@@ -1,24 +1,16 @@
 import { cookies } from 'next/headers';
 import { SESSION_COOKIE_NAME } from './session-constants';
-import {
-  applySessionCookieClear,
-  getSessionCookieSetOptions,
-} from './session-cookie-options';
+import { getSessionCookieSetOptions } from './session-cookie-options';
 import { encodeSessionValue, verifySessionValue } from './session-verify.node';
 import type { AppSession } from './session.types';
 
-export { applySessionCookieClear } from './session-cookie-options';
+export { appendSessionCookieClearHeaders } from './session-cookie-options';
 
 export async function setSessionCookie(session: AppSession): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, encodeSessionValue(session), {
     ...getSessionCookieSetOptions(new Date(session.expires_at * 1000)),
   });
-}
-
-export async function clearSessionCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  applySessionCookieClear(cookieStore);
 }
 
 export async function getSession(): Promise<AppSession | null> {

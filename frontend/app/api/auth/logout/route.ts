@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { clearSessionCookie } from '@/lib/auth/session.node';
+import { appendSessionCookieClearHeaders } from '@/lib/auth/session-cookie-options';
 import { buildCognitoLogoutUrl } from '@/src/lib/auth/cognito';
 
 async function handleLogout(request: NextRequest): Promise<NextResponse> {
-  await clearSessionCookie();
-
   const domain = process.env.COGNITO_DOMAIN?.trim();
   const clientId = process.env.COGNITO_CLIENT_ID?.trim();
 
   if (!domain || !clientId) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    appendSessionCookieClearHeaders(response.headers);
+    return response;
   }
 
   const logoutUri =
@@ -19,7 +19,9 @@ async function handleLogout(request: NextRequest): Promise<NextResponse> {
     clientId,
     logoutUri,
   });
-  return NextResponse.redirect(redirectTo);
+  const response = NextResponse.redirect(redirectTo);
+  appendSessionCookieClearHeaders(response.headers);
+  return response;
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

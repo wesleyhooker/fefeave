@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import {
+  appendSessionCookieClearHeaders,
   applySessionCookieClear,
   getSessionCookieClearOptionsList,
   getSessionCookieDomain,
   getSessionCookieSetOptions,
+  serializeSessionCookieClear,
 } from './session-cookie-options.ts';
 
 const originalEnv = { ...process.env };
@@ -75,5 +77,27 @@ describe('session cookie options', () => {
     process.env.NODE_ENV = 'production';
     process.env.SESSION_COOKIE_DOMAIN = '.example.com';
     assert.equal(getSessionCookieDomain(), '.example.com');
+  });
+
+  it('serializes secure clear cookies with optional domain', () => {
+    process.env.NODE_ENV = 'production';
+    const [hostOnly, withDomain] = getSessionCookieClearOptionsList();
+    assert.match(serializeSessionCookieClear(hostOnly), /Secure/);
+    assert.match(serializeSessionCookieClear(hostOnly), /HttpOnly/);
+    assert.doesNotMatch(serializeSessionCookieClear(hostOnly), /Domain=/);
+    assert.match(
+      serializeSessionCookieClear(withDomain),
+      /Domain=\.fefeave\.com/,
+    );
+  });
+
+  it('appendSessionCookieClearHeaders emits both clear variants', () => {
+    process.env.NODE_ENV = 'production';
+    const headers = new Headers();
+    appendSessionCookieClearHeaders(headers);
+    const cookies = headers.getSetCookie();
+    assert.equal(cookies.length, 2);
+    assert.ok(cookies.some((value) => !value.includes('Domain=')));
+    assert.ok(cookies.some((value) => value.includes('Domain=.fefeave.com')));
   });
 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchMe } from '@/lib/auth/backendUser';
-import { clearSessionCookie, setSessionCookie } from '@/lib/auth/session.node';
+import { appendSessionCookieClearHeaders } from '@/lib/auth/session-cookie-options';
+import { setSessionCookie } from '@/lib/auth/session.node';
 
 function envOrThrow(name: string): string {
   const value = process.env[name]?.trim();
@@ -35,9 +36,12 @@ function decodeJwtClaimsNoVerify(
 }
 
 async function redirectAuthFailed(request: NextRequest): Promise<NextResponse> {
-  await clearSessionCookie();
   const origin = getAppOrigin();
-  return NextResponse.redirect(new URL('/login?error=auth_failed', origin));
+  const response = NextResponse.redirect(
+    new URL('/login?error=auth_failed', origin),
+  );
+  appendSessionCookieClearHeaders(response.headers);
+  return response;
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

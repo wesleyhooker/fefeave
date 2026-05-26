@@ -93,6 +93,30 @@ export function getSessionCookieClearOptionsList(): SessionCookieClearOptions[] 
   return variants;
 }
 
+export function serializeSessionCookieClear(
+  options: SessionCookieClearOptions,
+): string {
+  const parts = [
+    `${options.name}=${options.value}`,
+    `Path=${options.path}`,
+    `Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+    'SameSite=Lax',
+  ];
+  if (options.domain) {
+    parts.splice(2, 0, `Domain=${options.domain}`);
+  }
+  if (options.httpOnly) parts.push('HttpOnly');
+  if (options.secure) parts.push('Secure');
+  return parts.join('; ');
+}
+
+/** Append distinct Set-Cookie headers (host-only + domain) without last-wins overwrite. */
+export function appendSessionCookieClearHeaders(headers: Headers): void {
+  for (const options of getSessionCookieClearOptionsList()) {
+    headers.append('Set-Cookie', serializeSessionCookieClear(options));
+  }
+}
+
 export function applySessionCookieClear(
   cookieStore: SessionCookieWriter,
 ): void {
