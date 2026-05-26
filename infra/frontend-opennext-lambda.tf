@@ -121,7 +121,6 @@ resource "aws_lambda_function" "frontend_server" {
   environment {
     variables = {
       NODE_ENV             = "production"
-      AWS_REGION           = var.aws_region
       BACKEND_BASE_URL     = local.backend_base_url
       COGNITO_REDIRECT_URI = var.cognito_redirect_uri
       COGNITO_LOGOUT_URI   = var.cognito_logout_uri
@@ -185,11 +184,11 @@ resource "aws_lambda_function_url" "frontend_image" {
 }
 
 locals {
-  frontend_server_origin_domain = var.create_serverless_frontend ? trimprefix(
+  frontend_server_origin_domain = var.create_serverless_frontend ? trimsuffix(
     trimprefix(aws_lambda_function_url.frontend_server[0].function_url, "https://"),
     "/"
   ) : null
-  frontend_image_origin_domain = var.create_serverless_frontend ? trimprefix(
+  frontend_image_origin_domain = var.create_serverless_frontend ? trimsuffix(
     trimprefix(aws_lambda_function_url.frontend_image[0].function_url, "https://"),
     "/"
   ) : null

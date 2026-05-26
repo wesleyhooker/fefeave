@@ -28,7 +28,6 @@ resource "aws_lambda_function" "backend" {
     variables = {
       NODE_ENV              = "production"
       AUTH_MODE             = "cognito"
-      AWS_REGION            = var.aws_region
       API_PREFIX            = var.api_prefix
       S3_ATTACHMENTS_BUCKET = aws_s3_bucket.attachments.bucket
       COGNITO_REGION        = var.cognito_region
