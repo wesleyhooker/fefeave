@@ -33,7 +33,9 @@ resource "aws_cloudfront_origin_access_control" "oac" {
   signing_protocol                  = "sigv4"
 }
 
+# Static-only distribution (dev / legacy). Replaced by cloudfront-opennext.tf when create_serverless_frontend = true.
 resource "aws_cloudfront_distribution" "cdn" {
+  count               = var.create_serverless_frontend ? 0 : 1
   enabled             = true
   comment             = local.cf_comment
   default_root_object = "index.html"
@@ -87,7 +89,11 @@ data "aws_iam_policy_document" "site_policy" {
     condition {
       test     = "StringEquals"
       variable = "AWS:SourceArn"
-      values   = ["arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${aws_cloudfront_distribution.cdn.id}"]
+      values = var.create_serverless_frontend ? [
+        aws_cloudfront_distribution.opennext[0].arn
+        ] : [
+        aws_cloudfront_distribution.cdn[0].arn
+      ]
     }
   }
 }

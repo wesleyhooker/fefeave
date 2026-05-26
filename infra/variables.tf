@@ -43,6 +43,78 @@ variable "create_serverless_backend" {
   default     = false
 }
 
+variable "create_serverless_frontend" {
+  type        = bool
+  description = "Create OpenNext frontend (Lambda + multi-origin CloudFront). Replaces static-only CDN."
+  default     = false
+}
+
+variable "frontend_domain" {
+  type        = string
+  description = "Production apex domain for CloudFront aliases and Cognito URLs (e.g. fefeave.com)."
+  default     = "fefeave.com"
+}
+
+variable "frontend_www_domain" {
+  type        = string
+  description = "Optional www alias for CloudFront (e.g. www.fefeave.com). Set empty string to omit."
+  default     = "www.fefeave.com"
+}
+
+variable "frontend_domain_aliases" {
+  type        = list(string)
+  description = "Additional CloudFront aliases beyond apex and www (usually empty)."
+  default     = []
+}
+
+variable "cognito_redirect_uri" {
+  type        = string
+  description = "Cognito app client callback URL (must match Hosted UI config exactly)."
+  default     = "https://fefeave.com/api/auth/callback"
+}
+
+variable "cognito_logout_uri" {
+  type        = string
+  description = "Cognito app client sign-out URL (must match Hosted UI config exactly)."
+  default     = "https://fefeave.com/login"
+}
+
+variable "enable_frontend_custom_domain" {
+  type        = bool
+  description = "Attach ACM cert + CloudFront aliases. Requires validated acm_certificate_arn (us-east-1)."
+  default     = false
+}
+
+variable "acm_certificate_arn" {
+  type        = string
+  description = "ACM certificate ARN in us-east-1 for CloudFront. Set after DNS validation; leave null until cutover."
+  default     = null
+}
+
+variable "frontend_server_lambda_memory" {
+  type        = number
+  description = "Memory (MiB) for OpenNext server Lambda."
+  default     = 1024
+}
+
+variable "frontend_server_lambda_timeout" {
+  type        = number
+  description = "Timeout (seconds) for OpenNext server Lambda."
+  default     = 30
+}
+
+variable "frontend_image_lambda_memory" {
+  type        = number
+  description = "Memory (MiB) for OpenNext image optimization Lambda."
+  default     = 512
+}
+
+variable "frontend_image_lambda_timeout" {
+  type        = number
+  description = "Timeout (seconds) for OpenNext image optimization Lambda."
+  default     = 30
+}
+
 variable "lambda_memory_size" {
   type        = number
   description = "Lambda memory (MiB) for serverless backend."
@@ -158,6 +230,13 @@ check "rds_requires_ecs_backend" {
   assert {
     condition     = !var.create_rds || var.create_backend_infra
     error_message = "create_rds requires create_backend_infra (RDS is not used with serverless backend)."
+  }
+}
+
+check "frontend_serverless_needs_backend" {
+  assert {
+    condition     = !var.create_serverless_frontend || var.create_serverless_backend
+    error_message = "create_serverless_frontend requires create_serverless_backend for BACKEND_BASE_URL / API Gateway."
   }
 }
 

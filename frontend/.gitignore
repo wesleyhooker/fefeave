@@ -6,6 +6,8 @@ node_modules
 # build
 .next
 .open-next
+opennext-server.zip
+opennext-image.zip
 out
 
 # misc
