@@ -15,8 +15,12 @@ output "backend_role_name" {
 }
 
 output "backend_deploy_role_arn" {
-  description = "OIDC role ARN for GitHub Actions backend deploy (ECR push + ECS update)"
-  value       = (var.create_github_deploy_role && var.create_backend_infra) ? aws_iam_role.gh_backend_deploy[0].arn : null
+  description = "OIDC role ARN for GitHub Actions backend deploy (Lambda code update or legacy ECS)"
+  value = var.create_github_deploy_role ? (
+    var.create_serverless_backend ? aws_iam_role.gh_backend_serverless_deploy[0].arn : (
+      var.create_backend_infra ? aws_iam_role.gh_backend_deploy[0].arn : null
+    )
+  ) : null
 }
 
 output "frontend_deploy_role_arn" {
@@ -173,9 +177,10 @@ output "github_prod_frontend_serverless_vars" {
 }
 
 output "github_prod_backend_serverless_vars" {
-  description = "Suggested GitHub prod environment variables for Phase 4/5 Lambda deploy workflows (non-secret)"
+  description = "Suggested GitHub prod environment variables for Lambda backend deploy workflow (non-secret)"
   value = var.create_serverless_backend ? {
     AWS_REGION                    = var.aws_region
+    BACKEND_DEPLOY_ROLE_ARN       = var.create_github_deploy_role ? aws_iam_role.gh_backend_serverless_deploy[0].arn : null
     BACKEND_LAMBDA_FUNCTION_NAME  = aws_lambda_function.backend[0].function_name
     BACKEND_API_GATEWAY_URL       = aws_apigatewayv2_api.backend[0].api_endpoint
     NEON_DATABASE_URL_SECRET_NAME = aws_secretsmanager_secret.neon_database_url[0].name

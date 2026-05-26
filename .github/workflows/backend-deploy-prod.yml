@@ -1,8 +1,6 @@
-# Prod deploy is manual-only (workflow_dispatch). Does not run on merge or CI success.
-# Backend deploy to PROD: build image, push immutable :<shortsha>, register new task def, update ECS.
-# Uses OIDC. Requires GitHub env "prod" vars: BACKEND_DEPLOY_ROLE_ARN, AWS_REGION, BACKEND_ECR_REPO_URL,
-# BACKEND_ECS_CLUSTER, BACKEND_ECS_SERVICE, BACKEND_API_BASE_URL.
-# PROD deploy is manual only — no push triggers.
+# Prod deploy is manual-only (workflow_dispatch). Backend → Lambda (no ECS/ECR).
+# Uses OIDC. Requires GitHub env "prod" vars: BACKEND_DEPLOY_ROLE_ARN, AWS_REGION,
+# BACKEND_LAMBDA_FUNCTION_NAME. Optional: BACKEND_API_GATEWAY_URL (post-deploy health check).
 
 name: Backend Deploy (prod)
 
@@ -13,16 +11,30 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
+concurrency:
+  group: backend-prod
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: prod
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Check required env vars
+        run: |
+          missing=""
+          [ -z "${{ vars.BACKEND_DEPLOY_ROLE_ARN }}" ] && missing="$missing BACKEND_DEPLOY_ROLE_ARN"
+          [ -z "${{ vars.BACKEND_LAMBDA_FUNCTION_NAME }}" ] && missing="$missing BACKEND_LAMBDA_FUNCTION_NAME"
+          [ -z "${{ vars.AWS_REGION }}" ] && missing="$missing AWS_REGION"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing or empty GitHub env vars:$missing"
+            exit 1
+          fi
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -30,66 +42,50 @@ jobs:
           role-to-assume: ${{ vars.BACKEND_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Set image tag
-        id: image
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Build and package Lambda
+        working-directory: backend
         run: |
-          SHA_SHORT=$(git rev-parse --short HEAD)
-          echo "tag=$SHA_SHORT" >> $GITHUB_OUTPUT
-          echo "Image tag: $SHA_SHORT (immutable)"
+          npm ci
+          npm run build:lambda
+          npm run package:lambda
+          ls -lh lambda.zip
 
-      - name: Login to ECR
+      - name: Update Lambda function code
         run: |
-          ECR_REPO_URL="${{ vars.BACKEND_ECR_REPO_URL }}"
-          ECR_HOST="${ECR_REPO_URL%%/*}"
-          aws ecr get-login-password --region ${{ vars.AWS_REGION }} | \
-            docker login --username AWS --password-stdin "$ECR_HOST"
+          aws lambda update-function-code \
+            --function-name "${{ vars.BACKEND_LAMBDA_FUNCTION_NAME }}" \
+            --zip-file fileb://backend/lambda.zip
+          aws lambda wait function-updated-v2 \
+            --function-name "${{ vars.BACKEND_LAMBDA_FUNCTION_NAME }}"
+          echo "Lambda updated: ${{ vars.BACKEND_LAMBDA_FUNCTION_NAME }}"
 
-      - name: Build and push Docker image (immutable tag only)
+      - name: Post-deploy health check
         run: |
-          REPO_URL="${{ vars.BACKEND_ECR_REPO_URL }}"
-          TAG="${{ steps.image.outputs.tag }}"
-          docker build -t "${REPO_URL}:${TAG}" -f backend/Dockerfile backend/
-          docker push "${REPO_URL}:${TAG}"
-
-      - name: Register new task definition and update ECS service
-        run: |
-          CLUSTER="${{ vars.BACKEND_ECS_CLUSTER }}"
-          SERVICE="${{ vars.BACKEND_ECS_SERVICE }}"
-          REPO_URL="${{ vars.BACKEND_ECR_REPO_URL }}"
-          TAG="${{ steps.image.outputs.tag }}"
-          IMAGE="${REPO_URL}:${TAG}"
-
-          TASK_ARN=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
-            --query 'services[0].taskDefinition' --output text)
-          TASK_DEF=$(aws ecs describe-task-definition --task-definition "$TASK_ARN" \
-            --query 'taskDefinition')
-          NEW_DEF=$(echo "$TASK_DEF" | jq --arg img "$IMAGE" \
-            'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) |
-            .containerDefinitions[0].image = $img')
-          NEW_TASK=$(aws ecs register-task-definition --cli-input-json "$NEW_DEF")
-          FAMILY=$(echo "$NEW_TASK" | jq -r '.taskDefinition.family')
-          REV=$(echo "$NEW_TASK" | jq -r '.taskDefinition.revision')
-
-          aws ecs update-service \
-            --cluster "$CLUSTER" \
-            --service "$SERVICE" \
-            --task-definition "${FAMILY}:${REV}" \
-            --query 'service.deployments' --output table
-
-      - name: Wait for service stability
-        run: |
-          aws ecs wait services-stable \
-            --cluster "${{ vars.BACKEND_ECS_CLUSTER }}" \
-            --services "${{ vars.BACKEND_ECS_SERVICE }}"
-          echo "Service is stable."
+          if [ -z "${{ vars.BACKEND_API_GATEWAY_URL }}" ]; then
+            echo "Skipping health check (BACKEND_API_GATEWAY_URL not set)."
+            exit 0
+          fi
+          BASE="${{ vars.BACKEND_API_GATEWAY_URL }}"
+          BASE="${BASE%/}"
+          curl -sfS "${BASE}/api/health" | head -c 500
+          echo ""
+          echo "Health check OK: ${BASE}/api/health"
 
       - name: Deployment summary
         run: |
+          SHA_SHORT=$(git rev-parse --short HEAD)
           echo "## Backend deploy (prod) complete" >> $GITHUB_STEP_SUMMARY
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Image** | \`${{ steps.image.outputs.tag }}\` (immutable) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Backend API base URL** | ${{ vars.BACKEND_API_BASE_URL }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "API: ${{ vars.BACKEND_API_BASE_URL }}/api"
-          echo "Image: ${{ vars.BACKEND_ECR_REPO_URL }}:${{ steps.image.outputs.tag }}"
+          echo "| **Commit** | \`${SHA_SHORT}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Lambda** | \`${{ vars.BACKEND_LAMBDA_FUNCTION_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ vars.BACKEND_API_GATEWAY_URL }}" ]; then
+            echo "| **API** | ${{ vars.BACKEND_API_GATEWAY_URL }}/api |" >> $GITHUB_STEP_SUMMARY
+          fi
