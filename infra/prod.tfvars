@@ -21,11 +21,11 @@ frontend_www_domain           = "www.fefeave.com"
 frontend_domain_aliases       = []
 cognito_redirect_uri          = "https://fefeave.com/api/auth/callback"
 cognito_logout_uri            = "https://fefeave.com/login"
-enable_frontend_custom_domain = false # true only after ACM (us-east-1) is ISSUED
-# acm_certificate_arn     = "arn:aws:acm:us-east-1:ACCOUNT:certificate/UUID"
+enable_frontend_custom_domain = true
+acm_certificate_arn           = "arn:aws:acm:us-east-1:356892335988:certificate/8e668416-b1ed-453c-a383-a33ae0ad8d18"
 # route53_zone_id omitted — create apex/www CNAMEs in Cloudflare to cloudfront_distribution_domain
 
 # Backend Cognito placeholders (update Lambda env or tfvars before auth works).
 cognito_region        = "us-west-2"
-cognito_user_pool_id  = "REPLACE_ME"
-cognito_app_client_id = "REPLACE_ME"
+cognito_user_pool_id  = "us-west-2_pGDWIC7xK"
+cognito_app_client_id = "14s9ol7f8mpcbjd7dhls1ecttk"
