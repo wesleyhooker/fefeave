@@ -33,14 +33,14 @@ With that configuration, Terraform provisions **low-cost shared resources only**
 
 When enabled in `*.tfvars`, Terraform also creates:
 
-| Resource                     | Purpose                                                                  |
-| ---------------------------- | ------------------------------------------------------------------------ |
-| VPC, NAT, subnets            | Private networking for ECS                                               |
-| ECR (backend + frontend)     | Container images for deploy workflows                                    |
-| ALB (HTTP 80)                | Routes `/api/*` → backend ECS; default → frontend ECS                    |
-| ECS Fargate                  | Backend API and Next.js frontend services                                |
-| RDS (if `create_rds = true`) | Postgres; `DATABASE_URL` in Secrets Manager                              |
-| OIDC roles                   | `backend_deploy_role_arn`, `frontend_deploy_role_arn` for GitHub Actions |
+| Resource                     | Purpose                                                                                             |
+| ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| VPC, NAT, subnets            | Private networking for ECS                                                                          |
+| ECR (backend + frontend)     | Container images for deploy workflows                                                               |
+| ALB (HTTP 80)                | Routes `/api/*` → backend ECS; default → frontend ECS                                               |
+| ECS Fargate                  | Backend API and Next.js frontend services                                                           |
+| RDS (if `create_rds = true`) | Postgres; `DATABASE_URL` in Secrets Manager                                                         |
+| OIDC roles                   | `backend_deploy_role_arn`, `frontend_deploy_role_arn` for GitHub Actions (Lambda or ECS per tfvars) |
 
 Opt-in by uncommenting the block at the bottom of `dev.tfvars` (and setting `alb_ingress_cidrs` for dev).
 
@@ -57,6 +57,23 @@ When enabled (prod `prod.tfvars`):
 
 No VPC, NAT, ALB, ECS, ECR, or RDS.
 
+### Serverless frontend (`create_serverless_frontend = true`)
+
+When enabled (prod `prod.tfvars`; requires `create_serverless_backend = true`):
+
+| Resource                  | Purpose                                                              |
+| ------------------------- | -------------------------------------------------------------------- |
+| Lambda (server)           | OpenNext SSR, middleware, `/api/*` proxy                             |
+| Lambda (image)            | `next/image` optimizer                                               |
+| CloudFront (multi-origin) | S3 `/_assets`, server Lambda URL, image Lambda URL                   |
+| OIDC deploy role          | GitHub Actions: S3 sync, Lambda code update, CloudFront invalidation |
+
+**Not created:** DynamoDB, SQS, warmer/EventBridge, ECS, ECR, NAT, ALB, RDS.
+
+Domain defaults to **fefeave.com** (Cognito URLs in tfvars). DNS is **Cloudflare**; ACM in us-east-1 is required for CloudFront custom domain. Route53 zone (`route53_zone_id`) is optional and unused for current launch — see [docs/deployment/route53-acm-cutover.md](../docs/deployment/route53-acm-cutover.md).
+
+Before plan/apply: `cd frontend && npm run build:opennext && npm run package:opennext` (produces `opennext-server.zip`, `opennext-image.zip`). OpenNext uses `tagCache: dummy` and `queue: dummy` (no DynamoDB/SQS).
+
 ---
 
 ## 2. File layout
@@ -67,7 +84,8 @@ infra/
 ├── cognito-dev.tf          # Dev Cognito user pool (dev workspace only)
 ├── vpc.tf, ecr.tf, alb.tf, ecs.tf, rds.tf   # When create_backend_infra = true
 ├── lambda-api.tf, apigateway.tf, secrets.tf, serverless-backend-iam.tf  # When create_serverless_backend = true
-├── backend-deploy-role.tf, frontend-deploy-role.tf
+├── frontend-opennext-lambda.tf, cloudfront-opennext.tf, route53-acm.tf, frontend-serverless-deploy-role.tf  # When create_serverless_frontend = true
+├── backend-deploy-role.tf, backend-serverless-deploy-role.tf, frontend-deploy-role.tf
 ├── providers.tf, variables.tf, outputs.tf
 ├── dev.tfvars              # Default: create_backend_infra = false
 └── prod.tfvars             # Default: create_backend_infra = false
@@ -93,29 +111,33 @@ Application development does **not** require `terraform apply` with the default 
 
 ## 4. Variables (selected)
 
-| Variable                    | Description                                                   | Default in code |
-| --------------------------- | ------------------------------------------------------------- | --------------- |
-| `create_backend_infra`      | VPC, ECR, ALB, ECS, deploy OIDC roles                         | `false`         |
-| `create_serverless_backend` | Lambda, API Gateway HTTP API, Neon secret container           | `false`         |
-| `create_rds`                | RDS + Secrets Manager `DATABASE_URL` (requires backend infra) | `false`         |
-| `create_github_deploy_role` | OIDC provider data used by deploy roles when infra is on      | `true`          |
+| Variable                                  | Description                                                               | Default in code                   |
+| ----------------------------------------- | ------------------------------------------------------------------------- | --------------------------------- |
+| `create_backend_infra`                    | VPC, ECR, ALB, ECS, deploy OIDC roles                                     | `false`                           |
+| `create_serverless_backend`               | Lambda, API Gateway HTTP API, Neon secret container                       | `false`                           |
+| `create_serverless_frontend`              | OpenNext Lambdas + multi-origin CloudFront (requires serverless backend)  | `false`                           |
+| `enable_frontend_custom_domain`           | ACM cert + CloudFront aliases (us-east-1 ACM); DNS in Cloudflare manually | `false`                           |
+| `frontend_domain` / `frontend_www_domain` | Production apex + optional www alias (Cognito URLs)                       | `fefeave.com` / `www.fefeave.com` |
+| `create_rds`                              | RDS + Secrets Manager `DATABASE_URL` (requires backend infra)             | `false`                           |
+| `create_github_deploy_role`               | OIDC provider data used by deploy roles when infra is on                  | `true`                            |
 
 `create_backend_infra` and `create_serverless_backend` are **mutually exclusive**.
 
-Committed tfvars: **dev** keeps all backend flags `false` (local-first). **prod** uses `create_serverless_backend = true` (see `prod.tfvars`). See [docs/deployment/lambda-phase3.md](../docs/deployment/lambda-phase3.md).
+Committed tfvars: **dev** keeps all backend flags `false` (local-first). **prod** uses `create_serverless_backend = true` and `create_serverless_frontend = true` (see `prod.tfvars`). See [docs/deployment/lambda-phase3.md](../docs/deployment/lambda-phase3.md) and [opennext-phase5.md](../docs/deployment/opennext-phase5.md).
 
 ---
 
 ## 5. Outputs
 
-| Output                                                                                                             | When set                                |
-| ------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
-| `s3_bucket_name`, `cloudfront_distribution_id`                                                                     | Always                                  |
-| `attachments_bucket_name`, `backend_role_name`                                                                     | Always                                  |
-| `user_pool_id`, `app_client_id`, `cognito_domain`, …                                                               | Dev workspace                           |
-| `backend_*`, `frontend_*` (ECR, ECS, ALB URL, deploy role ARNs)                                                    | `create_backend_infra = true`           |
-| `rds_endpoint`, `database_url_secret_arn`                                                                          | `create_backend_infra` and `create_rds` |
-| `backend_lambda_*`, `backend_api_gateway_url`, `neon_database_url_secret_*`, `github_prod_backend_serverless_vars` | `create_serverless_backend`             |
+| Output                                                                                                                  | When set                                |
+| ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `s3_bucket_name`, `cloudfront_distribution_id`                                                                          | Always                                  |
+| `attachments_bucket_name`, `backend_role_name`                                                                          | Always                                  |
+| `user_pool_id`, `app_client_id`, `cognito_domain`, …                                                                    | Dev workspace                           |
+| `backend_*`, `frontend_*` (ECR, ECS, ALB URL, deploy role ARNs)                                                         | `create_backend_infra = true`           |
+| `rds_endpoint`, `database_url_secret_arn`                                                                               | `create_backend_infra` and `create_rds` |
+| `backend_lambda_*`, `backend_api_gateway_url`, `neon_database_url_secret_*`, `github_prod_backend_serverless_vars`      | `create_serverless_backend`             |
+| `frontend_server_lambda_name`, `frontend_image_lambda_name`, `frontend_app_url`, `github_prod_frontend_serverless_vars` | `create_serverless_frontend`            |
 
 ---
 
@@ -123,26 +145,37 @@ Committed tfvars: **dev** keeps all backend flags `false` (local-first). **prod*
 
 **Local dev + CI only for dev.** Dev CD workflows (`*Deploy*dev*`, `Backend Migrate (dev)`) were removed. Production ECS deploy is **manual** (`workflow_dispatch`) only.
 
-| Workflow                   | Trigger                         | Requires                                                                                              |
-| -------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Backend CI**             | Push/PR (`backend/**`, etc.)    | Unit tests, lint, format (no AWS)                                                                     |
-| **Frontend CI**            | Push/PR (`frontend/**`)         | `npm run build`, audit (no AWS)                                                                       |
-| **Backend Deploy (prod)**  | Manual `workflow_dispatch` only | `create_backend_infra = true` in **prod** tfvars when ready; **prod** vars: `BACKEND_*`, `AWS_REGION` |
-| **Frontend Deploy (prod)** | Manual `workflow_dispatch` only | Same in **prod** when ECS enabled; **prod** vars: `FRONTEND_*`, `AWS_REGION`                          |
+| Workflow                   | Trigger                         | Requires                                                                                                                     |
+| -------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Backend CI**             | Push/PR (`backend/**`, etc.)    | Unit tests, lint, format (no AWS)                                                                                            |
+| **Frontend CI**            | Push/PR (`frontend/**`)         | `npm run build`, audit (no AWS)                                                                                              |
+| **Backend Deploy (prod)**  | Manual `workflow_dispatch` only | `create_backend_infra = true` in **prod** tfvars when ready; **prod** vars: `BACKEND_*`, `AWS_REGION`                        |
+| **Frontend Deploy (prod)** | Manual `workflow_dispatch` only | OpenNext path when `create_serverless_frontend = true`; **prod** vars: `FRONTEND_*`, `S3_BUCKET`, `CF_DIST_ID`, `AWS_REGION` |
 
-**Prod tfvars:** `prod.tfvars` enables serverless backend (`create_serverless_backend = true`; ECS/RDS off). Package `backend/lambda.zip` before plan/apply. Cognito for prod is **not** in Terraform — see [docs/deployment/prod-release.md](../docs/deployment/prod-release.md) and [lambda-phase3.md](../docs/deployment/lambda-phase3.md).
+**Prod tfvars:** `prod.tfvars` enables serverless backend + frontend (`create_serverless_backend = true`, `create_serverless_frontend = true`; ECS/RDS off). Package `backend/lambda.zip` and frontend OpenNext zips before plan/apply. Cognito for prod is **not** in Terraform — see [docs/deployment/prod-release.md](../docs/deployment/prod-release.md), [opennext-phase5.md](../docs/deployment/opennext-phase5.md), and [lambda-phase3.md](../docs/deployment/lambda-phase3.md).
 
 **ECS path (legacy):** opt in via `create_backend_infra = true` in tfvars; mutually exclusive with serverless.
 
 ### `make gh-sync-dev` / `make gh-sync-prod`
 
 - Always attempts to sync `S3_BUCKET`, `CF_DIST_ID`, and `AWS_REGION` from Terraform outputs.
-- When `backend_deploy_role_arn` is non-null, also syncs backend ECS deploy vars (`BACKEND_*`).
-- **`make gh-sync-prod`:** syncs `S3_BUCKET`, `CF_DIST_ID`, `AWS_REGION`, and when ECS is enabled all `BACKEND_*` and `FRONTEND_*` deploy vars from Terraform outputs. Cognito/session secrets are **not** synced (manual ECS / Secrets Manager).
+- When `backend_deploy_role_arn` is non-null, syncs serverless backend vars (`BACKEND_LAMBDA_FUNCTION_NAME`, `BACKEND_API_GATEWAY_URL`) or legacy ECS vars (`BACKEND_ECR_*`, `BACKEND_ECS_*`).
+- **`make gh-sync-prod`:** syncs `S3_BUCKET`, `CF_DIST_ID`, `AWS_REGION`. When serverless frontend is enabled, also syncs OpenNext deploy vars (`FRONTEND_DEPLOY_ROLE_ARN`, `FRONTEND_*_LAMBDA_NAME`, `BACKEND_BASE_URL`, Cognito URLs). When ECS is enabled, syncs `BACKEND_*` / legacy `FRONTEND_*` ECR/ECS vars. Cognito/session **secrets** are **not** synced (manual Lambda env / Secrets Manager).
 
 ---
 
 ## 7. GitHub environment variables
+
+### When `create_serverless_backend = true` (backend deploy)
+
+| Variable                       | Source                                                      |
+| ------------------------------ | ----------------------------------------------------------- |
+| `BACKEND_DEPLOY_ROLE_ARN`      | `backend_deploy_role_arn`                                   |
+| `BACKEND_LAMBDA_FUNCTION_NAME` | `backend_lambda_function_name`                              |
+| `BACKEND_API_GATEWAY_URL`      | `backend_api_gateway_url` (optional; workflow health check) |
+| `AWS_REGION`                   | e.g. `us-west-2`                                            |
+
+Workflow: [Backend Deploy (prod)](../.github/workflows/backend-deploy-prod.yml) — packages `lambda.zip` and runs `aws lambda update-function-code` (no ECS/ECR).
 
 ### When `create_backend_infra = true` (backend deploy)
 
@@ -167,7 +200,7 @@ Committed tfvars: **dev** keeps all backend flags `false` (local-first). **prod*
 
 ### Static site outputs (always)
 
-S3 and CloudFront outputs exist for future or manual static deploys; there is **no** automated “upload to S3” workflow in `.github/workflows/` today. Hosted app deploys use **ECS** when infra is enabled.
+S3 and CloudFront outputs exist for static assets. **OpenNext prod deploy** (`frontend-deploy-prod.yml`) syncs `/_assets` to S3, updates frontend Lambdas, and invalidates CloudFront when `create_serverless_frontend = true`. Legacy **ECS** deploy remains available when `create_backend_infra = true`.
 
 ---
 

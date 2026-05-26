@@ -1,27 +1,29 @@
 # Production release (serverless backend path)
 
-Manual path to run Felicia’s full app on AWS: static site (S3/CloudFront), admin login (Cognito), ledger API on **Lambda + API Gateway**, Postgres on **Neon**. **No automated prod deploy on merge** in Phase 3 — workflows come in Phase 4/5.
+Manual path to run Felicia’s full app on AWS: **OpenNext** frontend on CloudFront (`https://fefeave.com`), Cognito login, ledger API on **Lambda + API Gateway**, Postgres on **Neon**. Prod deploy workflows are **manual** (`workflow_dispatch`) only.
 
-Local development stays unchanged (`make dev`, `create_serverless_backend = false` in `infra/dev.tfvars`).
+Local development stays unchanged (`make dev`; `infra/dev.tfvars` keeps serverless flags off).
 
-> **Phase docs:** [lambda-phase3.md](lambda-phase3.md) (Terraform), [lambda-phase2.md](lambda-phase2.md) (runtime). Consolidate before final merge.
+> **Phase docs:** [opennext-phase5.md](opennext-phase5.md), [lambda-phase3.md](lambda-phase3.md), [route53-acm-cutover.md](route53-acm-cutover.md) (Cloudflare DNS + ACM). Consolidate before final merge.
 
 ---
 
 ## What Terraform provisions (current `infra/prod.tfvars`)
 
-| Layer              | Resources                                                                                     |
-| ------------------ | --------------------------------------------------------------------------------------------- |
-| Always             | S3 site bucket, CloudFront, attachments S3, ECS-oriented backend IAM role (unused by Lambda)  |
-| Serverless backend | Lambda `fefeave-backend-prod`, API Gateway HTTP API, Neon `DATABASE_URL` **secret container** |
-| Not created        | VPC, **NAT**, ALB, ECS, ECR, RDS                                                              |
+| Layer               | Resources                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
+| Always              | S3 site bucket, attachments S3, ECS-oriented backend IAM role (legacy; unused by Lambdas)            |
+| Serverless frontend | OpenNext Lambdas + multi-origin CloudFront; domain **fefeave.com** (ACM + Cloudflare DNS at cutover) |
+| Serverless backend  | Lambda `fefeave-backend-prod`, API Gateway HTTP API, Neon `DATABASE_URL` **secret container**        |
+| Not created         | VPC, **NAT**, ALB, ECS, ECR, RDS, DynamoDB, SQS, warmer                                              |
 
 ### After apply (manual, not in Terraform)
 
 1. `aws secretsmanager put-secret-value` for Neon pooler `DATABASE_URL` — see [lambda-phase3.md](lambda-phase3.md).
 2. `cd backend && npm run package:lambda` before each Lambda code update.
 3. Prod **Cognito** User Pool (manual); update Lambda `COGNITO_*` placeholders.
-4. Frontend/OpenNext + API Gateway CORS/CloudFront proxy — Phase 4/5.
+4. `cd frontend && npm run package:opennext` before frontend Lambda updates.
+5. ACM (us-east-1) + Cloudflare DNS for `fefeave.com` — [route53-acm-cutover.md](route53-acm-cutover.md).
 
 ### Legacy ECS path (`create_backend_infra = true`)
 
@@ -35,8 +37,8 @@ Create a **production** User Pool (do not reuse the dev pool from `cognito-dev.t
 
 1. User pool with Hosted UI domain (e.g. `fefeave-prod-<suffix>`).
 2. App client: OAuth **authorization code**, secret enabled, scopes `openid`, `email`, `profile`.
-3. Callback URL: `http://<ALB_DNS>/api/auth/callback` (replace with HTTPS URL when you add TLS).
-4. Sign-out URL: `http://<ALB_DNS>/login`.
+3. Callback URL: `https://fefeave.com/api/auth/callback` (must match `cognito_redirect_uri` in `prod.tfvars`).
+4. Sign-out URL: `https://fefeave.com/login` (must match `cognito_logout_uri`).
 5. Create admin users and set `custom:role` (or your pool’s role claim) to `ADMIN` per [frontend/AUTH_SETUP.md](../../frontend/AUTH_SETUP.md).
 
 Record for GitHub **secrets** / ECS task env (not Terraform outputs today):
@@ -104,7 +106,27 @@ terraform -chdir=infra plan -var-file=prod.tfvars
 
 ## GitHub environment `prod` — variables and secrets
 
-### From Terraform (`make gh-sync-prod` when ECS enabled)
+### From Terraform (`make gh-sync-prod` after apply)
+
+**OpenNext frontend (current `prod.tfvars`):**
+
+| GitHub variable                              | Terraform output / source                               |
+| -------------------------------------------- | ------------------------------------------------------- |
+| `AWS_REGION`                                 | `us-west-2`                                             |
+| `S3_BUCKET`                                  | `s3_bucket_name`                                        |
+| `CF_DIST_ID`                                 | `cloudfront_distribution_id`                            |
+| `FRONTEND_DEPLOY_ROLE_ARN`                   | `frontend_deploy_role_arn`                              |
+| `FRONTEND_SERVER_LAMBDA_NAME`                | `frontend_server_lambda_name`                           |
+| `FRONTEND_IMAGE_LAMBDA_NAME`                 | `frontend_image_lambda_name`                            |
+| `BACKEND_BASE_URL`                           | `github_prod_frontend_serverless_vars.BACKEND_BASE_URL` |
+| `FRONTEND_APP_URL`, `FRONTEND_DOMAIN`        | `frontend_app_url`, `frontend_domain`                   |
+| `COGNITO_REDIRECT_URI`, `COGNITO_LOGOUT_URI` | tfvars outputs                                          |
+
+Or copy the full map: `terraform -chdir=infra output -json github_prod_frontend_serverless_vars`.
+
+**Serverless backend:** `terraform output -json github_prod_backend_serverless_vars` (`BACKEND_DEPLOY_ROLE_ARN`, `BACKEND_LAMBDA_FUNCTION_NAME`, `BACKEND_API_GATEWAY_URL`, etc.). Sync via `make gh-sync-prod` after apply.
+
+### Legacy ECS path (`create_backend_infra = true`)
 
 | GitHub variable            | Terraform output             |
 | -------------------------- | ---------------------------- |
@@ -140,18 +162,32 @@ Set on **backend** ECS task definition:
 
 ### Workflows
 
-| Workflow                                                                   | Trigger | Required vars              |
-| -------------------------------------------------------------------------- | ------- | -------------------------- |
-| [Backend Deploy (prod)](../../.github/workflows/backend-deploy-prod.yml)   | Manual  | `BACKEND_*`, `AWS_REGION`  |
-| [Frontend Deploy (prod)](../../.github/workflows/frontend-deploy-prod.yml) | Manual  | `FRONTEND_*`, `AWS_REGION` |
+| Workflow                                                                   | Trigger | Required vars                                                                                                            |
+| -------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [Backend Deploy (prod)](../../.github/workflows/backend-deploy-prod.yml)   | Manual  | `BACKEND_DEPLOY_ROLE_ARN`, `BACKEND_LAMBDA_FUNCTION_NAME`, `AWS_REGION` (serverless); optional `BACKEND_API_GATEWAY_URL` |
+| [Frontend Deploy (prod)](../../.github/workflows/frontend-deploy-prod.yml) | Manual  | `FRONTEND_*`, `AWS_REGION`                                                                                               |
 
 Dev CD workflows were removed; **do not** re-add dev deploy on merge.
 
 ---
 
-## Manual deploy order
+## Manual deploy order (serverless path — current prod.tfvars)
 
-1. **Terraform apply** (prod workspace) — infra only.
+Domain **fefeave.com** is on **Cloudflare** (registrar + DNS). Route53 is not used. See [route53-acm-cutover.md](route53-acm-cutover.md) for ACM and Cloudflare record details.
+
+1. **Package artifacts:** `cd backend && npm run package:lambda`; `cd frontend && npm run build:opennext && npm run package:opennext`.
+2. **Terraform apply** (prod workspace) with `enable_frontend_custom_domain = false` — infra only; CloudFront on default `*.cloudfront.net` cert.
+3. **`make gh-sync-prod`** — GitHub prod env vars (`CF_DIST_ID`, Lambda names, Cognito URLs, etc.).
+4. **Neon `DATABASE_URL`** — `aws secretsmanager put-secret-value` (see [lambda-phase3.md](lambda-phase3.md)).
+5. **Cognito** — prod pool, client; callback `https://fefeave.com/api/auth/callback`, sign-out `https://fefeave.com/login`; set frontend server Lambda secrets (`COGNITO_*`, `AUTH_SESSION_SECRET`).
+6. **ACM (us-east-1)** — request cert for `fefeave.com` + `www.fefeave.com`; add validation **CNAME** records in Cloudflare (**DNS only**, grey cloud); wait for **ISSUED**.
+7. **Terraform custom domain** — set `enable_frontend_custom_domain = true` and `acm_certificate_arn` in `prod.tfvars` (leave `route53_zone_id` unset); `make apply-prod`.
+8. **Cloudflare DNS** — CNAME `@` and `www` → `cloudfront_distribution_domain` output; **Proxied**; SSL/TLS **Full (strict)**.
+9. **Backend Deploy (prod)** then **Frontend Deploy (prod)** — `workflow_dispatch` (Lambda zip + OpenNext; no ECS/ECR).
+10. Smoke test: `https://fefeave.com/`, `/api/auth/health`, `/login` → Cognito → `/admin`.
+
+### Legacy ECS deploy order (`create_backend_infra = true`)
+
 2. **Cognito** — pool, client, URLs, users.
 3. **ECS env** — Cognito + `BACKEND_BASE_URL` on tasks (new revision).
 4. **Database migrations** — one-time before or after first backend deploy:

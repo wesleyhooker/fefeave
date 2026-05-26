@@ -61,7 +61,14 @@ aws lambda update-function-configuration \
   --secrets "[{\"EnvironmentVariableName\":\"DATABASE_URL\",\"SecretArn\":\"$SECRET_ARN\"}]"
 ```
 
-3. **Deploy Lambda code** when the handler changes: `cd backend && npm run package:lambda`, then update function code (Phase 4 workflow).
+3. **Deploy Lambda code** when the handler changes: run **Backend Deploy (prod)** (`workflow_dispatch`) or locally:
+
+```bash
+cd backend && npm run package:lambda
+aws lambda update-function-code --function-name fefeave-backend-prod --zip-file fileb://lambda.zip
+```
+
+Requires GitHub prod vars from `make gh-sync-prod` (`BACKEND_DEPLOY_ROLE_ARN`, `BACKEND_LAMBDA_FUNCTION_NAME`).
 
 Until steps 1–2 complete, Lambda invocations fail env validation or DB connection.
 
