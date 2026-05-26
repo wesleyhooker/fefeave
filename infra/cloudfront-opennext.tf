@@ -73,7 +73,7 @@ resource "aws_cloudfront_distribution" "opennext" {
     compress               = true
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # CachingDisabled
-    origin_request_policy_id = "216adef6-5c7f-47e4-b989-5492eafa07d3" # AllViewer (cookies/headers)
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # AllViewerExceptHostHeader
   }
 
   ordered_cache_behavior {
@@ -85,7 +85,7 @@ resource "aws_cloudfront_distribution" "opennext" {
     compress               = true
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-    origin_request_policy_id = "216adef6-5c7f-47e4-b989-5492eafa07d3"
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
   }
 
   ordered_cache_behavior {
@@ -212,6 +212,16 @@ resource "aws_lambda_permission" "cloudfront_frontend_server" {
   function_url_auth_type = "AWS_IAM"
 }
 
+resource "aws_lambda_permission" "cloudfront_frontend_server_invoke" {
+  count = var.create_serverless_frontend ? 1 : 0
+
+  statement_id  = "AllowCloudFrontInvokeFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.frontend_server[0].function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.opennext[0].arn
+}
+
 resource "aws_lambda_permission" "cloudfront_frontend_image" {
   count = var.create_serverless_frontend ? 1 : 0
 
@@ -221,4 +231,14 @@ resource "aws_lambda_permission" "cloudfront_frontend_image" {
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.opennext[0].arn
   function_url_auth_type = "AWS_IAM"
+}
+
+resource "aws_lambda_permission" "cloudfront_frontend_image_invoke" {
+  count = var.create_serverless_frontend ? 1 : 0
+
+  statement_id  = "AllowCloudFrontInvokeFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.frontend_image[0].function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.opennext[0].arn
 }
