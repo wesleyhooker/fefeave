@@ -1,7 +1,32 @@
-import { Pool, PoolClient } from 'pg';
+import { Pool, PoolClient, type PoolConfig } from 'pg';
 import { getDatabaseUrl } from '../config/env';
 
 let pool: Pool | null = null;
+
+/**
+ * True only inside an AWS Lambda execution environment.
+ * Not set for local dev, Jest, ECS, or bare Node (`npm run dev` / `npm start`).
+ */
+export function isLambdaRuntime(): boolean {
+  const name = process.env.AWS_LAMBDA_FUNCTION_NAME;
+  return typeof name === 'string' && name.length > 0;
+}
+
+/**
+ * Pool options for the current runtime. Exported for unit tests only.
+ * Non-Lambda: pg defaults (e.g. max 10) — unchanged from pre-Lambda behavior.
+ * Lambda: single connection per warm container (pair with Neon pooler in DATABASE_URL).
+ */
+export function buildPgPoolConfig(connectionString: string): PoolConfig {
+  if (!isLambdaRuntime()) {
+    return { connectionString };
+  }
+  return {
+    connectionString,
+    max: 1,
+    idleTimeoutMillis: 20_000,
+  };
+}
 
 /**
  * Get the singleton connection pool. Throws if DATABASE_URL (or split DB vars) is not configured.
@@ -14,7 +39,7 @@ export function getPool(): Pool {
         'Database not configured. Set DATABASE_URL or DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD'
       );
     }
-    pool = new Pool({ connectionString: url });
+    pool = new Pool(buildPgPoolConfig(url));
   }
   return pool;
 }
