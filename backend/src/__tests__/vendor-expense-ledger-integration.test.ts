@@ -2,23 +2,8 @@
  * Manual vendor expenses (owed_line_items VENDOR_EXPENSE) + balances + statement.
  * Requires Postgres and DATABASE_URL. Run with: npm run test:integration
  */
-import { execSync } from 'child_process';
-import path from 'path';
 import type { FastifyInstance } from 'fastify';
-import { buildAppForTest, buildUniqueDevBypassIdentity } from './helpers';
-
-const TEST_SCHEMA = 'test';
-
-function runMigrations(databaseUrl: string): void {
-  execSync(
-    `npx node-pg-migrate up -m migrations -s ${TEST_SCHEMA} --create-schema --create-migrations-schema`,
-    {
-      env: { ...process.env, DATABASE_URL: databaseUrl },
-      cwd: path.resolve(__dirname, '../..'),
-      stdio: 'pipe',
-    }
-  );
-}
+import { buildAppForTest, buildUniqueDevBypassIdentity, runTestSchemaMigrations } from './helpers';
 
 describe('Vendor expense obligations', () => {
   let app: FastifyInstance;
@@ -30,7 +15,7 @@ describe('Vendor expense obligations', () => {
     if (!databaseUrl) {
       throw new Error('DATABASE_URL is required. Run: npm run test:integration');
     }
-    runMigrations(databaseUrl);
+    runTestSchemaMigrations(databaseUrl);
   });
 
   beforeEach(async () => {

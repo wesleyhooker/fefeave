@@ -188,12 +188,10 @@ gh-sync-dev: ws-dev
 	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)
 	@S3=$$($(TF) output -raw s3_bucket_name); \
 	  CF=$$($(TF) output -raw cloudfront_distribution_id); \
-	  ROLE=$$($(TF) output -raw github_actions_role_arn); \
 	  gh variable set -R $(REPO) --env dev S3_BUCKET --body "$$S3"; \
 	  gh variable set -R $(REPO) --env dev CF_DIST_ID --body "$$CF"; \
-	  gh variable set -R $(REPO) --env dev AWS_ROLE_ARN --body "$$ROLE"; \
 	  gh variable set -R $(REPO) --env dev AWS_REGION --body "$(AWS_REGION)"; \
-	  echo "Synced dev env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_ROLE_ARN=$$ROLE"; \
+	  echo "Synced dev env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_REGION=$(AWS_REGION)"; \
 	  BDR=$$($(TF) output -raw backend_deploy_role_arn 2>/dev/null); \
 	  if [ -n "$$BDR" ]; then \
 	    BECR=$$($(TF) output -raw backend_ecr_repo_url); \
@@ -212,12 +210,54 @@ gh-sync-prod: ws-prod
 	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)
 	@S3=$$($(TF) output -raw s3_bucket_name); \
 	  CF=$$($(TF) output -raw cloudfront_distribution_id); \
-	  ROLE=$$($(TF) output -raw github_actions_role_arn); \
 	  gh variable set -R $(REPO) --env prod S3_BUCKET --body "$$S3"; \
 	  gh variable set -R $(REPO) --env prod CF_DIST_ID --body "$$CF"; \
-	  gh variable set -R $(REPO) --env prod AWS_ROLE_ARN --body "$$ROLE"; \
 	  gh variable set -R $(REPO) --env prod AWS_REGION --body "$(AWS_REGION)"; \
-	  echo "Synced prod env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_ROLE_ARN=$$ROLE"
+	  echo "Synced prod env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_REGION=$(AWS_REGION)"; \
+	  BDR=$$($(TF) output -raw backend_deploy_role_arn 2>/dev/null); \
+	  BLN=$$($(TF) output -raw backend_lambda_function_name 2>/dev/null); \
+	  if [ -n "$$BDR" ] && [ -n "$$BLN" ]; then \
+	    BAPI=$$($(TF) output -raw backend_api_gateway_url); \
+	    gh variable set -R $(REPO) --env prod BACKEND_DEPLOY_ROLE_ARN --body "$$BDR"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_LAMBDA_FUNCTION_NAME --body "$$BLN"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_API_GATEWAY_URL --body "$$BAPI"; \
+	    echo "Synced prod serverless backend deploy env vars"; \
+	  elif [ -n "$$BDR" ]; then \
+	    BECR=$$($(TF) output -raw backend_ecr_repo_url); \
+	    BCL=$$($(TF) output -raw backend_ecs_cluster_name); \
+	    BSV=$$($(TF) output -raw backend_ecs_service_name); \
+	    BAPI=$$($(TF) output -raw backend_api_base_url); \
+	    gh variable set -R $(REPO) --env prod BACKEND_DEPLOY_ROLE_ARN --body "$$BDR"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_ECR_REPO_URL --body "$$BECR"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_ECS_CLUSTER --body "$$BCL"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_ECS_SERVICE --body "$$BSV"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_API_BASE_URL --body "$$BAPI"; \
+	    echo "Synced prod ECS backend deploy env vars"; \
+	  fi; \
+	  FDR=$$($(TF) output -raw frontend_deploy_role_arn 2>/dev/null); \
+	  if [ -n "$$FDR" ]; then \
+	    gh variable set -R $(REPO) --env prod FRONTEND_DEPLOY_ROLE_ARN --body "$$FDR"; \
+	    echo "Synced prod FRONTEND_DEPLOY_ROLE_ARN"; \
+	  fi; \
+	  FSN=$$($(TF) output -raw frontend_server_lambda_name 2>/dev/null); \
+	  if [ -n "$$FSN" ]; then \
+	    FIN=$$($(TF) output -raw frontend_image_lambda_name); \
+	    FAPP=$$($(TF) output -raw frontend_app_url); \
+	    FDOM=$$($(TF) output -raw frontend_domain); \
+	    CRED=$$($(TF) output -raw cognito_redirect_uri); \
+	    CLOU=$$($(TF) output -raw cognito_logout_uri); \
+	    BBU=$$($(TF) output -json github_prod_frontend_serverless_vars 2>/dev/null | jq -r '.BACKEND_BASE_URL // empty'); \
+	    gh variable set -R $(REPO) --env prod FRONTEND_SERVER_LAMBDA_NAME --body "$$FSN"; \
+	    gh variable set -R $(REPO) --env prod FRONTEND_IMAGE_LAMBDA_NAME --body "$$FIN"; \
+	    gh variable set -R $(REPO) --env prod FRONTEND_APP_URL --body "$$FAPP"; \
+	    gh variable set -R $(REPO) --env prod FRONTEND_DOMAIN --body "$$FDOM"; \
+	    gh variable set -R $(REPO) --env prod COGNITO_REDIRECT_URI --body "$$CRED"; \
+	    gh variable set -R $(REPO) --env prod COGNITO_LOGOUT_URI --body "$$CLOU"; \
+	    if [ -n "$$BBU" ]; then \
+	      gh variable set -R $(REPO) --env prod BACKEND_BASE_URL --body "$$BBU"; \
+	    fi; \
+	    echo "Synced prod OpenNext frontend deploy env vars"; \
+	  fi
 
 deploy-dev:
 	@echo "Dev CD deploy is disabled. Use make dev for local development; CI runs tests/build only."

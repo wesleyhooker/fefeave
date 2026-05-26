@@ -1,0 +1,6 @@
+# Build artifacts
+frontend/.next
+frontend/.open-next
+backend/lambda.zip
+frontend/opennext-server.zip
+frontend/opennext-image.zip

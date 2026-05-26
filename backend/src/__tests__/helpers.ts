@@ -1,6 +1,48 @@
+import { execSync } from 'child_process';
+import path from 'path';
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../index';
 import { clearEnvCache } from '../config/env';
+
+/** Isolated schema for integration tests (see run-integration-tests.sh). */
+export const TEST_SCHEMA = 'test';
+
+/** True when URL uses Neon PgBouncer pooler (cannot set search_path via PGOPTIONS). */
+export function isNeonPoolerDatabaseUrl(databaseUrl: string): boolean {
+  return databaseUrl.includes('-pooler.');
+}
+
+/**
+ * Env for integration tests: DATABASE_URL + PGOPTIONS search_path=test.
+ * Neon pooler endpoints reject startup options — use the direct (non-pooler) connection string.
+ */
+export function integrationTestDatabaseEnv(
+  databaseUrl: string
+): Pick<TestEnvOverrides, 'DATABASE_URL' | 'PGOPTIONS'> {
+  if (isNeonPoolerDatabaseUrl(databaseUrl)) {
+    throw new Error(
+      'Neon pooler DATABASE_URL cannot run integration tests (search_path rejected). ' +
+        'Use the direct connection string from the Neon dashboard (host without -pooler). ' +
+        'See docs/deployment/neon-phase1.md.'
+    );
+  }
+  return {
+    DATABASE_URL: databaseUrl,
+    PGOPTIONS: '-c search_path=test',
+  };
+}
+
+/** Run node-pg-migrate into TEST_SCHEMA; requires --tsx (ESM migration files). */
+export function runTestSchemaMigrations(databaseUrl: string): void {
+  execSync(
+    `npx node-pg-migrate --tsx up -m migrations -s ${TEST_SCHEMA} --create-schema --create-migrations-schema`,
+    {
+      env: { ...process.env, DATABASE_URL: databaseUrl },
+      cwd: path.resolve(__dirname, '../..'),
+      stdio: 'pipe',
+    }
+  );
+}
 
 /** Env overrides for tests. Only set keys you need; rest come from process.env or defaults. */
 export type TestEnvOverrides = Partial<{

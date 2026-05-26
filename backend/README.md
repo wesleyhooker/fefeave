@@ -29,18 +29,20 @@ For full stack (frontend + `AUTH_MODE=dev_bypass`), from repo root: `make dev-mi
 
 ## 2. Available Scripts
 
-| Script                     | Purpose                                                      |
-| -------------------------- | ------------------------------------------------------------ |
-| `npm run dev`              | Dev server with watch                                        |
-| `npm run build`            | Compile to `dist/`                                           |
-| `npm start`                | Run compiled app                                             |
-| `npm run lint`             | ESLint                                                       |
-| `npm run format`           | Prettier                                                     |
-| `npm test`                 | Unit tests (Jest, DB-free; excludes integration suites)      |
-| `npm run test:integration` | Integration tests (Docker Postgres + isolated `test` schema) |
-| `npm run migrate:up`       | Run migrations                                               |
-| `npm run migrate:down`     | Rollback last migration                                      |
-| `npm run migrate:create`   | Create new migration                                         |
+| Script                     | Purpose                                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| `npm run dev`              | Dev server with watch                                          |
+| `npm run build`            | Compile to `dist/`                                             |
+| `npm run build:lambda`     | Build + verify `dist/lambda.js` exports `handler`              |
+| `npm run package:lambda`   | Stage `lambda.zip` (dist + prod deps; deploy in a later phase) |
+| `npm start`                | Run compiled app                                               |
+| `npm run lint`             | ESLint                                                         |
+| `npm run format`           | Prettier                                                       |
+| `npm test`                 | Unit tests (Jest, DB-free; excludes integration suites)        |
+| `npm run test:integration` | Integration tests (Docker Postgres + isolated `test` schema)   |
+| `npm run migrate:up`       | Run migrations                                                 |
+| `npm run migrate:down`     | Rollback last migration                                        |
+| `npm run migrate:create`   | Create new migration                                           |
 
 ---
 
@@ -60,6 +62,10 @@ For full stack (frontend + `AUTH_MODE=dev_bypass`), from repo root: `make dev-mi
 **If `DATABASE_URL` is already set:** the script skips Docker startup and uses that URL (useful when Postgres is already running locally).
 
 **CI:** GitHub Actions does **not** run integration tests today; run them locally before ledger, settlement, or migration changes.
+
+**Neon (serverless migration Phase 1):** Run the same integration suite against a throwaway Neon branch — see [docs/deployment/neon-phase1.md](../docs/deployment/neon-phase1.md). Optional wrapper: `./scripts/run-neon-integration-tests.sh` (requires `NEON_INTEGRATION_CONFIRM=1`).
+
+**Lambda (serverless migration Phase 2):** API entry is `src/lambda.ts` → `dist/lambda.js` (`handler`). Local dev is unchanged (`npm run dev` / `src/index.ts`). See [docs/deployment/lambda-phase2.md](../docs/deployment/lambda-phase2.md).
 
 ---
 

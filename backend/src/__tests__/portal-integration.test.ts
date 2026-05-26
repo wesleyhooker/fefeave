@@ -2,24 +2,9 @@
  * Portal API integration tests for Phase 5.1.
  * Requires Postgres and DATABASE_URL. Run with: npm run test:integration
  */
-import { execSync } from 'child_process';
-import path from 'path';
 import type { FastifyInstance } from 'fastify';
 import { getPool } from '../db';
-import { buildAppForTest } from './helpers';
-
-const TEST_SCHEMA = 'test';
-
-function runMigrations(databaseUrl: string): void {
-  execSync(
-    `npx node-pg-migrate up -m migrations -s ${TEST_SCHEMA} --create-schema --create-migrations-schema`,
-    {
-      env: { ...process.env, DATABASE_URL: databaseUrl },
-      cwd: path.resolve(__dirname, '../..'),
-      stdio: 'pipe',
-    }
-  );
-}
+import { buildAppForTest, runTestSchemaMigrations } from './helpers';
 
 function parseCsvLines(payload: string): string[] {
   return payload
@@ -53,7 +38,7 @@ describe('Portal integration', () => {
       );
       return;
     }
-    runMigrations(databaseUrl);
+    runTestSchemaMigrations(databaseUrl);
   });
 
   beforeEach(async () => {

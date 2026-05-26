@@ -1,4 +1,4 @@
-# Prod deploy is manual-only (workflow_dispatch). Does not run on merge or CI success.
+# Prod deploy is manual-only (workflow_dispatch). OpenNext → S3 assets + Lambda + CloudFront invalidation.
 name: Frontend Deploy (prod)
 
 on:
@@ -18,6 +18,7 @@ jobs:
     environment: prod
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
+      NEXT_PUBLIC_BACKEND_URL: /api
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,9 +27,10 @@ jobs:
         run: |
           missing=""
           [ -z "${{ vars.FRONTEND_DEPLOY_ROLE_ARN }}" ] && missing="$missing FRONTEND_DEPLOY_ROLE_ARN"
-          [ -z "${{ vars.FRONTEND_ECR_REPO_URL }}" ] && missing="$missing FRONTEND_ECR_REPO_URL"
-          [ -z "${{ vars.FRONTEND_ECS_CLUSTER }}" ] && missing="$missing FRONTEND_ECS_CLUSTER"
-          [ -z "${{ vars.FRONTEND_ECS_SERVICE }}" ] && missing="$missing FRONTEND_ECS_SERVICE"
+          [ -z "${{ vars.S3_BUCKET }}" ] && missing="$missing S3_BUCKET"
+          [ -z "${{ vars.CF_DIST_ID }}" ] && missing="$missing CF_DIST_ID"
+          [ -z "${{ vars.FRONTEND_SERVER_LAMBDA_NAME }}" ] && missing="$missing FRONTEND_SERVER_LAMBDA_NAME"
+          [ -z "${{ vars.FRONTEND_IMAGE_LAMBDA_NAME }}" ] && missing="$missing FRONTEND_IMAGE_LAMBDA_NAME"
           [ -z "${{ vars.AWS_REGION }}" ] && missing="$missing AWS_REGION"
           if [ -n "$missing" ]; then
             echo "::error::Missing or empty GitHub env vars:$missing"
@@ -41,55 +43,45 @@ jobs:
           role-to-assume: ${{ vars.FRONTEND_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Set image tag
-        id: image
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build and package OpenNext
+        working-directory: frontend
+        env:
+          BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL }}
         run: |
-          SHA_SHORT=$(git rev-parse --short HEAD)
-          echo "tag=$SHA_SHORT" >> $GITHUB_OUTPUT
-          echo "Image tag: $SHA_SHORT (immutable)"
+          npm ci
+          npm run build:opennext
+          npm run package:opennext
 
-      - name: Login to ECR
+      - name: Sync static assets to S3
         run: |
-          ECR_REPO_URL="${{ vars.FRONTEND_ECR_REPO_URL }}"
-          ECR_HOST="${ECR_REPO_URL%%/*}"
-          aws ecr get-login-password --region ${{ vars.AWS_REGION }} | \
-            docker login --username AWS --password-stdin "$ECR_HOST"
+          aws s3 sync frontend/.open-next/assets "s3://${{ vars.S3_BUCKET }}/_assets" --delete
 
-      - name: Build and push Docker image (immutable tag only)
+      - name: Update server Lambda
         run: |
-          REPO_URL="${{ vars.FRONTEND_ECR_REPO_URL }}"
-          TAG="${{ steps.image.outputs.tag }}"
-          docker build -t "${REPO_URL}:${TAG}" -f frontend/Dockerfile frontend/
-          docker push "${REPO_URL}:${TAG}"
+          aws lambda update-function-code \
+            --function-name "${{ vars.FRONTEND_SERVER_LAMBDA_NAME }}" \
+            --zip-file fileb://frontend/opennext-server.zip
+          aws lambda wait function-updated-v2 \
+            --function-name "${{ vars.FRONTEND_SERVER_LAMBDA_NAME }}"
 
-      - name: Register new task definition and update ECS service
+      - name: Update image optimizer Lambda
         run: |
-          CLUSTER="${{ vars.FRONTEND_ECS_CLUSTER }}"
-          SERVICE="${{ vars.FRONTEND_ECS_SERVICE }}"
-          REPO_URL="${{ vars.FRONTEND_ECR_REPO_URL }}"
-          TAG="${{ steps.image.outputs.tag }}"
-          IMAGE="${REPO_URL}:${TAG}"
+          aws lambda update-function-code \
+            --function-name "${{ vars.FRONTEND_IMAGE_LAMBDA_NAME }}" \
+            --zip-file fileb://frontend/opennext-image.zip
+          aws lambda wait function-updated-v2 \
+            --function-name "${{ vars.FRONTEND_IMAGE_LAMBDA_NAME }}"
 
-          TASK_ARN=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
-            --query 'services[0].taskDefinition' --output text)
-          TASK_DEF=$(aws ecs describe-task-definition --task-definition "$TASK_ARN" \
-            --query 'taskDefinition')
-          NEW_DEF=$(echo "$TASK_DEF" | jq --arg img "$IMAGE" \
-            'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) |
-            .containerDefinitions[0].image = $img')
-          NEW_TASK=$(aws ecs register-task-definition --cli-input-json "$NEW_DEF")
-          FAMILY=$(echo "$NEW_TASK" | jq -r '.taskDefinition.family')
-          REV=$(echo "$NEW_TASK" | jq -r '.taskDefinition.revision')
-
-          aws ecs update-service \
-            --cluster "$CLUSTER" \
-            --service "$SERVICE" \
-            --task-definition "${FAMILY}:${REV}" \
-            --query 'service.deployments' --output table
-
-      - name: Wait for service stability
+      - name: Invalidate CloudFront
         run: |
-          aws ecs wait services-stable \
-            --cluster "${{ vars.FRONTEND_ECS_CLUSTER }}" \
-            --services "${{ vars.FRONTEND_ECS_SERVICE }}"
-          echo "Service is stable."
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CF_DIST_ID }}" \
+            --paths "/*"
+          echo "CloudFront invalidation started."

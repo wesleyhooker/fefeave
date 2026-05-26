@@ -117,7 +117,7 @@ resource "aws_ecs_task_definition" "backend" {
     environment = concat(
       [
         { name = "PORT", value = "3000" },
-        { name = "AUTH_MODE", value = var.env == "dev" ? "dev_bypass" : "off" },
+        { name = "AUTH_MODE", value = var.env == "dev" ? "dev_bypass" : (var.env == "prod" ? "cognito" : "off") },
         { name = "AWS_REGION", value = var.aws_region },
         { name = "NODE_ENV", value = "production" },
         { name = "S3_ATTACHMENTS_BUCKET", value = aws_s3_bucket.attachments.bucket }

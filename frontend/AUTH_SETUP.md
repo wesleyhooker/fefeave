@@ -10,10 +10,10 @@ Never commit `frontend/.env.local`. Keep real values local only.
 
 ## Local auth modes
 
-| Mode                                | How to run                                   | Backend `AUTH_MODE` | Use when                                      |
-| ----------------------------------- | -------------------------------------------- | ------------------- | --------------------------------------------- |
-| **dev_bypass** (default inner loop) | `make dev` or `make dev-api` + `make dev-ui` | `dev_bypass`        | Fast local work; fixed dev user; no Cognito   |
-| **Cognito**                         | `make dev-cognito`                           | `cognito`           | Real Hosted UI, JWT verification, role claims |
+| Mode                                | How to run                                   | Backend `AUTH_MODE` | Use when                                         |
+| ----------------------------------- | -------------------------------------------- | ------------------- | ------------------------------------------------ |
+| **dev_bypass** (default inner loop) | `make dev` or `make dev-api` + `make dev-ui` | `dev_bypass`        | Fast local work; fixed dev user; no Cognito      |
+| **Cognito**                         | `make dev-cognito`                           | `cognito`           | Real Hosted UI, JWT verification, Cognito groups |
 
 Ports (Makefile):
 
@@ -87,6 +87,24 @@ Use Cognito User Pool app client + Hosted UI settings:
 
 ---
 
+## Roles (Cognito groups)
+
+Production and Cognito-mode dev use the backend access token claim **`cognito:groups`**.
+
+| Group name   | App role | Routes      |
+| ------------ | -------- | ----------- |
+| `ADMIN`      | Admin    | `/admin/*`  |
+| `OPERATOR`   | Admin    | `/admin/*`  |
+| `WHOLESALER` | Portal   | `/portal/*` |
+
+Group names are **case-sensitive**. Do **not** use `custom:role` — it is not read by this app.
+
+If no matching group is present, the backend defaults to **`OPERATOR`**.
+
+First production admin (Felicia, Google sign-in): [docs/deployment/cognito-prod-bootstrap.md](../docs/deployment/cognito-prod-bootstrap.md).
+
+---
+
 ## Auth flow notes
 
 - Session is stored in `httpOnly` cookie (`fefeave_session`), not in `localStorage`.
@@ -111,8 +129,9 @@ Use `GET /api/auth/health` to quickly verify session state without exposing toke
 - Login URL contains `change_me_domain` or `CHANGE_ME_FRONTEND_CLIENT_ID`:
   - your env values were not set correctly.
   - set `COGNITO_DOMAIN` and `COGNITO_CLIENT_ID` in shell env or `frontend/.env.local`.
-- Missing or wrong roles/groups:
-  - users can authenticate but then route to `/403` if they do not have `ADMIN`/`OPERATOR`/`WHOLESALER` claims expected by backend `/users/me` and session roles.
+- Missing or wrong Cognito groups:
+  - users can authenticate but then route to `/403` if `cognito:groups` does not include `ADMIN`, `OPERATOR`, or `WHOLESALER` as expected by backend `/users/me` and the session cookie.
+  - assigning `custom:role` in Cognito does **not** grant access — add the user to the correct **group** instead.
 - Cookie issues:
   - in production, cookie is `secure=true`; ensure HTTPS.
   - cross-site deployment setups may need careful domain and SameSite expectations (`lax` is currently used).
@@ -147,9 +166,9 @@ Use `GET /api/auth/health` to quickly verify session state without exposing toke
 
 ## Role / portal smoke steps
 
-1. Create or identify Cognito test users:
-   - one user with `ADMIN` (or `OPERATOR`) role claim
-   - one user with `WHOLESALER` role claim
+1. Create or identify Cognito test users and add them to groups:
+   - one user in group `ADMIN` (or `OPERATOR`)
+   - one user in group `WHOLESALER`
 2. Sign in as ADMIN and create/find a wholesaler in admin UI or API.
 3. Link the WHOLESALER Cognito user to that wholesaler:
    - `POST /api/admin/wholesalers/:id/link-user`
