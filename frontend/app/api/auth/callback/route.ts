@@ -137,7 +137,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
     await setSessionCookie({
       access_token: tokenJson.access_token,
-      id_token: tokenJson.id_token,
       expires_at: expiresAt,
       roles: me.roles,
       user: {

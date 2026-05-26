@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SESSION_COOKIE_NAME } from '@/lib/auth/session-constants';
+import { applySessionCookieClear } from '@/lib/auth/session-cookie-options';
 import { verifySessionCookie } from '@/lib/auth/session.edge';
+import { SESSION_COOKIE_NAME } from '@/lib/auth/session-constants';
 import type { AppRole } from '@/lib/auth/session.types';
 
 function extractRolesFromSession(session: { roles?: AppRole[] }): AppRole[] {
@@ -29,7 +30,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const nowEpochSec = Math.floor(Date.now() / 1000);
   if (session.expires_at <= nowEpochSec) {
     const response = redirectToLogin(request);
-    response.cookies.delete(SESSION_COOKIE_NAME);
+    applySessionCookieClear(response.cookies);
     return response;
   }
 
