@@ -87,7 +87,7 @@ variable "vpc_cidr" {
 
 variable "alb_ingress_cidrs" {
   type        = list(string)
-  description = "Allowed IPv4 CIDRs for backend ALB HTTP ingress in dev. Must be explicitly set for dev when backend infra is enabled."
+  description = "Allowed IPv4 CIDRs for backend ALB HTTP ingress when env=dev. Prod uses 0.0.0.0/0 in alb.tf (ignored for prod)."
   default     = []
 
   validation {

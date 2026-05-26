@@ -188,12 +188,10 @@ gh-sync-dev: ws-dev
 	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)
 	@S3=$$($(TF) output -raw s3_bucket_name); \
 	  CF=$$($(TF) output -raw cloudfront_distribution_id); \
-	  ROLE=$$($(TF) output -raw github_actions_role_arn); \
 	  gh variable set -R $(REPO) --env dev S3_BUCKET --body "$$S3"; \
 	  gh variable set -R $(REPO) --env dev CF_DIST_ID --body "$$CF"; \
-	  gh variable set -R $(REPO) --env dev AWS_ROLE_ARN --body "$$ROLE"; \
 	  gh variable set -R $(REPO) --env dev AWS_REGION --body "$(AWS_REGION)"; \
-	  echo "Synced dev env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_ROLE_ARN=$$ROLE"; \
+	  echo "Synced dev env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_REGION=$(AWS_REGION)"; \
 	  BDR=$$($(TF) output -raw backend_deploy_role_arn 2>/dev/null); \
 	  if [ -n "$$BDR" ]; then \
 	    BECR=$$($(TF) output -raw backend_ecr_repo_url); \
@@ -212,12 +210,34 @@ gh-sync-prod: ws-prod
 	@command -v gh >/dev/null || (echo "Missing gh CLI"; exit 1)
 	@S3=$$($(TF) output -raw s3_bucket_name); \
 	  CF=$$($(TF) output -raw cloudfront_distribution_id); \
-	  ROLE=$$($(TF) output -raw github_actions_role_arn); \
 	  gh variable set -R $(REPO) --env prod S3_BUCKET --body "$$S3"; \
 	  gh variable set -R $(REPO) --env prod CF_DIST_ID --body "$$CF"; \
-	  gh variable set -R $(REPO) --env prod AWS_ROLE_ARN --body "$$ROLE"; \
 	  gh variable set -R $(REPO) --env prod AWS_REGION --body "$(AWS_REGION)"; \
-	  echo "Synced prod env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_ROLE_ARN=$$ROLE"
+	  echo "Synced prod env vars: S3_BUCKET=$$S3 CF_DIST_ID=$$CF AWS_REGION=$(AWS_REGION)"; \
+	  BDR=$$($(TF) output -raw backend_deploy_role_arn 2>/dev/null); \
+	  if [ -n "$$BDR" ]; then \
+	    BECR=$$($(TF) output -raw backend_ecr_repo_url); \
+	    BCL=$$($(TF) output -raw backend_ecs_cluster_name); \
+	    BSV=$$($(TF) output -raw backend_ecs_service_name); \
+	    BAPI=$$($(TF) output -raw backend_api_base_url); \
+	    gh variable set -R $(REPO) --env prod BACKEND_DEPLOY_ROLE_ARN --body "$$BDR"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_ECR_REPO_URL --body "$$BECR"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_ECS_CLUSTER --body "$$BCL"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_ECS_SERVICE --body "$$BSV"; \
+	    gh variable set -R $(REPO) --env prod BACKEND_API_BASE_URL --body "$$BAPI"; \
+	    echo "Synced prod backend deploy env vars"; \
+	  fi; \
+	  FDR=$$($(TF) output -raw frontend_deploy_role_arn 2>/dev/null); \
+	  if [ -n "$$FDR" ]; then \
+	    FECR=$$($(TF) output -raw frontend_ecr_repo_url); \
+	    FCL=$$($(TF) output -raw frontend_ecs_cluster_name); \
+	    FSV=$$($(TF) output -raw frontend_ecs_service_name); \
+	    gh variable set -R $(REPO) --env prod FRONTEND_DEPLOY_ROLE_ARN --body "$$FDR"; \
+	    gh variable set -R $(REPO) --env prod FRONTEND_ECR_REPO_URL --body "$$FECR"; \
+	    gh variable set -R $(REPO) --env prod FRONTEND_ECS_CLUSTER --body "$$FCL"; \
+	    gh variable set -R $(REPO) --env prod FRONTEND_ECS_SERVICE --body "$$FSV"; \
+	    echo "Synced prod frontend deploy env vars"; \
+	  fi
 
 deploy-dev:
 	@echo "Dev CD deploy is disabled. Use make dev for local development; CI runs tests/build only."

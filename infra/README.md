@@ -112,7 +112,7 @@ Committed tfvars (`dev.tfvars`, `prod.tfvars`) keep **`create_backend_infra = fa
 | **Backend Deploy (prod)**  | Manual `workflow_dispatch` only | `create_backend_infra = true` in **prod** tfvars when ready; **prod** vars: `BACKEND_*`, `AWS_REGION` |
 | **Frontend Deploy (prod)** | Manual `workflow_dispatch` only | Same in **prod** when ECS enabled; **prod** vars: `FRONTEND_*`, `AWS_REGION`                          |
 
-**Prod tfvars today:** `create_backend_infra = false` (see `prod.tfvars`). Prod deploy workflows exist but need infra enabled plus GitHub **prod** environment variables from `terraform output` before they are usable.
+**Prod tfvars:** `prod.tfvars` enables low-traffic ECS + RDS (`create_backend_infra = true`, `create_rds = true`). Cognito for prod is **not** in Terraform — see [docs/deployment/prod-release.md](../docs/deployment/prod-release.md). Prod deploy workflows need `make apply-prod`, `make gh-sync-prod`, manual Cognito/ECS auth env, then manual workflow dispatch.
 
 With default tfvars, **ECS deploy workflows have nothing to deploy to** until you enable `create_backend_infra` and set GitHub environment variables from `terraform output`.
 
@@ -120,7 +120,7 @@ With default tfvars, **ECS deploy workflows have nothing to deploy to** until yo
 
 - Always attempts to sync `S3_BUCKET`, `CF_DIST_ID`, and `AWS_REGION` from Terraform outputs.
 - When `backend_deploy_role_arn` is non-null, also syncs backend ECS deploy vars (`BACKEND_*`).
-- Does **not** sync frontend ECS vars (`FRONTEND_*`); set those manually from `frontend_deploy_role_arn`, `frontend_ecr_repo_url`, `frontend_ecs_cluster_name`, and `frontend_ecs_service_name` when ECS is enabled.
+- **`make gh-sync-prod`:** syncs `S3_BUCKET`, `CF_DIST_ID`, `AWS_REGION`, and when ECS is enabled all `BACKEND_*` and `FRONTEND_*` deploy vars from Terraform outputs. Cognito/session secrets are **not** synced (manual ECS / Secrets Manager).
 
 ---
 
