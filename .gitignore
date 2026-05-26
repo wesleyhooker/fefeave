@@ -28,6 +28,16 @@ dist/
 # Playwright local dev (session storage + screenshots; never commit)
 frontend/.playwright-dev/
 
+# TypeScript incremental build cache
+frontend/tsconfig.tsbuildinfo
+
+# Local debug assets (e.g. one-off logo experiments)
+frontend/.tiktok-*.png
+
+# Cursor IDE (keep .cursor/rules/ tracked if shared; ignore local-only)
+.cursor/debug-*.log
+.cursor/plans/
+
 # =========================
 # Terraform / Infra
 # =========================
