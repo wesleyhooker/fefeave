@@ -57,7 +57,7 @@ variable "frontend_domain" {
 
 variable "frontend_www_domain" {
   type        = string
-  description = "Optional www alias for CloudFront (e.g. www.fefeave.com). Set empty string to omit."
+  description = "Optional www alias for CloudFront (e.g. www.fefeave.com). Set empty string to omit. DNS in Cloudflare when not using route53_zone_id."
   default     = "www.fefeave.com"
 }
 
@@ -81,13 +81,19 @@ variable "cognito_logout_uri" {
 
 variable "enable_frontend_custom_domain" {
   type        = bool
-  description = "Attach ACM cert + CloudFront aliases. Requires validated acm_certificate_arn (us-east-1)."
+  description = "Attach ACM cert + CloudFront aliases. Requires validated acm_certificate_arn (us-east-1). Public DNS is manual in Cloudflare unless route53_zone_id is set."
   default     = false
 }
 
 variable "acm_certificate_arn" {
   type        = string
   description = "ACM certificate ARN in us-east-1 for CloudFront. Set after DNS validation; leave null until cutover."
+  default     = null
+}
+
+variable "route53_zone_id" {
+  type        = string
+  description = "Optional Route53 hosted zone ID for automatic A/AAAA aliases. Omit for Cloudflare DNS (current launch)."
   default     = null
 }
 
@@ -237,6 +243,13 @@ check "frontend_serverless_needs_backend" {
   assert {
     condition     = !var.create_serverless_frontend || var.create_serverless_backend
     error_message = "create_serverless_frontend requires create_serverless_backend for BACKEND_BASE_URL / API Gateway."
+  }
+}
+
+check "custom_domain_needs_acm" {
+  assert {
+    condition     = !var.enable_frontend_custom_domain || (var.acm_certificate_arn != null && var.acm_certificate_arn != "")
+    error_message = "enable_frontend_custom_domain requires acm_certificate_arn (ACM in us-east-1)."
   }
 }
 

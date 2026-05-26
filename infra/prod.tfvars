@@ -15,6 +15,16 @@ create_rds                 = false
 create_serverless_backend  = true
 create_serverless_frontend = true
 
+# Custom domain (Cognito + final URLs). DNS: Cloudflare (not Route53). See docs/deployment/route53-acm-cutover.md
+frontend_domain               = "fefeave.com"
+frontend_www_domain           = "www.fefeave.com"
+frontend_domain_aliases       = []
+cognito_redirect_uri          = "https://fefeave.com/api/auth/callback"
+cognito_logout_uri            = "https://fefeave.com/login"
+enable_frontend_custom_domain = false # true only after ACM (us-east-1) is ISSUED
+# acm_certificate_arn     = "arn:aws:acm:us-east-1:ACCOUNT:certificate/UUID"
+# route53_zone_id omitted — create apex/www CNAMEs in Cloudflare to cloudfront_distribution_domain
+
 # Backend Cognito placeholders (update Lambda env or tfvars before auth works).
 cognito_region        = "us-west-2"
 cognito_user_pool_id  = "REPLACE_ME"
