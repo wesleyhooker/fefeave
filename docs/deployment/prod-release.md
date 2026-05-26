@@ -4,7 +4,7 @@ Manual path to run Felicia’s full app on AWS: **OpenNext** frontend on CloudFr
 
 Local development stays unchanged (`make dev`; `infra/dev.tfvars` keeps serverless flags off).
 
-> **Phase docs:** [opennext-phase5.md](opennext-phase5.md), [lambda-phase3.md](lambda-phase3.md), [route53-acm-cutover.md](route53-acm-cutover.md) (Cloudflare DNS + ACM). Consolidate before final merge.
+> **Phase docs:** [opennext-phase5.md](opennext-phase5.md), [lambda-phase3.md](lambda-phase3.md), [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md), [route53-acm-cutover.md](route53-acm-cutover.md) (Cloudflare DNS + ACM). Consolidate before final merge.
 
 ---
 
@@ -21,7 +21,7 @@ Local development stays unchanged (`make dev`; `infra/dev.tfvars` keeps serverle
 
 1. `aws secretsmanager put-secret-value` for Neon pooler `DATABASE_URL` — see [lambda-phase3.md](lambda-phase3.md).
 2. `cd backend && npm run package:lambda` before each Lambda code update.
-3. Prod **Cognito** User Pool (manual); update Lambda `COGNITO_*` placeholders.
+3. Prod **Cognito** User Pool + Google IdP + groups (manual) — [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md).
 4. `cd frontend && npm run package:opennext` before frontend Lambda updates.
 5. ACM (us-east-1) + Cloudflare DNS for `fefeave.com` — [route53-acm-cutover.md](route53-acm-cutover.md).
 
@@ -33,15 +33,23 @@ Opt-in only; mutually exclusive with `create_serverless_backend`. Creates VPC, N
 
 ## Cognito (manual setup)
 
-Create a **production** User Pool (do not reuse the dev pool from `cognito-dev.tf`).
+Full bootstrap (Google sign-in, groups, first admin): **[cognito-prod-bootstrap.md](cognito-prod-bootstrap.md)**.
 
-1. User pool with Hosted UI domain (e.g. `fefeave-prod-<suffix>`).
-2. App client: OAuth **authorization code**, secret enabled, scopes `openid`, `email`, `profile`.
-3. Callback URL: `https://fefeave.com/api/auth/callback` (must match `cognito_redirect_uri` in `prod.tfvars`).
-4. Sign-out URL: `https://fefeave.com/login` (must match `cognito_logout_uri`).
-5. Create admin users and set `custom:role` (or your pool’s role claim) to `ADMIN` per [frontend/AUTH_SETUP.md](../../frontend/AUTH_SETUP.md).
+Summary:
 
-Record for GitHub **secrets** / ECS task env (not Terraform outputs today):
+- Roles come from Cognito **groups** in the JWT claim `cognito:groups` — not `custom:role`.
+- Valid groups: `ADMIN`, `OPERATOR`, `WHOLESALER` (case-sensitive).
+- Felicia signs in with **Google** via Hosted UI; Cognito creates the federated user on first login; operator adds her to the **`ADMIN`** group.
+- No manual DB `users` insert, no prod seed script, and no user-management UI required for launch. `ensureUser` syncs the DB on first write.
+
+App client URLs (must match `infra/prod.tfvars`):
+
+| URL      | Value                                   |
+| -------- | --------------------------------------- |
+| Callback | `https://fefeave.com/api/auth/callback` |
+| Sign-out | `https://fefeave.com/login`             |
+
+Record for **Lambda env** (not Terraform outputs today):
 
 | Name                    | Used by            | Notes                                                          |
 | ----------------------- | ------------------ | -------------------------------------------------------------- |
@@ -179,7 +187,7 @@ Domain **fefeave.com** is on **Cloudflare** (registrar + DNS). Route53 is not us
 2. **Terraform apply** (prod workspace) with `enable_frontend_custom_domain = false` — infra only; CloudFront on default `*.cloudfront.net` cert.
 3. **`make gh-sync-prod`** — GitHub prod env vars (`CF_DIST_ID`, Lambda names, Cognito URLs, etc.).
 4. **Neon `DATABASE_URL`** — `aws secretsmanager put-secret-value` (see [lambda-phase3.md](lambda-phase3.md)).
-5. **Cognito** — prod pool, client; callback `https://fefeave.com/api/auth/callback`, sign-out `https://fefeave.com/login`; set frontend server Lambda secrets (`COGNITO_*`, `AUTH_SESSION_SECRET`).
+5. **Cognito** — prod pool, Google IdP, groups (`ADMIN`/`OPERATOR`/`WHOLESALER`), Hosted UI, app client URLs; set Lambda secrets (`COGNITO_*`, `AUTH_SESSION_SECRET`). **Create Felicia Google-backed Cognito admin account** — see [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md).
 6. **ACM (us-east-1)** — request cert for `fefeave.com` + `www.fefeave.com`; add validation **CNAME** records in Cloudflare (**DNS only**, grey cloud); wait for **ISSUED**.
 7. **Terraform custom domain** — set `enable_frontend_custom_domain = true` and `acm_certificate_arn` in `prod.tfvars` (leave `route53_zone_id` unset); `make apply-prod`.
 8. **Cloudflare DNS** — CNAME `@` and `www` → `cloudfront_distribution_domain` output; **Proxied**; SSL/TLS **Full (strict)**.
@@ -243,11 +251,21 @@ Dev workspace still creates **Cognito** (`cognito-dev.tf`) for local `make dev-c
 
 ---
 
+## Production launch checklist (operator)
+
+- [ ] Terraform apply (serverless prod) + `make gh-sync-prod`
+- [ ] Neon `DATABASE_URL` secret + migrations
+- [ ] ACM + Cloudflare DNS cutover ([route53-acm-cutover.md](route53-acm-cutover.md))
+- [ ] Backend + Frontend deploy workflows
+- [ ] **Create Felicia Google-backed Cognito admin account** ([cognito-prod-bootstrap.md](cognito-prod-bootstrap.md))
+- [ ] Smoke: `https://fefeave.com/`, `/api/auth/health`, `/login` → admin dashboard
+
 ## Recommended merge / release sequence
 
-1. Merge this branch (tfvars + docs + `AUTH_MODE` + `gh-sync-prod`).
+1. Merge this branch (tfvars + docs + serverless deploy workflows).
 2. Operator: `make plan-prod` → review → `make apply-prod`.
-3. `make gh-sync-prod` + set Cognito secrets on ECS tasks.
-4. Run migrations.
+3. `make gh-sync-prod` + set Cognito/Lambda secrets (see [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md)).
+4. Run migrations against Neon.
 5. `workflow_dispatch` **Backend Deploy (prod)** then **Frontend Deploy (prod)**.
-6. Validate admin ledger flows; monitor CloudWatch log groups `/ecs/fefeave-*-prod`.
+6. Bootstrap Felicia admin (Google → Cognito → `ADMIN` group).
+7. Validate admin ledger flows; monitor CloudWatch log groups for Lambdas.

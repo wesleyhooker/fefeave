@@ -152,7 +152,7 @@ Committed tfvars: **dev** keeps all backend flags `false` (local-first). **prod*
 | **Backend Deploy (prod)**  | Manual `workflow_dispatch` only | `create_backend_infra = true` in **prod** tfvars when ready; **prod** vars: `BACKEND_*`, `AWS_REGION`                        |
 | **Frontend Deploy (prod)** | Manual `workflow_dispatch` only | OpenNext path when `create_serverless_frontend = true`; **prod** vars: `FRONTEND_*`, `S3_BUCKET`, `CF_DIST_ID`, `AWS_REGION` |
 
-**Prod tfvars:** `prod.tfvars` enables serverless backend + frontend (`create_serverless_backend = true`, `create_serverless_frontend = true`; ECS/RDS off). Package `backend/lambda.zip` and frontend OpenNext zips before plan/apply. Cognito for prod is **not** in Terraform — see [docs/deployment/prod-release.md](../docs/deployment/prod-release.md), [opennext-phase5.md](../docs/deployment/opennext-phase5.md), and [lambda-phase3.md](../docs/deployment/lambda-phase3.md).
+**Prod tfvars:** `prod.tfvars` enables serverless backend + frontend (`create_serverless_backend = true`, `create_serverless_frontend = true`; ECS/RDS off). Package `backend/lambda.zip` and frontend OpenNext zips before plan/apply. Cognito for prod is **not** in Terraform — see [cognito-prod-bootstrap.md](../docs/deployment/cognito-prod-bootstrap.md), [prod-release.md](../docs/deployment/prod-release.md), [opennext-phase5.md](../docs/deployment/opennext-phase5.md), and [lambda-phase3.md](../docs/deployment/lambda-phase3.md).
 
 **ECS path (legacy):** opt in via `create_backend_infra = true` in tfvars; mutually exclusive with serverless.
 

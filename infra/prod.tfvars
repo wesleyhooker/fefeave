@@ -3,7 +3,7 @@
 #
 # Before first apply: cd backend && npm run package:lambda
 # After apply: populate Neon DATABASE_URL (see docs/deployment/lambda-phase3.md)
-# Cognito prod is NOT in Terraform — set cognito_* placeholders after manual pool setup.
+# Cognito prod is NOT in Terraform — set cognito_* after pool setup (groups ADMIN/OPERATOR/WHOLESALER; see docs/deployment/cognito-prod-bootstrap.md).
 
 env                       = "prod"
 project_name              = "fefeave-frontend"

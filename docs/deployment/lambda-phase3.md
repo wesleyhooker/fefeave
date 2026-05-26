@@ -76,7 +76,7 @@ Migrations: run against Neon **direct** host (`npm run migrate:up`), not the poo
 
 ## Cognito (prod)
 
-Terraform sets placeholder `COGNITO_*` env vars on Lambda. Create prod User Pool manually (see [prod-release.md](prod-release.md)), then update Lambda environment or `prod.tfvars` and re-apply.
+Terraform sets placeholder `COGNITO_*` env vars on Lambda. Create prod User Pool manually — roles use Cognito **groups** (`ADMIN`, `OPERATOR`, `WHOLESALER`) from `cognito:groups`, not `custom:role`. See [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md) and [prod-release.md](prod-release.md).
 
 ## Outputs for Phase 4/5
 
