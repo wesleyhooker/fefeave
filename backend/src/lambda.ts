@@ -17,10 +17,11 @@ let proxy: LambdaProxy | undefined;
 async function getProxy(): Promise<LambdaProxy> {
   if (!proxy) {
     const app = await buildApp();
-    await app.ready();
+    // Must register @fastify/aws-lambda decorators before app.ready() (FST_ERR_DEC_AFTER_START).
     proxy = awsLambdaFastify(app, {
       callbackWaitsForEmptyEventLoop: false,
     }) as LambdaProxy;
+    await app.ready();
   }
   return proxy;
 }

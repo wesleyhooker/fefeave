@@ -68,13 +68,15 @@ jobs:
 
       - name: Post-deploy health check
         run: |
+          set -euo pipefail
           if [ -z "${{ vars.BACKEND_API_GATEWAY_URL }}" ]; then
             echo "Skipping health check (BACKEND_API_GATEWAY_URL not set)."
             exit 0
           fi
           BASE="${{ vars.BACKEND_API_GATEWAY_URL }}"
           BASE="${BASE%/}"
-          curl -sfS "${BASE}/api/health" | head -c 500
+          BODY="$(curl -sfS "${BASE}/api/health")"
+          printf '%s\n' "$BODY" | head -c 500
           echo ""
           echo "Health check OK: ${BASE}/api/health"
 
