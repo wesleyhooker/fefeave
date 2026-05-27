@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
+import { LogoutForm } from "@/app/_components/auth/LogoutForm";
 import { publicHeaderControlBase } from "./publicHeaderControls";
 
 export type PublicAccountDropdownProps = {
@@ -88,13 +89,12 @@ export function PublicAccountDropdown({
 
   if (!isStaff) {
     return (
-      <Link
-        href="/api/auth/logout"
-        className={`max-w-[12rem] gap-2 ${accountControlClasses}`}
+      <LogoutForm
+        buttonClassName={`max-w-[12rem] gap-2 ${accountControlClasses}`}
       >
         <AccountAvatar email={email} />
         <span className="truncate">{accountLabel}</span>
-      </Link>
+      </LogoutForm>
     );
   }
 
@@ -128,14 +128,13 @@ export function PublicAccountDropdown({
             Workspace
           </Link>
           <div className="border-t border-fefe-stone/60">
-            <Link
-              href="/api/auth/logout"
-              className="block px-fefe-3 py-2 font-fefe text-sm text-fefe-charcoal hover:bg-fefe-cream"
+            <LogoutForm
+              buttonClassName="block w-full px-fefe-3 py-2 text-left font-fefe text-sm text-fefe-charcoal hover:bg-fefe-cream"
               role="menuitem"
-              onClick={() => setOpen(false)}
+              onSubmit={() => setOpen(false)}
             >
               Logout
-            </Link>
+            </LogoutForm>
           </div>
         </div>
       )}

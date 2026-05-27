@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LogoutForm } from "@/app/_components/auth/LogoutForm";
 import {
   workspaceActionIconMd,
   workspaceChromeHoverWarm,
@@ -144,17 +145,16 @@ function SidebarAccountBlock({
       </div>
 
       <div className={workspaceSidebarAccountSignOutCluster}>
-        <Link
-          href="/api/auth/logout"
-          onClick={onNavigate}
-          className={workspaceSidebarSignOut}
+        <LogoutForm
+          buttonClassName={workspaceSidebarSignOut}
+          onSubmit={() => onNavigate?.()}
         >
           <ArrowRightOnRectangleIcon
             className={workspaceActionIconMd}
             aria-hidden
           />
           <span>Sign out</span>
-        </Link>
+        </LogoutForm>
       </div>
     </div>
   );

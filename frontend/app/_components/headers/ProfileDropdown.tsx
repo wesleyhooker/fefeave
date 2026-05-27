@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
+import { LogoutForm } from "@/app/_components/auth/LogoutForm";
 import { workspaceChromeHover } from "@/app/(admin)/admin/_components/workspaceUi";
 
 function formatRoles(roles: string[]): string {
@@ -117,14 +118,13 @@ export function ProfileDropdown({
             Wholesaler portal
           </Link>
           <div className="border-t border-gray-200">
-            <Link
-              href="/api/auth/logout"
-              className={`block min-h-11 rounded px-3 py-2.5 text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 sm:min-h-10 sm:py-2 ${workspaceChromeHover}`}
+            <LogoutForm
+              buttonClassName={`block w-full min-h-11 rounded px-3 py-2.5 text-left text-sm text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 sm:min-h-10 sm:py-2 ${workspaceChromeHover}`}
               role="menuitem"
-              onClick={() => setOpen(false)}
+              onSubmit={() => setOpen(false)}
             >
               Sign out
-            </Link>
+            </LogoutForm>
           </div>
         </div>
       )}
