@@ -36,10 +36,9 @@ resource "aws_lambda_function" "backend" {
     }
   }
 
-  # DATABASE_URL is wired after apply (provider has no secrets block):
-  # 1) put-secret-value on neon_database_url secret
-  # 2) aws lambda update-function-configuration --secrets ...
-  # See docs/deployment/lambda-phase3.md
+  # DATABASE_URL: store in neon_database_url Secrets Manager secret, then inject
+  # into Lambda env via get-secret-value + update-function-configuration (merge).
+  # There is no --secrets flag on the Lambda CLI. See docs/deployment/lambda-phase3.md
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_backend_basic,

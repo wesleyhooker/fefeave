@@ -39,11 +39,14 @@ make init
 make plan-prod   # or plan-dev with -var create_serverless_backend=true for experiments
 ```
 
-## After apply — required order (secret + Lambda wiring)
+## After apply — required order (Neon secret + Lambda env)
 
-Terraform creates the Secrets Manager secret **without** a value and does **not** map it to Lambda (AWS provider has no `secrets` block on `aws_lambda_function`). Complete these steps after apply:
+Terraform creates the Secrets Manager secret **without** a value. Lambda has **no** native `--secrets` flag on `aws lambda update-function-configuration` (that CLI option does not exist). The working serverless pattern is:
 
-1. **Populate the secret** (Neon **pooler** URL only — never commit this string):
+1. Store the connection string in Secrets Manager (source of truth).
+2. Inject it into Lambda as a normal **`DATABASE_URL` environment variable** (plaintext at rest in Lambda config, same as today in prod).
+
+### 1. Populate the secret (Neon **pooler** URL only — never commit this string)
 
 ```bash
 SECRET_ARN="$(terraform -chdir=infra output -raw neon_database_url_secret_arn)"
@@ -52,16 +55,32 @@ aws secretsmanager put-secret-value \
   --secret-string 'postgresql://USER:PASSWORD@HOST/neondb?sslmode=require'
 ```
 
-2. **Attach the secret to Lambda as `DATABASE_URL`** (runtime injection; no code change):
+Use the **pooler** hostname for Lambda runtime. Use Neon **direct** host only for one-off migrations — see [neon-phase1.md](neon-phase1.md).
+
+### 2. Inject `DATABASE_URL` into Lambda environment (no code change)
+
+Read the secret, then merge `DATABASE_URL` into the function’s existing environment variables. **Do not** overwrite unrelated keys (`COGNITO_*`, `S3_ATTACHMENTS_BUCKET`, etc.).
 
 ```bash
 FN="$(terraform -chdir=infra output -raw backend_lambda_function_name)"
+SECRET_ARN="$(terraform -chdir=infra output -raw neon_database_url_secret_arn)"
+
+DB_URL="$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --query SecretString --output text)"
+
+# Fetch current env JSON, add DATABASE_URL, write back (requires jq)
+CURRENT="$(aws lambda get-function-configuration --function-name "$FN" --query 'Environment.Variables' --output json)"
+NEW_ENV="$(echo "$CURRENT" | jq --arg url "$DB_URL" '. + {DATABASE_URL: $url}')"
+
 aws lambda update-function-configuration \
   --function-name "$FN" \
-  --secrets "[{\"EnvironmentVariableName\":\"DATABASE_URL\",\"SecretArn\":\"$SECRET_ARN\"}]"
+  --environment "Variables=${NEW_ENV}"
 ```
 
-3. **Deploy Lambda code** when the handler changes: run **Backend Deploy (prod)** (`workflow_dispatch`) or locally:
+The Lambda execution role already has `secretsmanager:GetSecretValue` on this secret (`serverless-backend-iam.tf`) so operators (or a future sync script) can read it. **Application code reads `process.env.DATABASE_URL` only** — no runtime Secrets Manager call today.
+
+### 3. Deploy Lambda code when the handler changes
+
+Run **Backend Deploy (prod)** (`workflow_dispatch`) or locally:
 
 ```bash
 cd backend && npm run package:lambda
@@ -72,11 +91,11 @@ Requires GitHub prod vars from `make gh-sync-prod` (`BACKEND_DEPLOY_ROLE_ARN`, `
 
 Until steps 1–2 complete, Lambda invocations fail env validation or DB connection.
 
-Migrations: run against Neon **direct** host (`npm run migrate:up`), not the pooler — see [neon-phase1.md](neon-phase1.md).
-
 ## Cognito (prod)
 
-Terraform sets placeholder `COGNITO_*` env vars on Lambda. Create prod User Pool manually — roles use Cognito **groups** (`ADMIN`, `OPERATOR`, `WHOLESALER`) from `cognito:groups`, not `custom:role`. See [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md) and [prod-release.md](prod-release.md).
+Terraform sets non-secret `COGNITO_*` env vars on the backend Lambda. Create prod User Pool manually — roles use Cognito **groups** (`ADMIN`, `OPERATOR`, `WHOLESALER`) from `cognito:groups`, not `custom:role`. See [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md) and [prod-release.md](prod-release.md).
+
+Frontend session/OAuth secrets (`AUTH_SESSION_SECRET`, `COGNITO_CLIENT_SECRET`) are **not** in Terraform — see [prod-secrets.md](prod-secrets.md).
 
 ## Outputs for Phase 4/5
 
@@ -85,12 +104,13 @@ Terraform sets placeholder `COGNITO_*` env vars on Lambda. Create prod User Pool
 | `backend_lambda_function_name`                                   | Deploy workflow target                |
 | `backend_lambda_function_arn`                                    | IAM / monitoring                      |
 | `backend_api_gateway_url`                                        | API base (`${url}api/health`)         |
-| `neon_database_url_secret_arn` / `neon_database_url_secret_name` | Secret population, GH vars            |
+| `neon_database_url_secret_arn` / `neon_database_url_secret_name` | Secret population, operator scripts   |
 | `backend_lambda_execution_role_arn`                              | Auditing                              |
 | `github_prod_backend_serverless_vars`                            | Suggested non-secret GitHub prod vars |
 
 ## Related
 
+- [prod-secrets.md](prod-secrets.md) — all prod secrets, injection pattern, cleanup roadmap
 - [lambda-phase2.md](lambda-phase2.md) — handler, env vars, packaging
 - [neon-phase1.md](neon-phase1.md) — Postgres validation
 - [prod-release.md](prod-release.md) — prod release checklist (serverless path)

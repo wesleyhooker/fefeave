@@ -186,8 +186,8 @@ Domain **fefeave.com** is on **Cloudflare** (registrar + DNS). Route53 is not us
 1. **Package artifacts:** `cd backend && npm run package:lambda`; `cd frontend && npm run build:opennext && npm run package:opennext`.
 2. **Terraform apply** (prod workspace) with `enable_frontend_custom_domain = false` — infra only; CloudFront on default `*.cloudfront.net` cert.
 3. **`make gh-sync-prod`** — GitHub prod env vars (`CF_DIST_ID`, Lambda names, Cognito URLs, etc.).
-4. **Neon `DATABASE_URL`** — `aws secretsmanager put-secret-value` (see [lambda-phase3.md](lambda-phase3.md)).
-5. **Cognito** — prod pool, Google IdP, groups (`ADMIN`/`OPERATOR`/`WHOLESALER`), Hosted UI, app client URLs; set Lambda secrets (`COGNITO_*`, `AUTH_SESSION_SECRET`). **Create Felicia Google-backed Cognito admin account** — see [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md).
+4. **Neon `DATABASE_URL`** — `aws secretsmanager put-secret-value`, then inject into backend Lambda env (see [lambda-phase3.md](lambda-phase3.md) and [prod-secrets.md](prod-secrets.md)).
+5. **Cognito** — prod pool, Google IdP, groups (`ADMIN`/`OPERATOR`/`WHOLESALER`), Hosted UI, app client URLs; set frontend Lambda secrets (`COGNITO_*`, `AUTH_SESSION_SECRET`) via console/CLI env merge. **Create Felicia Google-backed Cognito admin account** — see [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md).
 6. **ACM (us-east-1)** — request cert for `fefeave.com` + `www.fefeave.com`; add validation **CNAME** records in Cloudflare (**DNS only**, grey cloud); wait for **ISSUED**.
 7. **Terraform custom domain** — set `enable_frontend_custom_domain = true` and `acm_certificate_arn` in `prod.tfvars` (leave `route53_zone_id` unset); `make apply-prod`.
 8. **Cloudflare DNS** — CNAME `@` and `www` → `cloudfront_distribution_domain` output; **Proxied**; SSL/TLS **Full (strict)**.

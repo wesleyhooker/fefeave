@@ -124,8 +124,8 @@ resource "aws_lambda_function" "frontend_server" {
       BACKEND_BASE_URL     = local.backend_base_url
       COGNITO_REDIRECT_URI = var.cognito_redirect_uri
       COGNITO_LOGOUT_URI   = var.cognito_logout_uri
-      # COGNITO_DOMAIN, COGNITO_CLIENT_ID, COGNITO_CLIENT_SECRET, AUTH_SESSION_SECRET:
-      # set via deploy workflow or console after apply (not in tfvars/state).
+      # COGNITO_DOMAIN, COGNITO_CLIENT_ID: set via deploy workflow or console after apply.
+      # COGNITO_CLIENT_SECRET, AUTH_SESSION_SECRET: manual Lambda env (see docs/deployment/prod-secrets.md).
     }
   }
 

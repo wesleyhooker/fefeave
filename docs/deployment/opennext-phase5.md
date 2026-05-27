@@ -56,11 +56,14 @@ OpenNext config (`open-next.config.ts`): `tagCache: dummy`, `queue: dummy` (no D
 
 ### Secrets (manual, not in Terraform)
 
-| Secret                                | Used by                                         |
-| ------------------------------------- | ----------------------------------------------- |
-| `AUTH_SESSION_SECRET`                 | Frontend server Lambda                          |
-| `COGNITO_CLIENT_SECRET`               | OAuth token exchange                            |
-| `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID` | Set on Lambda via console or workflow extension |
+See [prod-secrets.md](prod-secrets.md) for storage, injection, and cleanup roadmap.
+
+| Secret                                | Used by                                    |
+| ------------------------------------- | ------------------------------------------ |
+| `AUTH_SESSION_SECRET`                 | Frontend server Lambda                     |
+| `COGNITO_CLIENT_SECRET`               | OAuth token exchange                       |
+| `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID` | Set on Lambda via console or CLI env merge |
+| `DATABASE_URL`                        | Backend Lambda (SM source → env injection) |
 
 ## CloudFront routing summary
 
