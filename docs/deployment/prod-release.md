@@ -269,3 +269,26 @@ Dev workspace still creates **Cognito** (`cognito-dev.tf`) for local `make dev-c
 5. `workflow_dispatch` **Backend Deploy (prod)** then **Frontend Deploy (prod)**.
 6. Bootstrap Felicia admin (Google → Cognito → `ADMIN` group).
 7. Validate admin ledger flows; monitor CloudWatch log groups for Lambdas.
+
+## Monitoring and budget (post-launch)
+
+When `enable_cost_alerts = true` in `prod.tfvars`, Terraform creates prod guardrails only (`monitoring.tf`, `budgets.tf`):
+
+| Resource   | Detail                                                                          |
+| ---------- | ------------------------------------------------------------------------------- |
+| AWS Budget | **$20/mo** account-wide; email at **80% forecast** and **100% actual**          |
+| SNS        | `fefeave-alerts-prod` + email subscription                                      |
+| Alarms     | Backend Lambda errors/throttles, frontend server Lambda errors, API Gateway 5xx |
+
+After `make apply-prod`:
+
+1. Confirm **SNS subscription** email from AWS (alarms are silent until confirmed).
+2. Billing → Budgets → verify `fefeave-monthly-cost` limit **$20**.
+3. CloudWatch → Alarms → four alarms in **OK** state at idle.
+4. Budget is **AWS-only** — Neon and Cloudflare spend is not included.
+
+To disable: set `enable_cost_alerts = false` and re-apply.
+
+### Terraform apply safety (Lambda env)
+
+Serverless Lambdas use `lifecycle { ignore_changes = [environment] }`. A normal `make apply-prod` will **not** remove `DATABASE_URL` or frontend auth env vars. After apply, optionally copy live secrets into new SM containers and run `scripts/prod/sync-lambda-env-from-secrets.sh` (see [prod-secrets.md](prod-secrets.md)).

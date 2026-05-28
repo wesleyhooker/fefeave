@@ -85,6 +85,8 @@ infra/
 ├── vpc.tf, ecr.tf, alb.tf, ecs.tf, rds.tf   # When create_backend_infra = true
 ├── lambda-api.tf, apigateway.tf, secrets.tf, serverless-backend-iam.tf  # When create_serverless_backend = true
 ├── frontend-opennext-lambda.tf, cloudfront-opennext.tf, route53-acm.tf, frontend-serverless-deploy-role.tf  # When create_serverless_frontend = true
+├── monitoring.tf, budgets.tf               # When enable_cost_alerts && env == prod
+├── secrets.tf                              # SM containers (Neon + frontend session/OAuth)
 ├── backend-deploy-role.tf, backend-serverless-deploy-role.tf, frontend-deploy-role.tf
 ├── providers.tf, variables.tf, outputs.tf
 ├── dev.tfvars              # Default: create_backend_infra = false
@@ -120,6 +122,9 @@ Application development does **not** require `terraform apply` with the default 
 | `frontend_domain` / `frontend_www_domain` | Production apex + optional www alias (Cognito URLs)                       | `fefeave.com` / `www.fefeave.com` |
 | `create_rds`                              | RDS + Secrets Manager `DATABASE_URL` (requires backend infra)             | `false`                           |
 | `create_github_deploy_role`               | OIDC provider data used by deploy roles when infra is on                  | `true`                            |
+| `enable_cost_alerts`                      | AWS Budget + CloudWatch alarms (prod workspace only)                      | `false`                           |
+| `alert_email`                             | Email for budget and SNS alarm notifications                              | `""`                              |
+| `monthly_budget_usd`                      | Monthly AWS account cost budget (USD)                                     | `20`                              |
 
 `create_backend_infra` and `create_serverless_backend` are **mutually exclusive**.
 
@@ -138,6 +143,29 @@ Committed tfvars: **dev** keeps all backend flags `false` (local-first). **prod*
 | `rds_endpoint`, `database_url_secret_arn`                                                                               | `create_backend_infra` and `create_rds` |
 | `backend_lambda_*`, `backend_api_gateway_url`, `neon_database_url_secret_*`, `github_prod_backend_serverless_vars`      | `create_serverless_backend`             |
 | `frontend_server_lambda_name`, `frontend_image_lambda_name`, `frontend_app_url`, `github_prod_frontend_serverless_vars` | `create_serverless_frontend`            |
+| `alerts_sns_topic_arn`, `monthly_budget_limit_usd`, `monitoring_alarm_names`                                            | `enable_cost_alerts && env == prod`     |
+
+---
+
+## 5b. Monitoring (prod guardrails)
+
+When `enable_cost_alerts = true` in **prod** workspace (`prod.tfvars`):
+
+| Resource                        | Purpose                                                                                                         |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| AWS Budget                      | Account-wide **$20/mo** limit; 80% forecast + 100% actual email alerts                                          |
+| SNS topic `fefeave-alerts-prod` | Fan-out for CloudWatch alarms                                                                                   |
+| CloudWatch alarms               | Backend Lambda **Errors**, frontend server Lambda **Errors**, backend Lambda **Throttles**, API Gateway **5xx** |
+
+**Not created:** frontend image Lambda alarm, duration alarms, CloudFront alarms, log metric filters.
+
+After apply, confirm the **SNS email subscription** (AWS sends a confirmation link). Budget covers the whole AWS account (dev + prod); Neon and Cloudflare are external.
+
+See [prod-release.md](../docs/deployment/prod-release.md) for post-apply verification.
+
+### Lambda environment ownership
+
+Serverless Lambdas use `lifecycle { ignore_changes = [environment] }` so Terraform does not remove operator-managed secrets (`DATABASE_URL`, `AUTH_SESSION_SECRET`, `COGNITO_*`, etc.). Update those keys via CLI, console, or `scripts/prod/sync-lambda-env-from-secrets.sh` — not via Terraform `environment` blocks.
 
 ---
 

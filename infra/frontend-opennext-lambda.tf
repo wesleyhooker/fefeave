@@ -55,6 +55,23 @@ resource "aws_iam_role_policy" "frontend_server_lambda_logs" {
   })
 }
 
+resource "aws_iam_role_policy" "frontend_server_lambda_secrets" {
+  count = var.create_serverless_frontend ? 1 : 0
+  name  = "fefeave-frontend-server-lambda-${var.env}-secrets"
+  role  = aws_iam_role.frontend_server_lambda[0].id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["secretsmanager:GetSecretValue"]
+      Resource = [
+        aws_secretsmanager_secret.frontend_auth_session[0].arn,
+        aws_secretsmanager_secret.frontend_cognito_client[0].arn,
+      ]
+    }]
+  })
+}
+
 resource "aws_iam_role" "frontend_image_lambda" {
   count = var.create_serverless_frontend ? 1 : 0
   name  = "fefeave-frontend-image-lambda-${var.env}"
@@ -132,7 +149,13 @@ resource "aws_lambda_function" "frontend_server" {
   depends_on = [
     aws_iam_role_policy_attachment.frontend_server_lambda_basic,
     aws_iam_role_policy.frontend_server_lambda_logs,
+    aws_iam_role_policy.frontend_server_lambda_secrets,
   ]
+
+  # COGNITO_* / AUTH_SESSION_SECRET and other operator-merged keys live outside Terraform.
+  lifecycle {
+    ignore_changes = [environment]
+  }
 
   tags = local.tags
 }
@@ -155,6 +178,11 @@ resource "aws_lambda_function" "frontend_image" {
     aws_iam_role_policy.frontend_image_lambda_logs,
     aws_iam_role_policy.frontend_image_lambda_s3_read,
   ]
+
+  # No env vars today; ignore environment if operators add keys later.
+  lifecycle {
+    ignore_changes = [environment]
+  }
 
   tags = local.tags
 }

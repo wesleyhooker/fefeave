@@ -4,11 +4,11 @@ Post-launch reference for how prod secrets are stored, injected, and rotated. **
 
 ## Current state (live prod)
 
-| Secret                  | Storage (source of truth)                                | Runtime consumption                                    | Set by                                                                            |
-| ----------------------- | -------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `DATABASE_URL`          | Secrets Manager `fefeave-backend-prod-neon-database-url` | Plain Lambda env var on `fefeave-backend-prod`         | Manual: `put-secret-value` + `get-secret-value` → `update-function-configuration` |
-| `COGNITO_CLIENT_SECRET` | Operator clipboard / Cognito console (not in SM yet)     | Plain Lambda env var on `fefeave-frontend-server-prod` | Manual console or CLI env update                                                  |
-| `AUTH_SESSION_SECRET`   | Operator-generated (not in SM yet)                       | Plain Lambda env var on `fefeave-frontend-server-prod` | Manual console or CLI env update                                                  |
+| Secret                  | Storage (source of truth)                                                           | Runtime consumption                                    | Set by                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | Secrets Manager `fefeave-backend-prod-neon-database-url`                            | Plain Lambda env var on `fefeave-backend-prod`         | Manual: `put-secret-value` + `get-secret-value` → `update-function-configuration` |
+| `COGNITO_CLIENT_SECRET` | SM `fefeave-frontend-prod-cognito-client-secret` (after apply + `put-secret-value`) | Plain Lambda env var on `fefeave-frontend-server-prod` | Manual console, CLI merge, or `scripts/prod/sync-lambda-env-from-secrets.sh`      |
+| `AUTH_SESSION_SECRET`   | SM `fefeave-frontend-prod-auth-session-secret` (after apply + `put-secret-value`)   | Plain Lambda env var on `fefeave-frontend-server-prod` | Manual console, CLI merge, or `scripts/prod/sync-lambda-env-from-secrets.sh`      |
 
 All three are **visible in Lambda configuration** to anyone with `lambda:GetFunctionConfiguration`. Secrets Manager for `DATABASE_URL` is the durable store; Lambda env is the runtime copy.
 
@@ -59,13 +59,20 @@ Backend DB wiring details: [lambda-phase3.md](lambda-phase3.md). Cognito bootstr
 
 **Phase 1 (this doc): docs-only** — prod is stable; align docs with reality. No Terraform apply.
 
-**Phase 2 (optional, low risk after approval):**
+**Phase 2 (infra ready on branch `fix/terraform-lambda-env-stabilization`):**
 
-- Add Terraform `aws_secretsmanager_secret` containers for `AUTH_SESSION_SECRET` and `COGNITO_CLIENT_SECRET` (no values).
-- Add `secretsmanager:GetSecretValue` on frontend server Lambda role.
-- Add a small operator script (e.g. `scripts/prod/sync-lambda-env-from-secrets.sh`) — not run in CI — that reads SM and merges env.
-- **Copy live values into SM** with `put-secret-value` (preserve current secrets).
-- **Do not** change application code or remove existing Lambda env until a successful login smoke test after sync.
+- Terraform creates empty SM containers for `AUTH_SESSION_SECRET` and `COGNITO_CLIENT_SECRET` (no values in repo).
+- Frontend server Lambda role has `secretsmanager:GetSecretValue` on those ARNs (for future runtime fetch; app still reads env today).
+- Operator script: `scripts/prod/sync-lambda-env-from-secrets.sh` — not run in CI.
+- Lambda `lifecycle { ignore_changes = [environment] }` on all serverless functions so `terraform apply` cannot strip live env vars.
+
+**After apply (operator, one-time per secret):**
+
+1. `aws secretsmanager put-secret-value` — copy live values into SM (never commit strings).
+2. Run sync script or manual env merge (see script `--help`).
+3. Login smoke test before any runtime SM fetch code change.
+
+**Do not** change application code or remove existing Lambda env until smoke test passes.
 
 **Phase 3 (defer):** runtime fetch (option C) only if you need automatic rotation without redeploying Lambda config.
 
@@ -87,11 +94,14 @@ After any secret or env change:
 
 ## Related files
 
-| Area                                 | Path                                                                                  |
-| ------------------------------------ | ------------------------------------------------------------------------------------- |
-| Neon secret container                | `infra/secrets.tf`                                                                    |
-| Backend Lambda env (non-secret)      | `infra/lambda-api.tf`                                                                 |
-| Backend SM IAM                       | `infra/serverless-backend-iam.tf`                                                     |
-| Frontend Lambda env comments         | `infra/frontend-opennext-lambda.tf`                                                   |
-| Backend reads `DATABASE_URL`         | `backend/src/db/index.ts`                                                             |
-| Frontend reads session/OAuth secrets | `frontend/lib/auth/session-verify.node.ts`, `frontend/app/api/auth/callback/route.ts` |
+| Area                                 | Path                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------- |
+| Neon secret container                | `infra/secrets.tf`                                                                            |
+| Backend Lambda env (non-secret)      | `infra/lambda-api.tf`                                                                         |
+| Backend SM IAM                       | `infra/serverless-backend-iam.tf`                                                             |
+| Frontend Lambda env comments         | `infra/frontend-opennext-lambda.tf`                                                           |
+| Backend reads `DATABASE_URL`         | `backend/src/db/index.ts`                                                                     |
+| Frontend reads session/OAuth secrets | `frontend/lib/auth/session-verify.node.ts`, `frontend/app/api/auth/callback/route.ts`         |
+| Lambda env lifecycle (Terraform)     | `infra/lambda-api.tf`, `infra/frontend-opennext-lambda.tf` (`ignore_changes = [environment]`) |
+| Frontend SM containers               | `infra/secrets.tf`                                                                            |
+| Env sync script                      | `scripts/prod/sync-lambda-env-from-secrets.sh`                                                |

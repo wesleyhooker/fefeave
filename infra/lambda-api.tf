@@ -47,5 +47,11 @@ resource "aws_lambda_function" "backend" {
     aws_iam_role_policy.lambda_backend_attachments,
   ]
 
+  # DATABASE_URL and any operator-merged keys are set outside Terraform (CLI/console).
+  # Ignoring the whole environment block prevents apply from stripping live secrets.
+  lifecycle {
+    ignore_changes = [environment]
+  }
+
   tags = local.tags
 }
