@@ -1,4 +1,8 @@
 # Fastify backend on Lambda (Phase 2 handler: dist/lambda.handler).
+#
+# Ownership: Terraform = function shell (IAM, memory, timeout, log group, API wiring).
+# Code = Backend Deploy (prod) workflow (aws lambda update-function-code).
+# Runtime secrets = operator CLI / scripts (see docs/deployment/prod-secrets.md).
 
 locals {
   lambda_zip_path = "${path.module}/../backend/lambda.zip"
@@ -47,10 +51,15 @@ resource "aws_lambda_function" "backend" {
     aws_iam_role_policy.lambda_backend_attachments,
   ]
 
-  # DATABASE_URL and any operator-merged keys are set outside Terraform (CLI/console).
-  # Ignoring the whole environment block prevents apply from stripping live secrets.
+  # Code + env are updated outside Terraform (deploy workflow + operator scripts).
   lifecycle {
-    ignore_changes = [environment]
+    ignore_changes = [
+      environment,
+      filename,
+      source_code_hash,
+      s3_bucket,
+      s3_key,
+    ]
   }
 
   tags = local.tags

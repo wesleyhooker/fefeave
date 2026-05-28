@@ -291,4 +291,4 @@ To disable: set `enable_cost_alerts = false` and re-apply.
 
 ### Terraform apply safety (Lambda env)
 
-Serverless Lambdas use `lifecycle { ignore_changes = [environment] }`. A normal `make apply-prod` will **not** remove `DATABASE_URL` or frontend auth env vars. After apply, optionally copy live secrets into new SM containers and run `scripts/prod/sync-lambda-env-from-secrets.sh` (see [prod-secrets.md](prod-secrets.md)).
+Serverless Lambdas ignore `environment` and deployment package attributes in Terraform (`filename`, `source_code_hash`). A normal `make apply-prod` will **not** redeploy Lambda code or remove `DATABASE_URL` / frontend auth env vars. Code updates use **Backend/Frontend Deploy (prod)** workflows only. After apply, optionally copy live secrets into new SM containers and run `scripts/prod/sync-lambda-env-from-secrets.sh` (see [prod-secrets.md](prod-secrets.md)).

@@ -163,9 +163,15 @@ After apply, confirm the **SNS email subscription** (AWS sends a confirmation li
 
 See [prod-release.md](../docs/deployment/prod-release.md) for post-apply verification.
 
-### Lambda environment ownership
+### Lambda ownership (serverless prod)
 
-Serverless Lambdas use `lifecycle { ignore_changes = [environment] }` so Terraform does not remove operator-managed secrets (`DATABASE_URL`, `AUTH_SESSION_SECRET`, `COGNITO_*`, etc.). Update those keys via CLI, console, or `scripts/prod/sync-lambda-env-from-secrets.sh` — not via Terraform `environment` blocks.
+| Concern             | Owner          | Mechanism                                                                                                                                                                              |
+| ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Function shell      | Terraform      | IAM, memory, timeout, log groups, API Gateway, CloudFront                                                                                                                              |
+| Deployment package  | GitHub Actions | `aws lambda update-function-code` ([backend-deploy-prod.yml](../.github/workflows/backend-deploy-prod.yml), [frontend-deploy-prod.yml](../.github/workflows/frontend-deploy-prod.yml)) |
+| Runtime env secrets | Operator       | CLI / `scripts/prod/sync-lambda-env-from-secrets.sh`                                                                                                                                   |
+
+Lambdas use `lifecycle { ignore_changes = [environment, filename, source_code_hash, s3_bucket, s3_key] }` so `terraform apply` does not redeploy code or strip secrets. Local `lambda.zip` / OpenNext zips are only needed for **initial** create; day-to-day code updates go through deploy workflows.
 
 ---
 

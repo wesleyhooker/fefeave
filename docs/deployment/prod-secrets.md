@@ -64,7 +64,7 @@ Backend DB wiring details: [lambda-phase3.md](lambda-phase3.md). Cognito bootstr
 - Terraform creates empty SM containers for `AUTH_SESSION_SECRET` and `COGNITO_CLIENT_SECRET` (no values in repo).
 - Frontend server Lambda role has `secretsmanager:GetSecretValue` on those ARNs (for future runtime fetch; app still reads env today).
 - Operator script: `scripts/prod/sync-lambda-env-from-secrets.sh` — not run in CI.
-- Lambda `lifecycle { ignore_changes = [environment] }` on all serverless functions so `terraform apply` cannot strip live env vars.
+- Lambda `lifecycle { ignore_changes = [environment, filename, source_code_hash, ...] }` on all serverless functions so `terraform apply` cannot redeploy code or strip live env vars.
 
 **After apply (operator, one-time per secret):**
 
