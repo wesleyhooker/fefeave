@@ -12,9 +12,10 @@
  * - Links: underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900; focus-visible:outline-2 outline-offset-2 outline-gray-400
  * - Cards: rounded-lg border border-gray-200 bg-white shadow-sm (e.g. contact list)
  *
- * Admin (workspace)
- * - Shell: page bg #F3F4F6; inset strips #F9FAFB; sidebar white, border-gray-100
- * - Source of truth: `app/(admin)/admin/_components/workspaceUi.ts` (file header documents the full map;
+ * Reseller workspace (`/admin/*`) — separate from public `@/system`
+ * - Shell: warm canvas `bg-admin-canvas`; clay sidebar; header in `admin/_components/headers/`
+ * - Source of truth: `app/(admin)/admin/_components/workspaceUi.ts` (see `app/(admin)/admin/README.md`)
+ * - Dashboard hub may use richer modules via `dashboard/_components/dashboardStructure.ts`
  *   dashboard `/admin/dashboard` is the interaction reference for lists/tables)
  *   — money semantics on values only; action meanings (primary / Pay / Close out / row vs page size);
  *   row hover + title link pattern; panels vs flat lists; section toolbars

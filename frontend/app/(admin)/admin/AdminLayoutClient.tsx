@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { WorkspaceHeader } from "@/app/_components/headers/WorkspaceHeader";
-import { WorkspaceHeaderSlotsProvider } from "@/app/_components/headers/WorkspaceHeaderSlots";
+import { WorkspaceHeader } from "@/app/(admin)/admin/_components/headers/WorkspaceHeader";
+import { WorkspaceHeaderSlotsProvider } from "@/app/(admin)/admin/_components/headers/WorkspaceHeaderSlots";
 import { AdminSidebar } from "./AdminSidebar";
 import {
   workspaceShellBg,

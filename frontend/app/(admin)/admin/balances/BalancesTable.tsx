@@ -12,6 +12,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import { apiGetText } from "@/lib/api";
 import { AdminWorkspaceToolbar } from "@/app/(admin)/admin/_components/AdminWorkspaceToolbar";
+import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
 import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
 import { WorkspaceToolbarMenu } from "@/app/(admin)/admin/_components/WorkspaceToolbarMenu";
 import { WorkspaceListPaymentStatus } from "@/app/(admin)/admin/_components/WorkspaceListStatus";
@@ -314,9 +315,9 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
       <div className="md:hidden">
         <div className="space-y-2.5 p-3 sm:p-4">
           {sorted.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-gray-200 bg-gray-50/60 px-4 py-8 text-center text-sm text-gray-500">
+            <WorkspaceEmptyState variant="dashed">
               No balances yet.
-            </p>
+            </WorkspaceEmptyState>
           ) : (
             sorted.map((r) => {
               const balance = parseNum(r.balance_owed);
@@ -500,11 +501,10 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
           <tbody className="divide-y divide-gray-100 bg-white [&>tr:first-child>td]:pt-4">
             {sorted.length === 0 ? (
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-10 text-center text-sm text-gray-500"
-                >
-                  No balances yet.
+                <td colSpan={7} className="px-4 py-10">
+                  <WorkspaceEmptyState variant="plain" as="span">
+                    No balances yet.
+                  </WorkspaceEmptyState>
                 </td>
               </tr>
             ) : (

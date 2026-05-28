@@ -3,6 +3,7 @@ import { WORKFLOW_SHOWS_PROFIT_LABEL } from "@/app/(admin)/admin/_lib/adminWorkf
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import { workspaceTheadSticky } from "@/app/(admin)/admin/_components/workspaceUi";
 import type { ShowViewModel } from "@/src/lib/api/shows";
+import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
 import { ShowDesktopRow } from "./ShowDesktopRow";
 
 export function WeekDesktopTable({
@@ -21,9 +22,9 @@ export function WeekDesktopTable({
 }) {
   if (shows.length === 0) {
     return (
-      <p className="px-4 py-8 text-center text-sm text-gray-500">
+      <WorkspaceEmptyState variant="plain" className="px-4 py-8">
         {emptyLabel}
-      </p>
+      </WorkspaceEmptyState>
     );
   }
   return (

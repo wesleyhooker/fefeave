@@ -5,17 +5,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrentWeekBounds } from "@/lib/weekRange";
 import { ShowsTableSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
-  AdminPageContainer,
-  AdminPageIntroSection,
-} from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+  AdminWorkspacePageIntro,
+  AdminWorkspacePageLayout,
+} from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
 import {
   fetchShowFinancialSummariesByShowIds,
   type ShowFinancialSummary,
 } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
 import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
-import { useRegisterWorkspaceHeaderActions } from "@/app/_components/headers/WorkspaceHeaderSlots";
+import { useRegisterWorkspaceHeaderActions } from "@/app/(admin)/admin/_components/headers/WorkspaceHeaderSlots";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
   workspacePageContentWidthWide,
@@ -170,18 +170,15 @@ export default function AdminShowsPage() {
         />
       }
     >
-      <AdminPageIntroSection
-        contentWidthClassName={workspacePageContentWidthWide}
-      >
-        <AdminWorkspacePageIntro
-          title="Shows"
-          subtitle={WORKFLOW_SHOWS_PAGE_SUBTITLE}
-        />
-      </AdminPageIntroSection>
-
-      <AdminPageContainer
+      <AdminWorkspacePageLayout
         contentWidthClassName={workspacePageContentWidthWide}
         contentStackClassName={workspaceShowsIndexContentStack}
+        intro={
+          <AdminWorkspacePageIntro
+            title="Shows"
+            subtitle={WORKFLOW_SHOWS_PAGE_SUBTITLE}
+          />
+        }
       >
         {error != null ? (
           <WorkspaceInlineError
@@ -193,9 +190,9 @@ export default function AdminShowsPage() {
         ) : null}
 
         {rows.length === 0 ? (
-          <p className="rounded-lg border border-gray-100 bg-white px-4 py-6 text-center text-sm text-gray-500">
+          <WorkspaceEmptyState variant="inset">
             No shows yet.
-          </p>
+          </WorkspaceEmptyState>
         ) : (
           <>
             <ShowsThisWeekSection
@@ -217,7 +214,7 @@ export default function AdminShowsPage() {
             <ShowsAllTimeClosedSummary analytics={analytics} />
           </>
         )}
-      </AdminPageContainer>
+      </AdminWorkspacePageLayout>
     </WorkspacePageWithRightPanel>
   );
 }

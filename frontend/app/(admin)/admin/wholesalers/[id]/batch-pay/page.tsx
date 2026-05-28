@@ -4,11 +4,10 @@ import { BanknotesIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import {
-  AdminPageContainer,
-  AdminPageIntroSection,
-} from "@/app/(admin)/admin/_components/AdminPageContainer";
+import { AdminPageContainer } from "@/app/(admin)/admin/_components/AdminPageContainer";
+import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminWorkspacePageLayout } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   fetchWholesalerBalances,
@@ -176,20 +175,21 @@ export default function BatchPayPage() {
   }
 
   return (
-    <>
-      <AdminPageIntroSection variant="entity-detail">
+    <AdminWorkspacePageLayout
+      introVariant="entity-detail"
+      intro={
         <AdminPageIntro
           variant="entity-detail"
           title={`Balance breakdown - ${name ?? id}`}
           subtitle="Shows currently contributing to this wholesaler balance."
           breadcrumb={
-            <nav className="text-sm text-stone-500" aria-label="Breadcrumb">
-              <Link href="/admin/balances" className="hover:text-stone-700">
-                Balances
-              </Link>
-              <span className="mx-1.5">/</span>
-              <span aria-current="page">Balance breakdown</span>
-            </nav>
+            <AdminEntityBreadcrumb
+              variant="compact"
+              segments={[
+                { href: "/admin/balances", label: "Balances" },
+                { label: "Balance breakdown", current: true },
+              ]}
+            />
           }
           action={
             <Link
@@ -204,165 +204,159 @@ export default function BatchPayPage() {
             </Link>
           }
         />
-      </AdminPageIntroSection>
-
-      <AdminPageContainer>
-        <div className="flex min-w-0 flex-col gap-5">
-          <section className={`p-4 sm:p-5 ${workspaceCard}`}>
-            <div className="flex min-w-0 flex-col gap-4">
-              <label className="block min-w-0">
-                <span className={`mb-1.5 block ${workspaceFormLabelSecondary}`}>
-                  Date range
-                </span>
-                <WorkspaceNativeSelect
-                  value={dateWindow}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setDateWindow(
-                      v === "all" ? "all" : (Number(v) as 7 | 14 | 30),
-                    );
-                  }}
-                >
-                  {WINDOW_OPTIONS.map((opt) => (
-                    <option key={String(opt.value)} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </WorkspaceNativeSelect>
-              </label>
-              <p className={`text-sm leading-snug ${workspaceTableCellMeta}`}>
-                {dateWindowNote}
+      }
+    >
+      <div className="flex min-w-0 flex-col gap-5">
+        <section className={`p-4 sm:p-5 ${workspaceCard}`}>
+          <div className="flex min-w-0 flex-col gap-4">
+            <label className="block min-w-0">
+              <span className={`mb-1.5 block ${workspaceFormLabelSecondary}`}>
+                Date range
+              </span>
+              <WorkspaceNativeSelect
+                value={dateWindow}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDateWindow(
+                    v === "all" ? "all" : (Number(v) as 7 | 14 | 30),
+                  );
+                }}
+              >
+                {WINDOW_OPTIONS.map((opt) => (
+                  <option key={String(opt.value)} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </WorkspaceNativeSelect>
+            </label>
+            <p className={`text-sm leading-snug ${workspaceTableCellMeta}`}>
+              {dateWindowNote}
+            </p>
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                Total for displayed shows
               </p>
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                  Total for displayed shows
-                </p>
-                <p
-                  className={`mt-1 text-2xl font-semibold tracking-tight ${workspaceMoneyTabular} ${workspaceMoneyNeutral}`}
-                >
-                  {formatCurrency(totalOwed)}
-                </p>
-              </div>
+              <p
+                className={`mt-1 text-2xl font-semibold tracking-tight ${workspaceMoneyTabular} ${workspaceMoneyNeutral}`}
+              >
+                {formatCurrency(totalOwed)}
+              </p>
             </div>
-          </section>
+          </div>
+        </section>
 
-          <section className={`min-w-0 overflow-hidden ${workspaceCard}`}>
-            <div className="border-b border-gray-100 px-4 py-3 sm:px-5">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Closed shows
-              </h2>
+        <section className={`min-w-0 overflow-hidden ${workspaceCard}`}>
+          <div className="border-b border-gray-100 px-4 py-3 sm:px-5">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Closed shows
+            </h2>
+          </div>
+          {filteredShows.length === 0 ? (
+            <div className="px-4 py-6 text-center text-sm text-gray-500 sm:px-5">
+              {closedShows.length === 0
+                ? "No closed shows for this wholesaler."
+                : "No closed shows in the selected date range."}
             </div>
-            {filteredShows.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-gray-500 sm:px-5">
-                {closedShows.length === 0
-                  ? "No closed shows for this wholesaler."
-                  : "No closed shows in the selected date range."}
+          ) : (
+            <>
+              <div className="md:hidden">
+                <ul className="divide-y divide-gray-100">
+                  {filteredShows.map((row) => {
+                    const owed = parseAmount(row.owed_total);
+                    return (
+                      <li key={row.show_id} className="min-w-0 px-4 py-4">
+                        <Link
+                          href={`/admin/shows/${row.show_id}`}
+                          className={`block text-base font-semibold leading-snug ${workspaceRowTitleLink}`}
+                        >
+                          {row.show_name}
+                        </Link>
+                        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                          <span className={`text-sm ${workspaceTableCellMeta}`}>
+                            {formatDate(row.show_date)}
+                          </span>
+                          <span
+                            className={`text-lg font-semibold tabular-nums ${workspaceMoneyClassForLiability(owed)}`}
+                          >
+                            {formatCurrency(owed)}
+                          </span>
+                        </div>
+                        <p className={`mt-1 text-xs ${workspaceTableCellMeta}`}>
+                          Owed for this show
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-            ) : (
-              <>
-                <div className="md:hidden">
-                  <ul className="divide-y divide-gray-100">
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className={workspaceTheadSticky}>
+                    <tr>
+                      <th
+                        className={`${workspaceTableHeaderCellPadding} text-left`}
+                      >
+                        Show
+                      </th>
+                      <th
+                        className={`${workspaceTableHeaderCellPadding} text-left`}
+                      >
+                        Date
+                      </th>
+                      <th
+                        className={`${workspaceTableHeaderCellPadding} text-right`}
+                      >
+                        Owed
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
                     {filteredShows.map((row) => {
                       const owed = parseAmount(row.owed_total);
                       return (
-                        <li key={row.show_id} className="min-w-0 px-4 py-4">
-                          <Link
-                            href={`/admin/shows/${row.show_id}`}
-                            className={`block text-base font-semibold leading-snug ${workspaceRowTitleLink}`}
+                        <tr
+                          key={row.show_id}
+                          className={workspaceTableRowInteractive}
+                        >
+                          <td
+                            className={`whitespace-nowrap text-sm ${workspaceTableBodyCellPadding}`}
                           >
-                            {row.show_name}
-                          </Link>
-                          <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                            <span
-                              className={`text-sm ${workspaceTableCellMeta}`}
+                            <Link
+                              href={`/admin/shows/${row.show_id}`}
+                              className={workspaceRowTitleLink}
                             >
-                              {formatDate(row.show_date)}
-                            </span>
-                            <span
-                              className={`text-lg font-semibold tabular-nums ${workspaceMoneyClassForLiability(owed)}`}
-                            >
-                              {formatCurrency(owed)}
-                            </span>
-                          </div>
-                          <p
-                            className={`mt-1 text-xs ${workspaceTableCellMeta}`}
+                              {row.show_name}
+                            </Link>
+                          </td>
+                          <td
+                            className={`whitespace-nowrap text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
                           >
-                            Owed for this show
-                          </p>
-                        </li>
+                            {formatDate(row.show_date)}
+                          </td>
+                          <td
+                            className={`whitespace-nowrap text-right text-sm ${workspaceTableBodyCellPadding} ${workspaceMoneyTabular} ${workspaceMoneyClassForLiability(owed)}`}
+                          >
+                            {formatCurrency(owed)}
+                          </td>
+                        </tr>
                       );
                     })}
-                  </ul>
-                </div>
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="min-w-full divide-y divide-gray-100">
-                    <thead className={workspaceTheadSticky}>
-                      <tr>
-                        <th
-                          className={`${workspaceTableHeaderCellPadding} text-left`}
-                        >
-                          Show
-                        </th>
-                        <th
-                          className={`${workspaceTableHeaderCellPadding} text-left`}
-                        >
-                          Date
-                        </th>
-                        <th
-                          className={`${workspaceTableHeaderCellPadding} text-right`}
-                        >
-                          Owed
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                      {filteredShows.map((row) => {
-                        const owed = parseAmount(row.owed_total);
-                        return (
-                          <tr
-                            key={row.show_id}
-                            className={workspaceTableRowInteractive}
-                          >
-                            <td
-                              className={`whitespace-nowrap text-sm ${workspaceTableBodyCellPadding}`}
-                            >
-                              <Link
-                                href={`/admin/shows/${row.show_id}`}
-                                className={workspaceRowTitleLink}
-                              >
-                                {row.show_name}
-                              </Link>
-                            </td>
-                            <td
-                              className={`whitespace-nowrap text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
-                            >
-                              {formatDate(row.show_date)}
-                            </td>
-                            <td
-                              className={`whitespace-nowrap text-right text-sm ${workspaceTableBodyCellPadding} ${workspaceMoneyTabular} ${workspaceMoneyClassForLiability(owed)}`}
-                            >
-                              {formatCurrency(owed)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </section>
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </section>
 
-          <div className="pb-1">
-            <Link
-              href="/admin/balances"
-              className={`${workspaceActionSecondaryMd} flex w-full justify-center sm:inline-flex sm:w-auto`}
-            >
-              Back to balances
-            </Link>
-          </div>
+        <div className="pb-1">
+          <Link
+            href="/admin/balances"
+            className={`${workspaceActionSecondaryMd} flex w-full justify-center sm:inline-flex sm:w-auto`}
+          >
+            Back to balances
+          </Link>
         </div>
-      </AdminPageContainer>
-    </>
+      </div>
+    </AdminWorkspacePageLayout>
   );
 }

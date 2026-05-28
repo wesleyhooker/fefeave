@@ -16,7 +16,7 @@ import {
   WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
   WORKFLOW_THIS_WEEK_HEADING,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
-import { useRegisterWorkspaceHeaderActions } from "@/app/_components/headers/WorkspaceHeaderSlots";
+import { useRegisterWorkspaceHeaderActions } from "@/app/(admin)/admin/_components/headers/WorkspaceHeaderSlots";
 
 export function DashboardPageHeader({
   weekRangeLabel,

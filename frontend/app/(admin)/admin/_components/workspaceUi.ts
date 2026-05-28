@@ -54,14 +54,10 @@
  * | Header/menu hover (chrome) | This file — `workspaceChromeHover` (+ `workspaceChromeTransition` / `workspaceChromeHoverWarm`) |
  * | Loading skeletons shaped like admin pages | `AdminPageSkeletons.tsx` |
  * | Page region stacks/grids (intro-adjacent, primary/secondary columns) | `_lib/workspacePageRegions.ts` |
- * | Summary stat tiles (dashboard-style cards) | `AdminSummaryStatGrid.tsx` + `workspaceStatTile` (soft peach); semantic shells `workspaceStatTileProfit` / `workspaceStatTileOwed` / `workspaceStatTileCompleted` / `workspaceStatTileAttention` (sage); icon chips `workspaceDashboardStatIcon*` |
+ * | Summary stat tiles (unified KPI cards) | `AdminSummaryStatGrid.tsx` + `getWorkspaceSummaryStatSurfaceClass(surface)`; shells `workspaceStatTileSurface*` + legacy aliases; icon chips `workspaceDashboardStatIcon*` |
  * | Section toolbar (filters left, actions right) | `AdminWorkspaceToolbar.tsx` + `workspaceSectionToolbar` |
- * | Page region stacks/grids (intro-adjacent, primary/secondary columns) | `_lib/workspacePageRegions.ts` |
- * | Summary stat tiles (unified KPI cards) | `AdminSummaryStatGrid.tsx` + `getWorkspaceSummaryStatSurfaceClass(surface)` (`WorkspaceStatCardSurface`); shells `workspaceStatTileSurface*` + legacy aliases `workspaceStatTileProfit` / `workspaceStatTileOwed` / `workspaceStatTileCompleted`; KPI header `workspaceStatTileKpiTopRow` + `workspaceStatTileKpiLabelBesideIcon`; per-surface chips `workspaceDashboardStatIcon*` + `getWorkspaceSummaryStatIconChipClass(surface)` |
- * | Section toolbar (filters left, actions right) | `AdminWorkspaceToolbar.tsx` + `workspaceSectionToolbar` |
- * | Page region stacks/grids (intro-adjacent, primary/secondary columns) | `_lib/workspacePageRegions.ts` |
- * | Summary stat tiles (dashboard-style cards) | `AdminSummaryStatGrid.tsx` + `workspaceStatTile` |
- * | Section toolbar (filters left, actions right) | `AdminWorkspaceToolbar.tsx` + `workspaceSectionToolbar` |
+ * | Entity-detail breadcrumbs | `AdminEntityBreadcrumb.tsx` + `workspaceEntityDetailBreadcrumb*` |
+ * | List/table empty states | `WorkspaceEmptyState.tsx` + `workspaceEmptyState*` |
  * | Styled native `<select>` / text / date | `workspaceSelect`, `workspaceTextInput`, `workspaceDateInput` + `WorkspaceNativeSelect.tsx` |
  * | Segmented toolbar filter | `workspaceSegmentedTrack` / `workspaceSegmentedButton*` + `WorkspaceSegmentedControl.tsx` |
  * | Toolbar Export / Actions menu | `WorkspaceToolbarMenu.tsx` (trigger: `workspaceActionUtilityMd`; panel: `workspaceToolbarMenuPanel` / `workspaceToolbarMenuItem*`) |
@@ -1019,3 +1015,20 @@ export const WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS: Record<string, string> = {
   Paid: workspaceDetailSettlementDotPaid,
   Unpaid: workspaceDetailSettlementDotUnpaid,
 };
+
+// --- Empty states (lists, tables, week sections) ------------------------------
+
+/** Dashed inset — mobile list empty (Payments, Balances). */
+export const workspaceEmptyStateDashed =
+  'rounded-lg border border-dashed border-gray-200 bg-gray-50/60 px-4 py-8 text-center text-sm text-gray-500';
+
+/** Dashed inset, shorter — nested section empty (Accounts). */
+export const workspaceEmptyStateDashedCompact =
+  'rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500';
+
+/** Solid card inset — shows index / this-week mobile empty. */
+export const workspaceEmptyStateInset =
+  'rounded-lg border border-gray-100 bg-white px-4 py-6 text-center text-sm text-gray-500';
+
+/** Plain copy — parent supplies padding (table cell, week desktop table). */
+export const workspaceEmptyStatePlain = 'text-center text-sm text-gray-500';

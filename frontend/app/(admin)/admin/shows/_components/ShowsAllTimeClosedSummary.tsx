@@ -37,7 +37,7 @@ export function ShowsAllTimeClosedSummary({
   if (analytics.closedCount === 0) return null;
 
   return (
-    <details className="group rounded-lg border border-gray-200 bg-[#F9FAFB] shadow-workspace-surface">
+    <details className="group rounded-lg border border-gray-200 bg-admin-mutedStrip/85 shadow-workspace-surface">
       <summary
         className={`flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-gray-800 [&_*]:cursor-inherit ${workspaceTableRowInteractive} hover:bg-gray-100/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-inset [&::-webkit-details-marker]:hidden`}
       >

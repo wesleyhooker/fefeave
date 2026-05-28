@@ -71,15 +71,15 @@ Root `app/layout.tsx` wraps the tree; each group adds its own chrome (e.g. `Publ
 
 ### Public / admin / portal separation
 
-- **Public** uses `frontend/app/(public)/_components/` and `@/system` primitives. Tokens for marketing live under `.public-site` in `frontend/system/tokens.css` (see [design/colors.md](../design/colors.md)).
-- **Admin** uses `workspaceUi.ts` and `--admin-*` tokens—intentionally separate from public styling.
-- **Portal** reuses session auth but restricts routes to wholesaler-facing pages.
+- **Public** uses `frontend/app/(public)/_components/`, `@/system` (`Button`, `Card`, …), `publicShell.ts`, `publicCtaClasses.ts`, and `--fefe-*` tokens (scoped via `.public-site` in `(public)/layout.tsx`). See [design/colors.md](../design/colors.md).
+- **Reseller workspace** (`/admin/*`) uses `workspaceUi.ts`, components under `app/(admin)/admin/_components/`, and `--admin-*` tokens—intentionally separate from public styling. Top chrome: `admin/_components/headers/`.
+- **Portal** reuses session auth but restricts routes to wholesaler-facing pages; minimal gray chrome inline in `portal/layout.tsx`.
 
-Cross-route shared chrome (e.g. `PublicHeader`) lives in `app/_components/`.
+**Cross-route `app/_components/`** should stay neutral (e.g. `LogoutForm`) or public-only (`PublicHeader`, `PublicAccountDropdown`). Do not add admin-styled components there.
 
 ### Shared UI system
 
-`frontend/system/` (`@/system`) provides layout primitives: `Button`, `Card`, `Container`, `Heading`, `Prose`, etc. Public pages compose these; admin pages prefer workspace-specific components documented in `workspaceUi.ts`.
+`frontend/system/` (`@/system`) provides layout primitives for the **public marketing site only**. The reseller workspace does not import `@/system` Button/Card. It uses `workspaceUi.ts` (see `frontend/app/(admin)/admin/README.md`). Light brand overlap (e.g. bird icon, some `fefe-*` on sidebar avatar) is token-level only—not shared React components.
 
 ### `workspaceUi`
 

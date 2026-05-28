@@ -40,10 +40,7 @@ import { DashboardNotificationsCard } from "./_components/DashboardNotifications
 import { DashboardOverviewStats } from "./_components/DashboardOverviewStats";
 import { DashboardPageHeader } from "./_components/DashboardPageHeader";
 import { DashboardThisWeekCard } from "./_components/DashboardThisWeekCard";
-import {
-  AdminPageContainer,
-  AdminPageIntroSection,
-} from "../_components/AdminPageContainer";
+import { AdminWorkspacePageLayout } from "../_components/AdminWorkspacePageLayout";
 import { WorkspacePageWithRightPanel } from "../_components/WorkspacePageWithRightPanel";
 import { ShowCreateForm } from "../shows/new/ShowCreateForm";
 import {
@@ -474,16 +471,16 @@ export default function AdminDashboardPage() {
         />
       }
     >
-      <AdminPageIntroSection>
-        <DashboardPageHeader
-          weekRangeLabel={formatWeekRangeCompact(weekBounds)}
-          weekStartYmd={weekBounds.startStr}
-          newShowPanelOpen={isCreateShowOpen}
-          onNewShowClick={() => setIsCreateShowOpen(true)}
-        />
-      </AdminPageIntroSection>
-
-      <AdminPageContainer>
+      <AdminWorkspacePageLayout
+        intro={
+          <DashboardPageHeader
+            weekRangeLabel={formatWeekRangeCompact(weekBounds)}
+            weekStartYmd={weekBounds.startStr}
+            newShowPanelOpen={isCreateShowOpen}
+            onNewShowClick={() => setIsCreateShowOpen(true)}
+          />
+        }
+      >
         <div className={workspacePageTopStack}>
           <DashboardOverviewStats
             ytdProfit={ytdProfit}
@@ -536,7 +533,7 @@ export default function AdminDashboardPage() {
             pending={monthDailyPending}
           />
         </div>
-      </AdminPageContainer>
+      </AdminWorkspacePageLayout>
     </WorkspacePageWithRightPanel>
   );
 }

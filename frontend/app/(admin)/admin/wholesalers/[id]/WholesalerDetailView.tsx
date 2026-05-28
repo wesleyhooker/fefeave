@@ -12,6 +12,7 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
+import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
@@ -149,32 +150,14 @@ function runningBalanceClass(value: number): string {
   return workspaceListPrimaryMoneyAmountClass(value);
 }
 
-function WholesalerBalancesBreadcrumb({
-  currentLabel,
-}: {
-  currentLabel: string;
-}) {
+function wholesalerDetailBreadcrumb(currentLabel: string) {
   return (
-    <nav aria-label="Breadcrumb" className="text-sm font-medium leading-snug">
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-stone-600">
-        <li>
-          <Link
-            href="/admin/balances"
-            className="rounded-sm text-stone-800 underline decoration-stone-400/80 underline-offset-[3px] transition-colors hover:text-stone-950 hover:decoration-stone-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
-          >
-            Balances
-          </Link>
-        </li>
-        <li className="select-none text-stone-300" aria-hidden>
-          /
-        </li>
-        <li className="min-w-0 max-w-full text-stone-900" aria-current="page">
-          <span className="block truncate font-semibold tracking-tight">
-            {currentLabel}
-          </span>
-        </li>
-      </ol>
-    </nav>
+    <AdminEntityBreadcrumb
+      segments={[
+        { href: "/admin/balances", label: "Balances" },
+        { label: currentLabel, current: true },
+      ]}
+    />
   );
 }
 
@@ -347,9 +330,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
         <AdminPageIntroSection variant="entity-detail">
           <AdminPageIntro
             variant="entity-detail"
-            breadcrumb={
-              <WholesalerBalancesBreadcrumb currentLabel="Wholesaler" />
-            }
+            breadcrumb={wholesalerDetailBreadcrumb("Wholesaler")}
             title="Unable to load vendor"
           />
         </AdminPageIntroSection>
@@ -370,9 +351,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
         <AdminPageIntroSection variant="entity-detail">
           <AdminPageIntro
             variant="entity-detail"
-            breadcrumb={
-              <WholesalerBalancesBreadcrumb currentLabel="Not found" />
-            }
+            breadcrumb={wholesalerDetailBreadcrumb("Not found")}
             title="Wholesaler not found"
             subtitle="This vendor isn't in your balances list, or the link may be outdated."
           />
@@ -397,9 +376,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
       <AdminPageIntroSection variant="entity-detail">
         <AdminPageIntro
           variant="entity-detail"
-          breadcrumb={
-            <WholesalerBalancesBreadcrumb currentLabel={wholesaler.name} />
-          }
+          breadcrumb={wholesalerDetailBreadcrumb(wholesaler.name)}
           title={wholesaler.name}
           subtitle={lastPaymentSubtext}
         />

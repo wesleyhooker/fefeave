@@ -11,10 +11,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AdminPageContainer,
-  AdminPageIntroSection,
-} from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+  AdminWorkspacePageIntro,
+  AdminWorkspacePageLayout,
+} from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
 import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
@@ -366,21 +366,21 @@ export default function AccountsPage() {
         )
       }
     >
-      <AdminPageIntroSection>
-        <AdminWorkspacePageIntro
-          title="Accounts"
-          subtitle="Manage balance accounts used for payouts, wholesaler balances, and payments."
-          action={
-            <WorkspaceSidePanelTrigger
-              label="Add wholesaler account"
-              open={isAddOpen}
-              onClick={() => setPanelMode("add")}
-            />
-          }
-        />
-      </AdminPageIntroSection>
-
-      <AdminPageContainer>
+      <AdminWorkspacePageLayout
+        intro={
+          <AdminWorkspacePageIntro
+            title="Accounts"
+            subtitle="Manage balance accounts used for payouts, wholesaler balances, and payments."
+            action={
+              <WorkspaceSidePanelTrigger
+                label="Add wholesaler account"
+                open={isAddOpen}
+                onClick={() => setPanelMode("add")}
+              />
+            }
+          />
+        }
+      >
         <div className="space-y-5 md:space-y-6">
           {loading ? (
             <p
@@ -475,9 +475,9 @@ export default function AccountsPage() {
                       </div>
                     </Link>
                   ) : (
-                    <p className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
+                    <WorkspaceEmptyState variant="dashedCompact">
                       No owner account found.
-                    </p>
+                    </WorkspaceEmptyState>
                   )}
                 </div>
               </section>
@@ -599,7 +599,7 @@ export default function AccountsPage() {
             </>
           ) : null}
         </div>
-      </AdminPageContainer>
+      </AdminWorkspacePageLayout>
     </WorkspacePageWithRightPanel>
   );
 }

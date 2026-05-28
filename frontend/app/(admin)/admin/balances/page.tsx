@@ -2,14 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRegisterWorkspaceHeaderActions } from "@/app/_components/headers/WorkspaceHeaderSlots";
+import { useRegisterWorkspaceHeaderActions } from "@/app/(admin)/admin/_components/headers/WorkspaceHeaderSlots";
 import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
 import { BalancesPageSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
-  AdminPageContainer,
-  AdminPageIntroSection,
-} from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+  AdminWorkspacePageIntro,
+  AdminWorkspacePageLayout,
+} from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { AdminSummaryStatGrid } from "@/app/(admin)/admin/_components/AdminSummaryStatGrid";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
@@ -202,61 +201,59 @@ export default function AdminBalancesPage() {
 
   if (error) {
     return (
-      <>
-        <AdminPageIntroSection>
+      <AdminWorkspacePageLayout
+        intro={
           <AdminWorkspacePageIntro
             title="Balances"
             subtitle={WORKFLOW_BALANCES_PAGE_SUBTITLE}
           />
-        </AdminPageIntroSection>
-        <AdminPageContainer>
-          <WorkspaceInlineError
-            title="Could not load balances"
-            message="Check your connection and retry."
-            onRetry={() => fetchBalances()}
-            retryDisabled={fetchBusy}
-          >
-            <details className="mt-2 text-sm">
-              <summary className="cursor-pointer font-medium text-amber-800">
-                Technical details
-              </summary>
-              <p className="mt-1 font-mono text-xs text-amber-900">{error}</p>
-            </details>
-          </WorkspaceInlineError>
-        </AdminPageContainer>
-      </>
+        }
+      >
+        <WorkspaceInlineError
+          title="Could not load balances"
+          message="Check your connection and retry."
+          onRetry={() => fetchBalances()}
+          retryDisabled={fetchBusy}
+        >
+          <details className="mt-2 text-sm">
+            <summary className="cursor-pointer font-medium text-amber-800">
+              Technical details
+            </summary>
+            <p className="mt-1 font-mono text-xs text-amber-900">{error}</p>
+          </details>
+        </WorkspaceInlineError>
+      </AdminWorkspacePageLayout>
     );
   }
 
   return (
-    <>
-      <AdminPageIntroSection>
+    <AdminWorkspacePageLayout
+      intro={
         <AdminWorkspacePageIntro
           title="Balances"
           subtitle={WORKFLOW_BALANCES_PAGE_SUBTITLE}
         />
-      </AdminPageIntroSection>
-      <AdminPageContainer>
-        <div className={workspaceBalancesPageStack}>
-          {refreshError != null ? (
-            <WorkspaceInlineError
-              title="Refresh failed"
-              message={refreshError}
-              onRetry={() => fetchBalances()}
-              retryDisabled={fetchBusy}
-            />
-          ) : null}
+      }
+    >
+      <div className={workspaceBalancesPageStack}>
+        {refreshError != null ? (
+          <WorkspaceInlineError
+            title="Refresh failed"
+            message={refreshError}
+            onRetry={() => fetchBalances()}
+            retryDisabled={fetchBusy}
+          />
+        ) : null}
 
-          {summaryStatItems.length > 0 ? (
-            <AdminSummaryStatGrid
-              aria-label="Balances summary"
-              items={summaryStatItems}
-            />
-          ) : null}
+        {summaryStatItems.length > 0 ? (
+          <AdminSummaryStatGrid
+            aria-label="Balances summary"
+            items={summaryStatItems}
+          />
+        ) : null}
 
-          {data != null ? <BalancesTable data={data} /> : null}
-        </div>
-      </AdminPageContainer>
-    </>
+        {data != null ? <BalancesTable data={data} /> : null}
+      </div>
+    </AdminWorkspacePageLayout>
   );
 }

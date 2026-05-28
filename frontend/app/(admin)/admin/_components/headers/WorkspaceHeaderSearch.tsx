@@ -1,7 +1,7 @@
 "use client";
 
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { workspaceToolbarSearchInput } from "@/app/(admin)/admin/_components/workspaceUi";
+import { workspaceToolbarSearchInput } from "../workspaceUi";
 
 /**
  * Visual-only workspace search shell (no submission, no API).
