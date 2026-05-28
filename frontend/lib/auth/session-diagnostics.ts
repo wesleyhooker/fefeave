@@ -1,4 +1,5 @@
 import { SESSION_COOKIE_NAME } from './session-constants';
+import { getAuthSessionSecret } from './runtime-secrets.server';
 import { resolveAuthDecision, verifySessionValue } from './session-verify.node';
 import type { AuthDecision, SessionVerifyReason } from './session-verify.types';
 import type { AppSession } from './session.types';
@@ -34,15 +35,21 @@ export type SessionAuthInspection = {
   session: AppSession | null;
 };
 
-export function inspectSessionAuth(input: {
+export async function inspectSessionAuth(input: {
   cookieHeader: string | null;
   parsedCookieValue: string | undefined;
   cookiesHasSession: boolean;
   nowEpochSec?: number;
-}): SessionAuthInspection {
+}): Promise<SessionAuthInspection> {
   const cookieHeader = input.cookieHeader ?? '';
   const raw = input.parsedCookieValue;
-  const verifyResult = verifySessionValue(raw);
+  let secret: string | undefined;
+  try {
+    secret = await getAuthSessionSecret();
+  } catch {
+    secret = undefined;
+  }
+  const verifyResult = verifySessionValue(raw, secret);
   const { decision, verifyReason } = resolveAuthDecision(
     raw,
     verifyResult,

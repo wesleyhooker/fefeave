@@ -12,7 +12,7 @@ export async function GET(): Promise<NextResponse> {
   const cookieHeader = headerStore.get('cookie');
   const parsed = cookieStore.get(SESSION_COOKIE_NAME);
 
-  const inspection = inspectSessionAuth({
+  const inspection = await inspectSessionAuth({
     cookieHeader,
     parsedCookieValue: parsed?.value,
     cookiesHasSession: cookieStore.has(SESSION_COOKIE_NAME),

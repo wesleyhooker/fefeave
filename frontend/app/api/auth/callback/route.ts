@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchMe } from '@/lib/auth/backendUser';
 import { appendSessionCookieClearHeaders } from '@/lib/auth/session-cookie-options';
 import { attachSessionCookieToResponse } from '@/lib/auth/session-cookie-response';
+import {
+  hydrateFrontendRuntimeSecrets,
+  getCognitoClientSecret,
+} from '@/lib/auth/runtime-secrets.server';
 
 function envOrThrow(name: string): string {
   const value = process.env[name]?.trim();
@@ -62,11 +66,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   };
 
   try {
+    await hydrateFrontendRuntimeSecrets();
     const cognitoDomain = envOrThrow('COGNITO_DOMAIN')
       .replace(/^https?:\/\//, '')
       .replace(/\/$/, '');
     const clientId = envOrThrow('COGNITO_CLIENT_ID');
-    const clientSecret = envOrThrow('COGNITO_CLIENT_SECRET');
+    const clientSecret = (await getCognitoClientSecret()).trim();
     const redirectUri = envOrThrow('COGNITO_REDIRECT_URI');
 
     const tokenUrl = `https://${cognitoDomain}/oauth2/token`;

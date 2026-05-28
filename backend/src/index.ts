@@ -27,8 +27,11 @@ import { inventoryPurchaseRoutes } from './routes/inventory-purchases';
 import { portalRoutes } from './routes/portal';
 import { accountRoutes } from './routes/accounts';
 import { ownerSelfPayRoutes } from './routes/owner-self-pay';
+import { hydrateBackendRuntimeSecrets } from './secrets/runtime-secret';
 
 async function buildApp() {
+  // Cold-start secret hydrate: Secrets Manager -> process.env with env fallback.
+  await hydrateBackendRuntimeSecrets();
   // Load and validate environment variables (fail fast)
   loadEnv();
   const env = getEnv();

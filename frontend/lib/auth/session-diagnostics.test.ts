@@ -20,8 +20,8 @@ describe('session diagnostics', () => {
     assert.equal(countNamedCookieOccurrences(header), 2);
   });
 
-  it('reports missing when parser has no session cookie', () => {
-    const inspection = inspectSessionAuth({
+  it('reports missing when parser has no session cookie', async () => {
+    const inspection = await inspectSessionAuth({
       cookieHeader: 'cf_clearance=abc',
       parsedCookieValue: undefined,
       cookiesHasSession: false,
@@ -31,8 +31,8 @@ describe('session diagnostics', () => {
     assert.equal(inspection.sessionOccurrences, 0);
   });
 
-  it('reports verify_failed when last parsed value is empty', () => {
-    const inspection = inspectSessionAuth({
+  it('reports verify_failed when last parsed value is empty', async () => {
+    const inspection = await inspectSessionAuth({
       cookieHeader: 'fefeave_session=valid-looking; fefeave_session=',
       parsedCookieValue: '',
       cookiesHasSession: true,
@@ -43,13 +43,13 @@ describe('session diagnostics', () => {
     assert.equal(inspection.cookiesHasSession, true);
   });
 
-  it('reports ok for a valid parsed session', () => {
+  it('reports ok for a valid parsed session', async () => {
     const encoded = encodeSessionValue(session, secret);
     const previousSecret = process.env.AUTH_SESSION_SECRET;
     process.env.AUTH_SESSION_SECRET = secret;
 
     try {
-      const inspection = inspectSessionAuth({
+      const inspection = await inspectSessionAuth({
         cookieHeader: `fefeave_session=${encoded}`,
         parsedCookieValue: encoded,
         cookiesHasSession: true,
