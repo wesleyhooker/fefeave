@@ -24,6 +24,7 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
+import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import {
   SettlementFlatExpandedBody,
@@ -244,28 +245,14 @@ function formatPlatformLabel(
   return labels[platform] ?? platform;
 }
 
-function ShowShowsBreadcrumb({ showName }: { showName: string }) {
+function showDetailBreadcrumb(showName: string) {
   return (
-    <nav aria-label="Breadcrumb" className="text-sm font-medium leading-snug">
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-stone-600">
-        <li>
-          <Link
-            href="/admin/shows"
-            className="rounded-sm text-stone-800 underline decoration-stone-400/80 underline-offset-[3px] transition-colors hover:text-stone-950 hover:decoration-stone-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
-          >
-            Shows
-          </Link>
-        </li>
-        <li className="select-none text-stone-300" aria-hidden>
-          /
-        </li>
-        <li className="min-w-0 max-w-full text-stone-900" aria-current="page">
-          <span className="block truncate font-semibold tracking-tight">
-            {showName || "Show"}
-          </span>
-        </li>
-      </ol>
-    </nav>
+    <AdminEntityBreadcrumb
+      segments={[
+        { href: "/admin/shows", label: "Shows" },
+        { label: showName || "Show", current: true },
+      ]}
+    />
   );
 }
 
@@ -839,7 +826,7 @@ export function ShowDetailView({ id }: { id: string }) {
         <AdminPageIntroSection variant="entity-detail">
           <AdminPageIntro
             variant="entity-detail"
-            breadcrumb={<ShowShowsBreadcrumb showName="Show" />}
+            breadcrumb={showDetailBreadcrumb("Show")}
             title="Unable to load show"
           />
         </AdminPageIntroSection>
@@ -861,7 +848,7 @@ export function ShowDetailView({ id }: { id: string }) {
       <AdminPageIntroSection variant="entity-detail">
         <AdminPageIntro
           variant="entity-detail"
-          breadcrumb={<ShowShowsBreadcrumb showName={showName || "Show"} />}
+          breadcrumb={showDetailBreadcrumb(showName || "Show")}
           title={
             <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <ShowStatusPill status={isClosed ? "COMPLETED" : "ACTIVE"} />

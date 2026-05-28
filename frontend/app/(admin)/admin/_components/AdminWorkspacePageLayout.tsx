@@ -20,7 +20,8 @@ export function AdminWorkspacePageIntro(
 
 /**
  * Standard admin page shell — intro band + content column aligned to Dashboard.
- * Use on index pages (Balances, Shows, Owner activity, etc.).
+ * Use on index pages (Balances, Shows, Owner activity, etc.). Safe inside
+ * `WorkspacePageWithRightPanel` (pass `intro` + `children` only; panel stays outside).
  */
 export function AdminWorkspacePageLayout({
   intro,

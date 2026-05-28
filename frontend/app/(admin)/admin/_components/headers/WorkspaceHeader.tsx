@@ -8,7 +8,7 @@ import {
   workspaceHeaderBrandCluster,
   workspaceHeaderBrandLink,
   workspacePageGutter,
-} from "@/app/(admin)/admin/_components/workspaceUi";
+} from "../workspaceUi";
 import { WorkspaceHeaderSearch } from "./WorkspaceHeaderSearch";
 import { useWorkspaceHeaderSlots } from "./WorkspaceHeaderSlots";
 

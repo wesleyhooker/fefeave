@@ -2,7 +2,7 @@
 
 Reusable UI primitives that implement the **[/design](/design)** documentation (colors, typography, spacing, components).
 
-Use for the **public marketing site** and the **admin dashboard**. Design tokens are in `tokens.css` and extended in `tailwind.config.ts`.
+Use for the **public marketing site** (`@/system` Button, Card, etc.). The **admin workspace** uses `app/(admin)/admin/_components/workspaceUi.ts` and `--admin-*` tokens in `tokens.css` — not these components. Design tokens are in `tokens.css` and extended in `tailwind.config.ts`.
 
 ## Usage
 

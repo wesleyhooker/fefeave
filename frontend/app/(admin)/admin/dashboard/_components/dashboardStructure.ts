@@ -1,6 +1,12 @@
 /**
- * Dashboard-local surface styling + restrained Fefe Ave internal identity.
- * Warm stone neutrals, rose accent for chrome/CTA; semantic greens reserved for money/paid.
+ * Reseller dashboard (`/admin/dashboard`) — module surfaces and row chrome.
+ *
+ * **Intentionally richer than `workspaceCard`:** `rounded-2xl`, warm stone shadows, and
+ * dashboard-specific bands stay here so the hub can feel slightly more polished without
+ * forcing every admin list page into the same module radius. Do not merge into `workspaceUi`
+ * unless we deliberately promote a pattern workspace-wide.
+ *
+ * Warm stone neutrals, rose accent for nav/CTA; semantic greens reserved for money/paid.
  * Page-level stacks/grids live in `admin/_lib/workspacePageRegions.ts`.
  *
  * **This week** outer shell is shared with Shows — see `workspaceThisWeekSurface.ts`.

@@ -1,54 +1,33 @@
 "use client";
 
-import Link from "next/link";
-import {
-  AdminPageContainer,
-  AdminPageIntroSection,
-} from "@/app/(admin)/admin/_components/AdminPageContainer";
+import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
+import { AdminWorkspacePageLayout } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { workspacePageContentWidthWide } from "@/app/(admin)/admin/_components/workspaceUi";
 import { WORKFLOW_LOG_SHOW_PANEL_TITLE } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { ShowCreateForm } from "./ShowCreateForm";
 
-function CreateShowBreadcrumb() {
-  return (
-    <nav aria-label="Breadcrumb" className="text-sm font-medium leading-snug">
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-stone-600">
-        <li>
-          <Link
-            href="/admin/shows"
-            className="rounded-sm text-stone-800 underline decoration-stone-400/80 underline-offset-[3px] transition-colors hover:text-stone-950 hover:decoration-stone-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
-          >
-            Shows
-          </Link>
-        </li>
-        <li className="select-none text-stone-300" aria-hidden>
-          /
-        </li>
-        <li className="min-w-0 max-w-full text-stone-900" aria-current="page">
-          <span className="block truncate font-semibold tracking-tight">
-            {WORKFLOW_LOG_SHOW_PANEL_TITLE}
-          </span>
-        </li>
-      </ol>
-    </nav>
-  );
-}
-
 export default function AdminShowsNewPage() {
   return (
-    <>
-      <AdminPageIntroSection variant="entity-detail">
+    <AdminWorkspacePageLayout
+      introVariant="entity-detail"
+      contentWidthClassName={workspacePageContentWidthWide}
+      intro={
         <AdminPageIntro
           variant="entity-detail"
-          breadcrumb={<CreateShowBreadcrumb />}
+          breadcrumb={
+            <AdminEntityBreadcrumb
+              segments={[
+                { href: "/admin/shows", label: "Shows" },
+                { label: WORKFLOW_LOG_SHOW_PANEL_TITLE, current: true },
+              ]}
+            />
+          }
           title={WORKFLOW_LOG_SHOW_PANEL_TITLE}
         />
-      </AdminPageIntroSection>
-
-      <AdminPageContainer contentWidthClassName={workspacePageContentWidthWide}>
-        <ShowCreateForm />
-      </AdminPageContainer>
-    </>
+      }
+    >
+      <ShowCreateForm />
+    </AdminWorkspacePageLayout>
   );
 }

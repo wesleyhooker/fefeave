@@ -4,11 +4,11 @@ import { BanknotesIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
+import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
 import {
-  AdminPageContainer,
-  AdminPageIntroSection,
-} from "@/app/(admin)/admin/_components/AdminPageContainer";
-import { AdminWorkspacePageIntro } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+  AdminWorkspacePageIntro,
+  AdminWorkspacePageLayout,
+} from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { WorkspaceFileUpload } from "@/app/(admin)/admin/_components/WorkspaceFileUpload";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -183,238 +183,231 @@ function RecordPaymentForm() {
   }
 
   return (
-    <>
-      <AdminPageIntroSection>
+    <AdminWorkspacePageLayout
+      intro={
         <AdminWorkspacePageIntro
           title="Record payment"
           subtitle="Apply a payment to a wholesaler balance."
           breadcrumb={
-            <nav className="text-sm text-stone-500" aria-label="Breadcrumb">
-              <Link href="/admin/balances" className="hover:text-stone-700">
-                Balances
-              </Link>
-              <span className="mx-1.5">/</span>
-              <span aria-current="page">Record payment</span>
-            </nav>
+            <AdminEntityBreadcrumb
+              variant="compact"
+              segments={[
+                { href: "/admin/balances", label: "Balances" },
+                { label: "Record payment", current: true },
+              ]}
+            />
           }
         />
-      </AdminPageIntroSection>
+      }
+    >
+      {loadError ? (
+        <WorkspaceInlineError
+          title="Could not load wholesalers."
+          message={loadError}
+          onRetry={() => setReloadToken((v) => v + 1)}
+        />
+      ) : null}
 
-      <AdminPageContainer>
-        {loadError ? (
-          <WorkspaceInlineError
-            title="Could not load wholesalers."
-            message={loadError}
-            onRetry={() => setReloadToken((v) => v + 1)}
-          />
-        ) : null}
+      {submitError ? (
+        <WorkspaceInlineError
+          title="Could not record payment."
+          message={submitError}
+        />
+      ) : null}
 
-        {submitError ? (
-          <WorkspaceInlineError
-            title="Could not record payment."
-            message={submitError}
-          />
-        ) : null}
-
-        <form
-          onSubmit={handleSubmit}
-          className={`mx-auto min-w-0 max-w-full space-y-5 p-4 sm:max-w-xl sm:space-y-4 sm:p-6 ${workspaceCard}`}
-        >
-          <div>
-            <label
-              htmlFor="wholesaler"
-              className={`mb-1 block ${workspaceFormLabel}`}
-            >
-              Wholesaler <span className="text-red-500">*</span>
-            </label>
-            <WorkspaceNativeSelect
-              id="wholesaler"
-              required
-              value={wholesalerId}
-              onChange={(e) => setWholesalerId(e.target.value)}
-              disabled={loadingWholesalers || wholesalers.length === 0}
-            >
-              <option value="">Select wholesaler</option>
-              {wholesalers.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </WorkspaceNativeSelect>
-            {errors.wholesalerId && (
-              <p className="mt-0.5 text-xs text-red-600">
-                {errors.wholesalerId}
-              </p>
-            )}
-            {wholesalerId &&
-              (() => {
-                const w = wholesalers.find((x) => x.id === wholesalerId);
-                if (!w) return null;
-                const amt = amount === "" ? NaN : Number(amount);
-                const validAmount = Number.isFinite(amt) && amt > 0;
-                const projected = validAmount
-                  ? Math.round((w.balanceOwed - amt) * 100) / 100
-                  : null;
-                const isOverage = validAmount && amt > w.balanceOwed;
-                return (
-                  <div className="mt-2 rounded border border-gray-200 bg-[#F9FAFB] px-3 py-2 text-sm text-gray-700">
-                    <p>
-                      Current balance owed:{" "}
+      <form
+        onSubmit={handleSubmit}
+        className={`mx-auto min-w-0 max-w-full space-y-5 p-4 sm:max-w-xl sm:space-y-4 sm:p-6 ${workspaceCard}`}
+      >
+        <div>
+          <label
+            htmlFor="wholesaler"
+            className={`mb-1 block ${workspaceFormLabel}`}
+          >
+            Wholesaler <span className="text-red-500">*</span>
+          </label>
+          <WorkspaceNativeSelect
+            id="wholesaler"
+            required
+            value={wholesalerId}
+            onChange={(e) => setWholesalerId(e.target.value)}
+            disabled={loadingWholesalers || wholesalers.length === 0}
+          >
+            <option value="">Select wholesaler</option>
+            {wholesalers.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </WorkspaceNativeSelect>
+          {errors.wholesalerId && (
+            <p className="mt-0.5 text-xs text-red-600">{errors.wholesalerId}</p>
+          )}
+          {wholesalerId &&
+            (() => {
+              const w = wholesalers.find((x) => x.id === wholesalerId);
+              if (!w) return null;
+              const amt = amount === "" ? NaN : Number(amount);
+              const validAmount = Number.isFinite(amt) && amt > 0;
+              const projected = validAmount
+                ? Math.round((w.balanceOwed - amt) * 100) / 100
+                : null;
+              const isOverage = validAmount && amt > w.balanceOwed;
+              return (
+                <div className="mt-2 rounded border border-gray-200 bg-admin-mutedStrip/90 px-3 py-2 text-sm text-gray-700">
+                  <p>
+                    Current balance owed:{" "}
+                    <strong className="text-gray-900">
+                      {formatCurrency(w.balanceOwed)}
+                    </strong>
+                  </p>
+                  {projected !== null && (
+                    <p className="mt-1">
+                      After this payment:{" "}
                       <strong className="text-gray-900">
-                        {formatCurrency(w.balanceOwed)}
+                        {formatCurrency(projected)}
                       </strong>
                     </p>
-                    {projected !== null && (
-                      <p className="mt-1">
-                        After this payment:{" "}
-                        <strong className="text-gray-900">
-                          {formatCurrency(projected)}
-                        </strong>
-                      </p>
-                    )}
-                    {isOverage && (
-                      <p className="mt-2 text-amber-700" role="alert">
-                        This payment exceeds the current balance and will create
-                        a credit.
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
-          </div>
+                  )}
+                  {isOverage && (
+                    <p className="mt-2 text-amber-700" role="alert">
+                      This payment exceeds the current balance and will create a
+                      credit.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+        </div>
 
-          <div>
-            <label
-              htmlFor="amount"
-              className={`mb-1 block ${workspaceFormLabel}`}
+        <div>
+          <label
+            htmlFor="amount"
+            className={`mb-1 block ${workspaceFormLabel}`}
+          >
+            Amount <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <span
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+              aria-hidden
             >
-              Amount <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <span
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
-                aria-hidden
-              >
-                $
-              </span>
-              <input
-                id="amount"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                required
-                value={amount}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9.]/g, "");
-                  const parts = v.split(".");
-                  if (parts.length > 2) return;
-                  if (parts[1]?.length > 2) return;
-                  setAmount(v);
-                }}
-                className={`w-full min-w-0 max-w-full pl-7 tabular-nums sm:max-w-[10rem] ${workspaceTextInput}`}
-                placeholder="0.00"
-                aria-label="Amount in dollars"
-              />
-            </div>
-            {errors.amount && (
-              <p className="mt-0.5 text-xs text-red-600">{errors.amount}</p>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="date"
-              className={`mb-1 block ${workspaceFormLabel}`}
-            >
-              Date <span className="text-red-500">*</span>
-            </label>
+              $
+            </span>
             <input
-              id="date"
-              type="date"
-              required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={workspaceDateInput}
-            />
-            {errors.date && (
-              <p className="mt-0.5 text-xs text-red-600">{errors.date}</p>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="method"
-              className={`mb-1 block ${workspaceFormLabelSecondary}`}
-            >
-              Method
-            </label>
-            <WorkspaceNativeSelect
-              id="method"
-              value={method}
-              onChange={(e) => setMethod(e.target.value)}
-            >
-              {METHODS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </WorkspaceNativeSelect>
-          </div>
-
-          <div>
-            <label
-              htmlFor="reference"
-              className={`mb-1 block ${workspaceFormLabelSecondary}`}
-            >
-              Reference
-            </label>
-            <input
-              id="reference"
+              id="amount"
               type="text"
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-              className={workspaceTextInput}
-              placeholder="Optional"
+              inputMode="decimal"
+              autoComplete="off"
+              required
+              value={amount}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9.]/g, "");
+                const parts = v.split(".");
+                if (parts.length > 2) return;
+                if (parts[1]?.length > 2) return;
+                setAmount(v);
+              }}
+              className={`w-full min-w-0 max-w-full pl-7 tabular-nums sm:max-w-[10rem] ${workspaceTextInput}`}
+              placeholder="0.00"
+              aria-label="Amount in dollars"
             />
           </div>
+          {errors.amount && (
+            <p className="mt-0.5 text-xs text-red-600">{errors.amount}</p>
+          )}
+        </div>
 
-          <WorkspaceFileUpload
-            id="receipt"
-            label="Receipt (optional)"
-            helperText={`PDF or image (PNG/JPEG), max ${MAX_MB} MB.`}
-            accept={ACCEPT_RECEIPT}
-            onChange={handleReceiptChange}
-            error={receiptError}
-            fileName={receiptFile?.name ?? null}
-            tone="flush"
+        <div>
+          <label htmlFor="date" className={`mb-1 block ${workspaceFormLabel}`}>
+            Date <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="date"
+            type="date"
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={workspaceDateInput}
           />
+          {errors.date && (
+            <p className="mt-0.5 text-xs text-red-600">{errors.date}</p>
+          )}
+        </div>
 
-          <div className="flex flex-col-reverse gap-2 pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:pt-2">
-            <Link
-              href="/admin/balances"
-              className={`${workspaceActionSecondaryMd} flex w-full justify-center sm:w-auto`}
+        <div>
+          <label
+            htmlFor="method"
+            className={`mb-1 block ${workspaceFormLabelSecondary}`}
+          >
+            Method
+          </label>
+          <WorkspaceNativeSelect
+            id="method"
+            value={method}
+            onChange={(e) => setMethod(e.target.value)}
+          >
+            {METHODS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </WorkspaceNativeSelect>
+        </div>
+
+        <div>
+          <label
+            htmlFor="reference"
+            className={`mb-1 block ${workspaceFormLabelSecondary}`}
+          >
+            Reference
+          </label>
+          <input
+            id="reference"
+            type="text"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            className={workspaceTextInput}
+            placeholder="Optional"
+          />
+        </div>
+
+        <WorkspaceFileUpload
+          id="receipt"
+          label="Receipt (optional)"
+          helperText={`PDF or image (PNG/JPEG), max ${MAX_MB} MB.`}
+          accept={ACCEPT_RECEIPT}
+          onChange={handleReceiptChange}
+          error={receiptError}
+          fileName={receiptFile?.name ?? null}
+          tone="flush"
+        />
+
+        <div className="flex flex-col-reverse gap-2 pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:pt-2">
+          <Link
+            href="/admin/balances"
+            className={`${workspaceActionSecondaryMd} flex w-full justify-center sm:w-auto`}
+          >
+            <WorkspaceActionLabel
+              icon={<XMarkIcon className={workspaceActionIconMd} />}
             >
-              <WorkspaceActionLabel
-                icon={<XMarkIcon className={workspaceActionIconMd} />}
-              >
-                Cancel
-              </WorkspaceActionLabel>
-            </Link>
-            <button
-              type="submit"
-              disabled={submitting || loadingWholesalers}
-              className={`${workspaceActionCompleteMd} w-full justify-center disabled:opacity-60 sm:w-auto`}
+              Cancel
+            </WorkspaceActionLabel>
+          </Link>
+          <button
+            type="submit"
+            disabled={submitting || loadingWholesalers}
+            className={`${workspaceActionCompleteMd} w-full justify-center disabled:opacity-60 sm:w-auto`}
+          >
+            <WorkspaceActionLabel
+              icon={<BanknotesIcon className={workspaceActionIconMd} />}
             >
-              <WorkspaceActionLabel
-                icon={<BanknotesIcon className={workspaceActionIconMd} />}
-              >
-                {submitting ? "Saving..." : "Record payment"}
-              </WorkspaceActionLabel>
-            </button>
-          </div>
-        </form>
-      </AdminPageContainer>
-    </>
+              {submitting ? "Saving..." : "Record payment"}
+            </WorkspaceActionLabel>
+          </button>
+        </div>
+      </form>
+    </AdminWorkspacePageLayout>
   );
 }
 

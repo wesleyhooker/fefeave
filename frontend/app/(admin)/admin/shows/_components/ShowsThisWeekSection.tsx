@@ -18,6 +18,7 @@ import {
 import type { WeekBounds } from "@/lib/weekRange";
 import type { ShowViewModel } from "@/src/lib/api/shows";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
+import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
 import { ShowMobileCard } from "./ShowMobileCard";
 import { ShowsThisWeekWorkflowStrip } from "./ShowsThisWeekWorkflowStrip";
 import { WeekDesktopTable } from "./WeekDesktopTable";
@@ -79,9 +80,9 @@ export function ShowsThisWeekSection({
         <div className="md:hidden">
           <div className="space-y-3 px-4 pb-4 pt-0 sm:p-5 sm:pb-5 sm:pt-1">
             {currentShows.length === 0 ? (
-              <p className="rounded-lg border border-gray-100 bg-white px-4 py-6 text-center text-sm text-gray-500">
+              <WorkspaceEmptyState variant="inset">
                 {WORKFLOW_EMPTY_WEEK_SCHEDULE}
-              </p>
+              </WorkspaceEmptyState>
             ) : (
               currentShows.map((show) => (
                 <ShowMobileCard
