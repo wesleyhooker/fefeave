@@ -227,6 +227,15 @@ describe('Balances CSV export integration', () => {
     expect(showRes.statusCode).toBe(201);
     const show = JSON.parse(showRes.payload) as { id: string };
 
+    const financialsRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: {
+        payout_after_fees_amount: 5000,
+      },
+    });
+    expect(financialsRes.statusCode).toBe(200);
+
     const wholesalerRes = await app.inject({
       method: 'POST',
       url: `${prefix}/wholesalers`,
@@ -288,6 +297,15 @@ describe('Balances CSV export integration', () => {
     });
     expect(showRes.statusCode).toBe(201);
     const show = JSON.parse(showRes.payload) as { id: string };
+
+    const financialsRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: {
+        payout_after_fees_amount: 1000,
+      },
+    });
+    expect(financialsRes.statusCode).toBe(200);
 
     const wholesalerRes = await app.inject({
       method: 'POST',

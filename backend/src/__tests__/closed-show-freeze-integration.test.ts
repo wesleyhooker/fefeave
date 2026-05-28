@@ -94,7 +94,6 @@ describe('Closed show freeze', () => {
     });
     expect(wholesalerRes.statusCode).toBe(201);
     const wholesaler = JSON.parse(wholesalerRes.payload);
-
     await app.inject({
       method: 'POST',
       url: `${prefix}/shows/${show.id}/settlements`,
@@ -187,6 +186,13 @@ describe('Closed show freeze', () => {
     });
     expect(wholesalerRes.statusCode).toBe(201);
     const wholesaler = JSON.parse(wholesalerRes.payload);
+    const secondWholesalerRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers`,
+      payload: { name: 'Reopen W2' },
+    });
+    expect(secondWholesalerRes.statusCode).toBe(201);
+    const secondWholesaler = JSON.parse(secondWholesalerRes.payload);
 
     const settlementRes = await app.inject({
       method: 'POST',
@@ -220,7 +226,7 @@ describe('Closed show freeze', () => {
     const secondSettlementRes = await app.inject({
       method: 'POST',
       url: `${prefix}/shows/${show.id}/settlements`,
-      payload: { wholesaler_id: wholesaler.id, method: 'MANUAL', amount: 100 },
+      payload: { wholesaler_id: secondWholesaler.id, method: 'MANUAL', amount: 100 },
     });
     expect(secondSettlementRes.statusCode).toBe(201);
 

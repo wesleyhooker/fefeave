@@ -115,6 +115,13 @@ describe('Portal integration', () => {
     expect(showRes.statusCode).toBe(201);
     const show = JSON.parse(showRes.payload) as { id: string };
 
+    const financialsRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 1000 },
+    });
+    expect(financialsRes.statusCode).toBe(200);
+
     const settlementARes = await app.inject({
       method: 'POST',
       url: `${prefix}/shows/${show.id}/settlements`,
@@ -213,6 +220,13 @@ describe('Portal integration', () => {
     });
     expect(showRes.statusCode).toBe(201);
     const show = JSON.parse(showRes.payload) as { id: string };
+
+    const financialsRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 1000 },
+    });
+    expect(financialsRes.statusCode).toBe(200);
 
     const settlementRes = await app.inject({
       method: 'POST',
@@ -317,6 +331,13 @@ describe('Portal integration', () => {
     expect(showARes.statusCode).toBe(201);
     const showA = JSON.parse(showARes.payload) as { id: string };
 
+    const financialsARes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${showA.id}/financials`,
+      payload: { payout_after_fees_amount: 1000 },
+    });
+    expect(financialsARes.statusCode).toBe(200);
+
     const showBRes = await app.inject({
       method: 'POST',
       url: `${prefix}/shows`,
@@ -328,6 +349,13 @@ describe('Portal integration', () => {
     });
     expect(showBRes.statusCode).toBe(201);
     const showB = JSON.parse(showBRes.payload) as { id: string };
+
+    const financialsBRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${showB.id}/financials`,
+      payload: { payout_after_fees_amount: 1000 },
+    });
+    expect(financialsBRes.statusCode).toBe(200);
 
     const settleARes = await app.inject({
       method: 'POST',
@@ -395,12 +423,21 @@ describe('Portal integration', () => {
     expect(showRes.statusCode).toBe(201);
     const show = JSON.parse(showRes.payload) as { id: string };
 
-    await app.inject({
+    const financialsRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 1000 },
+    });
+    expect(financialsRes.statusCode).toBe(200);
+
+    const settlementRes = await app.inject({
       method: 'POST',
       url: `${prefix}/shows/${show.id}/settlements`,
       payload: { wholesaler_id: wholesaler.id, method: 'MANUAL', amount: 50 },
     });
-    await app.inject({
+    expect(settlementRes.statusCode).toBe(201);
+
+    const paymentRes = await app.inject({
       method: 'POST',
       url: `${prefix}/payments`,
       payload: {
@@ -410,6 +447,7 @@ describe('Portal integration', () => {
         reference: 'Export-PMT',
       },
     });
+    expect(paymentRes.statusCode).toBe(201);
 
     const pool = getPool();
     await pool.query(
@@ -418,11 +456,12 @@ describe('Portal integration', () => {
        ON CONFLICT (cognito_user_id) DO NOTHING`,
       ['wh-export-format', 'wh-export-format@test.example.com']
     );
-    await app.inject({
+    const linkRes = await app.inject({
       method: 'POST',
       url: `${prefix}/admin/wholesalers/${wholesaler.id}/link-user`,
       payload: { userId: 'wh-export-format' },
     });
+    expect(linkRes.statusCode).toBe(200);
 
     const res = await app.inject({
       method: 'GET',
