@@ -19,12 +19,12 @@ import {
   publicHomeHeroGridClass,
 } from "./shell/publicShell";
 
-const HERO_COLLAGE_SRC = "/images/hero-collage.png";
+const HERO_COLLAGE_SRC = "/images/hero-collage.webp";
 const HERO_COLLAGE_FILE = join(
   process.cwd(),
   "public",
   "images",
-  "hero-collage.png",
+  "hero-collage.webp",
 );
 const HERO_COLLAGE_READY = existsSync(HERO_COLLAGE_FILE);
 const HERO_COLLAGE_WIDTH = 3200;
