@@ -4,6 +4,7 @@ import {
   ArrowDownTrayIcon,
   BanknotesIcon,
   Cog6ToothIcon,
+  CreditCardIcon,
   FunnelIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
@@ -232,6 +233,14 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         }
         right={
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+            <Link
+              href="/admin/payments"
+              className={`${workspaceActionSecondarySm} gap-1.5`}
+              aria-label="View recorded payments"
+            >
+              <CreditCardIcon className={workspaceActionIconMd} aria-hidden />
+              Payments
+            </Link>
             <Link
               href="/admin/balances/owner"
               className={`${workspaceActionSecondarySm} gap-1.5`}

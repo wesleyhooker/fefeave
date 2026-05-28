@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  BanknotesIcon,
   InformationCircleIcon,
   Cog6ToothIcon,
   MagnifyingGlassIcon,
   PlusIcon,
+  ScaleIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
@@ -20,6 +22,7 @@ import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/Workspace
 import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
 import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
+import { FinancialsCrossLinks } from "@/app/(admin)/admin/_components/FinancialsCrossLinks";
 import {
   workspaceActionIconMd,
   workspaceActionPrimaryMd,
@@ -377,7 +380,7 @@ export default function AccountsPage() {
         intro={
           <AdminWorkspacePageIntro
             title="Accounts"
-            subtitle="Manage balance accounts used for payouts, wholesaler balances, and payments."
+            subtitle="The setup layer for Financials — the wholesalers and owner account behind your balances, payments, and owner activity."
             action={
               <WorkspaceSidePanelTrigger
                 label="Add wholesaler account"
@@ -389,6 +392,28 @@ export default function AccountsPage() {
         }
       >
         <div className="space-y-5 md:space-y-6">
+          <FinancialsCrossLinks
+            links={[
+              {
+                href: "/admin/balances",
+                label: "Balances",
+                icon: (
+                  <ScaleIcon className={workspaceActionIconMd} aria-hidden />
+                ),
+              },
+              {
+                href: "/admin/payments",
+                label: "Payments",
+                icon: (
+                  <BanknotesIcon
+                    className={workspaceActionIconMd}
+                    aria-hidden
+                  />
+                ),
+              },
+            ]}
+          />
+
           {loading ? (
             <p
               className={`${workspaceCard} px-4 py-8 text-center text-sm text-gray-500`}
@@ -421,6 +446,9 @@ export default function AccountsPage() {
                   </button>
                 </div>
                 <div className="px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+                  <p className="mb-3 text-xs leading-relaxed text-stone-500">
+                    Feeds weekly self-pay and voids on Owner activity.
+                  </p>
                   {ownerAccount ? (
                     <Link
                       href="/admin/balances/owner"
@@ -499,6 +527,10 @@ export default function AccountsPage() {
                   <h2 className={workspaceSectionTitle}>Wholesaler accounts</h2>
                 </div>
                 <div className="px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+                  <p className="mb-3 text-xs leading-relaxed text-stone-500">
+                    Each wholesaler account feeds its balance and the payments
+                    you record against it.
+                  </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <label className="relative block w-full sm:max-w-sm">
                       <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
@@ -616,8 +648,9 @@ export default function AccountsPage() {
               </section>
 
               <div className="rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-stone-600">
-                Accounts represent the people and businesses you pay or receive
-                payments from.
+                Accounts are the setup layer for Financials. Wholesaler accounts
+                feed Balances and Payments; the owner account feeds Owner
+                activity.
               </div>
             </>
           ) : null}

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
@@ -112,14 +111,6 @@ export default function AdminInventoryPage() {
         <AdminWorkspacePageIntro
           title="Inventory purchases"
           subtitle="Record pallet or lump-sum inventory buys (cash-based, no SKU)."
-          action={
-            <Link
-              href="/admin/dashboard"
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              ← Dashboard
-            </Link>
-          }
         />
       }
     >

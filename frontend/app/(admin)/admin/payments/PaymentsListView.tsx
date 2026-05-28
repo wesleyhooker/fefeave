@@ -1,6 +1,10 @@
 "use client";
 
-import { BanknotesIcon } from "@heroicons/react/24/outline";
+import {
+  BanknotesIcon,
+  Cog6ToothIcon,
+  ScaleIcon,
+} from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PaymentsTableSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
@@ -18,6 +22,7 @@ import {
   workspaceTableHeaderCellPadding,
 } from "@/app/(admin)/admin/_components/WorkspaceTableRow";
 import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
+import { FinancialsCrossLinks } from "@/app/(admin)/admin/_components/FinancialsCrossLinks";
 import {
   workspaceActionIconMd,
   workspaceActionPrimaryMd,
@@ -116,6 +121,24 @@ export function PaymentsListView() {
         />
       }
     >
+      <FinancialsCrossLinks
+        className="mb-4"
+        links={[
+          {
+            href: "/admin/balances",
+            label: "Balances",
+            icon: <ScaleIcon className={workspaceActionIconMd} aria-hidden />,
+          },
+          {
+            href: "/admin/balances/accounts",
+            label: "Accounts",
+            icon: (
+              <Cog6ToothIcon className={workspaceActionIconMd} aria-hidden />
+            ),
+          },
+        ]}
+      />
+
       {error != null ? (
         <WorkspaceInlineError
           title="Could not load payments."

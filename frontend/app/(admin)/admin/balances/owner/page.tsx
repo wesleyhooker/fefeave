@@ -6,9 +6,11 @@ import {
   AdminWorkspacePageLayout,
 } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { AdminSummaryStatGrid } from "@/app/(admin)/admin/_components/AdminSummaryStatGrid";
+import { FinancialsCrossLinks } from "@/app/(admin)/admin/_components/FinancialsCrossLinks";
 import { WorkspaceDetailSettlementStatusBadge } from "@/app/(admin)/admin/_components/WorkspaceListStatus";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
+  workspaceActionIconMd,
   workspaceCard,
   workspaceInsetFlatList,
   workspaceLedgerRowBaseline,
@@ -16,6 +18,7 @@ import {
   workspacePanel,
   workspaceTableCellMeta,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import { Cog6ToothIcon, ScaleIcon } from "@heroicons/react/24/outline";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   WORKFLOW_EMPTY_OWNER_ACTIVITY_HINT,
@@ -187,6 +190,23 @@ export default function OwnerActivityPage() {
   return (
     <AdminWorkspacePageLayout intro={pageIntro}>
       <div className="space-y-6 md:space-y-7">
+        <FinancialsCrossLinks
+          links={[
+            {
+              href: "/admin/balances",
+              label: "Balances",
+              icon: <ScaleIcon className={workspaceActionIconMd} aria-hidden />,
+            },
+            {
+              href: "/admin/balances/accounts",
+              label: "Accounts",
+              icon: (
+                <Cog6ToothIcon className={workspaceActionIconMd} aria-hidden />
+              ),
+            },
+          ]}
+        />
+
         {summaryItems.length > 0 ? (
           <AdminSummaryStatGrid
             aria-label="Owner payout summary"
