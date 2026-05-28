@@ -63,9 +63,53 @@ export const WORKFLOW_ACTIVE_SHOWS_ROW_LABEL = 'Shows still open';
 export const WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL =
   'Wholesalers with a balance';
 
+/** Dashboard Needs attention — dollar-first liability row. */
+export const WORKFLOW_OUTSTANDING_BALANCES_ROW_LABEL = 'Outstanding balances';
+
 /** Balances index */
 export const WORKFLOW_BALANCES_PAGE_SUBTITLE =
   'Wholesaler balances from your shows.';
 
 /** Balances index — header primary action (plus icon from {@link WorkspaceSidePanelTrigger}). */
 export const WORKFLOW_NEW_WHOLESALER_TRIGGER_LABEL = 'New wholesaler';
+
+export const WORKFLOW_EMPTY_PAYMENTS_TITLE = 'No payments recorded yet.';
+export const WORKFLOW_EMPTY_PAYMENTS_HINT =
+  'Record a payment to reduce a wholesaler balance.';
+
+export const WORKFLOW_EMPTY_BALANCES_TITLE = 'No wholesaler balances yet.';
+export const WORKFLOW_EMPTY_BALANCES_HINT =
+  'Balances appear after you close a show with settlements.';
+
+export const WORKFLOW_EMPTY_ACCOUNTS_WHOLESALER_TITLE =
+  'No wholesaler accounts found.';
+export const WORKFLOW_EMPTY_ACCOUNTS_WHOLESALER_HINT =
+  'Add a wholesaler account to track payouts and balances.';
+
+export const WORKFLOW_EMPTY_ACCOUNTS_OWNER_TITLE = 'No owner account found.';
+export const WORKFLOW_EMPTY_ACCOUNTS_OWNER_HINT =
+  'Set up the owner account to record weekly self-pay.';
+
+export const WORKFLOW_EMPTY_OWNER_ACTIVITY_TITLE =
+  'No owner payouts recorded yet.';
+export const WORKFLOW_EMPTY_OWNER_ACTIVITY_HINT =
+  'Mark a week paid on the Dashboard or Shows to record owner self-pay.';
+
+export const WORKFLOW_EMPTY_INVENTORY_TITLE =
+  'No inventory purchases in the last 30 days.';
+export const WORKFLOW_EMPTY_INVENTORY_HINT =
+  'Record a purchase above to begin tracking inventory costs.';
+
+export const WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_TITLE =
+  'No closed shows for this wholesaler.';
+export const WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_HINT =
+  'Open the wholesaler ledger if this balance includes open-show amounts.';
+
+export const WORKFLOW_EMPTY_BATCH_PAY_FILTERED_TITLE =
+  'No closed shows in the selected date range.';
+export const WORKFLOW_EMPTY_BATCH_PAY_FILTERED_HINT =
+  'Try a wider date range or choose All.';
+
+export const WORKFLOW_EMPTY_SHOWS_TITLE = 'No shows yet.';
+export const WORKFLOW_EMPTY_SHOWS_HINT =
+  'Log your first show to start tracking payouts and settlements.';

@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
+  WORKFLOW_EMPTY_INVENTORY_HINT,
+  WORKFLOW_EMPTY_INVENTORY_TITLE,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
   fetchInventoryPurchases,
   createInventoryPurchase,
   type InventoryPurchaseDTO,
@@ -194,8 +198,13 @@ export default function AdminInventoryPage() {
             className="m-4"
           />
         ) : !purchases?.length ? (
-          <div className="px-4 py-6 text-center text-sm text-gray-500 sm:px-5">
-            No purchases in the last 30 days.
+          <div className="px-4 py-6 text-center sm:px-5">
+            <p className="text-sm font-medium text-gray-600">
+              {WORKFLOW_EMPTY_INVENTORY_TITLE}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              {WORKFLOW_EMPTY_INVENTORY_HINT}
+            </p>
           </div>
         ) : (
           <>

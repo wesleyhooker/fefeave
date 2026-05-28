@@ -1,0 +1,66 @@
+/**
+ * Admin sidebar navigation — top-level workspaces and Financials children.
+ * Routes stay under `/admin/balances`, `/admin/payments`, etc. (P0: labels only).
+ */
+
+export const FINANCIALS_WORKSPACE_LABEL = 'Financials';
+
+export const FINANCIALS_LANDING_HREF = '/admin/balances';
+
+export type AdminSidebarChildNavItem = {
+  href: string;
+  label: string;
+  match: (path: string) => boolean;
+};
+
+export const FINANCIALS_NAV_CHILDREN: AdminSidebarChildNavItem[] = [
+  {
+    href: FINANCIALS_LANDING_HREF,
+    label: 'Balances',
+    match: (path) =>
+      path === FINANCIALS_LANDING_HREF || path.startsWith('/admin/wholesalers'),
+  },
+  {
+    href: '/admin/payments',
+    label: 'Payments',
+    match: (path) => path.startsWith('/admin/payments'),
+  },
+  {
+    href: '/admin/balances/accounts',
+    label: 'Accounts',
+    match: (path) => path.startsWith('/admin/balances/accounts'),
+  },
+  {
+    href: '/admin/balances/owner',
+    label: 'Owner Activity',
+    match: (path) => path.startsWith('/admin/balances/owner'),
+  },
+  {
+    href: '/admin/inventory',
+    label: 'Inventory',
+    match: (path) => path.startsWith('/admin/inventory'),
+  },
+];
+
+export function isFinancialsSectionActive(path: string): boolean {
+  return FINANCIALS_NAV_CHILDREN.some((item) => item.match(path));
+}
+
+export function isFinancialsChildActive(
+  item: AdminSidebarChildNavItem,
+  path: string,
+): boolean {
+  return item.match(path);
+}
+
+/** Workspace segment for entity-detail breadcrumbs. */
+export const FINANCIALS_WORKSPACE_BREADCRUMB = {
+  href: FINANCIALS_LANDING_HREF,
+  label: FINANCIALS_WORKSPACE_LABEL,
+} as const;
+
+/** Balances list segment (child page within Financials). */
+export const BALANCES_PAGE_BREADCRUMB = {
+  href: FINANCIALS_LANDING_HREF,
+  label: 'Balances',
+} as const;

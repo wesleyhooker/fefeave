@@ -7,15 +7,17 @@ export function DashboardNotificationRow({
   title,
   valueLabel,
   valueClassName = "text-stone-600",
+  ariaLabel,
 }: {
   href: string;
   iconClassName: string;
   title: string;
   valueLabel: string;
   valueClassName?: string;
+  ariaLabel?: string;
 }) {
   return (
-    <DashboardClickableRow href={href} aria-label={title}>
+    <DashboardClickableRow href={href} aria-label={ariaLabel ?? title}>
       <span
         className={`h-1.5 w-1.5 shrink-0 rounded-full ${iconClassName}`}
         aria-hidden

@@ -12,6 +12,10 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
+import {
+  BALANCES_PAGE_BREADCRUMB,
+  FINANCIALS_WORKSPACE_BREADCRUMB,
+} from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
@@ -44,8 +48,8 @@ import {
   workspaceLedgerTableDivide,
   workspacePageContentWidthWide,
   workspaceStatEyebrow,
-  workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
+  workspaceMoneyClassForRunningBalance,
   workspaceMoneyPositive,
   workspaceMoneyTabular,
   workspaceSectionTitle,
@@ -147,14 +151,15 @@ function moneyPaidClass(value: number | null): string {
 }
 
 function runningBalanceClass(value: number): string {
-  return workspaceListPrimaryMoneyAmountClass(value);
+  return workspaceMoneyClassForRunningBalance(value);
 }
 
 function wholesalerDetailBreadcrumb(currentLabel: string) {
   return (
     <AdminEntityBreadcrumb
       segments={[
-        { href: "/admin/balances", label: "Balances" },
+        FINANCIALS_WORKSPACE_BREADCRUMB,
+        BALANCES_PAGE_BREADCRUMB,
         { label: currentLabel, current: true },
       ]}
     />

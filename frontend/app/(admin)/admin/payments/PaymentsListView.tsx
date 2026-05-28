@@ -27,6 +27,10 @@ import {
   workspaceTableCellMeta,
   workspaceTheadSticky,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import {
+  WORKFLOW_EMPTY_PAYMENTS_HINT,
+  WORKFLOW_EMPTY_PAYMENTS_TITLE,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   fetchPayments,
@@ -137,8 +141,13 @@ export function PaymentsListView() {
           </div>
           <div className="space-y-2.5 p-3 sm:p-4">
             {rows.length === 0 ? (
-              <WorkspaceEmptyState variant="dashed">
-                No payments recorded yet.
+              <WorkspaceEmptyState variant="dashed" as="div">
+                <span className="block font-medium text-gray-600">
+                  {WORKFLOW_EMPTY_PAYMENTS_TITLE}
+                </span>
+                <span className="mt-1 block text-xs text-gray-500">
+                  {WORKFLOW_EMPTY_PAYMENTS_HINT}
+                </span>
               </WorkspaceEmptyState>
             ) : (
               rows.map((p) => {
@@ -234,8 +243,13 @@ export function PaymentsListView() {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-10 sm:px-4">
-                    <WorkspaceEmptyState variant="plain" as="span">
-                      No payments recorded yet.
+                    <WorkspaceEmptyState variant="plain" as="div">
+                      <span className="block font-medium text-gray-600">
+                        {WORKFLOW_EMPTY_PAYMENTS_TITLE}
+                      </span>
+                      <span className="mt-1 block text-xs text-gray-500">
+                        {WORKFLOW_EMPTY_PAYMENTS_HINT}
+                      </span>
                     </WorkspaceEmptyState>
                   </td>
                 </tr>

@@ -34,7 +34,14 @@ import {
   workspaceTableCellMeta,
   workspaceTextInput,
   workspaceToolbarSearchInput,
+  workspaceMoneyClassForLiability,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import {
+  WORKFLOW_EMPTY_ACCOUNTS_OWNER_HINT,
+  WORKFLOW_EMPTY_ACCOUNTS_OWNER_TITLE,
+  WORKFLOW_EMPTY_ACCOUNTS_WHOLESALER_HINT,
+  WORKFLOW_EMPTY_ACCOUNTS_WHOLESALER_TITLE,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
   type AccountDTO,
   type AccountStatus,
@@ -475,8 +482,13 @@ export default function AccountsPage() {
                       </div>
                     </Link>
                   ) : (
-                    <WorkspaceEmptyState variant="dashedCompact">
-                      No owner account found.
+                    <WorkspaceEmptyState variant="dashedCompact" as="div">
+                      <span className="block font-medium text-gray-600">
+                        {WORKFLOW_EMPTY_ACCOUNTS_OWNER_TITLE}
+                      </span>
+                      <span className="mt-1 block text-xs text-gray-500">
+                        {WORKFLOW_EMPTY_ACCOUNTS_OWNER_HINT}
+                      </span>
                     </WorkspaceEmptyState>
                   )}
                 </div>
@@ -519,9 +531,18 @@ export default function AccountsPage() {
                     className={`mt-3 rounded-lg border border-gray-200 bg-white ${workspaceInsetFlatList}`}
                   >
                     {wholesalerAccounts.length === 0 ? (
-                      <p className="px-4 py-8 text-center text-sm text-gray-500">
-                        No wholesaler accounts found.
-                      </p>
+                      <WorkspaceEmptyState
+                        variant="plain"
+                        as="div"
+                        className="px-4 py-8"
+                      >
+                        <span className="block font-medium text-gray-600">
+                          {WORKFLOW_EMPTY_ACCOUNTS_WHOLESALER_TITLE}
+                        </span>
+                        <span className="mt-1 block text-xs text-gray-500">
+                          {WORKFLOW_EMPTY_ACCOUNTS_WHOLESALER_HINT}
+                        </span>
+                      </WorkspaceEmptyState>
                     ) : (
                       wholesalerAccounts.map((account) => {
                         const href = account.wholesalerId
@@ -545,7 +566,9 @@ export default function AccountsPage() {
                                 <p className={workspaceTableCellMeta}>
                                   Balance owed
                                 </p>
-                                <p className="font-semibold text-rose-700">
+                                <p
+                                  className={`font-semibold tabular-nums ${workspaceMoneyClassForLiability(toNum(account.balanceOwed))}`}
+                                >
                                   {formatCurrency(toNum(account.balanceOwed))}
                                 </p>
                               </div>

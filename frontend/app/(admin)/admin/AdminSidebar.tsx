@@ -3,6 +3,8 @@
 import {
   ArrowRightOnRectangleIcon,
   CalendarDaysIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   HomeIcon,
   ScaleIcon,
 } from "@heroicons/react/24/outline";
@@ -11,13 +13,25 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogoutForm } from "@/app/_components/auth/LogoutForm";
 import {
+  FINANCIALS_NAV_CHILDREN,
+  FINANCIALS_WORKSPACE_LABEL,
+  isFinancialsChildActive,
+  isFinancialsSectionActive,
+} from "./_lib/adminSidebarNav";
+import {
   workspaceActionIconMd,
   workspaceChromeHoverWarm,
+  workspaceNavChildItemActive,
+  workspaceNavChildItemBase,
+  workspaceNavChildItemInactive,
   workspaceNavIconActive,
   workspaceNavIconInactive,
   workspaceNavItemActive,
   workspaceNavItemBase,
   workspaceNavItemInactive,
+  workspaceNavSectionTrigger,
+  workspaceNavSectionTriggerActive,
+  workspaceNavSectionTriggerInactive,
   workspaceSidebarAccountSection,
   workspaceSidebarAccountSignOutCluster,
   workspaceSidebarAvatar,
@@ -27,7 +41,7 @@ import {
   workspaceSidebarUserDisplayName,
 } from "./_components/workspaceUi";
 
-const NAV_ITEMS: {
+const TOP_NAV_ITEMS: {
   href: string;
   label: string;
   Icon: typeof HomeIcon;
@@ -45,19 +59,9 @@ const NAV_ITEMS: {
     Icon: CalendarDaysIcon,
     match: (p) => p.startsWith("/admin/shows"),
   },
-  {
-    href: "/admin/balances",
-    label: "Balances",
-    Icon: ScaleIcon,
-    match: (p) =>
-      p === "/admin/balances" ||
-      p.startsWith("/admin/balances/") ||
-      p.startsWith("/admin/wholesalers") ||
-      p.startsWith("/admin/payments"),
-  },
 ];
 
-function NavLinks({
+function TopNavLinks({
   pathname,
   onNavigate,
 }: {
@@ -66,7 +70,7 @@ function NavLinks({
 }) {
   return (
     <>
-      {NAV_ITEMS.map(({ href, label, Icon, match }) => {
+      {TOP_NAV_ITEMS.map(({ href, label, Icon, match }) => {
         const isActive = match(pathname ?? "");
         return (
           <Link
@@ -90,6 +94,97 @@ function NavLinks({
           </Link>
         );
       })}
+    </>
+  );
+}
+
+function FinancialsNavSection({
+  pathname,
+  onNavigate,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  const path = pathname ?? "";
+  const sectionActive = isFinancialsSectionActive(path);
+  const [expanded, setExpanded] = useState(sectionActive);
+
+  useEffect(() => {
+    if (sectionActive) {
+      setExpanded(true);
+    }
+  }, [sectionActive]);
+
+  const Chevron = expanded ? ChevronDownIcon : ChevronRightIcon;
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <button
+        type="button"
+        onClick={() => setExpanded((open) => !open)}
+        className={`${workspaceNavSectionTrigger} ${
+          sectionActive
+            ? workspaceNavSectionTriggerActive
+            : workspaceNavSectionTriggerInactive
+        }`}
+        aria-expanded={expanded}
+        aria-controls="admin-nav-financials-children"
+      >
+        <span
+          className={
+            sectionActive ? workspaceNavIconActive : workspaceNavIconInactive
+          }
+          aria-hidden
+        >
+          <ScaleIcon className={workspaceActionIconMd} />
+        </span>
+        <span className="min-w-0 flex-1 leading-snug">
+          {FINANCIALS_WORKSPACE_LABEL}
+        </span>
+        <Chevron className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+      </button>
+      {expanded ? (
+        <div
+          id="admin-nav-financials-children"
+          className="flex flex-col gap-0.5"
+          role="group"
+          aria-label={`${FINANCIALS_WORKSPACE_LABEL} pages`}
+        >
+          {FINANCIALS_NAV_CHILDREN.map((item) => {
+            const isActive = isFinancialsChildActive(item, path);
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={onNavigate}
+                className={`${workspaceNavChildItemBase} ${
+                  isActive
+                    ? workspaceNavChildItemActive
+                    : workspaceNavChildItemInactive
+                }`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function NavLinks({
+  pathname,
+  onNavigate,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      <TopNavLinks pathname={pathname} onNavigate={onNavigate} />
+      <FinancialsNavSection pathname={pathname} onNavigate={onNavigate} />
     </>
   );
 }

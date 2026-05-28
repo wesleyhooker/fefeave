@@ -521,6 +521,7 @@ export default function AdminDashboardPage() {
               onRetry={() => setReloadToken((v) => v + 1)}
               openShowsCount={openShowsCount}
               vendorsOwingCount={vendorsOwingCount}
+              totalOutstandingBalance={totalVendorBalance}
             />
           </div>
         </div>

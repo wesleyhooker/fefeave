@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCurrency } from "@/lib/format";
 import {
   dashboardModulePanel,
   dashboardModulePanelHeader,
@@ -10,8 +11,9 @@ import {
 import {
   WORKFLOW_ACTIVE_SHOWS_ROW_LABEL,
   WORKFLOW_NEEDS_ATTENTION_HEADING,
-  WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
+  WORKFLOW_OUTSTANDING_BALANCES_ROW_LABEL,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import { workspaceMoneyClassForLiability } from "@/app/(admin)/admin/_components/workspaceUi";
 import { DashboardNotificationRow } from "./DashboardNotificationRow";
 
 function BellIcon({ className }: { className?: string }) {
@@ -59,13 +61,23 @@ export function DashboardNotificationsCard({
   onRetry,
   openShowsCount,
   vendorsOwingCount,
+  totalOutstandingBalance,
 }: {
   showsError: string | null;
   balancesError: string | null;
   onRetry: () => void;
   openShowsCount: number;
   vendorsOwingCount: number;
+  totalOutstandingBalance: number | null;
 }) {
+  const outstandingAmount =
+    totalOutstandingBalance != null ? totalOutstandingBalance : 0;
+  const outstandingLabel = formatCurrency(outstandingAmount);
+  const outstandingAriaLabel =
+    vendorsOwingCount > 0
+      ? `${WORKFLOW_OUTSTANDING_BALANCES_ROW_LABEL}: ${outstandingLabel}, ${vendorsOwingCount} wholesalers`
+      : `${WORKFLOW_OUTSTANDING_BALANCES_ROW_LABEL}: ${outstandingLabel}`;
+
   return (
     <aside
       className={dashboardModulePanel}
@@ -96,11 +108,10 @@ export function DashboardNotificationsCard({
         <DashboardNotificationRow
           href="/admin/balances"
           iconClassName="bg-amber-300/55"
-          title={WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL}
-          valueLabel={String(vendorsOwingCount)}
-          valueClassName={
-            vendorsOwingCount > 0 ? "text-rose-800/90" : "text-stone-400"
-          }
+          title={WORKFLOW_OUTSTANDING_BALANCES_ROW_LABEL}
+          valueLabel={outstandingLabel}
+          valueClassName={workspaceMoneyClassForLiability(outstandingAmount)}
+          ariaLabel={outstandingAriaLabel}
         />
       </ul>
     </aside>

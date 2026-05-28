@@ -6,7 +6,7 @@ import {
   AdminWorkspacePageLayout,
 } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { AdminSummaryStatGrid } from "@/app/(admin)/admin/_components/AdminSummaryStatGrid";
-import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
+import { WorkspaceDetailSettlementStatusBadge } from "@/app/(admin)/admin/_components/WorkspaceListStatus";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
   workspaceCard,
@@ -18,10 +18,15 @@ import {
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
+  WORKFLOW_EMPTY_OWNER_ACTIVITY_HINT,
+  WORKFLOW_EMPTY_OWNER_ACTIVITY_TITLE,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
   getOwnerActivityPage,
   type OwnerActivityTransactionDTO,
   type OwnerActivityPageDTO,
 } from "@/src/lib/api/ownerSelfPay";
+import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
 
 function toNum(value: string): number {
   const n = Number(value);
@@ -202,9 +207,14 @@ export default function OwnerActivityPage() {
           </div>
 
           {transactions.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-stone-500 sm:px-5">
-              No owner payouts recorded yet.
-            </p>
+            <div className="px-4 py-10 text-center sm:px-5">
+              <p className="text-sm font-medium text-stone-600">
+                {WORKFLOW_EMPTY_OWNER_ACTIVITY_TITLE}
+              </p>
+              <p className="mt-1 text-xs text-stone-500">
+                {WORKFLOW_EMPTY_OWNER_ACTIVITY_HINT}
+              </p>
+            </div>
           ) : (
             <ul
               className={`${workspaceInsetFlatList} divide-y divide-stone-100`}
@@ -263,15 +273,9 @@ export default function OwnerActivityPage() {
                           </dl>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
-                          {voided ? (
-                            <span className="shrink-0 rounded-full bg-stone-200/90 px-2 py-0.5 text-xs font-medium text-stone-700">
-                              Voided
-                            </span>
-                          ) : (
-                            <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-900 ring-1 ring-emerald-200/80">
-                              Paid
-                            </span>
-                          )}
+                          <WorkspaceDetailSettlementStatusBadge
+                            status={voided ? "Voided" : "Paid"}
+                          />
                           <span
                             className={`inline-flex items-center ${
                               expanded ? "rotate-90" : ""

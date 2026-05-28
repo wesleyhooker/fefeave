@@ -14,7 +14,7 @@ Admin-only chrome (top bar) lives in `_components/headers/`. Public chrome lives
 
 ## Page structure (three layers)
 
-1. **Global chrome** — `AdminLayoutClient` → `AdminSidebar` + `WorkspaceHeader`
+1. **Global chrome** — `AdminLayoutClient` → `AdminSidebar` (Home, Shows, expandable **Financials**) + `WorkspaceHeader`
 2. **Page intro** — `AdminWorkspacePageLayout` or `AdminPageIntroSection` + `AdminPageIntro` / `AdminWorkspacePageIntro`
 3. **Work surface** — `AdminPageContainer` children (cards, tables, forms)
 

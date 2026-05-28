@@ -2,6 +2,8 @@
 
 import type { WorkspacePaymentStatus } from "@/app/(admin)/admin/_lib/workspacePaymentStatus";
 import {
+  WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS,
+  WORKSPACE_DETAIL_SETTLEMENT_STATUS_STYLES,
   workspaceShowsTableStatusDotClosed,
   workspaceShowsTableStatusDotOpen,
   workspaceShowsTableStatusDotOther,
@@ -96,6 +98,42 @@ export function WorkspaceListPaymentStatus({
     <span className={listStatusRow}>
       <span className={`${dot} translate-y-px`} aria-hidden />
       <span className={`${listStatusLabel} ${labelClass}`}>{status}</span>
+    </span>
+  );
+}
+
+const settlementBadgeShell =
+  "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium";
+
+/**
+ * Settlement / audit pill — matches show-detail rollup tokens (Paid / Unpaid / Open).
+ * Use {@link WorkspaceListPaymentStatus} for vendor payment state in lists.
+ */
+export function WorkspaceDetailSettlementStatusBadge({
+  status,
+}: {
+  status: "Paid" | "Unpaid" | "Open" | "Voided";
+}) {
+  if (status === "Voided") {
+    return (
+      <span
+        className={`${settlementBadgeShell} bg-stone-200/90 text-stone-700 ring-1 ring-stone-300/80`}
+      >
+        Voided
+      </span>
+    );
+  }
+
+  const shell = WORKSPACE_DETAIL_SETTLEMENT_STATUS_STYLES[status];
+  const dot = WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS[status];
+
+  return (
+    <span className={`${settlementBadgeShell} ${shell}`}>
+      <span
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`}
+        aria-hidden
+      />
+      {status}
     </span>
   );
 }

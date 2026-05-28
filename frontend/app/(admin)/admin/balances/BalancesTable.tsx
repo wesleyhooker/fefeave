@@ -24,7 +24,11 @@ import {
   workspaceTableHeaderCellPadding,
 } from "@/app/(admin)/admin/_components/WorkspaceTableRow";
 import { getWorkspacePaymentStatus } from "@/app/(admin)/admin/_lib/workspacePaymentStatus";
-import { WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
+  WORKFLOW_EMPTY_BALANCES_HINT,
+  WORKFLOW_EMPTY_BALANCES_TITLE,
+  WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
   workspaceActionIconMd,
   workspaceActionSecondarySm,
@@ -315,8 +319,13 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
       <div className="md:hidden">
         <div className="space-y-2.5 p-3 sm:p-4">
           {sorted.length === 0 ? (
-            <WorkspaceEmptyState variant="dashed">
-              No balances yet.
+            <WorkspaceEmptyState variant="dashed" as="div">
+              <span className="block font-medium text-gray-600">
+                {WORKFLOW_EMPTY_BALANCES_TITLE}
+              </span>
+              <span className="mt-1 block text-xs text-gray-500">
+                {WORKFLOW_EMPTY_BALANCES_HINT}
+              </span>
             </WorkspaceEmptyState>
           ) : (
             sorted.map((r) => {
@@ -502,8 +511,13 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
             {sorted.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-10">
-                  <WorkspaceEmptyState variant="plain" as="span">
-                    No balances yet.
+                  <WorkspaceEmptyState variant="plain" as="div">
+                    <span className="block font-medium text-gray-600">
+                      {WORKFLOW_EMPTY_BALANCES_TITLE}
+                    </span>
+                    <span className="mt-1 block text-xs text-gray-500">
+                      {WORKFLOW_EMPTY_BALANCES_HINT}
+                    </span>
                   </WorkspaceEmptyState>
                 </td>
               </tr>
