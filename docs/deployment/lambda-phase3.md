@@ -1,8 +1,6 @@
 # Phase 3: Backend Lambda infrastructure (Terraform)
 
-Backend-only Terraform for Fastify on Lambda + API Gateway HTTP API. **No apply in this phase doc** — operator runs plan/apply manually when ready.
-
-> **Temporary:** Consolidate with [lambda-phase2.md](lambda-phase2.md), [prod-release.md](prod-release.md), and `infra/README.md` before final merge.
+Backend Terraform for Fastify on Lambda + API Gateway HTTP API. Production uses this path (`create_serverless_backend = true` in `prod.tfvars`). Operator runs `make plan-prod` / `make apply-prod` manually when infra changes are needed.
 
 ## What this provisions (`create_serverless_backend = true`)
 
@@ -95,7 +93,7 @@ Until steps 1–2 complete, Lambda invocations fail env validation or DB connect
 
 Terraform sets non-secret `COGNITO_*` env vars on the backend Lambda. Create prod User Pool manually — roles use Cognito **groups** (`ADMIN`, `OPERATOR`, `WHOLESALER`) from `cognito:groups`, not `custom:role`. See [cognito-prod-bootstrap.md](cognito-prod-bootstrap.md) and [prod-release.md](prod-release.md).
 
-Frontend session/OAuth secrets (`AUTH_SESSION_SECRET`, `COGNITO_CLIENT_SECRET`) are **not** in Terraform — see [prod-secrets.md](prod-secrets.md).
+Frontend session/OAuth secrets: Terraform manages **SM containers** only (no values in `.tf`); operators set values and Lambda env. See [prod-secrets.md](prod-secrets.md).
 
 ## Outputs for Phase 4/5
 

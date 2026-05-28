@@ -1,8 +1,6 @@
 # Production Cognito bootstrap (first admin)
 
-> **Temporary** — consolidate before final merge.
-
-How to provision the **first production admin** (Felicia) without an in-app user-management UI. Prod Cognito is **not** in Terraform today.
+How to provision or verify the **first production admin** (Felicia) without an in-app user-management UI. Prod Cognito User Pool is **not** created by Terraform (manual pool + Google IdP). Backend non-secret `COGNITO_*` IDs are set in `infra/prod.tfvars` and applied to the backend Lambda.
 
 ## How roles work in this app
 
@@ -146,25 +144,28 @@ SELECT id, cognito_user_id, email, role FROM users WHERE email = 'felicia@exampl
 | `COGNITO_APP_CLIENT_ID` | Backend Lambda            | Same client ID (JWT `client_id` check)  |
 | `AUTH_MODE`             | Backend Lambda            | `cognito` (set in Terraform for prod)   |
 
-Replace `REPLACE_ME` placeholders in `infra/prod.tfvars` / Lambda console after the pool is created.
+After the pool exists, ensure `infra/prod.tfvars` has the live `cognito_user_pool_id` and `cognito_app_client_id`, then set frontend secrets on the server Lambda (`COGNITO_DOMAIN`, `COGNITO_CLIENT_SECRET`, `AUTH_SESSION_SECRET`) per [prod-secrets.md](prod-secrets.md). Backend Lambda receives non-secret `COGNITO_*` from Terraform apply.
 
 ---
 
-## Launch checklist item
+## Post-launch verification checklist
 
-- [ ] **Create Felicia Google-backed Cognito admin account** — pool, Google IdP, groups, Hosted UI, app client URLs, first Google sign-in, add to `ADMIN` group, verify `/api/auth/health` and `/admin/dashboard`.
+- [ ] Felicia (or designated admin) can sign in via Google at `https://fefeave.com/login`
+- [ ] User is in Cognito **`ADMIN`** group (not `custom:role` only)
+- [ ] `GET https://fefeave.com/api/auth/health` → `authenticated: true`, roles include `ADMIN`
+- [ ] Admin dashboard and protected routes load
 
 ---
 
 ## Common mistakes
 
-| Mistake                                | Symptom                          | Fix                                         |
-| -------------------------------------- | -------------------------------- | ------------------------------------------- |
-| Set `custom:role` only                 | Wrong or default `OPERATOR` role | Add user to **`ADMIN` group**               |
-| User not in group before login         | `/403` or wrong landing route    | Add to `ADMIN`, sign in again               |
-| Callback/sign-out URL mismatch         | `redirect_uri` error             | Match tfvars and app client exactly         |
-| Backend `COGNITO_*` still `REPLACE_ME` | `/users/me` fails at login       | Update Lambda env from prod pool            |
-| Expecting manual SQL user insert       | Unnecessary for launch           | Rely on login + `ensureUser` on first write |
+| Mistake                            | Symptom                          | Fix                                            |
+| ---------------------------------- | -------------------------------- | ---------------------------------------------- |
+| Set `custom:role` only             | Wrong or default `OPERATOR` role | Add user to **`ADMIN` group**                  |
+| User not in group before login     | `/403` or wrong landing route    | Add to `ADMIN`, sign in again                  |
+| Callback/sign-out URL mismatch     | `redirect_uri` error             | Match tfvars and app client exactly            |
+| Frontend secrets missing on Lambda | OAuth or session failures        | Set env per [prod-secrets.md](prod-secrets.md) |
+| Expecting manual SQL user insert   | Unnecessary                      | Rely on login + `ensureUser` on first write    |
 
 ---
 

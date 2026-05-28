@@ -1,6 +1,6 @@
 # Phase 5: OpenNext frontend infrastructure + deploy
 
-> **Temporary** — consolidate before final merge.
+Production frontend uses this path (`create_serverless_frontend = true` in `prod.tfvars`).
 
 ## What Terraform adds (`create_serverless_frontend = true`)
 
@@ -54,16 +54,16 @@ OpenNext config (`open-next.config.ts`): `tagCache: dummy`, `queue: dummy` (no D
 | `BACKEND_BASE_URL`                                               | API Gateway + `/api` |
 | `FRONTEND_APP_URL`, `COGNITO_REDIRECT_URI`, `COGNITO_LOGOUT_URI` | docs / optional      |
 
-### Secrets (manual, not in Terraform)
+### Secrets (values operator-managed; containers in Terraform)
 
-See [prod-secrets.md](prod-secrets.md) for storage, injection, and cleanup roadmap.
+Canonical reference: [prod-secrets.md](prod-secrets.md). Terraform creates empty SM containers for frontend session/OAuth secrets; **values** are set by operators and consumed at runtime via Lambda **env vars** (not runtime SM fetch).
 
-| Secret                                | Used by                                    |
-| ------------------------------------- | ------------------------------------------ |
-| `AUTH_SESSION_SECRET`                 | Frontend server Lambda                     |
-| `COGNITO_CLIENT_SECRET`               | OAuth token exchange                       |
-| `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID` | Set on Lambda via console or CLI env merge |
-| `DATABASE_URL`                        | Backend Lambda (SM source → env injection) |
+| Secret                                | Used by                                                 |
+| ------------------------------------- | ------------------------------------------------------- |
+| `AUTH_SESSION_SECRET`                 | Frontend server Lambda (env; SM container in Terraform) |
+| `COGNITO_CLIENT_SECRET`               | OAuth token exchange (env; SM container in Terraform)   |
+| `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID` | Frontend Lambda env (operator or deploy docs)           |
+| `DATABASE_URL`                        | Backend Lambda (SM container → env injection)           |
 
 ## CloudFront routing summary
 
@@ -76,6 +76,6 @@ See [prod-secrets.md](prod-secrets.md) for storage, injection, and cleanup roadm
 
 ## Related
 
-- [opennext-phase4-spike.md](opennext-phase4-spike.md)
+- [opennext-phase4-spike.md](opennext-phase4-spike.md) — historical validation spike (pre-deploy)
 - [lambda-phase3.md](lambda-phase3.md)
 - [prod-release.md](prod-release.md)

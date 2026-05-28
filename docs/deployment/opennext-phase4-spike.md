@@ -1,6 +1,6 @@
 # Phase 4.0: OpenNext validation spike
 
-> **Temporary** — consolidate with prod release docs before final merge.
+> **Historical / archive** — Pre-production validation only (May 2026). Production deploy and runbooks are in [opennext-phase5.md](opennext-phase5.md), [prod-release.md](prod-release.md), and [prod-secrets.md](prod-secrets.md). Do not use this doc as the active operator guide.
 
 ## Versions
 
