@@ -29,3 +29,8 @@ acm_certificate_arn           = "arn:aws:acm:us-east-1:356892335988:certificate/
 cognito_region        = "us-west-2"
 cognito_user_pool_id  = "us-west-2_pGDWIC7xK"
 cognito_app_client_id = "14s9ol7f8mpcbjd7dhls1ecttk"
+
+# Cost guardrails (prod only; see monitoring.tf + budgets.tf)
+enable_cost_alerts = true
+alert_email        = "wesleyhooker@outlook.com"
+monthly_budget_usd = 20

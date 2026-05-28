@@ -1,4 +1,8 @@
 # OpenNext frontend Lambdas (server + image optimizer).
+#
+# Ownership: Terraform = function shell (IAM, memory, timeout, URLs, CloudFront wiring).
+# Code = Frontend Deploy (prod) workflow (aws lambda update-function-code).
+# Runtime secrets = operator CLI / scripts (see docs/deployment/prod-secrets.md).
 
 locals {
   frontend_server_zip = "${path.module}/../frontend/opennext-server.zip"
@@ -51,6 +55,23 @@ resource "aws_iam_role_policy" "frontend_server_lambda_logs" {
       Effect   = "Allow"
       Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
       Resource = "${aws_cloudwatch_log_group.frontend_server[0].arn}:*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "frontend_server_lambda_secrets" {
+  count = var.create_serverless_frontend ? 1 : 0
+  name  = "fefeave-frontend-server-lambda-${var.env}-secrets"
+  role  = aws_iam_role.frontend_server_lambda[0].id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["secretsmanager:GetSecretValue"]
+      Resource = [
+        aws_secretsmanager_secret.frontend_auth_session[0].arn,
+        aws_secretsmanager_secret.frontend_cognito_client[0].arn,
+      ]
     }]
   })
 }
@@ -132,7 +153,18 @@ resource "aws_lambda_function" "frontend_server" {
   depends_on = [
     aws_iam_role_policy_attachment.frontend_server_lambda_basic,
     aws_iam_role_policy.frontend_server_lambda_logs,
+    aws_iam_role_policy.frontend_server_lambda_secrets,
   ]
+
+  lifecycle {
+    ignore_changes = [
+      environment,
+      filename,
+      source_code_hash,
+      s3_bucket,
+      s3_key,
+    ]
+  }
 
   tags = local.tags
 }
@@ -155,6 +187,16 @@ resource "aws_lambda_function" "frontend_image" {
     aws_iam_role_policy.frontend_image_lambda_logs,
     aws_iam_role_policy.frontend_image_lambda_s3_read,
   ]
+
+  lifecycle {
+    ignore_changes = [
+      environment,
+      filename,
+      source_code_hash,
+      s3_bucket,
+      s3_key,
+    ]
+  }
 
   tags = local.tags
 }

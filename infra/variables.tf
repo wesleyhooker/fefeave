@@ -265,3 +265,29 @@ variable "db_username" {
   default     = "fefeave"
   sensitive   = true
 }
+
+# --- Cost / monitoring (prod guardrails) ---
+variable "enable_cost_alerts" {
+  type        = bool
+  description = "Create AWS Budget + CloudWatch error/throttle alarms (prod only; see monitoring.tf)."
+  default     = false
+}
+
+variable "alert_email" {
+  type        = string
+  description = "Email for budget notifications and SNS alarm subscriptions."
+  default     = ""
+}
+
+variable "monthly_budget_usd" {
+  type        = number
+  description = "Monthly AWS account cost budget (USD)."
+  default     = 20
+}
+
+check "cost_alerts_need_email" {
+  assert {
+    condition     = !var.enable_cost_alerts || var.alert_email != ""
+    error_message = "alert_email is required when enable_cost_alerts is true."
+  }
+}

@@ -119,6 +119,26 @@ output "neon_database_url_secret_arn" {
   value       = var.create_serverless_backend ? aws_secretsmanager_secret.neon_database_url[0].arn : null
 }
 
+output "frontend_auth_session_secret_arn" {
+  description = "Secrets Manager ARN for AUTH_SESSION_SECRET (container only; populate after apply)"
+  value       = var.create_serverless_frontend ? aws_secretsmanager_secret.frontend_auth_session[0].arn : null
+}
+
+output "frontend_auth_session_secret_name" {
+  description = "Secrets Manager name for AUTH_SESSION_SECRET"
+  value       = var.create_serverless_frontend ? aws_secretsmanager_secret.frontend_auth_session[0].name : null
+}
+
+output "frontend_cognito_client_secret_arn" {
+  description = "Secrets Manager ARN for COGNITO_CLIENT_SECRET (container only; populate after apply)"
+  value       = var.create_serverless_frontend ? aws_secretsmanager_secret.frontend_cognito_client[0].arn : null
+}
+
+output "frontend_cognito_client_secret_name" {
+  description = "Secrets Manager name for COGNITO_CLIENT_SECRET"
+  value       = var.create_serverless_frontend ? aws_secretsmanager_secret.frontend_cognito_client[0].name : null
+}
+
 output "frontend_app_url" {
   description = "Canonical frontend URL (custom domain; used for Cognito and docs)"
   value       = var.create_serverless_frontend ? local.frontend_app_url : null
@@ -208,4 +228,25 @@ output "app_client_secret" {
 output "cognito_domain" {
   description = "Full Cognito Hosted UI domain for dev auth."
   value       = var.env == "dev" ? "${aws_cognito_user_pool_domain.dev[0].domain}.auth.${var.aws_region}.amazoncognito.com" : null
+}
+
+# --- Cost / monitoring (prod guardrails) ---
+output "alerts_sns_topic_arn" {
+  description = "SNS topic ARN for prod budget and CloudWatch alarm notifications"
+  value       = local.monitoring_enabled ? aws_sns_topic.alerts[0].arn : null
+}
+
+output "monthly_budget_limit_usd" {
+  description = "Configured monthly AWS account cost budget (USD)"
+  value       = local.monitoring_enabled ? var.monthly_budget_usd : null
+}
+
+output "monitoring_alarm_names" {
+  description = "CloudWatch alarm names created for prod guardrails"
+  value = local.monitoring_enabled ? compact([
+    var.create_serverless_backend ? aws_cloudwatch_metric_alarm.backend_lambda_errors[0].alarm_name : null,
+    var.create_serverless_frontend ? aws_cloudwatch_metric_alarm.frontend_server_lambda_errors[0].alarm_name : null,
+    var.create_serverless_backend ? aws_cloudwatch_metric_alarm.backend_lambda_throttles[0].alarm_name : null,
+    var.create_serverless_backend ? aws_cloudwatch_metric_alarm.backend_apigw_5xx[0].alarm_name : null,
+  ]) : []
 }
