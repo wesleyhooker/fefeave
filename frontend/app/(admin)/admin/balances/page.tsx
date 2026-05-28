@@ -161,7 +161,7 @@ export default function AdminBalancesPage() {
       {
         id: "owed",
         surface: "owed" as const,
-        label: "Owed",
+        label: "Total owed",
         value: (
           <p
             className={`text-xl font-semibold text-stone-900 sm:text-2xl ${workspaceMoneyTabular}`}

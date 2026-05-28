@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
+import { FINANCIALS_WORKSPACE_BREADCRUMB } from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import {
   AdminWorkspacePageIntro,
   AdminWorkspacePageLayout,
@@ -192,7 +193,7 @@ function RecordPaymentForm() {
             <AdminEntityBreadcrumb
               variant="compact"
               segments={[
-                { href: "/admin/balances", label: "Balances" },
+                FINANCIALS_WORKSPACE_BREADCRUMB,
                 { label: "Record payment", current: true },
               ]}
             />

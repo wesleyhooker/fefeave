@@ -6,8 +6,18 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AdminPageContainer } from "@/app/(admin)/admin/_components/AdminPageContainer";
 import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
+import {
+  BALANCES_PAGE_BREADCRUMB,
+  FINANCIALS_WORKSPACE_BREADCRUMB,
+} from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import { AdminWorkspacePageLayout } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import {
+  WORKFLOW_EMPTY_BATCH_PAY_FILTERED_HINT,
+  WORKFLOW_EMPTY_BATCH_PAY_FILTERED_TITLE,
+  WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_HINT,
+  WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_TITLE,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   fetchWholesalerBalances,
@@ -186,7 +196,8 @@ export default function BatchPayPage() {
             <AdminEntityBreadcrumb
               variant="compact"
               segments={[
-                { href: "/admin/balances", label: "Balances" },
+                FINANCIALS_WORKSPACE_BREADCRUMB,
+                BALANCES_PAGE_BREADCRUMB,
                 { label: "Balance breakdown", current: true },
               ]}
             />
@@ -252,10 +263,17 @@ export default function BatchPayPage() {
             </h2>
           </div>
           {filteredShows.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-500 sm:px-5">
-              {closedShows.length === 0
-                ? "No closed shows for this wholesaler."
-                : "No closed shows in the selected date range."}
+            <div className="px-4 py-6 text-center sm:px-5">
+              <p className="text-sm font-medium text-gray-600">
+                {closedShows.length === 0
+                  ? WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_TITLE
+                  : WORKFLOW_EMPTY_BATCH_PAY_FILTERED_TITLE}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                {closedShows.length === 0
+                  ? WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_HINT
+                  : WORKFLOW_EMPTY_BATCH_PAY_FILTERED_HINT}
+              </p>
             </div>
           ) : (
             <>

@@ -39,6 +39,8 @@ import {
   WORKFLOW_LOG_SHOW_PANEL_SUBTITLE,
   WORKFLOW_LOG_SHOW_PANEL_TITLE,
   WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
+  WORKFLOW_EMPTY_SHOWS_HINT,
+  WORKFLOW_EMPTY_SHOWS_TITLE,
   WORKFLOW_SHOWS_PAGE_SUBTITLE,
 } from "../_lib/adminWorkflowCopy";
 
@@ -190,8 +192,13 @@ export default function AdminShowsPage() {
         ) : null}
 
         {rows.length === 0 ? (
-          <WorkspaceEmptyState variant="inset">
-            No shows yet.
+          <WorkspaceEmptyState variant="inset" as="div">
+            <span className="block font-medium text-gray-600">
+              {WORKFLOW_EMPTY_SHOWS_TITLE}
+            </span>
+            <span className="mt-1 block text-xs text-gray-500">
+              {WORKFLOW_EMPTY_SHOWS_HINT}
+            </span>
           </WorkspaceEmptyState>
         ) : (
           <>

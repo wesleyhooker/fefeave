@@ -132,6 +132,26 @@ export const workspaceNavItemActive =
 export const workspaceNavItemInactive =
   'text-admin-sidebarTextMuted transition-[color,background-color] duration-200 ease-out hover:bg-black/[0.10] hover:text-white motion-reduce:transition-none';
 
+/** Nested Financials child — indented, no icon chip. */
+export const workspaceNavChildItemBase =
+  'group relative flex min-h-10 items-center rounded-lg py-1.5 pl-9 pr-3 text-[13px] leading-snug transition-[color,background-color] duration-200 ease-out motion-reduce:transition-none';
+
+export const workspaceNavChildItemActive =
+  'bg-black/[0.14] font-medium text-white';
+
+export const workspaceNavChildItemInactive =
+  'text-admin-sidebarTextMuted hover:bg-black/[0.10] hover:text-white';
+
+/** Financials section parent row (expand/collapse). */
+export const workspaceNavSectionTrigger =
+  'flex w-full min-h-[2.75rem] items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-[color,background-color] duration-200 ease-out motion-reduce:transition-none';
+
+export const workspaceNavSectionTriggerActive =
+  'bg-black/[0.10] font-medium text-white';
+
+export const workspaceNavSectionTriggerInactive =
+  'text-admin-sidebarTextMuted hover:bg-black/[0.10] hover:text-white';
+
 /**
  * Active icon chip — slightly deeper tone on clay (no bright white pill).
  */
@@ -753,6 +773,16 @@ export const workspaceLedgerRunningBalanceAmount =
   'text-sm font-semibold tabular-nums sm:text-base';
 
 // --- Semantic money (value carries meaning; avoid loud green/red) ------------
+//
+// Financial semantics (Financials workspace):
+// - Green (workspaceMoneyPositive): paid amounts, profit, favorable signed outcomes
+// - Rose (workspaceMoneyNegative / workspaceMoneyClassForLiability): outstanding
+//   balances, money owed, liabilities (> 0 only)
+// - Neutral (workspaceMoneyNeutral): lifetime totals, informational/historical totals
+// - Muted gray (text-gray-500 / workspaceMoneyMuted): zero balances, unknown, $0.00
+//
+// Do not use alarm colors for $0.00. Use workspaceMoneyClassForLiability or
+// workspaceMoneyClassForRunningBalance for owed/balance columns.
 
 /** Tabular figures for currency */
 export const workspaceMoneyTabular = 'tabular-nums';
@@ -794,6 +824,13 @@ export function workspaceMoneyClassForSigned(value: number | null): string {
 export function workspaceMoneyClassForLiability(value: number): string {
   if (value > 0) return `${workspaceMoneyNegative} font-medium`;
   return 'text-gray-500';
+}
+
+/**
+ * Ledger running balance — positive means amount still owed (liability), not profit.
+ */
+export function workspaceMoneyClassForRunningBalance(value: number): string {
+  return workspaceMoneyClassForLiability(value);
 }
 
 /**
