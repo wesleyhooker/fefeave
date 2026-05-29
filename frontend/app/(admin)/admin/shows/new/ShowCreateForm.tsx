@@ -21,6 +21,7 @@ import {
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import {
   WORKFLOW_LOG_SHOW_FORM_DRAWER_NOTE,
+  WORKFLOW_LOG_SHOW_PLATFORM_FEE_HINT,
   WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
@@ -97,6 +98,9 @@ export function ShowCreateForm({
   const [name, setName] = useState(date);
   const nameManuallyEdited = useRef(false);
   const [payoutAfterFees, setPayoutAfterFees] = useState("");
+  const [platformFee, setPlatformFee] = useState("");
+  const [startedAt, setStartedAt] = useState("");
+  const [endedAt, setEndedAt] = useState("");
   const [platform, setPlatform] = useState<"WHATNOT" | "INSTAGRAM" | "OTHER">(
     "WHATNOT",
   );
@@ -144,16 +148,45 @@ export function ShowCreateForm({
       setError("Enter a valid payout amount (0 or more).");
       return;
     }
+
+    let platformFeeNum: number | undefined;
+    if (platformFee.trim() !== "") {
+      const parsed = Number(platformFee.replace(/,/g, ""));
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        setError("Enter a valid platform fee (0 or more), or leave it blank.");
+        return;
+      }
+      platformFeeNum = parsed;
+    }
+
+    const startedIso = startedAt.trim()
+      ? new Date(startedAt).toISOString()
+      : undefined;
+    const endedIso = endedAt.trim()
+      ? new Date(endedAt).toISOString()
+      : undefined;
+    if (
+      startedIso != null &&
+      endedIso != null &&
+      new Date(endedIso).getTime() <= new Date(startedIso).getTime()
+    ) {
+      setError("Show end time must be after the start time.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const created = await createShow({
         show_date: date.trim(),
         platform,
         name: name.trim() || undefined,
+        started_at: startedIso,
+        ended_at: endedIso,
       });
 
       await upsertShowFinancials(created.id, {
         payout_after_fees_amount: payoutNum,
+        platform_fee_amount: platformFeeNum,
       });
 
       if (onSuccess != null) {
@@ -269,6 +302,75 @@ export function ShowCreateForm({
     </div>
   );
 
+  const timingFields = (
+    <div>
+      <p className={workspaceLabelEyebrow}>Show timing (optional)</p>
+      <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label htmlFor="create-show-started-at" className="block min-w-0">
+          <span className={workspaceFormLabel}>Started</span>
+          <input
+            id="create-show-started-at"
+            type="datetime-local"
+            value={startedAt}
+            onChange={(e) => setStartedAt(e.target.value)}
+            className={`${workspaceDateInput} mt-1.5 w-full min-w-0`}
+            aria-label="Show start time"
+          />
+        </label>
+        <label htmlFor="create-show-ended-at" className="block min-w-0">
+          <span className={workspaceFormLabel}>Ended</span>
+          <input
+            id="create-show-ended-at"
+            type="datetime-local"
+            value={endedAt}
+            onChange={(e) => setEndedAt(e.target.value)}
+            className={`${workspaceDateInput} mt-1.5 w-full min-w-0`}
+            aria-label="Show end time"
+          />
+        </label>
+      </div>
+      <p className="mt-1.5 text-xs text-gray-500">
+        Used later for duration insights. Leave blank if unknown.
+      </p>
+    </div>
+  );
+
+  const platformFeeField = (
+    <div className="mt-4">
+      <label htmlFor="create-show-platform-fee" className={workspaceFormLabel}>
+        Platform fee ($) (optional)
+      </label>
+      <div className="relative mt-1.5 max-w-[10rem]">
+        <span
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+          aria-hidden
+        >
+          $
+        </span>
+        <input
+          id="create-show-platform-fee"
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          value={platformFee}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^0-9.]/g, "");
+            const parts = v.split(".");
+            if (parts.length > 2) return;
+            if (parts[1]?.length > 2) return;
+            setPlatformFee(v);
+          }}
+          className={`${workspaceTextInput} w-full pl-7 tabular-nums`}
+          placeholder="0.00"
+          aria-label="Platform fee in dollars"
+        />
+      </div>
+      <p className="mt-1.5 max-w-md text-xs leading-snug text-gray-500">
+        {WORKFLOW_LOG_SHOW_PLATFORM_FEE_HINT}
+      </p>
+    </div>
+  );
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -316,6 +418,7 @@ export function ShowCreateForm({
               {dateField}
               {nameField}
               {platformField}
+              {timingFields}
             </div>
           )}
         </div>
@@ -329,6 +432,7 @@ export function ShowCreateForm({
             <div className={financialBlockClass}>
               <p className={workspaceLabelEyebrow}>Starting payout</p>
               {payoutField}
+              {platformFeeField}
             </div>
           </div>
         ) : null}

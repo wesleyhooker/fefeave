@@ -143,6 +143,88 @@ describe('Inventory purchases API integration', () => {
     expect(body.created_at).toBeDefined();
   });
 
+  describe('enrichment fields (supplier / category / purchase_type)', () => {
+    test('POST persists enrichment fields and GET returns them', async () => {
+      const createRes = await app.inject({
+        method: 'POST',
+        url: `${prefix}/inventory-purchases`,
+        payload: {
+          purchase_date: '2025-03-01',
+          amount: 800,
+          supplier: '  Acme Liquidators  ',
+          category: 'Shoes',
+          purchase_type: 'Pallet',
+        },
+      });
+      expect(createRes.statusCode).toBe(201);
+      const created = JSON.parse(createRes.payload);
+      expect(created.supplier).toBe('Acme Liquidators'); // trimmed
+      expect(created.category).toBe('Shoes');
+      expect(created.purchase_type).toBe('Pallet');
+
+      const listRes = await app.inject({
+        method: 'GET',
+        url: `${prefix}/inventory-purchases`,
+      });
+      expect(listRes.statusCode).toBe(200);
+      const list = JSON.parse(listRes.payload);
+      expect(list).toHaveLength(1);
+      expect(list[0].supplier).toBe('Acme Liquidators');
+      expect(list[0].category).toBe('Shoes');
+      expect(list[0].purchase_type).toBe('Pallet');
+    });
+
+    test('POST is backward compatible when enrichment fields are omitted', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `${prefix}/inventory-purchases`,
+        payload: { purchase_date: '2025-03-02', amount: 50 },
+      });
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.supplier).toBeUndefined();
+      expect(body.category).toBeUndefined();
+      expect(body.purchase_type).toBeUndefined();
+    });
+
+    test('POST treats blank category/purchase_type as omitted (stored null)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `${prefix}/inventory-purchases`,
+        payload: {
+          purchase_date: '2025-03-03',
+          amount: 75,
+          supplier: '   ',
+          category: '',
+          purchase_type: '',
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.supplier).toBeUndefined();
+      expect(body.category).toBeUndefined();
+      expect(body.purchase_type).toBeUndefined();
+    });
+
+    test('POST rejects an invalid category value', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `${prefix}/inventory-purchases`,
+        payload: { purchase_date: '2025-03-04', amount: 100, category: 'Electronics' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    test('POST rejects an invalid purchase_type value', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `${prefix}/inventory-purchases`,
+        payload: { purchase_date: '2025-03-05', amount: 100, purchase_type: 'Auction' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
   test('GET /admin/inventory-invested?days=N returns sum of purchases in window (deterministic)', async () => {
     const now = new Date();
     const withinDate = new Date(now);

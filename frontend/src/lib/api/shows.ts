@@ -7,6 +7,8 @@ export interface ShowDTO {
   name: string;
   notes?: string;
   external_reference?: string;
+  started_at?: string;
+  ended_at?: string;
   status: string;
   created_at: string;
   updated_at: string;
@@ -26,12 +28,17 @@ export interface CreateShowDTO {
   name?: string;
   notes?: string;
   external_reference?: string;
+  /** ISO 8601 timestamp (e.g. Date.toISOString()). Optional. */
+  started_at?: string;
+  /** ISO 8601 timestamp. Optional. Must be after started_at when both set. */
+  ended_at?: string;
 }
 
 export interface FinancialsDTO {
   show_id: string;
   payout_after_fees_amount: string;
   gross_sales_amount?: string;
+  platform_fee_amount?: string;
   currency: string;
   created_at: string;
   updated_at: string;
@@ -40,6 +47,7 @@ export interface FinancialsDTO {
 export interface UpsertFinancialsDTO {
   payout_after_fees_amount: number;
   gross_sales_amount?: number;
+  platform_fee_amount?: number;
 }
 
 export interface SettlementLineDTO {

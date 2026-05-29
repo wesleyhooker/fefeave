@@ -5,6 +5,9 @@ export interface InventoryPurchaseDTO {
   purchase_date: string;
   amount: string;
   notes?: string;
+  supplier?: string;
+  category?: string;
+  purchase_type?: string;
   created_at: string;
 }
 
@@ -23,6 +26,9 @@ export async function createInventoryPurchase(payload: {
   purchase_date: string;
   amount: number;
   notes?: string;
+  supplier?: string;
+  category?: string;
+  purchase_type?: string;
 }): Promise<InventoryPurchaseDTO> {
   return backendGetJson<InventoryPurchaseDTO>('/inventory-purchases', {
     method: 'POST',

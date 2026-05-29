@@ -301,7 +301,7 @@ Example Purchase Types:
 - Pallet
 - Shelf Pulls
 - Liquidation
-- Returns
+- Returned Merchandise
 - Consignment
 
 ### Wholesaler Performance

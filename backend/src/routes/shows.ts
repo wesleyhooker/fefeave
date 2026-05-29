@@ -17,13 +17,82 @@ function toApiPlatform(db: string | null): (typeof PLATFORM_API)[number] {
   return db === 'MANUAL' ? 'OTHER' : (db as (typeof PLATFORM_API)[number]);
 }
 
-const postShowSchema = z.object({
-  show_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'show_date must be YYYY-MM-DD'),
-  platform: z.enum(PLATFORM_API),
-  name: z.string().optional(),
-  external_reference: z.string().optional(),
-  notes: z.string().optional(),
-});
+interface ShowRow {
+  id: string;
+  show_date: string;
+  platform: string;
+  name: string;
+  notes: string | null;
+  external_reference: string | null;
+  started_at: Date | null;
+  ended_at: Date | null;
+  status?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/** Columns selected/returned for show rows (kept in one place so new fields stay in sync). */
+const SHOW_COLUMNS =
+  'id, show_date, platform, name, notes, external_reference, started_at, ended_at, status, created_at, updated_at';
+
+function serializeShow(row: ShowRow) {
+  return {
+    id: row.id,
+    show_date: row.show_date,
+    platform: toApiPlatform(row.platform),
+    name: row.name,
+    notes: row.notes ?? undefined,
+    external_reference: row.external_reference ?? undefined,
+    started_at: row.started_at ?? undefined,
+    ended_at: row.ended_at ?? undefined,
+    status: row.status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+/** Response schema properties shared by all show endpoints. */
+const showResponseProperties = {
+  id: { type: 'string' },
+  show_date: { type: 'string' },
+  platform: { type: 'string' },
+  name: { type: 'string' },
+  notes: { type: 'string' },
+  external_reference: { type: 'string' },
+  started_at: { type: 'string' },
+  ended_at: { type: 'string' },
+  status: { type: 'string' },
+  created_at: { type: 'string' },
+  updated_at: { type: 'string' },
+} as const;
+
+/** Blank string -> undefined so empty optional timestamps are treated as omitted. */
+const blankToUndefined = (v: unknown): unknown =>
+  typeof v === 'string' && v.trim() === '' ? undefined : v;
+
+/** Optional ISO 8601 timestamp (offsets allowed, e.g. the frontend's Date.toISOString()). */
+const optionalIsoTimestamp = z.preprocess(
+  blankToUndefined,
+  z.string().datetime({ offset: true }).optional()
+);
+
+const postShowSchema = z
+  .object({
+    show_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'show_date must be YYYY-MM-DD'),
+    platform: z.enum(PLATFORM_API),
+    name: z.string().optional(),
+    external_reference: z.string().optional(),
+    notes: z.string().optional(),
+    // Optional show duration (capture only). Backward compatible — old clients omit these.
+    started_at: optionalIsoTimestamp,
+    ended_at: optionalIsoTimestamp,
+  })
+  .refine(
+    (d) =>
+      !(d.started_at && d.ended_at) ||
+      new Date(d.ended_at).getTime() > new Date(d.started_at).getTime(),
+    { message: 'ended_at must be after started_at', path: ['ended_at'] }
+  );
 
 const uuidSchema = z.string().uuid();
 
@@ -49,21 +118,14 @@ export async function showRoutes(
             name: { type: 'string' },
             external_reference: { type: 'string' },
             notes: { type: 'string' },
+            started_at: { type: 'string', format: 'date-time' },
+            ended_at: { type: 'string', format: 'date-time' },
           },
         },
         response: {
           201: {
             type: 'object',
-            properties: {
-              id: { type: 'string' },
-              show_date: { type: 'string' },
-              platform: { type: 'string' },
-              name: { type: 'string' },
-              notes: { type: 'string' },
-              external_reference: { type: 'string' },
-              created_at: { type: 'string' },
-              updated_at: { type: 'string' },
-            },
+            properties: showResponseProperties,
           },
         },
       },
@@ -73,16 +135,17 @@ export async function showRoutes(
       if (!parsed.success) {
         throw new ValidationError('Invalid request body', parsed.error.errors);
       }
-      const { show_date, platform, name, external_reference, notes } = parsed.data;
+      const { show_date, platform, name, external_reference, notes, started_at, ended_at } =
+        parsed.data;
 
       const show = await withTx(async (client) => {
         const userId = await ensureUser(client, request);
         const dbPlatform = toDbPlatform(platform);
         const showName = (name ?? '').trim() || 'Untitled';
         const result = await client.query(
-          `INSERT INTO shows (name, show_date, platform, source, external_reference, notes, created_by, created_via)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, 'API')
-           RETURNING id, show_date, platform, name, notes, external_reference, created_at, updated_at`,
+          `INSERT INTO shows (name, show_date, platform, source, external_reference, notes, started_at, ended_at, created_by, created_via)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'API')
+           RETURNING ${SHOW_COLUMNS}`,
           [
             showName,
             show_date,
@@ -90,32 +153,15 @@ export async function showRoutes(
             dbPlatform,
             external_reference ?? null,
             notes ?? null,
+            started_at ?? null,
+            ended_at ?? null,
             userId,
           ]
         );
         return result.rows[0];
       });
 
-      const row = show as {
-        id: string;
-        show_date: string;
-        platform: string;
-        name: string;
-        notes: string | null;
-        external_reference: string | null;
-        created_at: Date;
-        updated_at: Date;
-      };
-      return reply.status(201).send({
-        id: row.id,
-        show_date: row.show_date,
-        platform: toApiPlatform(row.platform),
-        name: row.name,
-        notes: row.notes ?? undefined,
-        external_reference: row.external_reference ?? undefined,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      });
+      return reply.status(201).send(serializeShow(show as ShowRow));
     }
   );
 
@@ -131,17 +177,7 @@ export async function showRoutes(
             type: 'array',
             items: {
               type: 'object',
-              properties: {
-                id: { type: 'string' },
-                show_date: { type: 'string' },
-                platform: { type: 'string' },
-                name: { type: 'string' },
-                notes: { type: 'string' },
-                external_reference: { type: 'string' },
-                status: { type: 'string' },
-                created_at: { type: 'string' },
-                updated_at: { type: 'string' },
-              },
+              properties: showResponseProperties,
             },
           },
         },
@@ -150,35 +186,13 @@ export async function showRoutes(
     async (_request, reply) => {
       const pool = getPool();
       const result = await pool.query(
-        `SELECT id, show_date, platform, name, notes, external_reference, status, created_at, updated_at
+        `SELECT ${SHOW_COLUMNS}
          FROM shows
          WHERE deleted_at IS NULL
          ORDER BY show_date DESC, created_at DESC`
       );
-      const rows = result.rows as Array<{
-        id: string;
-        show_date: string;
-        platform: string;
-        name: string;
-        notes: string | null;
-        external_reference: string | null;
-        status: string;
-        created_at: Date;
-        updated_at: Date;
-      }>;
-      return reply.send(
-        rows.map((r) => ({
-          id: r.id,
-          show_date: r.show_date,
-          platform: toApiPlatform(r.platform),
-          name: r.name,
-          notes: r.notes ?? undefined,
-          external_reference: r.external_reference ?? undefined,
-          status: r.status,
-          created_at: r.created_at,
-          updated_at: r.updated_at,
-        }))
-      );
+      const rows = result.rows as ShowRow[];
+      return reply.send(rows.map(serializeShow));
     }
   );
 
@@ -197,17 +211,7 @@ export async function showRoutes(
         response: {
           200: {
             type: 'object',
-            properties: {
-              id: { type: 'string' },
-              show_date: { type: 'string' },
-              platform: { type: 'string' },
-              name: { type: 'string' },
-              notes: { type: 'string' },
-              external_reference: { type: 'string' },
-              status: { type: 'string' },
-              created_at: { type: 'string' },
-              updated_at: { type: 'string' },
-            },
+            properties: showResponseProperties,
           },
         },
       },
@@ -221,38 +225,16 @@ export async function showRoutes(
 
       const pool = getPool();
       const result = await pool.query(
-        `SELECT id, show_date, platform, name, notes, external_reference, status, created_at, updated_at
+        `SELECT ${SHOW_COLUMNS}
          FROM shows
          WHERE id = $1 AND deleted_at IS NULL`,
         [id]
       );
-      const row = result.rows[0] as
-        | {
-            id: string;
-            show_date: string;
-            platform: string;
-            name: string;
-            notes: string | null;
-            external_reference: string | null;
-            status: string;
-            created_at: Date;
-            updated_at: Date;
-          }
-        | undefined;
+      const row = result.rows[0] as ShowRow | undefined;
       if (!row) {
         throw new NotFoundError('Show', id);
       }
-      return reply.send({
-        id: row.id,
-        show_date: row.show_date,
-        platform: toApiPlatform(row.platform),
-        name: row.name,
-        notes: row.notes ?? undefined,
-        external_reference: row.external_reference ?? undefined,
-        status: row.status,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      });
+      return reply.send(serializeShow(row));
     }
   );
 
@@ -280,17 +262,7 @@ export async function showRoutes(
         response: {
           200: {
             type: 'object',
-            properties: {
-              id: { type: 'string' },
-              show_date: { type: 'string' },
-              platform: { type: 'string' },
-              name: { type: 'string' },
-              notes: { type: 'string' },
-              external_reference: { type: 'string' },
-              status: { type: 'string' },
-              created_at: { type: 'string' },
-              updated_at: { type: 'string' },
-            },
+            properties: showResponseProperties,
           },
         },
       },
@@ -310,36 +282,14 @@ export async function showRoutes(
       const pool = getPool();
       const result = await pool.query(
         `UPDATE shows SET status = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL
-         RETURNING id, show_date, platform, name, notes, external_reference, status, created_at, updated_at`,
+         RETURNING ${SHOW_COLUMNS}`,
         [status, id]
       );
-      const row = result.rows[0] as
-        | {
-            id: string;
-            show_date: string;
-            platform: string;
-            name: string;
-            notes: string | null;
-            external_reference: string | null;
-            status: string;
-            created_at: Date;
-            updated_at: Date;
-          }
-        | undefined;
+      const row = result.rows[0] as ShowRow | undefined;
       if (!row) {
         throw new NotFoundError('Show', id);
       }
-      return reply.send({
-        id: row.id,
-        show_date: row.show_date,
-        platform: toApiPlatform(row.platform),
-        name: row.name,
-        notes: row.notes ?? undefined,
-        external_reference: row.external_reference ?? undefined,
-        status: row.status,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      });
+      return reply.send(serializeShow(row));
     }
   );
 

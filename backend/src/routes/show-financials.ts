@@ -23,6 +23,24 @@ const postFinancialsSchema = z.object({
       if (Number.isNaN(n) || n < 0) return undefined;
       return n;
     }),
+  // Optional explicit platform fee (capture only). Rejected when negative.
+  platform_fee_amount: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v, ctx) => {
+      if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) {
+        return undefined;
+      }
+      const n = typeof v === 'string' ? parseFloat(v) : v;
+      if (Number.isNaN(n) || n < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'platform_fee_amount must be a non-negative number',
+        });
+        return z.NEVER;
+      }
+      return n;
+    }),
 });
 
 export async function showFinancialsRoutes(
@@ -52,6 +70,7 @@ export async function showFinancialsRoutes(
           properties: {
             payout_after_fees_amount: { type: 'number' },
             gross_sales_amount: { type: 'number' },
+            platform_fee_amount: { type: 'number' },
           },
         },
         response: {
@@ -61,6 +80,7 @@ export async function showFinancialsRoutes(
               show_id: { type: 'string' },
               payout_after_fees_amount: { type: 'string' },
               gross_sales_amount: { type: 'string' },
+              platform_fee_amount: { type: 'string' },
               currency: { type: 'string' },
               created_at: { type: 'string' },
               updated_at: { type: 'string' },
@@ -80,7 +100,7 @@ export async function showFinancialsRoutes(
       if (!bodyParsed.success) {
         throw new ValidationError('Invalid request body', bodyParsed.error.errors);
       }
-      const { payout_after_fees_amount, gross_sales_amount } = bodyParsed.data;
+      const { payout_after_fees_amount, gross_sales_amount, platform_fee_amount } = bodyParsed.data;
 
       const row = await withTx(async (client) => {
         const showCheck = await client.query(
@@ -96,14 +116,21 @@ export async function showFinancialsRoutes(
         }
 
         const result = await client.query(
-          `INSERT INTO show_financials (show_id, payout_after_fees_amount, gross_sales_amount, currency, updated_at)
-           VALUES ($1, $2, $3, 'USD', NOW())
+          `INSERT INTO show_financials (show_id, payout_after_fees_amount, gross_sales_amount, platform_fee_amount, currency, updated_at)
+           VALUES ($1, $2, $3, $4, 'USD', NOW())
            ON CONFLICT (show_id) DO UPDATE SET
              payout_after_fees_amount = EXCLUDED.payout_after_fees_amount,
              gross_sales_amount = EXCLUDED.gross_sales_amount,
+             -- Preserve existing platform fee when the caller omits it (e.g. payout-only edits).
+             platform_fee_amount = COALESCE(EXCLUDED.platform_fee_amount, show_financials.platform_fee_amount),
              updated_at = NOW()
-           RETURNING show_id, payout_after_fees_amount, gross_sales_amount, currency, created_at, updated_at`,
-          [showId, payout_after_fees_amount, gross_sales_amount ?? null]
+           RETURNING show_id, payout_after_fees_amount, gross_sales_amount, platform_fee_amount, currency, created_at, updated_at`,
+          [
+            showId,
+            payout_after_fees_amount,
+            gross_sales_amount ?? null,
+            platform_fee_amount ?? null,
+          ]
         );
         return result.rows[0];
       });
@@ -112,6 +139,7 @@ export async function showFinancialsRoutes(
         show_id: string;
         payout_after_fees_amount: string;
         gross_sales_amount: string | null;
+        platform_fee_amount: string | null;
         currency: string;
         created_at: Date;
         updated_at: Date;
@@ -121,6 +149,7 @@ export async function showFinancialsRoutes(
         show_id: r.show_id,
         payout_after_fees_amount: r.payout_after_fees_amount,
         gross_sales_amount: r.gross_sales_amount ?? undefined,
+        platform_fee_amount: r.platform_fee_amount ?? undefined,
         currency: r.currency,
         created_at: r.created_at,
         updated_at: r.updated_at,
@@ -147,6 +176,7 @@ export async function showFinancialsRoutes(
               show_id: { type: 'string' },
               payout_after_fees_amount: { type: 'string' },
               gross_sales_amount: { type: 'string' },
+              platform_fee_amount: { type: 'string' },
               currency: { type: 'string' },
               created_at: { type: 'string' },
               updated_at: { type: 'string' },
@@ -172,7 +202,7 @@ export async function showFinancialsRoutes(
       }
 
       const result = await pool.query(
-        `SELECT show_id, payout_after_fees_amount, gross_sales_amount, currency, created_at, updated_at
+        `SELECT show_id, payout_after_fees_amount, gross_sales_amount, platform_fee_amount, currency, created_at, updated_at
          FROM show_financials WHERE show_id = $1`,
         [showId]
       );
@@ -185,6 +215,7 @@ export async function showFinancialsRoutes(
         show_id: string;
         payout_after_fees_amount: string;
         gross_sales_amount: string | null;
+        platform_fee_amount: string | null;
         currency: string;
         created_at: Date;
         updated_at: Date;
@@ -194,6 +225,7 @@ export async function showFinancialsRoutes(
         show_id: r.show_id,
         payout_after_fees_amount: r.payout_after_fees_amount,
         gross_sales_amount: r.gross_sales_amount ?? undefined,
+        platform_fee_amount: r.platform_fee_amount ?? undefined,
         currency: r.currency,
         created_at: r.created_at,
         updated_at: r.updated_at,
