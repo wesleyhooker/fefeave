@@ -117,6 +117,123 @@ describe('Shows API integration', () => {
     expect(show.status).toBeDefined();
   });
 
+  describe('show duration (started_at / ended_at)', () => {
+    test('POST accepts started_at/ended_at and GET returns them', async () => {
+      const startedAt = '2025-07-01T18:00:00.000Z';
+      const endedAt = '2025-07-01T20:30:00.000Z';
+      const postRes = await app.inject({
+        method: 'POST',
+        url: `${prefix}/shows`,
+        payload: {
+          show_date: '2025-07-01',
+          platform: 'WHATNOT',
+          name: 'Timed Show',
+          started_at: startedAt,
+          ended_at: endedAt,
+        },
+      });
+      expect(postRes.statusCode).toBe(201);
+      const created = JSON.parse(postRes.payload);
+      expect(new Date(created.started_at).toISOString()).toBe(startedAt);
+      expect(new Date(created.ended_at).toISOString()).toBe(endedAt);
+
+      const getRes = await app.inject({
+        method: 'GET',
+        url: `${prefix}/shows/${created.id}`,
+      });
+      expect(getRes.statusCode).toBe(200);
+      const show = JSON.parse(getRes.payload);
+      expect(new Date(show.started_at).toISOString()).toBe(startedAt);
+      expect(new Date(show.ended_at).toISOString()).toBe(endedAt);
+    });
+
+    test('POST is backward compatible when timestamps are omitted', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `${prefix}/shows`,
+        payload: { show_date: '2025-07-02', platform: 'WHATNOT', name: 'No Times' },
+      });
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.started_at).toBeUndefined();
+      expect(body.ended_at).toBeUndefined();
+    });
+
+    test('POST rejects ended_at before started_at (400)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `${prefix}/shows`,
+        payload: {
+          show_date: '2025-07-03',
+          platform: 'WHATNOT',
+          name: 'Bad Times',
+          started_at: '2025-07-03T20:00:00.000Z',
+          ended_at: '2025-07-03T18:00:00.000Z',
+        },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
+  describe('platform_fee_amount on financials', () => {
+    async function createShowId(): Promise<string> {
+      const res = await app.inject({
+        method: 'POST',
+        url: `${prefix}/shows`,
+        payload: { show_date: '2025-07-10', platform: 'WHATNOT', name: 'Fee Show' },
+      });
+      return JSON.parse(res.payload).id as string;
+    }
+
+    test('POST financials accepts platform_fee_amount and GET returns it', async () => {
+      const showId = await createShowId();
+      const postRes = await app.inject({
+        method: 'POST',
+        url: `${prefix}/shows/${showId}/financials`,
+        payload: { payout_after_fees_amount: 1000, platform_fee_amount: 125.5 },
+      });
+      expect(postRes.statusCode).toBe(200);
+      const fin = JSON.parse(postRes.payload);
+      expect(Number(fin.platform_fee_amount)).toBe(125.5);
+
+      const getRes = await app.inject({
+        method: 'GET',
+        url: `${prefix}/shows/${showId}/financials`,
+      });
+      expect(getRes.statusCode).toBe(200);
+      expect(Number(JSON.parse(getRes.payload).platform_fee_amount)).toBe(125.5);
+    });
+
+    test('POST financials rejects negative platform_fee_amount (400)', async () => {
+      const showId = await createShowId();
+      const res = await app.inject({
+        method: 'POST',
+        url: `${prefix}/shows/${showId}/financials`,
+        payload: { payout_after_fees_amount: 1000, platform_fee_amount: -5 },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    test('platform_fee_amount is preserved on a payout-only re-upsert', async () => {
+      const showId = await createShowId();
+      await app.inject({
+        method: 'POST',
+        url: `${prefix}/shows/${showId}/financials`,
+        payload: { payout_after_fees_amount: 1000, platform_fee_amount: 80 },
+      });
+      // Re-upsert with payout only (mirrors the detail-view payout editor).
+      const second = await app.inject({
+        method: 'POST',
+        url: `${prefix}/shows/${showId}/financials`,
+        payload: { payout_after_fees_amount: 1200 },
+      });
+      expect(second.statusCode).toBe(200);
+      const fin = JSON.parse(second.payload);
+      expect(Number(fin.payout_after_fees_amount)).toBe(1200);
+      expect(Number(fin.platform_fee_amount)).toBe(80);
+    });
+  });
+
   test('PATCH /api/shows/:id updates status to COMPLETED then ACTIVE', async () => {
     const postRes = await app.inject({
       method: 'POST',

@@ -16,6 +16,11 @@ import {
   AdminWorkspacePageLayout,
 } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
+import {
+  INVENTORY_CATEGORIES,
+  INVENTORY_PURCHASE_TYPES,
+} from "@/src/lib/constants/inventory";
 import {
   workspaceTableBodyCellPadding,
   workspaceTableHeaderCellPadding,
@@ -49,6 +54,9 @@ export default function AdminInventoryPage() {
   const [purchaseDate, setPurchaseDate] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [category, setCategory] = useState("");
+  const [purchaseType, setPurchaseType] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -93,10 +101,16 @@ export default function AdminInventoryPage() {
         purchase_date: purchaseDate.trim(),
         amount: amt,
         notes: notes.trim() || undefined,
+        supplier: supplier.trim() || undefined,
+        category: category || undefined,
+        purchase_type: purchaseType || undefined,
       });
       setPurchaseDate("");
       setAmount("");
       setNotes("");
+      setSupplier("");
+      setCategory("");
+      setPurchaseType("");
       setReloadToken((t) => t + 1);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : String(err));
@@ -142,6 +156,54 @@ export default function AdminInventoryPage() {
               inputMode="decimal"
             />
           </label>
+          <label className="block min-w-0">
+            <span className={`mb-1.5 block ${workspaceFormLabelSecondary}`}>
+              Supplier (optional)
+            </span>
+            <input
+              type="text"
+              value={supplier}
+              onChange={(e) => setSupplier(e.target.value)}
+              placeholder="e.g. Acme Liquidators"
+              className={`w-full min-w-0 ${workspaceTextInput}`}
+            />
+          </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block min-w-0">
+              <span className={`mb-1.5 block ${workspaceFormLabelSecondary}`}>
+                Category (optional)
+              </span>
+              <WorkspaceNativeSelect
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                aria-label="Inventory category"
+              >
+                <option value="">Not specified</option>
+                {INVENTORY_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </WorkspaceNativeSelect>
+            </label>
+            <label className="block min-w-0">
+              <span className={`mb-1.5 block ${workspaceFormLabelSecondary}`}>
+                Purchase type (optional)
+              </span>
+              <WorkspaceNativeSelect
+                value={purchaseType}
+                onChange={(e) => setPurchaseType(e.target.value)}
+                aria-label="Inventory purchase type"
+              >
+                <option value="">Not specified</option>
+                {INVENTORY_PURCHASE_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </WorkspaceNativeSelect>
+            </label>
+          </div>
           <label className="block min-w-0">
             <span className={`mb-1.5 block ${workspaceFormLabelSecondary}`}>
               Notes (optional)
@@ -213,6 +275,13 @@ export default function AdminInventoryPage() {
                         {formatDate(row.purchase_date)}
                       </span>
                     </div>
+                    {row.category || row.purchase_type || row.supplier ? (
+                      <p className="mt-1.5 text-xs text-gray-500">
+                        {[row.category, row.purchase_type, row.supplier]
+                          .filter((v) => v && v.trim())
+                          .join(" · ")}
+                      </p>
+                    ) : null}
                     <p className="mt-2 text-sm leading-snug text-gray-700">
                       {row.notes?.trim() ? row.notes : "—"}
                     </p>
@@ -237,6 +306,21 @@ export default function AdminInventoryPage() {
                     <th
                       className={`${workspaceTableHeaderCellPadding} text-left`}
                     >
+                      Category
+                    </th>
+                    <th
+                      className={`${workspaceTableHeaderCellPadding} text-left`}
+                    >
+                      Type
+                    </th>
+                    <th
+                      className={`${workspaceTableHeaderCellPadding} text-left`}
+                    >
+                      Supplier
+                    </th>
+                    <th
+                      className={`${workspaceTableHeaderCellPadding} text-left`}
+                    >
                       Notes
                     </th>
                   </tr>
@@ -255,9 +339,40 @@ export default function AdminInventoryPage() {
                         {formatCurrency(parseAmount(row.amount))}
                       </td>
                       <td
+                        className={`whitespace-nowrap text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
+                      >
+                        {row.category?.trim() ? (
+                          row.category
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
+                      >
+                        {row.purchase_type?.trim() ? (
+                          row.purchase_type
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td
                         className={`text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
                       >
-                        {row.notes ?? "—"}
+                        {row.supplier?.trim() ? (
+                          row.supplier
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td
+                        className={`text-sm text-gray-600 ${workspaceTableBodyCellPadding}`}
+                      >
+                        {row.notes?.trim() ? (
+                          row.notes
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

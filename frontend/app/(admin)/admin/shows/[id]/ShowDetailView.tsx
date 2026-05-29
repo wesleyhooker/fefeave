@@ -19,6 +19,9 @@ import {
   WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING,
   WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY,
   WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST,
+  WORKFLOW_SHOW_PLATFORM_FEE_REPORTING_EYEBROW,
+  WORKFLOW_SHOW_PLATFORM_FEE_REPORTING_NOTE,
+  WORKFLOW_SHOW_SUMMARY_PAYOUT_LABEL,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
   AdminPageContainer,
@@ -264,6 +267,8 @@ export function ShowDetailView({ id }: { id: string }) {
   >("");
   const [closedAt, setClosedAt] = useState<string | undefined>(undefined);
   const [payoutAfterFees, setPayoutAfterFees] = useState(0);
+  /** Informational only (capture foundation); null when not recorded. */
+  const [platformFee, setPlatformFee] = useState<number | null>(null);
   const [settlements, setSettlements] = useState<StructuredSettlement[]>([]);
   const [wholesalers, setWholesalers] = useState<BackendWholesalerBalanceRow[]>(
     [],
@@ -354,6 +359,11 @@ export function ShowDetailView({ id }: { id: string }) {
         setPlatform(show.platform ?? "");
         const payout = Number(financials?.payout_after_fees_amount ?? "0");
         setPayoutAfterFees(Number.isFinite(payout) ? payout : 0);
+        const fee =
+          financials?.platform_fee_amount != null
+            ? Number(financials.platform_fee_amount)
+            : null;
+        setPlatformFee(fee != null && Number.isFinite(fee) ? fee : null);
         setClosedAt(
           show.status === "COMPLETED" ? (show.updated_at ?? "") : undefined,
         );
@@ -2018,7 +2028,9 @@ export function ShowDetailView({ id }: { id: string }) {
                   >
                     <div className="space-y-3">
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className={workspaceLabelEyebrow}>Payout</span>
+                        <span className={workspaceLabelEyebrow}>
+                          {WORKFLOW_SHOW_SUMMARY_PAYOUT_LABEL}
+                        </span>
                         <span
                           className={`shrink-0 text-right text-lg font-semibold ${workspaceMoneyTabular} ${workspaceMoneyPositive}`}
                           aria-label={`Payout after fees ${formatCurrency(payoutAfterFees)}`}
@@ -2070,6 +2082,29 @@ export function ShowDetailView({ id }: { id: string }) {
                           {formatCurrencyAbs(totals.profitEstimate)}
                         </span>
                       </div>
+
+                      {platformFee != null ? (
+                        <div
+                          className="mt-4 rounded-md border border-dashed border-stone-200/90 bg-stone-50/50 px-3 py-2.5"
+                          role="note"
+                          aria-label="Platform fee recorded for future reporting"
+                        >
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
+                            {WORKFLOW_SHOW_PLATFORM_FEE_REPORTING_EYEBROW}
+                          </p>
+                          <p className="mt-1.5 text-xs leading-snug text-stone-600">
+                            <span className="font-medium text-stone-700">
+                              Platform fee{" "}
+                              <span
+                                className={`tabular-nums ${workspaceMoneyTabular}`}
+                              >
+                                {formatCurrency(platformFee)}
+                              </span>
+                            </span>
+                            . {WORKFLOW_SHOW_PLATFORM_FEE_REPORTING_NOTE}
+                          </p>
+                        </div>
+                      ) : null}
 
                       {totals.status === "Open" ? (
                         <button

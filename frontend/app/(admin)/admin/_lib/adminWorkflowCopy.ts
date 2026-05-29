@@ -47,6 +47,23 @@ export const WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY =
 /** Read-only payout / profit column before close-out. */
 export const WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING = 'Summary';
 
+/** Summary sidebar: payout line (already net of platform fees). */
+export const WORKFLOW_SHOW_SUMMARY_PAYOUT_LABEL = 'Payout after fees';
+
+/**
+ * Platform fee captured on financials — informational only; not subtracted from
+ * estimated profit (payout already reflects fees).
+ */
+export const WORKFLOW_SHOW_PLATFORM_FEE_REPORTING_EYEBROW =
+  'Recorded for reporting';
+
+export const WORKFLOW_SHOW_PLATFORM_FEE_REPORTING_NOTE =
+  'Saved for future platform analysis. Already reflected in payout after fees — not subtracted again from estimated profit.';
+
+/** Log-show form: optional platform fee field. */
+export const WORKFLOW_LOG_SHOW_PLATFORM_FEE_HINT =
+  'Optional. Record what the platform charged for future analysis. Your payout-after-fees amount already accounts for this.';
+
 export const WORKFLOW_LOG_SHOW_TRIGGER_LABEL = 'Log show';
 export const WORKFLOW_LOG_SHOW_PANEL_TITLE = 'Log a show';
 export const WORKFLOW_LOG_SHOW_PANEL_SUBTITLE =
