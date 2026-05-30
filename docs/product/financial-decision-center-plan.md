@@ -64,9 +64,10 @@ never modified by the decision layer.
 ### Live financial snapshot
 
 A computed, read-only view of the current financial position derived from raw
-data. It answers "where do things stand right now" — current estimated cash
-(from reconciliation + tracked events), outstanding balances, inventory spend,
-expenses, and estimated profit. It holds no opinions and stores no settings.
+data. It answers "where do things stand right now" — outstanding balances,
+inventory spend, expenses, and strategy context on Overview; current cash for
+recommendations comes from the latest manual snapshot (event-adjusted estimated
+cash is planned). It holds no opinions and stores no settings.
 
 ### Strategy settings
 
@@ -90,10 +91,12 @@ chosen, and a strategy can be changed without touching raw data.
 These are the working definitions the Decision Center is built around. They are
 planning definitions for decision support — not accounting or tax definitions.
 
-- **Current cash** — Money actually available right now for the business. In V1
-  this is derived from a manual cash snapshot plus tracked events since that
-  snapshot (see **Current Cash Strategy (V1)** below). Outstanding receivables
-  are tracked separately and do not count as current cash.
+- **Current cash** — Money actually available right now for the business.
+  **Recommendation Engine V1 (implemented)** uses the latest manual cash snapshot
+  amount directly. Event-adjusted estimation (snapshot plus tracked events since
+  that snapshot) is planned for a future phase — see **Current Cash Strategy (V1)**
+  below. Outstanding receivables are tracked separately and do not count as
+  current cash.
 
 - **Outstanding balances** — Money owed _to_ the business (e.g. unpaid wholesaler
   balances). Expected future cash, not yet available. Creating a settlement does
@@ -138,12 +141,19 @@ Current cash will initially be maintained using **manual cash snapshots**.
 single total business cash amount. There is no per-account tracking in V1 — no
 checking/savings/PayPal/Venmo breakdown.
 
+**Current implementation:** Recommendation Engine V1 uses the latest snapshot
+amount directly as current cash. Overview **Cash Position** displays snapshot
+amount, last reconciliation date, and snapshot source.
+
+**Future:** event-adjusted cash estimation (snapshot plus tracked events since
+the snapshot — see **Cash Estimation Events** below) remains planned.
+
 - The operator periodically records actual business cash on hand.
 - FefeAve uses that snapshot as a **reconciliation point**.
-- After the snapshot is recorded, FefeAve **estimates current cash** by applying
-  tracked cash events since the snapshot (see **Cash Estimation Events** below).
-- The system should display:
-  - **Current estimated cash**
+- After the snapshot is recorded, FefeAve will **estimate current cash** by applying
+  tracked cash events since the snapshot (not yet implemented).
+- The system displays (implemented on Overview):
+  - **Snapshot amount** (used as current cash for recommendations)
   - **Last reconciliation date**
   - **Snapshot source** (e.g. manual entry)
 
@@ -156,7 +166,9 @@ bank-linked balances. Recommendation logic should continue operating on a
 
 #### Cash Estimation Events
 
-Only events that actually move cash affect the estimate. Direction matters.
+_Planned for a future phase — not used by Recommendation Engine V1._
+
+Only events that actually move cash will affect the estimate. Direction matters.
 
 **Cash inflows**
 
@@ -200,6 +212,9 @@ anchor. Over time, drift patterns can surface gaps in expense or owner-activity
 capture.
 
 #### V1 cash snapshot example
+
+_Example illustrates the future event-adjusted model; Recommendation Engine V1
+uses the snapshot amount directly._
 
 ```
 Cash snapshot:           $10,000
@@ -354,8 +369,8 @@ Location: **Financials → Overview** (route `/admin/financials`, the Financials
 **Status: Implemented (V1)** (branch `feat/expenses-foundation`)
 
 Phase 3 ships in steps. **V1 (implemented)** is the decision-support Overview surface.
-**Phase 3B (implemented)** adds manual business-wide cash snapshots. Estimated current
-cash from snapshot + tracked events and the recommendation engine remain deferred.
+**Phase 3B (implemented)** adds manual business-wide cash snapshots.
+**Phase 4 (implemented)** adds Recommendation Engine V1.
 
 **V1 Overview (implemented):**
 
@@ -364,7 +379,7 @@ cash from snapshot + tracked events and the recommendation engine remain deferre
   - Inventory spend — last 30 days (`GET /admin/inventory-invested?days=30`)
   - Business expenses — last 30 days (`GET /admin/business-expenses-total?days=30`)
   - Current strategy (label)
-- **Strategy Preview**, **Decision Preview**, **What's Missing** — as above.
+- **Strategy Preview**, **Recommendation Summary**, **What's Missing** — as above.
 
 **Phase 3B — Manual cash snapshots (implemented):**
 
@@ -383,7 +398,10 @@ cash from snapshot + tracked events and the recommendation engine remain deferre
 **Still deferred:**
 
 - Event-adjusted estimated current cash (snapshot + tracked inflows/outflows)
-- Deeper recommendation explanations (formula breakdown per line)
+- Reconciliation reminders
+- Bank integrations and multi-account cash feeds
+- Deeper recommendation explanations (formula breakdown per line — Phase 5)
+- AI explanations (V2) and AI recommendations (V3)
 
 ### Phase 5 — Recommendation Explanations
 
@@ -418,7 +436,7 @@ To protect focus, the following are explicitly **not** being built:
 - Forecasting first (collect data before predicting)
 - Advanced analytics before enough data exists
 - Customer returns/refunds tracking until it is a proven profit leak
-- AI decision making before a working manual strategy exists
+- AI decision making (V3 intelligent recommendations — see §5)
 
 If a proposed feature matches this list, it should be deferred or re-scoped.
 
@@ -452,15 +470,18 @@ If a proposed feature matches this list, it should be deferred or re-scoped.
 **Still deferred:**
 
 - Event-adjusted estimated current cash (snapshot + tracked cash events)
+- Reconciliation reminders
 - Recommendation formula explanations (Phase 5)
 - Bank integrations and multi-account cash feeds
+- AI explanations (V2) and AI recommendations (V3)
 
 ### Current Cash Strategy (V1)
 
 See **§3 Financial Concepts → Current Cash Strategy (V1)** for the full model.
-In short: one business-wide manual snapshot as reconciliation anchor, estimated
-cash derived from directional cash events, with last reconciliation date and
-snapshot source surfaced in Overview.
+In short: one business-wide manual snapshot as reconciliation anchor.
+Recommendation Engine V1 uses the snapshot amount directly as current cash; last
+reconciliation date and snapshot source are surfaced on Overview. Event-adjusted
+estimation from directional cash events remains planned.
 
 ### Future Cash Sources
 
@@ -484,7 +505,8 @@ Event-adjusted estimated cash remains deferred.
 
 ## Open Questions
 
-These do not block Phase 1 but should be resolved before Phases 2–3:
+These do not block merge of Phases 1–4 but should be resolved before event-adjusted
+cash or deeper recommendation UX:
 
 1. **Snapshot period** — Is estimated profit / inventory spend computed
    year-to-date, trailing 12 months, or a user-selected range? This affects tax
