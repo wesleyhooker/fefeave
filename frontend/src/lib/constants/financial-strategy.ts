@@ -41,24 +41,25 @@ export type StrategyOption = {
   description: string;
 };
 
+/** Default / recommended starting preset for new operators. */
+export const RECOMMENDED_STRATEGY_TYPE: StrategyType = 'BALANCED';
+
 export const STRATEGY_OPTIONS: StrategyOption[] = [
   {
     type: 'CONSERVATIVE_GROWTH',
     label: 'Conservative Growth',
-    description:
-      'Higher reinvestment and lower owner draw to prioritize building the business.',
+    description: 'Reinvest more (70%) to grow faster. Smaller take-home now.',
   },
   {
     type: 'BALANCED',
     label: 'Balanced',
     description:
-      'Balance reinvestment and taking money home when you want steady growth and income.',
+      'Reinvest about half (50%). A steady mix of growth and take-home.',
   },
   {
     type: 'INCOME_FOCUSED',
     label: 'Income Focused',
-    description:
-      'Lower reinvestment and higher owner draw when growth is not the priority.',
+    description: 'Reinvest less (30%) so more is available to take home.',
   },
   {
     type: 'CUSTOM',
@@ -67,6 +68,10 @@ export const STRATEGY_OPTIONS: StrategyOption[] = [
       'Set your own tax reserve, reinvestment, and cash buffer targets.',
   },
 ];
+
+/** Shown above preset cards — clarifies shared vs. differing levers. */
+export const STRATEGY_PRESETS_HELPER =
+  'All presets reserve 30% for taxes and keep a $2,000 cash buffer. They differ in how much remaining cash is reinvested versus available to take home.';
 
 /** Helper copy for the cash buffer field on the Strategy page. */
 export const STRATEGY_CASH_BUFFER_HELPER =

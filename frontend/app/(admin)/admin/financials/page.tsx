@@ -11,8 +11,11 @@ import {
   type AdminSummaryStatItem,
 } from "@/app/(admin)/admin/_components/AdminSummaryStatGrid";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import Link from "next/link";
+import { FinancialsCrossLinks } from "@/app/(admin)/admin/_components/FinancialsCrossLinks";
 import {
   workspaceActionCompleteMd,
+  workspaceActionSecondarySm,
   workspaceCard,
   workspaceDateInput,
   workspaceFormLabel,
@@ -71,6 +74,12 @@ function confidenceBadgeClass(confidence: RecommendationConfidence): string {
 /** Recent activity window used by the snapshot spend cards. Documented in copy. */
 const SNAPSHOT_WINDOW_DAYS = 30;
 const SNAPSHOT_WINDOW_LABEL = "Last 30 days";
+
+const RECOMMENDATION_FORMULA =
+  "Safe owner draw = current cash − tax reserve − cash buffer − reinvestment.";
+
+const ADVISORY_COPY =
+  "Guidance only — this does not move money or create an owner draw.";
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -272,25 +281,167 @@ export default function AdminFinancialsOverviewPage() {
         />
       ) : data ? (
         <div className="space-y-8">
-          {/* Section 1 — Financial Snapshot */}
-          <section className="space-y-3">
-            <div>
+          {/* A — Primary Recommendation */}
+          <section className={`p-4 sm:p-6 ${workspaceCard}`}>
+            {!data.recommendations.available ? (
+              <>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+                  Recommendation
+                </h2>
+                <p className={`mt-3 text-sm ${workspaceFormLabelSecondary}`}>
+                  Add a cash snapshot below to see how much you could safely
+                  take home based on your strategy.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+                    Safe owner draw
+                  </h2>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${confidenceBadgeClass(data.recommendations.confidence)}`}
+                  >
+                    {confidenceLabel(data.recommendations.confidence)}
+                  </span>
+                </div>
+                <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
+                  Based on your latest cash snapshot and active strategy.
+                </p>
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 sm:p-6">
+                  <p className="text-sm font-medium text-emerald-900">
+                    You could safely take home
+                  </p>
+                  <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-emerald-950 sm:text-5xl">
+                    {formatCurrency(
+                      parseAmount(data.recommendations.safe_owner_draw ?? "0"),
+                    )}
+                  </p>
+                  <p className="mt-2 text-sm text-emerald-900/80">
+                    After tax reserve, cash buffer, and reinvestment targets
+                    from your{" "}
+                    {STRATEGY_OPTIONS.find(
+                      (o) => o.type === data.recommendations.strategy_type,
+                    )?.label ?? data.recommendations.strategy_type}{" "}
+                    strategy.
+                  </p>
+                </div>
+                <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-sm text-gray-500">Current cash</dt>
+                    <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
+                      {formatCurrency(
+                        parseAmount(data.recommendations.current_cash ?? "0"),
+                      )}
+                    </dd>
+                    <dd className="mt-1 text-xs text-gray-500">
+                      From your latest manual snapshot
+                    </dd>
+                  </div>
+                  {data.recommendations.snapshot_date ? (
+                    <div>
+                      <dt className="text-sm text-gray-500">Last reconciled</dt>
+                      <dd className="mt-1 text-base font-medium text-gray-900">
+                        {formatDate(data.recommendations.snapshot_date)}
+                      </dd>
+                      {data.recommendations.confidence === "LOW" ? (
+                        <dd className="mt-1 text-xs text-amber-700">
+                          Snapshot is getting stale — reconcile when you can.
+                        </dd>
+                      ) : data.recommendations.confidence === "MEDIUM" ? (
+                        <dd className="mt-1 text-xs text-amber-700">
+                          Consider reconciling soon for fresher guidance.
+                        </dd>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </dl>
+                <p className={`mt-4 text-xs ${workspaceFormLabelSecondary}`}>
+                  {ADVISORY_COPY}
+                </p>
+              </>
+            )}
+          </section>
+
+          {/* B — Allocation Breakdown */}
+          {data.recommendations.available ? (
+            <section className={`p-4 sm:p-5 ${workspaceCard}`}>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-                Financial snapshot
+                Allocation breakdown
               </h2>
               <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
-                Spend totals cover the {SNAPSHOT_WINDOW_LABEL.toLowerCase()} of
-                recorded activity. Values are estimates based on what has been
-                entered, not a live bank balance.
+                {RECOMMENDATION_FORMULA}
               </p>
+              <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <dt className="text-sm text-gray-500">Tax reserve</dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
+                    {formatCurrency(
+                      parseAmount(
+                        data.recommendations.tax_reserve_recommendation ?? "0",
+                      ),
+                    )}
+                  </dd>
+                  <dd className="mt-1 text-xs text-gray-500">
+                    {formatPercent(data.recommendations.tax_reserve_bps)} of
+                    current cash
+                  </dd>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <dt className="text-sm text-gray-500">Cash buffer</dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
+                    {formatCurrency(
+                      parseAmount(
+                        data.recommendations.cash_buffer_target ?? "0",
+                      ),
+                    )}
+                  </dd>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <dt className="text-sm text-gray-500">Reinvestment</dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
+                    {formatCurrency(
+                      parseAmount(
+                        data.recommendations.reinvestment_recommendation ?? "0",
+                      ),
+                    )}
+                  </dd>
+                  <dd className="mt-1 text-xs text-gray-500">
+                    {formatPercent(data.recommendations.reinvestment_bps)} of
+                    available after protection
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          ) : null}
+
+          {/* C — Business Snapshot */}
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+                  Business snapshot
+                </h2>
+                <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
+                  Spend totals cover the {SNAPSHOT_WINDOW_LABEL.toLowerCase()}{" "}
+                  of recorded activity. Values are estimates based on what has
+                  been entered, not a live bank balance.
+                </p>
+              </div>
+              <Link
+                href="/admin/strategy"
+                className={workspaceActionSecondarySm}
+              >
+                Adjust strategy
+              </Link>
             </div>
             <AdminSummaryStatGrid
               items={snapshotItems}
-              aria-label="Financial snapshot"
+              aria-label="Business snapshot"
             />
           </section>
 
-          {/* Cash Position */}
+          {/* D — Cash Position */}
           <section className={`p-4 sm:p-5 ${workspaceCard}`}>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
               Cash position
@@ -298,16 +449,11 @@ export default function AdminFinancialsOverviewPage() {
             {data.cashSnapshot ? (
               <>
                 <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
-                  Your most recent business-wide cash snapshot. Recommendations
-                  below use this amount as current cash.
+                  Reconcile when your actual cash on hand changes.
+                  Recommendations use your latest snapshot amount as current
+                  cash.
                 </p>
-                <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <div>
-                    <dt className="text-sm text-gray-500">Snapshot amount</dt>
-                    <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
-                      {formatCurrency(parseAmount(data.cashSnapshot.amount))}
-                    </dd>
-                  </div>
+                <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <dt className="text-sm text-gray-500">Last reconciled</dt>
                     <dd className="mt-1 text-base font-medium text-gray-900">
@@ -341,7 +487,7 @@ export default function AdminFinancialsOverviewPage() {
             ) : (
               <>
                 <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
-                  Add a cash snapshot to generate recommendations.
+                  Add a cash snapshot to unlock recommendations.
                 </p>
                 {!showCashForm ? (
                   <div className="mt-4">
@@ -435,200 +581,41 @@ export default function AdminFinancialsOverviewPage() {
             ) : null}
           </section>
 
-          {/* Section 2 — Strategy Preview */}
-          <section className={`p-4 sm:p-5 ${workspaceCard}`}>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-              Strategy preview
-            </h2>
-            <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
-              Your current targets —{" "}
-              {strategyLabel(data.strategy.strategy_type)}. These describe how
-              available cash should be split.
-            </p>
-            <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <dt className="text-sm text-gray-500">Tax Reserve Target</dt>
-                <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
-                  {formatPercent(data.strategy.tax_reserve_bps)}
-                </dd>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <dt className="text-sm text-gray-500">Reinvestment Target</dt>
-                <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
-                  {formatPercent(data.strategy.reinvestment_bps)}
-                </dd>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <dt className="text-sm text-gray-500">Cash Buffer Target</dt>
-                <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
-                  {formatCurrency(
-                    parseAmount(data.strategy.cash_buffer_amount),
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </section>
-
-          {/* Recommendation Summary */}
-          <section className={`p-4 sm:p-5 ${workspaceCard}`}>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-                Recommendation summary
-              </h2>
-              {data.recommendations.available ? (
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${confidenceBadgeClass(data.recommendations.confidence)}`}
-                >
-                  {confidenceLabel(data.recommendations.confidence)}
-                </span>
-              ) : null}
-            </div>
-            {!data.recommendations.available ? (
-              <p className={`mt-3 text-sm ${workspaceFormLabelSecondary}`}>
-                Add a cash snapshot in Cash Position above to generate
-                recommendations.
-              </p>
-            ) : (
-              <>
-                <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
-                  Based on your current strategy and latest cash snapshot.
-                  Recommendations are guidance only and do not move money.
-                </p>
-                {data.recommendations.snapshot_date ? (
-                  <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
-                    Last reconciled{" "}
-                    {formatDate(data.recommendations.snapshot_date)}.
-                    {data.recommendations.confidence === "LOW"
-                      ? " This snapshot is getting stale — reconcile when you can."
-                      : null}
-                    {data.recommendations.confidence === "MEDIUM"
-                      ? " Consider reconciling soon for fresher guidance."
-                      : null}
-                  </p>
-                ) : null}
-                <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <dt className="text-sm text-gray-500">Current cash</dt>
-                    <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
-                      {formatCurrency(
-                        parseAmount(data.recommendations.current_cash ?? "0"),
-                      )}
-                    </dd>
-                  </div>
-                  <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <dt className="text-sm text-gray-500">
-                      Tax reserve recommendation
-                    </dt>
-                    <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
-                      {formatCurrency(
-                        parseAmount(
-                          data.recommendations.tax_reserve_recommendation ??
-                            "0",
-                        ),
-                      )}
-                    </dd>
-                    <dd className="mt-1 text-xs text-gray-500">
-                      {formatPercent(data.recommendations.tax_reserve_bps)} of
-                      current cash
-                    </dd>
-                  </div>
-                  <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <dt className="text-sm text-gray-500">
-                      Cash buffer target
-                    </dt>
-                    <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
-                      {formatCurrency(
-                        parseAmount(
-                          data.recommendations.cash_buffer_target ?? "0",
-                        ),
-                      )}
-                    </dd>
-                  </div>
-                  <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <dt className="text-sm text-gray-500">
-                      Reinvestment recommendation
-                    </dt>
-                    <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
-                      {formatCurrency(
-                        parseAmount(
-                          data.recommendations.reinvestment_recommendation ??
-                            "0",
-                        ),
-                      )}
-                    </dd>
-                    <dd className="mt-1 text-xs text-gray-500">
-                      {formatPercent(data.recommendations.reinvestment_bps)} of
-                      available after protection
-                    </dd>
-                  </div>
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 sm:col-span-2 xl:col-span-2">
-                    <dt className="text-sm font-medium text-emerald-900">
-                      Safe owner draw
-                    </dt>
-                    <dd className="mt-1 text-3xl font-semibold tabular-nums text-emerald-950">
-                      {formatCurrency(
-                        parseAmount(
-                          data.recommendations.safe_owner_draw ?? "0",
-                        ),
-                      )}
-                    </dd>
-                    <dd className="mt-1 text-sm text-emerald-900/80">
-                      How much you could safely take home right now after tax
-                      reserve, cash buffer, and reinvestment targets.
-                    </dd>
-                  </div>
-                </dl>
-              </>
-            )}
-          </section>
-
-          {/* What's Missing */}
-          <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 sm:p-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-900">
+          {/* E — What's Missing */}
+          <section className="rounded-xl border border-amber-100 bg-amber-50/40 p-4 sm:p-5">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-900/80">
               What&apos;s missing
             </h2>
-            <p className="mt-1 text-sm text-amber-900/90">
-              Recommendations use your snapshot amount directly. These items can
+            <p className="mt-1 text-sm text-amber-900/75">
+              Recommendations use your snapshot amount directly. These can
               improve accuracy over time:
             </p>
-            <ul className="mt-3 space-y-2 text-sm text-amber-900/90">
+            <ul className="mt-2 space-y-1.5 text-sm text-amber-900/75">
               {!data.cashSnapshot ? (
-                <li className="flex items-start gap-2">
-                  <span aria-hidden className="mt-1 text-amber-700">
-                    •
-                  </span>
-                  <span>
-                    <span className="font-medium">Cash snapshot</span> — record
-                    actual cash on hand to unlock recommendations.
-                  </span>
+                <li>
+                  <span className="font-medium">Cash snapshot</span> — record
+                  actual cash on hand to unlock recommendations.
                 </li>
               ) : (
-                <li className="flex items-start gap-2">
-                  <span aria-hidden className="mt-1 text-amber-700">
-                    •
-                  </span>
-                  <span>
-                    <span className="font-medium">Fresh reconciliation</span> —
-                    update your snapshot when cash changes so guidance stays
-                    current.
-                  </span>
+                <li>
+                  <span className="font-medium">Fresh reconciliation</span> —
+                  update your snapshot when cash changes.
                 </li>
               )}
-              <li className="flex items-start gap-2">
-                <span aria-hidden className="mt-1 text-amber-700">
-                  •
-                </span>
-                <span>
-                  <span className="font-medium">Complete records</span> — keep
-                  payments, expenses, inventory, and owner activity up to date
-                  for future event-adjusted cash estimates.
-                </span>
+              <li>
+                <span className="font-medium">Complete records</span> — keep
+                payments, expenses, inventory, and owner activity up to date for
+                future event-adjusted cash estimates.
               </li>
             </ul>
-            <p className="mt-3 text-xs text-amber-900/80">
-              Recommendations are guidance only. They never move money or create
-              owner draws.
-            </p>
+            <FinancialsCrossLinks
+              className="mt-3"
+              label="Related"
+              links={[
+                { href: "/admin/strategy", label: "Adjust strategy" },
+                { href: "/admin/expenses", label: "Record expense" },
+              ]}
+            />
           </section>
         </div>
       ) : null}
