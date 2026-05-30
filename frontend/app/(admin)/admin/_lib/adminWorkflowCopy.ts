@@ -117,6 +117,11 @@ export const WORKFLOW_EMPTY_INVENTORY_TITLE =
 export const WORKFLOW_EMPTY_INVENTORY_HINT =
   'Record a purchase above to begin tracking inventory costs.';
 
+export const WORKFLOW_EMPTY_EXPENSES_TITLE =
+  'No business expenses in the last 30 days.';
+export const WORKFLOW_EMPTY_EXPENSES_HINT =
+  'Record overhead like shipping, supplies, and software so future profit and owner-draw recommendations reflect real costs.';
+
 export const WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_TITLE =
   'No closed shows for this wholesaler.';
 export const WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_HINT =

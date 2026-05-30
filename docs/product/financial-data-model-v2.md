@@ -456,7 +456,7 @@ Mirror the Tax Reserve shape (ideally **one shared `reserves` table** with a
 
 ---
 
-## 10. Business Expense _(future)_
+## 10. Business Expenses
 
 ### Purpose
 
@@ -468,32 +468,64 @@ vision's **Operating Profit** model:
 Operating Profit = Revenue − Settlements − Inventory − Platform Fees − Business Expenses
 ```
 
-### Status / current proxy
+### Status — [Implemented]
 
-Today, `owed_line_items` with `obligation_kind = 'VENDOR_EXPENSE'` captures
-**vendor-specific** obligations, but that is not the same as general overhead.
-General business expenses have **no clean home** — a gap.
+Table **`business_expenses`** (migration `1780030000000_business_expenses`). General
+operating costs not owed to a wholesaler and not inventory. API: `POST/GET
+/business-expenses`, `GET /admin/business-expenses-total`.
 
-### Recommended future shape — [Recommended, deferred]
+| Field          | Status      | Notes                      |
+| -------------- | ----------- | -------------------------- |
+| `id`           | Implemented | UUID PK                    |
+| `expense_date` | Implemented | date                       |
+| `amount`       | Implemented | numeric(19,4), CHECK > 0   |
+| `category`     | Implemented | text; app-validated enum   |
+| `notes`        | Implemented | optional text              |
+| timestamps     | Implemented | `created_at`, `updated_at` |
 
-A dedicated `business_expenses` table (kept separate from settlements so balance
-math stays clean):
+Categories: Shipping, Supplies, Software, Travel, Equipment, Other.
 
-| Field                                                    | Tag           | Why / Question supported   |
-| -------------------------------------------------------- | ------------- | -------------------------- |
-| `id`                                                     | [Recommended] | Identity                   |
-| `expense_date` (date)                                    | [Recommended] | Period grouping            |
-| `amount` (numeric)                                       | [Recommended] | Cost                       |
-| `category` (enum: Shipping, Software, Fees, Rent, Other) | [Recommended] | "Where does overhead go?"  |
-| `vendor` (text)                                          | [Optional]    | Who was paid               |
-| `note` (text)                                            | [Optional]    | Memo                       |
-| `payment_method` (enum, reuse `payment_method`)          | [Optional]    | Cash-flow / reconciliation |
-| timestamps, `created_by`, soft delete                    | [Recommended] | Provenance / audit         |
+Optional future fields (`vendor`, `payment_method`, soft delete) remain deferred.
 
 ### Future questions supported
 
 - What is true operating profit (after all costs)?
 - Which overhead categories are growing?
+
+---
+
+## Financial Strategy Settings — [Implemented]
+
+Table **`financial_strategy_settings`** (migration `1780035000000_financial_strategy_settings`).
+One global row (`scope_key = 'global'`). API: `GET/PUT /financial-strategy`.
+
+| Field                | Status      | Notes                     |
+| -------------------- | ----------- | ------------------------- |
+| `strategy_type`      | Implemented | preset or CUSTOM          |
+| `tax_reserve_bps`    | Implemented | 0–10000                   |
+| `reinvestment_bps`   | Implemented | 0–10000                   |
+| `cash_buffer_amount` | Implemented | numeric(19,4), CHECK >= 0 |
+
+Presets: Conservative Growth, Balanced, Income Focused, Custom.
+
+---
+
+## Cash Snapshots — [Implemented]
+
+Table **`cash_snapshots`** (migration `1780040000000_cash_snapshots`). One
+business-wide manual cash total in V1. API: `GET /cash-snapshots/latest`,
+`POST /cash-snapshots`.
+
+| Field           | Status      | Notes                      |
+| --------------- | ----------- | -------------------------- |
+| `snapshot_date` | Implemented | date                       |
+| `amount`        | Implemented | numeric(19,4), CHECK >= 0  |
+| `source`        | Implemented | `MANUAL` in V1             |
+| `notes`         | Implemented | optional text              |
+| timestamps      | Implemented | `created_at`, `updated_at` |
+
+Recommendation Engine V1 reads the latest snapshot amount as current cash.
+Event-adjusted estimation from tracked events remains deferred.
 
 ---
 

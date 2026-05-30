@@ -55,7 +55,7 @@ For full stack (frontend + `AUTH_MODE=dev_bypass`), from repo root: `make dev-mi
 3. Resets an isolated **`test`** schema and runs Jest
 4. Stops Postgres only if this script started it
 
-**Suites included:** `db-smoke`, `shows-integration`, `wholesalers-integration`, `owed-line-items-integration`, `settlement-ledger-integration`, `vendor-expense-ledger-integration`, `closed-show-freeze-integration`, `inventory-purchases-integration`, `portal-integration`, `exports-balances-csv`.
+**Suites included:** `db-smoke`, `shows-integration`, `wholesalers-integration`, `owed-line-items-integration`, `settlement-ledger-integration`, `vendor-expense-ledger-integration`, `closed-show-freeze-integration`, `inventory-purchases-integration`, `business-expenses-integration`, `financial-strategy-integration`, `cash-snapshots-integration`, `financial-recommendations-integration`, `portal-integration`, `exports-balances-csv`.
 
 **Prerequisites:** Docker installed.
 

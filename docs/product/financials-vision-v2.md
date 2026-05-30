@@ -1,7 +1,7 @@
 # FefeAve Financials Vision (V2)
 
 Status: Draft
-Last Updated: 2026-05-28
+Last Updated: 2026-05-30
 
 ## Purpose
 
@@ -81,23 +81,29 @@ If a feature does not clearly fit one of those workspaces, its purpose should be
 
 Financials
 
+- Overview
 - Balances
 - Payments
 - Accounts
 - Owner Activity
 - Inventory
+- Expenses
+- Strategy
 
-Overview is planned under **Future** below; it is not a sidebar child until a dedicated page exists.
+Overview (`/admin/financials`) is the Financials landing page and Decision Center.
+It shows a financial snapshot, cash position (manual snapshots), strategy targets,
+and deterministic recommendation summary (safe owner draw). Event-adjusted cash
+from tracked events remains a future enhancement (see Decision Center plan).
 
 ### Future
 
 Financials
 
-#### Overview
+#### Overview (enhancements)
 
-- Snapshot
-- Action Center
-- Cash Position
+- Event-adjusted current cash (snapshot + tracked inflows/outflows)
+- Recommendation formula explanations per line
+- Action Center workflows
 
 #### Operations
 
@@ -106,6 +112,7 @@ Financials
 - Accounts
 - Owner Activity
 - Inventory
+- Expenses
 
 #### Planning
 
@@ -113,6 +120,8 @@ Financials
 - Taxes
 - Reinvestment
 - Reports
+
+_(Snapshot, Cash Position, Expenses, and Strategy ship in **Current** above.)_
 
 ## Product Evolution
 
