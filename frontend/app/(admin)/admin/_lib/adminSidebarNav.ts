@@ -5,6 +5,10 @@
 
 export const FINANCIALS_WORKSPACE_LABEL = 'Financials';
 
+/** Financials workspace landing page (Overview / Decision Center). */
+export const FINANCIALS_OVERVIEW_HREF = '/admin/financials';
+
+/** Balances list route (kept stable for existing balances breadcrumbs/links). */
 export const FINANCIALS_LANDING_HREF = '/admin/balances';
 
 export type AdminSidebarChildNavItem = {
@@ -14,6 +18,11 @@ export type AdminSidebarChildNavItem = {
 };
 
 export const FINANCIALS_NAV_CHILDREN: AdminSidebarChildNavItem[] = [
+  {
+    href: FINANCIALS_OVERVIEW_HREF,
+    label: 'Overview',
+    match: (path) => path === FINANCIALS_OVERVIEW_HREF,
+  },
   {
     href: FINANCIALS_LANDING_HREF,
     label: 'Balances',
@@ -40,6 +49,16 @@ export const FINANCIALS_NAV_CHILDREN: AdminSidebarChildNavItem[] = [
     label: 'Inventory',
     match: (path) => path.startsWith('/admin/inventory'),
   },
+  {
+    href: '/admin/expenses',
+    label: 'Expenses',
+    match: (path) => path.startsWith('/admin/expenses'),
+  },
+  {
+    href: '/admin/strategy',
+    label: 'Strategy',
+    match: (path) => path.startsWith('/admin/strategy'),
+  },
 ];
 
 export function isFinancialsSectionActive(path: string): boolean {
@@ -53,9 +72,9 @@ export function isFinancialsChildActive(
   return item.match(path);
 }
 
-/** Workspace segment for entity-detail breadcrumbs. */
+/** Workspace segment for entity-detail breadcrumbs — points at the Overview landing. */
 export const FINANCIALS_WORKSPACE_BREADCRUMB = {
-  href: FINANCIALS_LANDING_HREF,
+  href: FINANCIALS_OVERVIEW_HREF,
   label: FINANCIALS_WORKSPACE_LABEL,
 } as const;
 
