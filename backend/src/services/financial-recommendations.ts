@@ -25,13 +25,14 @@ export type FinancialRecommendationsUnavailable = {
   cash_buffer_target: string;
 };
 
-export type FinancialRecommendationsAvailable = {
+export type FinancialRecommendationsCore = {
   available: true;
   confidence: Exclude<RecommendationConfidence, 'UNAVAILABLE'>;
   snapshot_date: string;
   strategy_type: string;
   tax_reserve_bps: number;
   reinvestment_bps: number;
+  /** Estimated current cash after snapshot + tracked events. */
   current_cash: string;
   tax_reserve_recommendation: string;
   cash_buffer_target: string;
@@ -40,9 +41,18 @@ export type FinancialRecommendationsAvailable = {
   safe_owner_draw: string;
 };
 
+export type FinancialRecommendationsAvailable = FinancialRecommendationsCore & {
+  /** Original manual snapshot amount (before event adjustment). */
+  snapshot_amount: string;
+  total_inflows_since_snapshot: string;
+  total_outflows_since_snapshot: string;
+  /** Non-null for MEDIUM/LOW confidence — reconciliation freshness copy for Overview. */
+  freshness_reminder: string | null;
+};
+
 export type FinancialRecommendationsResult =
   | FinancialRecommendationsUnavailable
-  | FinancialRecommendationsAvailable;
+  | FinancialRecommendationsCore;
 
 /** Confidence thresholds based on snapshot age (calendar days). */
 export const CONFIDENCE_HIGH_MAX_DAYS = 14;
@@ -96,6 +106,37 @@ export function computeRecommendationConfidence(
 
 export function todayIsoDateUtc(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+export const FRESHNESS_REMINDER_MEDIUM =
+  'Your cash snapshot is getting older. Reconcile soon for more accurate recommendations.';
+
+export const FRESHNESS_REMINDER_LOW =
+  'Your cash snapshot is out of date. Update it before relying on owner-draw guidance.';
+
+export function getFreshnessReminder(confidence: RecommendationConfidence): string | null {
+  if (confidence === 'MEDIUM') return FRESHNESS_REMINDER_MEDIUM;
+  if (confidence === 'LOW') return FRESHNESS_REMINDER_LOW;
+  return null;
+}
+
+export type CashAdjustmentInput = {
+  snapshot_amount: number;
+  total_inflows_since_snapshot: number;
+  total_outflows_since_snapshot: number;
+};
+
+export function enrichAvailableRecommendations(
+  result: FinancialRecommendationsCore,
+  cashAdjustment: CashAdjustmentInput
+): FinancialRecommendationsAvailable {
+  return {
+    ...result,
+    snapshot_amount: formatMoney(cashAdjustment.snapshot_amount),
+    total_inflows_since_snapshot: formatMoney(cashAdjustment.total_inflows_since_snapshot),
+    total_outflows_since_snapshot: formatMoney(cashAdjustment.total_outflows_since_snapshot),
+    freshness_reminder: getFreshnessReminder(result.confidence),
+  };
 }
 
 /**

@@ -6,9 +6,12 @@ import {
   resolveStrategyValues,
 } from '../constants/financial-strategy';
 import { getPool } from '../db';
+import { loadCashEventTotals } from '../services/event-adjusted-cash';
 import {
   computeFinancialRecommendations,
+  enrichAvailableRecommendations,
   todayIsoDateUtc,
+  type FinancialRecommendationsUnavailable,
 } from '../services/financial-recommendations';
 import { toYyyyMmDd } from '../utils/pg-date';
 
@@ -49,45 +52,37 @@ const recommendationResponseSchema = {
     tax_reserve_bps: { type: 'integer' },
     reinvestment_bps: { type: 'integer' },
     current_cash: { type: ['string', 'null'] },
+    snapshot_amount: { type: ['string', 'null'] },
+    total_inflows_since_snapshot: { type: ['string', 'null'] },
+    total_outflows_since_snapshot: { type: ['string', 'null'] },
     tax_reserve_recommendation: { type: ['string', 'null'] },
     cash_buffer_target: { type: ['string', 'null'] },
     available_after_protection: { type: ['string', 'null'] },
     reinvestment_recommendation: { type: ['string', 'null'] },
     safe_owner_draw: { type: ['string', 'null'] },
+    freshness_reminder: { type: ['string', 'null'] },
   },
 };
 
-function serializeRecommendations(result: ReturnType<typeof computeFinancialRecommendations>) {
-  if (!result.available) {
-    return {
-      available: false,
-      confidence: result.confidence,
-      snapshot_date: null,
-      strategy_type: result.strategy_type,
-      tax_reserve_bps: result.tax_reserve_bps,
-      reinvestment_bps: result.reinvestment_bps,
-      current_cash: null,
-      tax_reserve_recommendation: null,
-      cash_buffer_target: result.cash_buffer_target,
-      available_after_protection: null,
-      reinvestment_recommendation: null,
-      safe_owner_draw: null,
-    };
-  }
-
+/** Unavailable recommendations only; available responses use enrichAvailableRecommendations. */
+function serializeUnavailableRecommendations(result: FinancialRecommendationsUnavailable) {
   return {
-    available: true,
+    available: false as const,
     confidence: result.confidence,
-    snapshot_date: result.snapshot_date,
+    snapshot_date: null,
     strategy_type: result.strategy_type,
     tax_reserve_bps: result.tax_reserve_bps,
     reinvestment_bps: result.reinvestment_bps,
-    current_cash: result.current_cash,
-    tax_reserve_recommendation: result.tax_reserve_recommendation,
+    current_cash: null,
+    snapshot_amount: null,
+    total_inflows_since_snapshot: null,
+    total_outflows_since_snapshot: null,
+    tax_reserve_recommendation: null,
     cash_buffer_target: result.cash_buffer_target,
-    available_after_protection: result.available_after_protection,
-    reinvestment_recommendation: result.reinvestment_recommendation,
-    safe_owner_draw: result.safe_owner_draw,
+    available_after_protection: null,
+    reinvestment_recommendation: null,
+    safe_owner_draw: null,
+    freshness_reminder: null,
   };
 }
 
@@ -103,7 +98,7 @@ export async function financialRecommendationsRoutes(
       preHandler: adminPre,
       schema: {
         description:
-          'Deterministic owner-draw and allocation recommendations from latest cash snapshot and strategy',
+          'Deterministic owner-draw and allocation recommendations from event-adjusted cash estimate and strategy',
         security: [{ bearerAuth: [] }],
         response: {
           200: recommendationResponseSchema,
@@ -140,9 +135,11 @@ export async function financialRecommendationsRoutes(
 
       const snapshotRow = snapshotResult.rows[0] as CashSnapshotRow | undefined;
       if (!snapshotRow) {
-        const unavailable = computeFinancialRecommendations(null);
+        const unavailable = computeFinancialRecommendations(
+          null
+        ) as FinancialRecommendationsUnavailable;
         return reply.send({
-          ...serializeRecommendations(unavailable),
+          ...serializeUnavailableRecommendations(unavailable),
           strategy_type: strategy.strategy_type,
           tax_reserve_bps: strategy.tax_reserve_bps,
           reinvestment_bps: strategy.reinvestment_bps,
@@ -150,9 +147,13 @@ export async function financialRecommendationsRoutes(
         });
       }
 
+      const snapshotDate = toYyyyMmDd(snapshotRow.snapshot_date);
+      const snapshotAmount = parseAmount(snapshotRow.amount);
+      const cashEvents = await loadCashEventTotals(pool, snapshotDate, snapshotAmount);
+
       const result = computeFinancialRecommendations({
-        current_cash: parseAmount(snapshotRow.amount),
-        snapshot_date: toYyyyMmDd(snapshotRow.snapshot_date),
+        current_cash: cashEvents.estimated_current_cash,
+        snapshot_date: snapshotDate,
         strategy: {
           strategy_type: strategy.strategy_type,
           tax_reserve_bps: strategy.tax_reserve_bps,
@@ -162,7 +163,17 @@ export async function financialRecommendationsRoutes(
         reference_date: todayIsoDateUtc(),
       });
 
-      return reply.send(serializeRecommendations(result));
+      if (!result.available) {
+        return reply.send(serializeUnavailableRecommendations(result));
+      }
+
+      const enriched = enrichAvailableRecommendations(result, {
+        snapshot_amount: cashEvents.snapshot_amount,
+        total_inflows_since_snapshot: cashEvents.total_inflows,
+        total_outflows_since_snapshot: cashEvents.total_outflows,
+      });
+
+      return reply.send(enriched);
     }
   );
 }

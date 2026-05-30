@@ -2,6 +2,10 @@ import {
   computeFinancialRecommendations,
   computeRecommendationConfidence,
   daysSinceSnapshot,
+  enrichAvailableRecommendations,
+  getFreshnessReminder,
+  FRESHNESS_REMINDER_LOW,
+  FRESHNESS_REMINDER_MEDIUM,
 } from '../services/financial-recommendations';
 
 const balancedStrategy = {
@@ -117,5 +121,43 @@ describe('financial-recommendations service', () => {
     expect(Number(result.available_after_protection)).toBe(6500);
     expect(Number(result.reinvestment_recommendation)).toBe(2600);
     expect(Number(result.safe_owner_draw)).toBe(3900);
+  });
+
+  test('explanation breakdown values match formula', () => {
+    const result = computeFinancialRecommendations({
+      current_cash: 8500,
+      snapshot_date: '2026-05-15',
+      strategy: balancedStrategy,
+      reference_date: '2026-05-30',
+    });
+
+    expect(result.available).toBe(true);
+    if (!result.available) return;
+
+    const enriched = enrichAvailableRecommendations(result, {
+      snapshot_amount: 8000,
+      total_inflows_since_snapshot: 1000,
+      total_outflows_since_snapshot: 500,
+    });
+
+    expect(Number(enriched.current_cash)).toBe(8500);
+    expect(Number(enriched.snapshot_amount)).toBe(8000);
+    expect(Number(enriched.total_inflows_since_snapshot)).toBe(1000);
+    expect(Number(enriched.total_outflows_since_snapshot)).toBe(500);
+    expect(Number(enriched.tax_reserve_recommendation)).toBe(2550);
+    expect(Number(enriched.cash_buffer_target)).toBe(2000);
+    expect(Number(enriched.available_after_protection)).toBe(3950);
+    expect(Number(enriched.reinvestment_recommendation)).toBe(1975);
+    expect(Number(enriched.safe_owner_draw)).toBe(1975);
+  });
+
+  test('medium confidence returns freshness reminder', () => {
+    expect(getFreshnessReminder('MEDIUM')).toBe(FRESHNESS_REMINDER_MEDIUM);
+    expect(getFreshnessReminder('HIGH')).toBeNull();
+  });
+
+  test('low confidence returns freshness reminder', () => {
+    expect(getFreshnessReminder('LOW')).toBe(FRESHNESS_REMINDER_LOW);
+    expect(getFreshnessReminder('UNAVAILABLE')).toBeNull();
   });
 });
