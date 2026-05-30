@@ -8,6 +8,7 @@ import {
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
   fetchBusinessExpenses,
+  fetchBusinessExpensesTotal,
   createBusinessExpense,
   type BusinessExpenseDTO,
 } from "@/src/lib/api/business-expenses";
@@ -17,6 +18,8 @@ import {
 } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
+import { FinancialsCrossLinks } from "@/app/(admin)/admin/_components/FinancialsCrossLinks";
+import { FINANCIALS_OVERVIEW_HREF } from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import { EXPENSE_CATEGORIES } from "@/src/lib/constants/expenses";
 import {
   workspaceTableBodyCellPadding,
@@ -42,6 +45,7 @@ function parseAmount(value: string): number {
 
 export default function AdminExpensesPage() {
   const [expenses, setExpenses] = useState<BusinessExpenseDTO[] | null>(null);
+  const [expensesTotal, setExpensesTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -57,9 +61,12 @@ export default function AdminExpensesPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchBusinessExpenses(30)
-      .then((rows) => {
-        if (!cancelled) setExpenses(rows);
+    Promise.all([fetchBusinessExpenses(30), fetchBusinessExpensesTotal(30)])
+      .then(([rows, totalResponse]) => {
+        if (!cancelled) {
+          setExpenses(rows);
+          setExpensesTotal(parseAmount(totalResponse.total));
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -117,10 +124,19 @@ export default function AdminExpensesPage() {
       intro={
         <AdminWorkspacePageIntro
           title="Expenses"
-          subtitle="Track business expenses used to calculate future profit and cash recommendations."
+          subtitle="Record business expenses now. They help future profit and cash recommendations stay accurate. Current recommendations are based on your latest cash snapshot."
         />
       }
     >
+      <FinancialsCrossLinks
+        className="mb-6"
+        links={[
+          {
+            href: FINANCIALS_OVERVIEW_HREF,
+            label: "View recommendation",
+          },
+        ]}
+      />
       <section className={`mb-8 p-4 sm:p-5 ${workspaceCard}`}>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">
           Record expense
@@ -197,9 +213,19 @@ export default function AdminExpensesPage() {
 
       <section className={`min-w-0 overflow-hidden ${workspaceCard}`}>
         <div className="border-b border-gray-100 px-4 py-3 sm:px-5">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Recent expenses (last 30 days)
-          </h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Recent expenses (last 30 days)
+            </h2>
+            {expensesTotal != null && !loading && !error ? (
+              <p className="text-sm text-gray-600">
+                Total:{" "}
+                <span className="font-semibold tabular-nums text-gray-900">
+                  {formatCurrency(expensesTotal)}
+                </span>
+              </p>
+            ) : null}
+          </div>
         </div>
         {loading ? (
           <div className="px-4 py-6 text-sm text-gray-500 sm:px-5">

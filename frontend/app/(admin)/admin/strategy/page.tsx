@@ -13,14 +13,18 @@ import {
 } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
+  RECOMMENDED_STRATEGY_TYPE,
   STRATEGY_CASH_BUFFER_HELPER,
   STRATEGY_OPTIONS,
+  STRATEGY_PRESETS_HELPER,
   bpsToPercent,
   percentToBps,
   valuesForStrategyType,
   type StrategyPresetValues,
   type StrategyType,
 } from "@/src/lib/constants/financial-strategy";
+import { FinancialsCrossLinks } from "@/app/(admin)/admin/_components/FinancialsCrossLinks";
+import { FINANCIALS_OVERVIEW_HREF } from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import {
   workspaceActionCompleteMd,
   workspaceCard,
@@ -214,7 +218,7 @@ export default function AdminStrategyPage() {
       intro={
         <AdminWorkspacePageIntro
           title="Strategy"
-          subtitle="Choose how FefeAve should split future available cash between taxes, inventory, and owner draw."
+          subtitle="Choose how to split available cash between taxes, reinvestment, and your take-home."
         />
       }
     >
@@ -229,13 +233,22 @@ export default function AdminStrategyPage() {
       ) : (
         <form onSubmit={handleSave} className="space-y-6">
           <section className={`p-4 sm:p-5 ${workspaceCard}`}>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
               Strategy preset
             </h2>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
+              Not sure? Start with{" "}
+              <span className="font-medium text-gray-800">Balanced</span> — you
+              can change this anytime.
+            </p>
+            <p className={`mt-2 text-sm ${workspaceFormLabelSecondary}`}>
+              {STRATEGY_PRESETS_HELPER}
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
               {STRATEGY_OPTIONS.map((option) => {
                 const selected = strategyType === option.type;
                 const presetValues = valuesForStrategyType(option.type);
+                const isRecommended = option.type === RECOMMENDED_STRATEGY_TYPE;
                 return (
                   <button
                     key={option.type}
@@ -257,11 +270,18 @@ export default function AdminStrategyPage() {
                           {option.description}
                         </p>
                       </div>
-                      {selected ? (
-                        <span className="shrink-0 rounded-full bg-stone-800 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-white">
-                          Selected
-                        </span>
-                      ) : null}
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {isRecommended ? (
+                          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-stone-700">
+                            Recommended start
+                          </span>
+                        ) : null}
+                        {selected ? (
+                          <span className="rounded-full bg-stone-800 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-white">
+                            Selected
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     {option.type !== "CUSTOM" ? (
                       <dl className="mt-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
@@ -374,9 +394,20 @@ export default function AdminStrategyPage() {
               </p>
             ) : null}
             {savedMessage ? (
-              <p className="mt-3 text-sm text-emerald-700" role="status">
-                {savedMessage}
-              </p>
+              <div className="mt-3 space-y-3">
+                <p className="text-sm text-emerald-700" role="status">
+                  {savedMessage}
+                </p>
+                <FinancialsCrossLinks
+                  label="Next"
+                  links={[
+                    {
+                      href: FINANCIALS_OVERVIEW_HREF,
+                      label: "See updated recommendation",
+                    },
+                  ]}
+                />
+              </div>
             ) : null}
           </section>
         </form>
