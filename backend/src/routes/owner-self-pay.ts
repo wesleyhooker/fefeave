@@ -5,7 +5,13 @@ import { getPool, withTx } from '../db';
 import { ensureUser } from '../db/ensure-user';
 import { resolveOwnerAccountId } from '../db/owner-account';
 import { computeOwnerWeeklyPayout } from '../services/owner-weekly-payout';
-import { emitOwnerSelfPayRecorded, resolveActorUserId } from '../services/financial-event-emission';
+import {
+  emitOwnerSelfPayCorrected,
+  emitOwnerSelfPayRecorded,
+  emitOwnerSelfPayVoided,
+  ownerSelfPayMateriallyChanged,
+  resolveActorUserId,
+} from '../services/financial-event-emission';
 import { ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
 
@@ -420,6 +426,15 @@ export async function ownerSelfPayRoutes(
       const ownerAccountId = await resolveOwnerAccountId();
       const row = await withTx(async (client) => {
         const userId = await ensureUser(client, request);
+        const existingResult = await client.query(
+          `SELECT id, amount, paid_at, transaction_type::text AS transaction_type,
+                  week_start_date, week_end_date, reference, note, voided_at, updated_at
+           FROM owner_self_pay_transactions
+           WHERE account_id = $1 AND week_start_date = $2 AND deleted_at IS NULL`,
+          [ownerAccountId, weekStart]
+        );
+        const prior = existingResult.rows[0] as OwnerSelfPayRow | undefined;
+
         // One row per (account_id, week_start_date): revive voided weeks in place (clears voided_at).
         const result = await client.query(
           `INSERT INTO owner_self_pay_transactions (
@@ -466,11 +481,17 @@ export async function ownerSelfPayRoutes(
           ]
         );
         const inserted = result.rows[0] as OwnerSelfPayRow;
-        await emitOwnerSelfPayRecorded(
-          client,
-          inserted,
-          resolveActorUserId(request.user?.cognitoSub)
-        );
+        const actorUserId = resolveActorUserId(request.user?.cognitoSub);
+        if (!prior || prior.voided_at) {
+          await emitOwnerSelfPayRecorded(
+            client,
+            inserted,
+            actorUserId,
+            prior?.voided_at ? inserted.updated_at.toISOString() : undefined
+          );
+        } else if (ownerSelfPayMateriallyChanged(prior, inserted)) {
+          await emitOwnerSelfPayCorrected(client, inserted, prior, actorUserId);
+        }
         return inserted;
       });
 
@@ -502,15 +523,35 @@ export async function ownerSelfPayRoutes(
       // Idempotent: only rows that are still active (voided_at IS NULL) are updated.
       // Re-void / duplicate DELETE calls affect 0 rows — no second transaction row is ever created.
       await withTx(async (client) => {
-        await client.query(
-          `UPDATE owner_self_pay_transactions
-           SET voided_at = NOW(),
-               updated_at = NOW()
+        const existingResult = await client.query(
+          `SELECT id, amount, paid_at, transaction_type::text AS transaction_type,
+                  week_start_date, week_end_date, reference, note
+           FROM owner_self_pay_transactions
            WHERE account_id = $1
              AND week_start_date = $2
              AND voided_at IS NULL
              AND deleted_at IS NULL`,
           [ownerAccountId, weekStart]
+        );
+        if (existingResult.rows.length === 0) return;
+
+        const prior = existingResult.rows[0] as OwnerSelfPayRow;
+        const voidedAt = new Date();
+        await client.query(
+          `UPDATE owner_self_pay_transactions
+           SET voided_at = $3,
+               updated_at = NOW()
+           WHERE account_id = $1
+             AND week_start_date = $2
+             AND voided_at IS NULL
+             AND deleted_at IS NULL`,
+          [ownerAccountId, weekStart, voidedAt]
+        );
+        await emitOwnerSelfPayVoided(
+          client,
+          prior,
+          resolveActorUserId(request.user?.cognitoSub),
+          voidedAt
         );
       });
 

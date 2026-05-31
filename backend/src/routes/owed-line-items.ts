@@ -13,6 +13,7 @@ import {
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
 import {
   emitSettlementCreated,
+  emitSettlementVoided,
   loadShowDate,
   resolveActorUserId,
 } from '../services/financial-event-emission';
@@ -470,6 +471,21 @@ export async function owedLineItemRoutes(
               ? 'Settlement (itemized)'
               : 'Settlement (manual)';
 
+        const actorUserId = resolveActorUserId(request.user?.cognitoSub);
+        let settlementRow: {
+          id: string;
+          show_id: string;
+          wholesaler_id: string;
+          amount: string;
+          currency: string;
+          calculation_method: string;
+          rate_bps: number | null;
+          base_amount: string | null;
+          status: string;
+          created_at: Date;
+          updated_at: Date;
+        };
+
         if (method === 'PERCENT_PAYOUT') {
           if (settlementAgg.payoutAfterFees == null) {
             throw new ConflictError(
@@ -494,10 +510,8 @@ export async function owedLineItemRoutes(
              RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at`,
             [showId, wholesaler_id, accountId, rate_bps, description, userId]
           );
-          return result.rows[0];
-        }
-
-        if (method === 'ITEMIZED') {
+          settlementRow = result.rows[0] as typeof settlementRow;
+        } else if (method === 'ITEMIZED') {
           const lines = linesRaw ?? [];
           const computed = lines.map((line) => {
             const lineTotalCents = line.quantity * line.unitPrice;
@@ -524,19 +538,7 @@ export async function owedLineItemRoutes(
              RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at`,
             [showId, wholesaler_id, accountId, amountDollars, description, userId]
           );
-          const settlementRow = result.rows[0] as {
-            id: string;
-            show_id: string;
-            wholesaler_id: string;
-            amount: string;
-            currency: string;
-            calculation_method: string;
-            rate_bps: number | null;
-            base_amount: string | null;
-            status: string;
-            created_at: Date;
-            updated_at: Date;
-          };
+          settlementRow = result.rows[0] as typeof settlementRow;
           for (const line of computed) {
             await client.query(
               `INSERT INTO settlement_lines (settlement_id, item_name, quantity, unit_price_cents, line_total_cents)
@@ -550,26 +552,42 @@ export async function owedLineItemRoutes(
               ]
             );
           }
-          return settlementRow;
+        } else {
+          const amount =
+            (typeof amountRaw === 'string' ? parseFloat(amountRaw) : (amountRaw as number)) ?? 0;
+          if (Number.isNaN(amount) || amount <= 0) {
+            throw new ValidationError('MANUAL settlement requires amount > 0');
+          }
+          assertNewSettlementAmountAllowed(
+            settlementAgg.existingTotalOwed,
+            amount,
+            settlementAgg.payoutAfterFees
+          );
+          const result = await client.query(
+            `INSERT INTO owed_line_items (show_id, wholesaler_id, account_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
+             VALUES ($1, $2, $3, $4, 'USD', $5, 'PENDING', $6, 'API', 'MANUAL', NULL, NULL)
+             RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at`,
+            [showId, wholesaler_id, accountId, amount, description, userId]
+          );
+          settlementRow = result.rows[0] as typeof settlementRow;
         }
 
-        const amount =
-          (typeof amountRaw === 'string' ? parseFloat(amountRaw) : (amountRaw as number)) ?? 0;
-        if (Number.isNaN(amount) || amount <= 0) {
-          throw new ValidationError('MANUAL settlement requires amount > 0');
-        }
-        assertNewSettlementAmountAllowed(
-          settlementAgg.existingTotalOwed,
-          amount,
-          settlementAgg.payoutAfterFees
+        const showDate = await loadShowDate(client, showId);
+        await emitSettlementCreated(
+          client,
+          {
+            id: settlementRow.id,
+            show_id: settlementRow.show_id,
+            wholesaler_id: settlementRow.wholesaler_id,
+            amount: settlementRow.amount,
+            description,
+            obligation_kind: 'SHOW_LINKED',
+            due_date: null,
+          },
+          showDate,
+          actorUserId
         );
-        const result = await client.query(
-          `INSERT INTO owed_line_items (show_id, wholesaler_id, account_id, amount, currency, description, status, created_by, created_via, calculation_method, rate_bps, base_amount)
-           VALUES ($1, $2, $3, $4, 'USD', $5, 'PENDING', $6, 'API', 'MANUAL', NULL, NULL)
-           RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps, base_amount, status, created_at, updated_at`,
-          [showId, wholesaler_id, accountId, amount, description, userId]
-        );
-        return result.rows[0];
+        return settlementRow;
       });
 
       const r = row as {
@@ -816,9 +834,12 @@ export async function owedLineItemRoutes(
       }
 
       const settlementResult = await pool.query(
-        `SELECT id, show_id, calculation_method, obligation_kind, deleted_at
-         FROM owed_line_items
-         WHERE id = $1`,
+        `SELECT oli.id, oli.show_id, oli.wholesaler_id, oli.amount, oli.description,
+                oli.obligation_kind, oli.due_date, oli.calculation_method, oli.deleted_at,
+                s.show_date
+         FROM owed_line_items oli
+         LEFT JOIN shows s ON s.id = oli.show_id AND s.deleted_at IS NULL
+         WHERE oli.id = $1`,
         [settlementId]
       );
       if (!settlementResult?.rows || settlementResult.rows.length === 0) {
@@ -828,9 +849,14 @@ export async function owedLineItemRoutes(
       const settlement = settlementResult.rows[0] as {
         id: string;
         show_id: string | null;
-        calculation_method: string | null;
+        wholesaler_id: string;
+        amount: string;
+        description: string;
         obligation_kind: string;
+        due_date: string | null;
+        calculation_method: string | null;
         deleted_at: Date | null;
+        show_date: string | null;
       };
 
       if (
@@ -845,12 +871,35 @@ export async function owedLineItemRoutes(
         return reply.send({ ok: true });
       }
 
-      await pool.query(
-        `UPDATE owed_line_items
-         SET deleted_at = NOW(), updated_at = NOW()
-         WHERE id = $1 AND deleted_at IS NULL`,
-        [settlementId]
-      );
+      if (!settlement.show_date) {
+        throw new NotFoundError('Show', showId);
+      }
+
+      await withTx(async (client) => {
+        const voidedAt = new Date();
+        await client.query(
+          `UPDATE owed_line_items
+           SET deleted_at = $2, updated_at = NOW()
+           WHERE id = $1 AND deleted_at IS NULL`,
+          [settlementId, voidedAt]
+        );
+
+        await emitSettlementVoided(
+          client,
+          {
+            id: settlement.id,
+            show_id: settlement.show_id!,
+            wholesaler_id: settlement.wholesaler_id,
+            amount: settlement.amount,
+            description: settlement.description,
+            obligation_kind: settlement.obligation_kind,
+            due_date: settlement.due_date,
+          },
+          settlement.show_date!,
+          resolveActorUserId(request.user?.cognitoSub),
+          voidedAt
+        );
+      });
 
       return reply.send({ ok: true });
     }

@@ -84,11 +84,16 @@ const EVENT_TYPE_TITLES: Record<FinancialEventType, string> = {
   SHOW_PAYOUT_UPDATED: 'Show payout updated',
   SETTLEMENT_CREATED: 'Settlement created',
   SETTLEMENT_ADJUSTED: 'Settlement adjusted',
+  SETTLEMENT_VOIDED: 'Settlement voided',
   WHOLESALER_PAYMENT_RECORDED: 'Wholesaler payment recorded',
   INVENTORY_PURCHASE_RECORDED: 'Inventory purchased',
   BUSINESS_EXPENSE_RECORDED: 'Business expense recorded',
   OWNER_DRAW_RECORDED: 'Owner draw',
   OWNER_SELF_PAY_RECORDED: 'Owner self-pay recorded',
+  OWNER_DRAW_CORRECTED: 'Owner draw corrected',
+  OWNER_SELF_PAY_CORRECTED: 'Owner self-pay corrected',
+  OWNER_DRAW_VOIDED: 'Owner draw voided',
+  OWNER_SELF_PAY_VOIDED: 'Owner self-pay voided',
   CASH_SNAPSHOT_RECORDED: 'Cash snapshot recorded',
   FINANCIAL_STRATEGY_CHANGED: 'Strategy changed',
 };
@@ -190,7 +195,12 @@ function buildPayloadSummary(
     }
   }
   if (
-    (eventType === 'OWNER_DRAW_RECORDED' || eventType === 'OWNER_SELF_PAY_RECORDED') &&
+    (eventType === 'OWNER_DRAW_RECORDED' ||
+      eventType === 'OWNER_SELF_PAY_RECORDED' ||
+      eventType === 'OWNER_DRAW_CORRECTED' ||
+      eventType === 'OWNER_SELF_PAY_CORRECTED' ||
+      eventType === 'OWNER_DRAW_VOIDED' ||
+      eventType === 'OWNER_SELF_PAY_VOIDED') &&
     typeof payload.week_start_date === 'string' &&
     typeof payload.week_end_date === 'string'
   ) {

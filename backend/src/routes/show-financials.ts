@@ -156,6 +156,7 @@ export async function showFinancialsRoutes(
           {
             showId,
             showDate: showRow.show_date,
+            showStatus: showRow.status,
             payoutAfterFeesAmount: inserted.payout_after_fees_amount,
             grossSalesAmount: inserted.gross_sales_amount,
             platformFeeAmount: inserted.platform_fee_amount,

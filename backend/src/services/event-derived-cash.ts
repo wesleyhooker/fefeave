@@ -2,8 +2,8 @@
  * Phase 5 — event-derived cash projection from `financial_events` only.
  *
  * Mirrors table-derived `loadCashEventTotals` semantics without reading domain
- * tables. Production recommendations still use the table path until explicit
- * switchover approval (see docs/architecture/financial-event-sourcing.md).
+ * tables. Production recommendations use this path by default
+ * (`FINANCIAL_RECOMMENDATIONS_SOURCE=events`; see `recommendation-cash-totals.ts`).
  */
 import type { Pool } from 'pg';
 import {
@@ -40,9 +40,18 @@ const CASH_OUTFLOW_EVENT_TYPES = [
   'WHOLESALER_PAYMENT_RECORDED',
   'INVENTORY_PURCHASE_RECORDED',
   'BUSINESS_EXPENSE_RECORDED',
+] as const;
+
+const OWNER_OUTFLOW_EVENT_TYPES = [
   'OWNER_DRAW_RECORDED',
   'OWNER_SELF_PAY_RECORDED',
+  'OWNER_DRAW_CORRECTED',
+  'OWNER_SELF_PAY_CORRECTED',
+  'OWNER_DRAW_VOIDED',
+  'OWNER_SELF_PAY_VOIDED',
 ] as const;
+
+const OWNER_VOIDED_EVENT_TYPES = ['OWNER_DRAW_VOIDED', 'OWNER_SELF_PAY_VOIDED'] as const;
 
 /**
  * Latest cash snapshot anchor from ledger events.
@@ -94,17 +103,43 @@ export async function loadCashEventTotalsFromEvents(
        SELECT COALESCE(SUM(amount), 0)::numeric AS total
        FROM latest_show_payout
        WHERE payload->>'show_status' = 'COMPLETED'
+     ),
+     latest_owner_outflow AS (
+       SELECT DISTINCT ON (source_id)
+         source_id,
+         amount::numeric AS amount,
+         event_type
+       FROM financial_events
+       WHERE event_type = ANY($4::text[])
+         AND source_type = 'owner_self_pay'
+         AND effective_date > $1::date
+       ORDER BY source_id, occurred_at DESC, id DESC
+     ),
+     owner_outflows AS (
+       SELECT COALESCE(SUM(amount), 0)::numeric AS total
+       FROM latest_owner_outflow
+       WHERE event_type <> ALL($5::text[])
+         AND amount IS NOT NULL
      )
      SELECT
        (SELECT total FROM show_payout_inflows) AS show_payout_inflows,
-       COALESCE((
-         SELECT SUM(amount)
-         FROM financial_events
-         WHERE event_type = ANY($3::text[])
-           AND direction = 'OUTFLOW'
-           AND effective_date > $1::date
-       ), 0)::numeric AS total_outflows`,
-    [snapshotDate, SHOW_PAYOUT_EVENT_TYPES, CASH_OUTFLOW_EVENT_TYPES]
+       (
+         COALESCE((
+           SELECT SUM(amount)
+           FROM financial_events
+           WHERE event_type = ANY($3::text[])
+             AND direction = 'OUTFLOW'
+             AND effective_date > $1::date
+         ), 0)
+         + (SELECT total FROM owner_outflows)
+       )::numeric AS total_outflows`,
+    [
+      snapshotDate,
+      SHOW_PAYOUT_EVENT_TYPES,
+      CASH_OUTFLOW_EVENT_TYPES,
+      OWNER_OUTFLOW_EVENT_TYPES,
+      OWNER_VOIDED_EVENT_TYPES,
+    ]
   );
 
   const row = result.rows[0] as {

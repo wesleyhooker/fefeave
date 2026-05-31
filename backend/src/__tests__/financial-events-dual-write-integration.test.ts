@@ -283,6 +283,7 @@ describe('Financial event dual-write integration', () => {
     expect(events[0].payload).toMatchObject({
       show_id: show.id,
       show_date: '2026-05-15',
+      show_status: 'PLANNED',
       payout_after_fees_amount: 1000,
     });
 
@@ -302,6 +303,33 @@ describe('Financial event dual-write integration', () => {
     expect(events[1].payload).toMatchObject({
       payout_after_fees_amount: 1500,
       previous_payout_after_fees_amount: 1000,
+      show_status: 'PLANNED',
+    });
+  });
+
+  test('PATCH show to COMPLETED writes SHOW_PAYOUT_UPDATED with show_status', async () => {
+    const show = await createShow('2026-05-20');
+
+    const finRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 900 },
+    });
+    expect(finRes.statusCode).toBe(200);
+
+    const completeRes = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}`,
+      payload: { status: 'COMPLETED' },
+    });
+    expect(completeRes.statusCode).toBe(200);
+
+    const events = await eventsForSource('show_financials', show.id);
+    expect(events).toHaveLength(2);
+    expect(events[1].event_type).toBe('SHOW_PAYOUT_UPDATED');
+    expect(events[1].payload).toMatchObject({
+      show_status: 'COMPLETED',
+      payout_after_fees_amount: 900,
     });
   });
 
@@ -375,6 +403,164 @@ describe('Financial event dual-write integration', () => {
       week_start_date: '2026-05-12',
       week_end_date: '2026-05-18',
     });
+  });
+
+  test('PUT /owner-self-pay correction writes OWNER_DRAW_CORRECTED', async () => {
+    const show = await createShow('2026-05-21');
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 500 },
+    });
+    await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}`,
+      payload: { status: 'COMPLETED' },
+    });
+
+    const first = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-19`,
+      payload: {
+        week_end_date: '2026-05-25',
+        transaction_type: 'OWNER_DRAW',
+        paid_at: '2026-05-22T10:00:00.000Z',
+      },
+    });
+    expect(first.statusCode).toBe(200);
+    const txId = JSON.parse(first.payload).transaction.id as string;
+
+    const second = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-19`,
+      payload: {
+        week_end_date: '2026-05-25',
+        transaction_type: 'OWNER_DRAW',
+        paid_at: '2026-05-23T10:00:00.000Z',
+      },
+    });
+    expect(second.statusCode).toBe(200);
+
+    const events = await eventsForSource('owner_self_pay', txId);
+    expect(events).toHaveLength(2);
+    expect(events[1].event_type).toBe('OWNER_DRAW_CORRECTED');
+    expect(events[1].direction).toBe('OUTFLOW');
+    expect(events[1].payload).toMatchObject({
+      amount: 500,
+      previous_amount: 500,
+      transaction_type: 'OWNER_DRAW',
+    });
+  });
+
+  test('DELETE /owner-self-pay writes OWNER_DRAW_VOIDED', async () => {
+    const show = await createShow('2026-05-22');
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 400 },
+    });
+    await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}`,
+      payload: { status: 'COMPLETED' },
+    });
+
+    const record = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-19`,
+      payload: {
+        week_end_date: '2026-05-25',
+        transaction_type: 'OWNER_DRAW',
+      },
+    });
+    expect(record.statusCode).toBe(200);
+    const txId = JSON.parse(record.payload).transaction.id as string;
+
+    const voidRes = await app.inject({
+      method: 'DELETE',
+      url: `${prefix}/owner-self-pay/2026-05-19`,
+    });
+    expect(voidRes.statusCode).toBe(204);
+
+    const events = await eventsForSource('owner_self_pay', txId);
+    expect(events).toHaveLength(2);
+    expect(events[1].event_type).toBe('OWNER_DRAW_VOIDED');
+    expect(events[1].direction).toBe('NEUTRAL');
+    expect(events[1].payload).toMatchObject({
+      amount: 400,
+      transaction_type: 'OWNER_DRAW',
+    });
+    expect(events[1].payload.voided_at).toBeDefined();
+  });
+
+  test('POST /shows/:showId/settlements writes SETTLEMENT_CREATED', async () => {
+    const show = await createShow('2026-06-10');
+    const wholesaler = await createWholesaler('Settlement API Wholesaler');
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 2000 },
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: {
+        wholesaler_id: wholesaler.id,
+        method: 'MANUAL',
+        amount: 300,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.payload);
+
+    const events = await eventsForSource('owed_line_item', body.id);
+    expect(events).toHaveLength(1);
+    expect(events[0].event_type).toBe('SETTLEMENT_CREATED');
+    expect(events[0].payload).toMatchObject({
+      obligation_kind: 'SHOW_LINKED',
+      amount: 300,
+      show_id: show.id,
+      wholesaler_id: wholesaler.id,
+    });
+  });
+
+  test('DELETE settlement writes SETTLEMENT_VOIDED', async () => {
+    const show = await createShow('2026-06-11');
+    const wholesaler = await createWholesaler('Void Settlement Co');
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 1500 },
+    });
+
+    const createRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: {
+        wholesaler_id: wholesaler.id,
+        method: 'MANUAL',
+        amount: 200,
+      },
+    });
+    expect(createRes.statusCode).toBe(201);
+    const settlement = JSON.parse(createRes.payload);
+
+    const deleteRes = await app.inject({
+      method: 'DELETE',
+      url: `${prefix}/shows/${show.id}/settlements/${settlement.id}`,
+    });
+    expect(deleteRes.statusCode).toBe(200);
+
+    const events = await eventsForSource('owed_line_item', settlement.id);
+    expect(events).toHaveLength(2);
+    expect(events[1].event_type).toBe('SETTLEMENT_VOIDED');
+    expect(events[1].direction).toBe('NEUTRAL');
+    expect(events[1].payload).toMatchObject({
+      obligation_kind: 'SHOW_LINKED',
+      amount: 200,
+    });
+    expect(events[1].payload.voided_at).toBeDefined();
   });
 
   test('idempotency key prevents duplicate events for the same source write', async () => {
