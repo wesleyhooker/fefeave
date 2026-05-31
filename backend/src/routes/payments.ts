@@ -5,6 +5,10 @@ import { getPool, withTx } from '../db';
 import { ensureUser } from '../db/ensure-user';
 import { NotFoundError, ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
+import {
+  emitWholesalerPaymentRecorded,
+  resolveActorUserId,
+} from '../services/financial-event-emission';
 
 const uuidSchema = z.string().uuid();
 
@@ -98,10 +102,27 @@ export async function paymentRoutes(
         const result = await client.query(
           `INSERT INTO payments (wholesaler_id, account_id, amount, currency, payment_date, payment_method, reference, notes, created_by, created_via)
            VALUES ($1, $2, $3, 'USD', $4, 'OTHER', $5, $6, $7, 'API')
-           RETURNING id, wholesaler_id, amount, currency, payment_date, reference, notes, created_at, updated_at`,
+           RETURNING id, wholesaler_id, account_id, amount, currency, payment_date, reference, notes, created_at, updated_at`,
           [wholesaler_id, accountId, amount, payment_date, reference ?? null, notes ?? null, userId]
         );
-        return result.rows[0];
+        const inserted = result.rows[0] as {
+          id: string;
+          wholesaler_id: string;
+          account_id: string;
+          amount: string;
+          currency: string;
+          payment_date: string;
+          reference: string | null;
+          notes: string | null;
+          created_at: Date;
+          updated_at: Date;
+        };
+        await emitWholesalerPaymentRecorded(
+          client,
+          inserted,
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return inserted;
       });
 
       const r = row as {

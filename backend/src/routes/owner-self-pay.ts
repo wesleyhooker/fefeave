@@ -5,6 +5,7 @@ import { getPool, withTx } from '../db';
 import { ensureUser } from '../db/ensure-user';
 import { resolveOwnerAccountId } from '../db/owner-account';
 import { computeOwnerWeeklyPayout } from '../services/owner-weekly-payout';
+import { emitOwnerSelfPayRecorded, resolveActorUserId } from '../services/financial-event-emission';
 import { ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
 
@@ -464,7 +465,13 @@ export async function ownerSelfPayRoutes(
             userId,
           ]
         );
-        return result.rows[0] as OwnerSelfPayRow;
+        const inserted = result.rows[0] as OwnerSelfPayRow;
+        await emitOwnerSelfPayRecorded(
+          client,
+          inserted,
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return inserted;
       });
 
       return reply.send({

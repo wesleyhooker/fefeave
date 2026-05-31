@@ -78,6 +78,12 @@ const SNAPSHOT_WINDOW_LABEL = "Last 30 days";
 const ADVISORY_COPY =
   "Guidance only — this does not move money or create an owner draw.";
 
+const INVENTORY_BUDGET_HELPER =
+  "Inventory budget is money available to reinvest in inventory. If you do not spend it now, it stays in the business and future recommendations will update.";
+
+const SAFE_OWNER_DRAW_HELPER =
+  "Safe owner draw is the amount you could move to your personal account after protecting taxes, buffer, and inventory budget.";
+
 type BreakdownRowProps = {
   label: string;
   amount: number;
@@ -109,6 +115,54 @@ function BreakdownRow({
         {isSubtract ? "−" : ""}
         {formatCurrency(Math.abs(amount))}
       </span>
+    </div>
+  );
+}
+
+type AllocationCardProps = {
+  label: string;
+  amount: number;
+  helper?: string;
+  emphasis?: boolean;
+};
+
+function AllocationCard({
+  label,
+  amount,
+  helper,
+  emphasis = false,
+}: AllocationCardProps): React.ReactElement {
+  return (
+    <div
+      className={`rounded-xl border p-4 sm:p-5 ${
+        emphasis
+          ? "border-emerald-200 bg-emerald-50/70"
+          : "border-gray-200 bg-white"
+      }`}
+    >
+      <p
+        className={`text-sm font-medium ${emphasis ? "text-emerald-900" : "text-gray-600"}`}
+      >
+        {label}
+      </p>
+      <p
+        className={`mt-1 tabular-nums tracking-tight ${
+          emphasis
+            ? "text-3xl font-semibold text-emerald-950 sm:text-4xl"
+            : "text-2xl font-semibold text-gray-900 sm:text-3xl"
+        }`}
+      >
+        {formatCurrency(amount)}
+      </p>
+      {helper ? (
+        <p
+          className={`mt-2 text-xs leading-relaxed ${
+            emphasis ? "text-emerald-900/80" : "text-gray-500"
+          }`}
+        >
+          {helper}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -294,12 +348,15 @@ export default function AdminFinancialsOverviewPage() {
     ];
   }, [data]);
 
+  const lastReconciledDate =
+    data?.cashSnapshot?.snapshot_date ?? data?.recommendations.snapshot_date;
+
   return (
     <AdminWorkspacePageLayout
       intro={
         <AdminWorkspacePageIntro
           title="Overview"
-          subtitle="A plain-language read on the business with deterministic recommendations based on your strategy and estimated current cash."
+          subtitle="See how to allocate your business cash — taxes, buffer, inventory, and take-home — based on your strategy and estimated current cash."
         />
       }
     >
@@ -313,23 +370,27 @@ export default function AdminFinancialsOverviewPage() {
         />
       ) : data ? (
         <div className="space-y-8">
-          {/* A — Primary Recommendation */}
+          {/* A — Recommended Allocation Plan */}
           <section className={`p-4 sm:p-6 ${workspaceCard}`}>
             {!data.recommendations.available ? (
               <>
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-                  Recommendation
+                  Recommended allocation plan
                 </h2>
+                <p className={`mt-2 text-base font-medium text-gray-900`}>
+                  How should I use my business cash?
+                </p>
                 <p className={`mt-3 text-sm ${workspaceFormLabelSecondary}`}>
-                  Add a cash snapshot below to see how much you could safely
-                  take home based on your strategy.
+                  Add a cash snapshot below to see how to set aside taxes, keep
+                  a buffer, budget for inventory, and what you could safely take
+                  home.
                 </p>
               </>
             ) : (
               <>
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-                    Safe owner draw
+                    Recommended allocation plan
                   </h2>
                   <span
                     className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${confidenceBadgeClass(data.recommendations.confidence)}`}
@@ -337,9 +398,29 @@ export default function AdminFinancialsOverviewPage() {
                     {confidenceLabel(data.recommendations.confidence)}
                   </span>
                 </div>
-                <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
-                  Based on your estimated current cash and active strategy.
+                <p className="mt-2 text-base font-medium text-gray-900">
+                  How should I use my business cash?
                 </p>
+                <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Estimated current cash
+                    </p>
+                    <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-gray-900 sm:text-4xl">
+                      {formatCurrency(
+                        parseAmount(data.recommendations.current_cash ?? "0"),
+                      )}
+                    </p>
+                  </div>
+                  {lastReconciledDate ? (
+                    <p className={`text-sm ${workspaceFormLabelSecondary}`}>
+                      Last reconciled{" "}
+                      <span className="font-medium text-gray-900">
+                        {formatDate(lastReconciledDate)}
+                      </span>
+                    </p>
+                  ) : null}
+                </div>
                 {data.recommendations.freshness_reminder ? (
                   <div
                     className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
@@ -352,77 +433,35 @@ export default function AdminFinancialsOverviewPage() {
                     {data.recommendations.freshness_reminder}
                   </div>
                 ) : null}
-                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 sm:p-6">
-                  <p className="text-sm font-medium text-emerald-900">
-                    You could safely take home
-                  </p>
-                  <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-emerald-950 sm:text-5xl">
-                    {formatCurrency(
-                      parseAmount(data.recommendations.safe_owner_draw ?? "0"),
+                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <AllocationCard
+                    label="Set aside for taxes"
+                    amount={parseAmount(
+                      data.recommendations.tax_reserve_recommendation ?? "0",
                     )}
-                  </p>
-                  <p className="mt-2 text-sm text-emerald-900/80">
-                    After tax reserve, cash buffer, and reinvestment targets
-                    from your{" "}
-                    {STRATEGY_OPTIONS.find(
-                      (o) => o.type === data.recommendations.strategy_type,
-                    )?.label ?? data.recommendations.strategy_type}{" "}
-                    strategy.
-                  </p>
+                  />
+                  <AllocationCard
+                    label="Keep as cash buffer"
+                    amount={parseAmount(
+                      data.recommendations.cash_buffer_target ?? "0",
+                    )}
+                  />
+                  <AllocationCard
+                    label="Inventory budget"
+                    amount={parseAmount(
+                      data.recommendations.reinvestment_recommendation ?? "0",
+                    )}
+                    helper={INVENTORY_BUDGET_HELPER}
+                  />
+                  <AllocationCard
+                    label="Safe owner draw"
+                    amount={parseAmount(
+                      data.recommendations.safe_owner_draw ?? "0",
+                    )}
+                    helper={SAFE_OWNER_DRAW_HELPER}
+                    emphasis
+                  />
                 </div>
-                <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-sm text-gray-500">
-                      Estimated current cash
-                    </dt>
-                    <dd className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
-                      {formatCurrency(
-                        parseAmount(data.recommendations.current_cash ?? "0"),
-                      )}
-                    </dd>
-                    {data.recommendations.snapshot_amount &&
-                    data.recommendations.snapshot_date ? (
-                      <dd className="mt-1 text-xs text-gray-500">
-                        Last cash snapshot:{" "}
-                        {formatCurrency(
-                          parseAmount(data.recommendations.snapshot_amount),
-                        )}{" "}
-                        on {formatDate(data.recommendations.snapshot_date)}
-                      </dd>
-                    ) : null}
-                  </div>
-                  <div>
-                    <dt className="text-sm text-gray-500">
-                      Since last snapshot
-                    </dt>
-                    <dd className="mt-1 space-y-0.5 text-sm tabular-nums text-gray-900">
-                      <p>
-                        + inflows{" "}
-                        {formatCurrency(
-                          parseAmount(
-                            data.recommendations.total_inflows_since_snapshot ??
-                              "0",
-                          ),
-                        )}
-                      </p>
-                      <p>
-                        − outflows{" "}
-                        {formatCurrency(
-                          parseAmount(
-                            data.recommendations
-                              .total_outflows_since_snapshot ?? "0",
-                          ),
-                        )}
-                      </p>
-                      <p className="font-medium">
-                        = estimated{" "}
-                        {formatCurrency(
-                          parseAmount(data.recommendations.current_cash ?? "0"),
-                        )}
-                      </p>
-                    </dd>
-                  </div>
-                </dl>
                 <p className={`mt-4 text-xs ${workspaceFormLabelSecondary}`}>
                   {ADVISORY_COPY}
                 </p>
@@ -430,14 +469,16 @@ export default function AdminFinancialsOverviewPage() {
             )}
           </section>
 
-          {/* B — Explanation Breakdown */}
+          {/* B — Explanation / formula */}
           {data.recommendations.available ? (
             <section className={`p-4 sm:p-5 ${workspaceCard}`}>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-                How this is calculated
+                How this plan is calculated
               </h2>
-              <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
-                Advisory breakdown — not a command to move money.
+              <p className={`mt-2 text-sm ${workspaceFormLabelSecondary}`}>
+                This plan uses your latest cash estimate and active strategy.
+                Inventory budget means money available to reinvest, not required
+                spending.
               </p>
               <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-1 sm:px-5">
                 <BreakdownRow
@@ -446,14 +487,14 @@ export default function AdminFinancialsOverviewPage() {
                   variant="base"
                 />
                 <BreakdownRow
-                  label={`Tax reserve (${formatPercent(data.recommendations.tax_reserve_bps)})`}
+                  label={`Set aside for taxes (${formatPercent(data.recommendations.tax_reserve_bps)})`}
                   amount={parseAmount(
                     data.recommendations.tax_reserve_recommendation ?? "0",
                   )}
                   variant="subtract"
                 />
                 <BreakdownRow
-                  label="Cash buffer"
+                  label="Keep as cash buffer"
                   amount={parseAmount(
                     data.recommendations.cash_buffer_target ?? "0",
                   )}
@@ -467,7 +508,7 @@ export default function AdminFinancialsOverviewPage() {
                   variant="result"
                 />
                 <BreakdownRow
-                  label={`Reinvestment (${formatPercent(data.recommendations.reinvestment_bps)})`}
+                  label={`Inventory budget (${formatPercent(data.recommendations.reinvestment_bps)})`}
                   amount={parseAmount(
                     data.recommendations.reinvestment_recommendation ?? "0",
                   )}
@@ -484,7 +525,73 @@ export default function AdminFinancialsOverviewPage() {
             </section>
           ) : null}
 
-          {/* C — Business Snapshot */}
+          {/* C — Event-adjusted cash details */}
+          {data.recommendations.available ? (
+            <section className={`p-4 sm:p-5 ${workspaceCard}`}>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+                Event-adjusted cash
+              </h2>
+              <p className={`mt-1 text-sm ${workspaceFormLabelSecondary}`}>
+                How your estimated current cash was built from your last
+                snapshot and tracked activity.
+              </p>
+              <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-sm text-gray-500">Last cash snapshot</dt>
+                  <dd className="mt-1 text-xl font-semibold tabular-nums text-gray-900">
+                    {data.recommendations.snapshot_amount &&
+                    data.recommendations.snapshot_date ? (
+                      <>
+                        {formatCurrency(
+                          parseAmount(data.recommendations.snapshot_amount),
+                        )}{" "}
+                        <span className="text-sm font-normal text-gray-500">
+                          on {formatDate(data.recommendations.snapshot_date)}
+                        </span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-gray-500">
+                    Estimated current cash
+                  </dt>
+                  <dd className="mt-1 text-xl font-semibold tabular-nums text-gray-900">
+                    {formatCurrency(
+                      parseAmount(data.recommendations.current_cash ?? "0"),
+                    )}
+                  </dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-sm text-gray-500">Since last snapshot</dt>
+                  <dd className="mt-2 space-y-1 text-sm tabular-nums text-gray-900">
+                    <p>
+                      + Inflows{" "}
+                      {formatCurrency(
+                        parseAmount(
+                          data.recommendations.total_inflows_since_snapshot ??
+                            "0",
+                        ),
+                      )}
+                    </p>
+                    <p>
+                      − Outflows{" "}
+                      {formatCurrency(
+                        parseAmount(
+                          data.recommendations.total_outflows_since_snapshot ??
+                            "0",
+                        ),
+                      )}
+                    </p>
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          ) : null}
+
+          {/* D — Business Snapshot */}
           <section className="space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -510,7 +617,7 @@ export default function AdminFinancialsOverviewPage() {
             />
           </section>
 
-          {/* D — Cash Position */}
+          {/* E — Cash Position */}
           <section className={`p-4 sm:p-5 ${workspaceCard}`}>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
               Cash position
@@ -650,7 +757,7 @@ export default function AdminFinancialsOverviewPage() {
             ) : null}
           </section>
 
-          {/* E — What's Missing */}
+          {/* What's Missing */}
           <section className="rounded-xl border border-amber-100 bg-amber-50/40 p-4 sm:p-5">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-900/80">
               What&apos;s missing

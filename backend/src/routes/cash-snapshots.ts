@@ -2,9 +2,10 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { CASH_SNAPSHOT_SOURCES, DEFAULT_CASH_SNAPSHOT_SOURCE } from '../constants/cash-snapshots';
-import { getPool } from '../db';
+import { getPool, withTx } from '../db';
 import { ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
+import { emitCashSnapshotRecorded, resolveActorUserId } from '../services/financial-event-emission';
 
 const optionalTrimmedNotes = z.preprocess((v) => {
   if (typeof v !== 'string') return v;
@@ -130,14 +131,21 @@ export async function cashSnapshotRoutes(
         throw new ValidationError('Invalid request body', parsed.error.errors);
       }
       const { snapshot_date, amount, source, notes } = parsed.data;
-      const pool = getPool();
-      const result = await pool.query(
-        `INSERT INTO cash_snapshots (snapshot_date, amount, source, notes)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, snapshot_date, amount, source, notes, created_at, updated_at`,
-        [snapshot_date, amount, source, notes ?? null]
-      );
-      const row = result.rows[0] as CashSnapshotRow;
+      const row = await withTx(async (client) => {
+        const result = await client.query(
+          `INSERT INTO cash_snapshots (snapshot_date, amount, source, notes)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, snapshot_date, amount, source, notes, created_at, updated_at`,
+          [snapshot_date, amount, source, notes ?? null]
+        );
+        const inserted = result.rows[0] as CashSnapshotRow;
+        await emitCashSnapshotRecorded(
+          client,
+          inserted,
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return inserted;
+      });
       return reply.status(201).send(serializeCashSnapshot(row));
     }
   );

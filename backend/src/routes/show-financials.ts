@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
+import { emitShowPayoutRecorded, resolveActorUserId } from '../services/financial-event-emission';
 
 const uuidSchema = z.string().uuid();
 
@@ -104,16 +105,25 @@ export async function showFinancialsRoutes(
 
       const row = await withTx(async (client) => {
         const showCheck = await client.query(
-          `SELECT id, status FROM shows WHERE id = $1 AND deleted_at IS NULL`,
+          `SELECT id, status, show_date FROM shows WHERE id = $1 AND deleted_at IS NULL`,
           [showId]
         );
         if (showCheck.rows.length === 0) {
           throw new NotFoundError('Show', showId);
         }
-        const showStatus = (showCheck.rows[0] as { status: string }).status;
-        if (showStatus === 'COMPLETED') {
+        const showRow = showCheck.rows[0] as { status: string; show_date: string };
+        if (showRow.status === 'COMPLETED') {
           throw new ConflictError('Show is closed; reopen before editing.');
         }
+
+        const existing = await client.query(
+          `SELECT payout_after_fees_amount FROM show_financials WHERE show_id = $1`,
+          [showId]
+        );
+        const isUpdate = existing.rows.length > 0;
+        const previousPayout = isUpdate
+          ? (existing.rows[0] as { payout_after_fees_amount: string }).payout_after_fees_amount
+          : null;
 
         const result = await client.query(
           `INSERT INTO show_financials (show_id, payout_after_fees_amount, gross_sales_amount, platform_fee_amount, currency, updated_at)
@@ -132,7 +142,31 @@ export async function showFinancialsRoutes(
             platform_fee_amount ?? null,
           ]
         );
-        return result.rows[0];
+        const inserted = result.rows[0] as {
+          show_id: string;
+          payout_after_fees_amount: string;
+          gross_sales_amount: string | null;
+          platform_fee_amount: string | null;
+          currency: string;
+          created_at: Date;
+          updated_at: Date;
+        };
+        await emitShowPayoutRecorded(
+          client,
+          {
+            showId,
+            showDate: showRow.show_date,
+            payoutAfterFeesAmount: inserted.payout_after_fees_amount,
+            grossSalesAmount: inserted.gross_sales_amount,
+            platformFeeAmount: inserted.platform_fee_amount,
+            currency: inserted.currency,
+            isUpdate,
+            previousPayoutAfterFeesAmount: previousPayout,
+            updatedAt: inserted.updated_at,
+          },
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return inserted;
       });
 
       const r = row as {

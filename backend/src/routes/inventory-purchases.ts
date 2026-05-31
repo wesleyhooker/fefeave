@@ -1,10 +1,14 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
-import { getPool } from '../db';
+import { getPool, withTx } from '../db';
 import { ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
 import { INVENTORY_CATEGORIES, INVENTORY_PURCHASE_TYPES } from '../constants/inventory';
+import {
+  emitInventoryPurchaseRecorded,
+  resolveActorUserId,
+} from '../services/financial-event-emission';
 
 /** Blank/whitespace-only string -> undefined; otherwise pass through for enum validation. */
 const blankToUndefined = (v: unknown): unknown =>
@@ -121,21 +125,28 @@ export async function inventoryPurchaseRoutes(
         throw new ValidationError('Invalid request body', parsed.error.errors);
       }
       const { purchase_date, amount, notes, supplier, category, purchase_type } = parsed.data;
-      const pool = getPool();
-      const result = await pool.query(
-        `INSERT INTO inventory_purchases (purchase_date, amount, notes, supplier, category, purchase_type)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id, purchase_date, amount, notes, supplier, category, purchase_type, created_at`,
-        [
-          purchase_date,
-          amount,
-          notes ?? null,
-          supplier ?? null,
-          category ?? null,
-          purchase_type ?? null,
-        ]
-      );
-      const row = result.rows[0] as InventoryPurchaseRow;
+      const row = await withTx(async (client) => {
+        const result = await client.query(
+          `INSERT INTO inventory_purchases (purchase_date, amount, notes, supplier, category, purchase_type)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING id, purchase_date, amount, notes, supplier, category, purchase_type, created_at`,
+          [
+            purchase_date,
+            amount,
+            notes ?? null,
+            supplier ?? null,
+            category ?? null,
+            purchase_type ?? null,
+          ]
+        );
+        const inserted = result.rows[0] as InventoryPurchaseRow;
+        await emitInventoryPurchaseRecorded(
+          client,
+          inserted,
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return inserted;
+      });
       return reply.status(201).send(serializeInventoryPurchase(row));
     }
   );
