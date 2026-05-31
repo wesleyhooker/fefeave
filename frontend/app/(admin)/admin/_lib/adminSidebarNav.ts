@@ -24,6 +24,11 @@ export const FINANCIALS_NAV_CHILDREN: AdminSidebarChildNavItem[] = [
     match: (path) => path === FINANCIALS_OVERVIEW_HREF,
   },
   {
+    href: '/admin/financials/activity',
+    label: 'Activity',
+    match: (path) => path.startsWith('/admin/financials/activity'),
+  },
+  {
     href: FINANCIALS_LANDING_HREF,
     label: 'Balances',
     match: (path) =>
