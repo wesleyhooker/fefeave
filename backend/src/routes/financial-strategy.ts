@@ -8,8 +8,12 @@ import {
   isPresetStrategyType,
   resolveStrategyValues,
 } from '../constants/financial-strategy';
-import { getPool } from '../db';
+import { getPool, withTx } from '../db';
 import { ValidationError } from '../utils/errors';
+import {
+  emitFinancialStrategyChanged,
+  resolveActorUserId,
+} from '../services/financial-event-emission';
 
 const bpsSchema = z
   .number({ invalid_type_error: 'must be a number' })
@@ -206,28 +210,35 @@ export async function financialStrategyRoutes(
             cash_buffer_amount,
           });
 
-      const pool = getPool();
-      const result = await pool.query(
-        `INSERT INTO financial_strategy_settings
-           (scope_key, strategy_type, tax_reserve_bps, reinvestment_bps, cash_buffer_amount)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (scope_key) DO UPDATE SET
-           strategy_type = EXCLUDED.strategy_type,
-           tax_reserve_bps = EXCLUDED.tax_reserve_bps,
-           reinvestment_bps = EXCLUDED.reinvestment_bps,
-           cash_buffer_amount = EXCLUDED.cash_buffer_amount,
-           updated_at = NOW()
-         RETURNING id, scope_key, strategy_type, tax_reserve_bps, reinvestment_bps,
-                   cash_buffer_amount, created_at, updated_at`,
-        [
-          STRATEGY_SCOPE_KEY,
-          strategy_type,
-          resolved.tax_reserve_bps,
-          resolved.reinvestment_bps,
-          resolved.cash_buffer_amount,
-        ]
-      );
-      const row = result.rows[0] as FinancialStrategyRow;
+      const row = await withTx(async (client) => {
+        const result = await client.query(
+          `INSERT INTO financial_strategy_settings
+             (scope_key, strategy_type, tax_reserve_bps, reinvestment_bps, cash_buffer_amount)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (scope_key) DO UPDATE SET
+             strategy_type = EXCLUDED.strategy_type,
+             tax_reserve_bps = EXCLUDED.tax_reserve_bps,
+             reinvestment_bps = EXCLUDED.reinvestment_bps,
+             cash_buffer_amount = EXCLUDED.cash_buffer_amount,
+             updated_at = NOW()
+           RETURNING id, scope_key, strategy_type, tax_reserve_bps, reinvestment_bps,
+                     cash_buffer_amount, created_at, updated_at`,
+          [
+            STRATEGY_SCOPE_KEY,
+            strategy_type,
+            resolved.tax_reserve_bps,
+            resolved.reinvestment_bps,
+            resolved.cash_buffer_amount,
+          ]
+        );
+        const inserted = result.rows[0] as FinancialStrategyRow;
+        await emitFinancialStrategyChanged(
+          client,
+          inserted,
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return inserted;
+      });
       return reply.send(serializeRow(row));
     }
   );

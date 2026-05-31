@@ -11,6 +11,11 @@ import {
   loadShowSettlementAggregates,
 } from '../services/show-settlement-create-validation';
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
+import {
+  emitSettlementCreated,
+  loadShowDate,
+  resolveActorUserId,
+} from '../services/financial-event-emission';
 
 const uuidSchema = z.string().uuid();
 
@@ -174,10 +179,38 @@ export async function owedLineItemRoutes(
         const result = await client.query(
           `INSERT INTO owed_line_items (show_id, wholesaler_id, account_id, amount, currency, description, due_date, status, created_by, created_via)
            VALUES ($1, $2, $3, $4, 'USD', $5, $6, 'PENDING', $7, 'API')
-           RETURNING id, show_id, wholesaler_id, amount, currency, description, due_date, status, created_at, updated_at`,
+           RETURNING id, show_id, wholesaler_id, amount, currency, description, due_date, status, obligation_kind, created_at, updated_at`,
           [showId, wholesaler_id, accountId, amount, description, due_date ?? null, userId]
         );
-        return result.rows[0];
+        const inserted = result.rows[0] as {
+          id: string;
+          show_id: string;
+          wholesaler_id: string;
+          amount: string;
+          currency: string;
+          description: string;
+          due_date: string | null;
+          status: string;
+          obligation_kind: string;
+          created_at: Date;
+          updated_at: Date;
+        };
+        const showDate = await loadShowDate(client, showId);
+        await emitSettlementCreated(
+          client,
+          {
+            id: inserted.id,
+            show_id: inserted.show_id,
+            wholesaler_id: inserted.wholesaler_id,
+            amount: inserted.amount,
+            description: inserted.description,
+            obligation_kind: inserted.obligation_kind,
+            due_date: inserted.due_date,
+          },
+          showDate,
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return inserted;
       });
 
       const r = row as {

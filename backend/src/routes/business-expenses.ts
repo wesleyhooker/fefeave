@@ -2,9 +2,13 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { EXPENSE_CATEGORIES } from '../constants/expenses';
-import { getPool } from '../db';
+import { getPool, withTx } from '../db';
 import { ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
+import {
+  emitBusinessExpenseRecorded,
+  resolveActorUserId,
+} from '../services/financial-event-emission';
 
 const optionalTrimmedNotes = z.preprocess((v) => {
   if (typeof v !== 'string') return v;
@@ -106,14 +110,21 @@ export async function businessExpenseRoutes(
         throw new ValidationError('Invalid request body', parsed.error.errors);
       }
       const { expense_date, amount, category, notes } = parsed.data;
-      const pool = getPool();
-      const result = await pool.query(
-        `INSERT INTO business_expenses (expense_date, amount, category, notes)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, expense_date, amount, category, notes, created_at, updated_at`,
-        [expense_date, amount, category, notes ?? null]
-      );
-      const row = result.rows[0] as BusinessExpenseRow;
+      const row = await withTx(async (client) => {
+        const result = await client.query(
+          `INSERT INTO business_expenses (expense_date, amount, category, notes)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, expense_date, amount, category, notes, created_at, updated_at`,
+          [expense_date, amount, category, notes ?? null]
+        );
+        const inserted = result.rows[0] as BusinessExpenseRow;
+        await emitBusinessExpenseRecorded(
+          client,
+          inserted,
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return inserted;
+      });
       return reply.status(201).send(serializeBusinessExpense(row));
     }
   );
