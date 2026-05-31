@@ -4,6 +4,10 @@ import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
 import { ensureUser } from '../db/ensure-user';
 import { NotFoundError, ValidationError } from '../utils/errors';
+import {
+  emitShowPayoutOnShowStatusChange,
+  resolveActorUserId,
+} from '../services/financial-event-emission';
 
 const PLATFORM_API = ['WHATNOT', 'INSTAGRAM', 'OTHER'] as const;
 const PLATFORM_DB = ['WHATNOT', 'INSTAGRAM', 'MANUAL'] as const;
@@ -279,16 +283,24 @@ export async function showRoutes(
       const id = parsedId.data;
       const { status } = bodyParsed.data;
 
-      const pool = getPool();
-      const result = await pool.query(
-        `UPDATE shows SET status = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL
-         RETURNING ${SHOW_COLUMNS}`,
-        [status, id]
-      );
-      const row = result.rows[0] as ShowRow | undefined;
-      if (!row) {
-        throw new NotFoundError('Show', id);
-      }
+      const row = await withTx(async (client) => {
+        const result = await client.query(
+          `UPDATE shows SET status = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL
+           RETURNING ${SHOW_COLUMNS}`,
+          [status, id]
+        );
+        const updated = result.rows[0] as ShowRow | undefined;
+        if (!updated) {
+          throw new NotFoundError('Show', id);
+        }
+        await emitShowPayoutOnShowStatusChange(
+          client,
+          id,
+          status,
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return updated;
+      });
       return reply.send(serializeShow(row));
     }
   );

@@ -11,6 +11,7 @@ import {
   CONFIDENCE_MEDIUM_MAX_DAYS,
   todayIsoDateUtc,
 } from '../services/financial-recommendations';
+import { assertRecommendationCashSourcesParity } from '../services/recommendation-cash-totals';
 import { buildAppForTest, buildUniqueDevBypassIdentity, runTestSchemaMigrations } from './helpers';
 
 const SNAPSHOT_DATE = '2026-05-01';
@@ -47,6 +48,7 @@ describe('Financial recommendations API integration', () => {
     app = result.app;
     restoreEnv = result.restoreEnv;
     const pool = getPool();
+    await pool.query('DELETE FROM financial_events');
     await pool.query('DELETE FROM owner_self_pay_transactions');
     await pool.query('DELETE FROM payments');
     await pool.query('DELETE FROM owed_line_items');
@@ -203,22 +205,21 @@ describe('Financial recommendations API integration', () => {
 
   test('owner draw after snapshot decreases estimated cash', async () => {
     await seedSnapshot();
-    const pool = getPool();
-    const ownerResult = await pool.query(
-      `SELECT id FROM accounts WHERE type = 'OWNER' AND deleted_at IS NULL LIMIT 1`
-    );
-    const ownerAccountId = ownerResult.rows[0]?.id as string;
-    expect(ownerAccountId).toBeDefined();
-    await pool.query(
-      `INSERT INTO owner_self_pay_transactions (
-         account_id, account_type, amount, week_start_date, week_end_date,
-         paid_at, transaction_type, reference, note
-       ) VALUES ($1, 'OWNER', 400, '2026-05-05', '2026-05-11', '2026-05-10T12:00:00Z', 'OWNER_DRAW', 'Draw', 'Test draw')`,
-      [ownerAccountId]
-    );
+    await createCompletedShow('2026-05-18', 400);
+    const drawRes = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-12`,
+      payload: {
+        week_end_date: '2026-05-18',
+        transaction_type: 'OWNER_DRAW',
+        paid_at: '2026-05-10T12:00:00.000Z',
+      },
+    });
+    expect(drawRes.statusCode).toBe(200);
     const body = await fetchRecommendations();
+    expect(Number(body.total_inflows_since_snapshot)).toBe(400);
     expect(Number(body.total_outflows_since_snapshot)).toBe(400);
-    expect(Number(body.current_cash)).toBe(8100);
+    expect(Number(body.current_cash)).toBe(SNAPSHOT_AMOUNT);
   });
 
   test('platform fee does not reduce estimated cash beyond payout_after_fees', async () => {
@@ -344,5 +345,164 @@ describe('Financial recommendations API integration', () => {
     expect(res.statusCode).toBe(401);
     await unauthApp.close();
     unauthResult.restoreEnv?.();
+  });
+
+  test('event and table cash sources agree on seeded recommendation data', async () => {
+    await seedSnapshot();
+    await createCompletedShow('2026-05-15', 1200);
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/business-expenses`,
+      payload: {
+        expense_date: '2026-05-10',
+        amount: 300,
+        category: 'Supplies',
+      },
+    });
+
+    const pool = getPool();
+    await assertRecommendationCashSourcesParity(pool, SNAPSHOT_DATE, SNAPSHOT_AMOUNT);
+
+    const eventsBody = await fetchRecommendations();
+
+    await app.close();
+    restoreEnv();
+
+    const databaseUrl = process.env.DATABASE_URL ?? '';
+    const identity = buildUniqueDevBypassIdentity('recommendations-tables', 'ADMIN');
+    const tableResult = await buildAppForTest({
+      DATABASE_URL: databaseUrl,
+      AUTH_MODE: 'dev_bypass',
+      FINANCIAL_RECOMMENDATIONS_SOURCE: 'tables',
+      ...identity,
+      PGOPTIONS: '-c search_path=test',
+    });
+    const tableApp = tableResult.app;
+    const tableRes = await tableApp.inject({
+      method: 'GET',
+      url: `${prefix}/financial-recommendations`,
+    });
+    expect(tableRes.statusCode).toBe(200);
+    const tablesBody = JSON.parse(tableRes.payload);
+
+    expect(tablesBody).toEqual(eventsBody);
+    await tableApp.close();
+    tableResult.restoreEnv?.();
+  });
+
+  test('FINANCIAL_RECOMMENDATIONS_SOURCE=tables rollback returns same shape as events', async () => {
+    await seedSnapshot();
+    const eventsBody = await fetchRecommendations();
+    expect(eventsBody.available).toBe(true);
+    expect(eventsBody).toHaveProperty('snapshot_amount');
+    expect(eventsBody).toHaveProperty('total_inflows_since_snapshot');
+    expect(eventsBody).toHaveProperty('safe_owner_draw');
+
+    await app.close();
+    restoreEnv();
+
+    const databaseUrl = process.env.DATABASE_URL ?? '';
+    const identity = buildUniqueDevBypassIdentity('recommendations-rollback', 'ADMIN');
+    const tableResult = await buildAppForTest({
+      DATABASE_URL: databaseUrl,
+      AUTH_MODE: 'dev_bypass',
+      FINANCIAL_RECOMMENDATIONS_SOURCE: 'tables',
+      ...identity,
+      PGOPTIONS: '-c search_path=test',
+    });
+    const tableRes = await tableResult.app.inject({
+      method: 'GET',
+      url: `${prefix}/financial-recommendations`,
+    });
+    expect(tableRes.statusCode).toBe(200);
+    const tablesBody = JSON.parse(tableRes.payload);
+    expect(Object.keys(tablesBody).sort()).toEqual(Object.keys(eventsBody).sort());
+    expect(tablesBody).toEqual(eventsBody);
+    await tableResult.app.close();
+    tableResult.restoreEnv?.();
+  });
+
+  test('non-completed show payout excluded from recommendation cash', async () => {
+    await seedSnapshot();
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2026-05-16',
+        platform: 'WHATNOT',
+        name: 'Open show',
+      },
+    });
+    expect(showRes.statusCode).toBe(201);
+    const show = JSON.parse(showRes.payload);
+    const finRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: {
+        payout_after_fees_amount: 900,
+        gross_sales_amount: 900,
+      },
+    });
+    expect(finRes.statusCode).toBe(200);
+
+    const body = await fetchRecommendations();
+    expect(Number(body.total_inflows_since_snapshot)).toBe(0);
+    expect(Number(body.current_cash)).toBe(SNAPSHOT_AMOUNT);
+  });
+
+  test('owner void excludes outflow from recommendation cash', async () => {
+    await seedSnapshot();
+    await createCompletedShow('2026-05-18', 600);
+    const recordRes = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-12`,
+      payload: {
+        week_end_date: '2026-05-18',
+        transaction_type: 'OWNER_DRAW',
+      },
+    });
+    expect(recordRes.statusCode).toBe(200);
+
+    const voidRes = await app.inject({
+      method: 'DELETE',
+      url: `${prefix}/owner-self-pay/2026-05-12`,
+    });
+    expect(voidRes.statusCode).toBe(204);
+
+    const body = await fetchRecommendations();
+    expect(Number(body.total_outflows_since_snapshot)).toBe(0);
+    expect(Number(body.total_inflows_since_snapshot)).toBe(600);
+    expect(Number(body.current_cash)).toBe(SNAPSHOT_AMOUNT + 600);
+  });
+
+  test('owner correction uses latest paid date for event-derived outflow timing', async () => {
+    await seedSnapshot();
+    await createCompletedShow('2026-05-18', 700);
+
+    const firstRes = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-12`,
+      payload: {
+        week_end_date: '2026-05-18',
+        transaction_type: 'OWNER_DRAW',
+        paid_at: '2026-05-15T12:00:00.000Z',
+      },
+    });
+    expect(firstRes.statusCode).toBe(200);
+
+    const secondRes = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-12`,
+      payload: {
+        week_end_date: '2026-05-18',
+        transaction_type: 'OWNER_DRAW',
+        paid_at: '2026-05-16T12:00:00.000Z',
+      },
+    });
+    expect(secondRes.statusCode).toBe(200);
+
+    const body = await fetchRecommendations();
+    expect(Number(body.total_outflows_since_snapshot)).toBe(700);
+    expect(Number(body.current_cash)).toBe(SNAPSHOT_AMOUNT);
   });
 });

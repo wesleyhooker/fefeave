@@ -684,41 +684,68 @@ Drift can occur when:
 **Status: implemented** (`feat/financial-activity-page`).
 
 - Build **Financials → Activity** powered by `financial_events` (§11).
-- Read-only ledger consumer; no changes to recommendations, Overview, or cash math.
+- Read-only ledger consumer; no changes to Overview or allocation UI. Recommendation
+  cash math switchover is Phase 5 (below), not Phase 4.
 
 ### Phase 5 — Event-derived projections for recommendations
 
-**Status: implemented as event-derived projection parity**
-(`feat/financial-event-projections`).
+**Status: recommendation switchover complete**
+(`feat/financial-events-switchover-readiness`).
 
 - `loadCashEventTotalsFromEvents` in `backend/src/services/event-derived-cash.ts`
   mirrors table-derived `loadCashEventTotals` using `financial_events` only.
 - Parity integration tests assert equivalence across cash-moving scenarios.
-- **Recommendations still use table-derived calculations** — no production
-  switchover until explicit approval after parity validation (§13).
-- Table-derived `event-adjusted-cash.ts` remains unchanged.
+- **`GET /financial-recommendations` uses event-derived cash by default**
+  via `loadRecommendationCashEventTotals` (`FINANCIAL_RECOMMENDATIONS_SOURCE=events`).
+- Table-derived `event-adjusted-cash.ts` remains available for rollback
+  (`FINANCIAL_RECOMMENDATIONS_SOURCE=tables`).
+- Snapshot anchor still reads from `cash_snapshots` (unchanged no-snapshot behavior).
+- This is **recommendation switchover only** — not full Financials source-of-truth
+  promotion (Phases 6–7).
 
-**Show payout parity (switchover blocker):**
+**Show payout parity (readiness — resolved on `feat/financial-events-switchover-readiness`):**
 
 - Table-derived cash counts show inflows only when `shows.status = 'COMPLETED'`.
 - Event-derived cash counts show payout events only when
   `payload.show_status = 'COMPLETED'`.
-- Phase 2 dual-write `SHOW_PAYOUT_*` events do **not** include `show_status` in
-  `payload` today, so those events are **excluded** from event-derived inflows
-  until dual-write emits status (or events are backfilled with status context).
-- **Recommendation switchover remains blocked** until show payout events carry
-  enough completion context for event-only replay to match table behavior.
+- Dual-write now includes `show_status` on every `SHOW_PAYOUT_*` payload (status at
+  financials write time, typically `ACTIVE`).
+- When a show is closed or reopened (`PATCH /shows/:id`), a `SHOW_PAYOUT_UPDATED`
+  event is emitted with the current payout snapshot and updated `show_status`, so
+  event-only replay can match table behavior without reading `shows`.
+- Backfill includes `show_status` from the joined `shows` row.
 
 **Null / unknown show status:**
 
-- Events with missing `show_status` are **not** counted as inflows (conservative;
-  matches table exclusion for non-completed shows, but under-counts completed
-  shows until status is present on the event).
+- Events with missing `show_status` are **not** counted as inflows (conservative).
+- Live dual-write and show close/reopen now populate `show_status` on new events.
+- Backfill inserts `show_status` only for shows that **do not yet have**
+  `SHOW_PAYOUT_RECORDED`; it does not patch or supersede existing payout events.
+- Existing ledgers with `SHOW_PAYOUT_*` events created before `show_status` support
+  may require a targeted repair/migration before recommendation parity is guaranteed
+  (see `financial-event-switchover-readiness.md` § Deployment notes).
 
-**Other known parity gaps (also block switchover):**
+**Owner activity parity (readiness — resolved):**
 
-- Owner self-pay void/re-upsert drift (Phase 2 follow-ups §12).
-- Settlement write-path coverage gaps (Phase 3 limitations).
+- `PUT /owner-self-pay/:weekStart` emits `OWNER_*_CORRECTED` when an active row
+  changes materially (amount, type, or paid date).
+- Re-upsert after void emits a new `OWNER_*_RECORDED` with a suffixed idempotency key.
+- `DELETE /owner-self-pay/:weekStart` emits `OWNER_*_VOIDED`.
+- Event-derived cash uses latest owner event per source and excludes voided rows.
+
+**Settlement coverage (readiness — resolved for show-linked paths):**
+
+- `POST /shows/:showId/owed-line-items` — `SETTLEMENT_CREATED` (unchanged).
+- `POST /shows/:showId/settlements` (PERCENT / ITEMIZED / MANUAL) — `SETTLEMENT_CREATED`.
+- `DELETE /shows/:showId/settlements/:settlementId` — `SETTLEMENT_VOIDED` (audit only;
+  settlements are neutral for cash).
+- **Not covered (documented):** vendor expense obligations (`vendor-expenses.ts`,
+  `obligation_kind = VENDOR_EXPENSE`) — neutral for recommendation cash; seed scripts
+  and migrations are out of band.
+
+**Recommendation switchover:** Complete on this branch. See
+`docs/architecture/financial-event-switchover-readiness.md`. Roll back with
+`FINANCIAL_RECOMMENDATIONS_SOURCE=tables` if needed.
 
 ### Phase 6 — Promote selected Financials read models to event-sourced projections
 

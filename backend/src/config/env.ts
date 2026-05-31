@@ -32,6 +32,8 @@ const baseEnvSchema = z.object({
   // S3 attachments bucket (Epic 2.1; wire to Terraform output in deployment)
   S3_ATTACHMENTS_BUCKET: z.string().min(1).optional(),
   AWS_REGION: z.string().optional().default('us-east-1'),
+  /** Recommendation cash math: events (ledger projection) or tables (rollback). */
+  FINANCIAL_RECOMMENDATIONS_SOURCE: z.enum(['events', 'tables']).default('events'),
 });
 
 export type Env = z.infer<typeof baseEnvSchema>;

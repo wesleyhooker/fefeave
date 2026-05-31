@@ -45,15 +45,24 @@ describe('DELETE /shows/:showId/settlements/:settlementId', () => {
           {
             id: settlementId,
             show_id: showId,
-            calculation_method: 'MANUAL',
+            wholesaler_id: '00000000-0000-0000-0000-000000000030',
+            amount: '100',
+            description: 'Test settlement',
             obligation_kind: 'SHOW_LINKED',
+            due_date: null,
+            calculation_method: 'MANUAL',
             deleted_at: null,
+            show_date: '2026-05-01',
           },
         ],
       })
-      .mockResolvedValueOnce({ rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ id: showId }] })
       .mockResolvedValueOnce({ rows: [] });
+
+    mockClient.query
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: 'event-id' }] });
 
     const result = await buildAppForTest({
       NODE_ENV: 'test',
@@ -88,9 +97,14 @@ describe('DELETE /shows/:showId/settlements/:settlementId', () => {
         {
           id: settlementId,
           show_id: showId,
-          calculation_method: 'PERCENT_PAYOUT',
+          wholesaler_id: '00000000-0000-0000-0000-000000000030',
+          amount: '100',
+          description: 'Test settlement',
           obligation_kind: 'SHOW_LINKED',
+          due_date: null,
+          calculation_method: 'PERCENT_PAYOUT',
           deleted_at: null,
+          show_date: '2026-05-01',
         },
       ],
     });

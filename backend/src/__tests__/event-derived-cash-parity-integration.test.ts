@@ -84,20 +84,6 @@ describe('Event-derived cash parity integration', () => {
     }
   }
 
-  /** Stamp show_status onto payout events so event-derived cash can match table logic. */
-  async function stampShowPayoutStatusFromShow(showId: string): Promise<void> {
-    const pool = getPool();
-    await pool.query(
-      `UPDATE financial_events fe
-       SET payload = fe.payload || jsonb_build_object('show_status', s.status::text)
-       FROM shows s
-       WHERE s.id = $1
-         AND fe.source_type = 'show_financials'
-         AND fe.source_id = $1`,
-      [showId]
-    );
-  }
-
   async function createCompletedShow(
     showDate: string,
     payoutAfterFees: number,
@@ -132,7 +118,6 @@ describe('Event-derived cash parity integration', () => {
       payload: { status: 'COMPLETED' },
     });
     expect(completeRes.statusCode).toBe(200);
-    await stampShowPayoutStatusFromShow(show.id as string);
     return show.id as string;
   }
 
@@ -258,7 +243,6 @@ describe('Event-derived cash parity integration', () => {
       url: `${prefix}/shows/${show.id}`,
       payload: { status: 'COMPLETED' },
     });
-    await stampShowPayoutStatusFromShow(show.id as string);
     await backfillAndAssertParity('neutral settlement');
   });
 
@@ -379,7 +363,6 @@ describe('Event-derived cash parity integration', () => {
 
     const pool = getPool();
     await runFinancialEventsBackfill(pool);
-    await stampShowPayoutStatusFromShow(show.id as string);
 
     const parity = await assertCashEventTotalsParity(pool);
     expect(parity.match).toBe(true);
@@ -424,7 +407,6 @@ describe('Event-derived cash parity integration', () => {
       payload: { status: 'COMPLETED' },
     });
     expect(completeRes.statusCode).toBe(200);
-    await stampShowPayoutStatusFromShow(show.id as string);
 
     await backfillAndAssertParity('SHOW_PAYOUT_UPDATED latest amount');
     const pool = getPool();
@@ -460,5 +442,65 @@ describe('Event-derived cash parity integration', () => {
     await assertCashSnapshotAnchorParity(pool);
     const eventAnchor = await loadLatestCashSnapshotFromEvents(pool);
     expect(eventAnchor?.snapshot_amount).toBe(SNAPSHOT_AMOUNT);
+  });
+
+  test('17. owner self-pay void excludes outflow from event-derived cash', async () => {
+    await seedSnapshot();
+    await createCompletedShow('2026-05-18', 600);
+
+    const recordRes = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-12`,
+      payload: {
+        week_end_date: '2026-05-18',
+        transaction_type: 'OWNER_DRAW',
+      },
+    });
+    expect(recordRes.statusCode).toBe(200);
+
+    const voidRes = await app.inject({
+      method: 'DELETE',
+      url: `${prefix}/owner-self-pay/2026-05-12`,
+    });
+    expect(voidRes.statusCode).toBe(204);
+
+    await backfillAndAssertParity('owner void');
+    const pool = getPool();
+    const parity = await assertCashEventTotalsParity(pool);
+    expect(parity.tableDerived.total_outflows).toBe(0);
+    expect(parity.eventDerived.total_outflows).toBe(0);
+  });
+
+  test('18. owner self-pay correction uses latest amount in event-derived cash', async () => {
+    await seedSnapshot();
+    await createCompletedShow('2026-05-18', 700);
+
+    const firstRes = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-12`,
+      payload: {
+        week_end_date: '2026-05-18',
+        transaction_type: 'OWNER_DRAW',
+        paid_at: '2026-05-15T12:00:00.000Z',
+      },
+    });
+    expect(firstRes.statusCode).toBe(200);
+
+    const secondRes = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-12`,
+      payload: {
+        week_end_date: '2026-05-18',
+        transaction_type: 'OWNER_DRAW',
+        paid_at: '2026-05-16T12:00:00.000Z',
+      },
+    });
+    expect(secondRes.statusCode).toBe(200);
+
+    await backfillAndAssertParity('owner correction');
+    const pool = getPool();
+    const parity = await assertCashEventTotalsParity(pool);
+    expect(parity.tableDerived.total_outflows).toBe(700);
+    expect(parity.eventDerived.total_outflows).toBe(700);
   });
 });

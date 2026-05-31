@@ -143,7 +143,8 @@ export async function emitOwnerSelfPayRecorded(
     reference: string | null;
     note: string | null;
   },
-  actorUserId: string | null
+  actorUserId: string | null,
+  idempotencySuffix?: string
 ): Promise<void> {
   const eventType =
     row.transaction_type === 'OWNER_DRAW' ? 'OWNER_DRAW_RECORDED' : 'OWNER_SELF_PAY_RECORDED';
@@ -156,7 +157,12 @@ export async function emitOwnerSelfPayRecorded(
     sourceType: 'owner_self_pay',
     sourceId: row.id,
     actorUserId,
-    idempotencyKey: financialEventIdempotencyKey('owner_self_pay', row.id, eventType),
+    idempotencyKey: financialEventIdempotencyKey(
+      'owner_self_pay',
+      row.id,
+      eventType,
+      idempotencySuffix
+    ),
     payload: {
       amount: Number(row.amount),
       transaction_type: row.transaction_type,
@@ -165,6 +171,159 @@ export async function emitOwnerSelfPayRecorded(
       week_end_date: toYyyyMmDd(row.week_end_date),
       reference: row.reference ?? null,
       note: row.note ?? null,
+    },
+  });
+}
+
+function ownerRecordedEventType(transactionType: string): FinancialEventType {
+  return transactionType === 'OWNER_DRAW' ? 'OWNER_DRAW_RECORDED' : 'OWNER_SELF_PAY_RECORDED';
+}
+
+function ownerCorrectedEventType(transactionType: string): FinancialEventType {
+  return transactionType === 'OWNER_DRAW' ? 'OWNER_DRAW_CORRECTED' : 'OWNER_SELF_PAY_CORRECTED';
+}
+
+function ownerVoidedEventType(transactionType: string): FinancialEventType {
+  return transactionType === 'OWNER_DRAW' ? 'OWNER_DRAW_VOIDED' : 'OWNER_SELF_PAY_VOIDED';
+}
+
+export function ownerSelfPayMateriallyChanged(
+  prior: {
+    amount: string | number;
+    paid_at: Date | string;
+    transaction_type: string;
+  },
+  next: {
+    amount: string | number;
+    paid_at: Date | string;
+    transaction_type: string;
+  }
+): boolean {
+  const priorPaidAt = prior.paid_at instanceof Date ? prior.paid_at : new Date(prior.paid_at);
+  const nextPaidAt = next.paid_at instanceof Date ? next.paid_at : new Date(next.paid_at);
+  return (
+    Number(prior.amount) !== Number(next.amount) ||
+    prior.transaction_type !== next.transaction_type ||
+    toYyyyMmDd(priorPaidAt) !== toYyyyMmDd(nextPaidAt)
+  );
+}
+
+async function findFirstFinancialEventId(
+  db: Queryable,
+  sourceType: string,
+  sourceId: string,
+  eventType: FinancialEventType
+): Promise<string | null> {
+  const result = await db.query(
+    `SELECT id FROM financial_events
+     WHERE source_type = $1 AND source_id = $2 AND event_type = $3
+     ORDER BY occurred_at ASC, id ASC
+     LIMIT 1`,
+    [sourceType, sourceId, eventType]
+  );
+  return (result.rows[0] as { id: string } | undefined)?.id ?? null;
+}
+
+export async function emitOwnerSelfPayCorrected(
+  db: Queryable,
+  row: {
+    id: string;
+    amount: string | number;
+    paid_at: Date | string;
+    transaction_type: string;
+    week_start_date: string;
+    week_end_date: string;
+    reference: string | null;
+    note: string | null;
+    updated_at: Date;
+  },
+  prior: {
+    amount: string | number;
+    paid_at: Date | string;
+    transaction_type: string;
+  },
+  actorUserId: string | null
+): Promise<void> {
+  const eventType = ownerCorrectedEventType(row.transaction_type);
+  const recordedType = ownerRecordedEventType(row.transaction_type);
+  const paidAt = row.paid_at instanceof Date ? row.paid_at : new Date(row.paid_at);
+  const priorPaidAt = prior.paid_at instanceof Date ? prior.paid_at : new Date(prior.paid_at);
+  const effectiveDate = toYyyyMmDd(paidAt);
+  const causationId = await findFirstFinancialEventId(db, 'owner_self_pay', row.id, recordedType);
+
+  await appendFinancialEvent(db, {
+    eventType,
+    effectiveDate,
+    amount: Number(row.amount),
+    sourceType: 'owner_self_pay',
+    sourceId: row.id,
+    actorUserId,
+    causationId,
+    idempotencyKey: financialEventIdempotencyKey(
+      'owner_self_pay',
+      row.id,
+      eventType,
+      row.updated_at.toISOString()
+    ),
+    payload: {
+      amount: Number(row.amount),
+      previous_amount: Number(prior.amount),
+      transaction_type: row.transaction_type,
+      previous_transaction_type: prior.transaction_type,
+      paid_at: paidAt.toISOString(),
+      previous_paid_at: priorPaidAt.toISOString(),
+      week_start_date: toYyyyMmDd(row.week_start_date),
+      week_end_date: toYyyyMmDd(row.week_end_date),
+      reference: row.reference ?? null,
+      note: row.note ?? null,
+    },
+  });
+}
+
+export async function emitOwnerSelfPayVoided(
+  db: Queryable,
+  row: {
+    id: string;
+    amount: string | number;
+    paid_at: Date | string;
+    transaction_type: string;
+    week_start_date: string;
+    week_end_date: string;
+    reference: string | null;
+    note: string | null;
+  },
+  actorUserId: string | null,
+  voidedAt: Date
+): Promise<void> {
+  const eventType = ownerVoidedEventType(row.transaction_type);
+  const recordedType = ownerRecordedEventType(row.transaction_type);
+  const paidAt = row.paid_at instanceof Date ? row.paid_at : new Date(row.paid_at);
+  const effectiveDate = toYyyyMmDd(paidAt);
+  const causationId = await findFirstFinancialEventId(db, 'owner_self_pay', row.id, recordedType);
+
+  await appendFinancialEvent(db, {
+    eventType,
+    effectiveDate,
+    amount: Number(row.amount),
+    sourceType: 'owner_self_pay',
+    sourceId: row.id,
+    actorUserId,
+    causationId,
+    idempotencyKey: financialEventIdempotencyKey(
+      'owner_self_pay',
+      row.id,
+      eventType,
+      voidedAt.toISOString()
+    ),
+    payload: {
+      amount: Number(row.amount),
+      transaction_type: row.transaction_type,
+      paid_at: paidAt.toISOString(),
+      week_start_date: toYyyyMmDd(row.week_start_date),
+      week_end_date: toYyyyMmDd(row.week_end_date),
+      reference: row.reference ?? null,
+      note: row.note ?? null,
+      voided_at: voidedAt.toISOString(),
     },
   });
 }
@@ -238,6 +397,7 @@ export async function emitShowPayoutRecorded(
   params: {
     showId: string;
     showDate: string;
+    showStatus: string;
     payoutAfterFeesAmount: string | number;
     grossSalesAmount: string | number | null;
     platformFeeAmount: string | number | null;
@@ -256,6 +416,7 @@ export async function emitShowPayoutRecorded(
   const payload: Record<string, unknown> = {
     show_id: params.showId,
     show_date: effectiveDate,
+    show_status: params.showStatus,
     payout_after_fees_amount: payout,
     gross_sales_amount: params.grossSalesAmount != null ? Number(params.grossSalesAmount) : null,
     platform_fee_amount: params.platformFeeAmount != null ? Number(params.platformFeeAmount) : null,
@@ -280,6 +441,48 @@ export async function emitShowPayoutRecorded(
     ),
     payload,
   });
+}
+
+/** Emit payout snapshot when show status changes (e.g. ACTIVE ↔ COMPLETED). */
+export async function emitShowPayoutOnShowStatusChange(
+  db: Queryable,
+  showId: string,
+  showStatus: string,
+  actorUserId: string | null
+): Promise<void> {
+  const result = await db.query(
+    `SELECT sf.payout_after_fees_amount, sf.gross_sales_amount, sf.platform_fee_amount,
+            sf.currency, s.show_date
+     FROM show_financials sf
+     INNER JOIN shows s ON s.id = sf.show_id AND s.deleted_at IS NULL
+     WHERE sf.show_id = $1`,
+    [showId]
+  );
+  if (result.rows.length === 0) return;
+
+  const fin = result.rows[0] as {
+    payout_after_fees_amount: string;
+    gross_sales_amount: string | null;
+    platform_fee_amount: string | null;
+    currency: string;
+    show_date: string;
+  };
+  const updatedAt = new Date();
+  await emitShowPayoutRecorded(
+    db,
+    {
+      showId,
+      showDate: fin.show_date,
+      showStatus,
+      payoutAfterFeesAmount: fin.payout_after_fees_amount,
+      grossSalesAmount: fin.gross_sales_amount,
+      platformFeeAmount: fin.platform_fee_amount,
+      currency: fin.currency,
+      isUpdate: true,
+      updatedAt,
+    },
+    actorUserId
+  );
 }
 
 export async function emitSettlementCreated(
@@ -313,6 +516,56 @@ export async function emitSettlementCreated(
       description: row.description,
       due_date: row.due_date ? toYyyyMmDd(row.due_date) : null,
       show_date: effectiveDate,
+    },
+  });
+}
+
+export async function emitSettlementVoided(
+  db: Queryable,
+  row: {
+    id: string;
+    show_id: string;
+    wholesaler_id: string;
+    amount: string | number;
+    description: string;
+    obligation_kind: string;
+    due_date: string | null;
+  },
+  showDate: string,
+  actorUserId: string | null,
+  voidedAt: Date
+): Promise<void> {
+  const effectiveDate = toYyyyMmDd(showDate);
+  const causationId = await findFirstFinancialEventId(
+    db,
+    'owed_line_item',
+    row.id,
+    'SETTLEMENT_CREATED'
+  );
+
+  await appendFinancialEvent(db, {
+    eventType: 'SETTLEMENT_VOIDED',
+    effectiveDate,
+    amount: Number(row.amount),
+    sourceType: 'owed_line_item',
+    sourceId: row.id,
+    actorUserId,
+    causationId,
+    idempotencyKey: financialEventIdempotencyKey(
+      'owed_line_item',
+      row.id,
+      'SETTLEMENT_VOIDED',
+      voidedAt.toISOString()
+    ),
+    payload: {
+      obligation_kind: row.obligation_kind,
+      amount: Number(row.amount),
+      show_id: row.show_id,
+      wholesaler_id: row.wholesaler_id,
+      description: row.description,
+      due_date: row.due_date ? toYyyyMmDd(row.due_date) : null,
+      show_date: effectiveDate,
+      voided_at: voidedAt.toISOString(),
     },
   });
 }

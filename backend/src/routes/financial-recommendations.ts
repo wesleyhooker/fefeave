@@ -6,13 +6,13 @@ import {
   resolveStrategyValues,
 } from '../constants/financial-strategy';
 import { getPool } from '../db';
-import { loadCashEventTotals } from '../services/event-adjusted-cash';
 import {
   computeFinancialRecommendations,
   enrichAvailableRecommendations,
   todayIsoDateUtc,
   type FinancialRecommendationsUnavailable,
 } from '../services/financial-recommendations';
+import { loadRecommendationCashEventTotals } from '../services/recommendation-cash-totals';
 import { toYyyyMmDd } from '../utils/pg-date';
 
 interface FinancialStrategyRow {
@@ -98,7 +98,7 @@ export async function financialRecommendationsRoutes(
       preHandler: adminPre,
       schema: {
         description:
-          'Deterministic owner-draw and allocation recommendations from event-adjusted cash estimate and strategy',
+          'Deterministic owner-draw and allocation recommendations from event-adjusted cash estimate and strategy. Post-snapshot cash math uses financial_events by default (FINANCIAL_RECOMMENDATIONS_SOURCE=events); set FINANCIAL_RECOMMENDATIONS_SOURCE=tables to rollback.',
         security: [{ bearerAuth: [] }],
         response: {
           200: recommendationResponseSchema,
@@ -149,7 +149,11 @@ export async function financialRecommendationsRoutes(
 
       const snapshotDate = toYyyyMmDd(snapshotRow.snapshot_date);
       const snapshotAmount = parseAmount(snapshotRow.amount);
-      const cashEvents = await loadCashEventTotals(pool, snapshotDate, snapshotAmount);
+      const cashEvents = await loadRecommendationCashEventTotals(
+        pool,
+        snapshotDate,
+        snapshotAmount
+      );
 
       const result = computeFinancialRecommendations({
         current_cash: cashEvents.estimated_current_cash,
