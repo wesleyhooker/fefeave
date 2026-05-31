@@ -530,28 +530,37 @@ same data) before switching the engine over. No behavior change until they match
 
 ---
 
-## 11. Financial Activity page (future — do not implement yet)
+## 11. Financial Activity page
 
-Location: **Financials → Activity**
+**Status: implemented** (Phase 4 — `feat/financial-activity-page`).
+
+Location: **Financials → Activity** (`/admin/financials/activity`)
 
 Purpose:
 
-- A **central, chronological timeline** of every financial event.
+- A **central, chronological timeline** of every financial event, read from
+  `financial_events` only.
 - Answers _"what happened financially?"_ in one place, across shows, payments,
   inventory, expenses, owner activity, snapshots, and strategy changes.
-- Explains _why numbers changed_ by showing the events between two points in time,
-  including corrections and voids (via `causation_id` chains).
+- First **read-only consumer** of the ledger; does not drive recommendations,
+  Overview, or cash math.
 
-Shape (sketch only):
+Current shape (Phase 4):
 
-- Reverse-chronological feed grouped by `effective_date`, each row showing
-  event type, direction (inflow/outflow/neutral), amount, actor, and a
+- Reverse-chronological feed with event type, direction, amount, and a
   human-readable summary from `payload`.
-- Filters by event type and date range; correlation grouping so a batch action
-  reads as one entry that expands.
+- Filters by event category, event type, and effective date range; pagination.
+- Global ledger statistics (all events) separate from filtered timeline.
+- Ledger Health panel documenting known ledger limitations.
 
-This page is the natural first **consumer** of the ledger and the best
-justification for building it — but it is **explicitly out of scope for now.**
+Future enhancements (not yet implemented):
+
+- Grouping by `effective_date` and correlation grouping so a batch action reads
+  as one expandable entry.
+- Actor display in the timeline.
+- Richer filters (e.g. source type, actor).
+- Correction/void chains via `causation_id` once those event types are emitted.
+- Event-derived projections feeding recommendations (Phase 5+).
 
 ---
 
@@ -650,7 +659,10 @@ Drift can occur when:
 
 ### Phase 4 — Financial Activity page
 
+**Status: implemented** (`feat/financial-activity-page`).
+
 - Build **Financials → Activity** powered by `financial_events` (§11).
+- Read-only ledger consumer; no changes to recommendations, Overview, or cash math.
 
 ### Phase 5 — Event-derived projections for recommendations
 

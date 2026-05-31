@@ -788,6 +788,7 @@ export default function AdminFinancialsOverviewPage() {
               className="mt-3"
               label="Related"
               links={[
+                { href: "/admin/financials/activity", label: "View activity" },
                 { href: "/admin/strategy", label: "Adjust strategy" },
                 { href: "/admin/expenses", label: "Record expense" },
               ]}
