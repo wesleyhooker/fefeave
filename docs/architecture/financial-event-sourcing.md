@@ -560,7 +560,11 @@ Future enhancements (not yet implemented):
 - Actor display in the timeline.
 - Richer filters (e.g. source type, actor).
 - Correction/void chains via `causation_id` once those event types are emitted.
-- Event-derived projections feeding recommendations (Phase 5+).
+- Event-derived projections feeding recommendation explanations (switchover).
+
+**Phase 5 note:** Event-derived cash projection parity is implemented in
+`event-derived-cash.ts`; recommendations still use table-derived math until
+explicit switchover approval.
 
 ---
 
@@ -651,11 +655,29 @@ Drift can occur when:
 
 ### Phase 3 — Backfill existing financial rows into events
 
+**Status: implemented** (`feat/financial-event-projections`).
+
 - Generate historical events from existing financial rows so the ledger has full
   history.
 - **Low risk:** production financial data is minimal/nonexistent today, so the
   backfill is small and easy to verify against table totals.
 - Use deterministic `idempotency_key`s so the backfill is safely re-runnable.
+- Run manually: `npm run backfill:financial-events` (optional `--dry-run`).
+- Backfill keys: `backfill:<table>:<id>:<event_type>`; skips rows already
+  present from Phase 2 dual-write (matched by `source_type`, `source_id`,
+  `event_type`).
+
+**Backfill limitations (by design):**
+
+- **Strategy** — current `financial_strategy_settings` row(s) only; no historical
+  strategy timeline reconstruction.
+- **Show payouts** — current `show_financials` state as `SHOW_PAYOUT_RECORDED`
+  only; no `SHOW_PAYOUT_UPDATED` chain.
+- **Owner activity** — active rows only (`voided_at IS NULL`); no
+  `OWNER_*_CORRECTED` / `OWNER_*_VOIDED` (Phase 2 follow-up).
+- **Settlements** — existing `owed_line_items` rows only; batch settlement routes
+  and Phase 2 coverage gaps not inferred.
+- **Actor** — `actor_user_id` is null when historical actor is not recoverable.
 
 ### Phase 4 — Financial Activity page
 
@@ -666,8 +688,37 @@ Drift can occur when:
 
 ### Phase 5 — Event-derived projections for recommendations
 
-- Move event-adjusted cash and recommendation explanations toward event-derived
-  projections, validated to equal the current calculation before switchover (§10).
+**Status: implemented as event-derived projection parity**
+(`feat/financial-event-projections`).
+
+- `loadCashEventTotalsFromEvents` in `backend/src/services/event-derived-cash.ts`
+  mirrors table-derived `loadCashEventTotals` using `financial_events` only.
+- Parity integration tests assert equivalence across cash-moving scenarios.
+- **Recommendations still use table-derived calculations** — no production
+  switchover until explicit approval after parity validation (§13).
+- Table-derived `event-adjusted-cash.ts` remains unchanged.
+
+**Show payout parity (switchover blocker):**
+
+- Table-derived cash counts show inflows only when `shows.status = 'COMPLETED'`.
+- Event-derived cash counts show payout events only when
+  `payload.show_status = 'COMPLETED'`.
+- Phase 2 dual-write `SHOW_PAYOUT_*` events do **not** include `show_status` in
+  `payload` today, so those events are **excluded** from event-derived inflows
+  until dual-write emits status (or events are backfilled with status context).
+- **Recommendation switchover remains blocked** until show payout events carry
+  enough completion context for event-only replay to match table behavior.
+
+**Null / unknown show status:**
+
+- Events with missing `show_status` are **not** counted as inflows (conservative;
+  matches table exclusion for non-completed shows, but under-counts completed
+  shows until status is present on the event).
+
+**Other known parity gaps (also block switchover):**
+
+- Owner self-pay void/re-upsert drift (Phase 2 follow-ups §12).
+- Settlement write-path coverage gaps (Phase 3 limitations).
 
 ### Phase 6 — Promote selected Financials read models to event-sourced projections
 
