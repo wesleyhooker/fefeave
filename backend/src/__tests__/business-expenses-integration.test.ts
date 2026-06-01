@@ -31,6 +31,7 @@ describe('Business expenses API integration', () => {
     app = result.app;
     restoreEnv = result.restoreEnv;
     const pool = getPool();
+    await pool.query('DELETE FROM financial_events');
     await pool.query('DELETE FROM business_expenses');
   });
 

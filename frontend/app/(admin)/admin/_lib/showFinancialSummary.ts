@@ -1,12 +1,14 @@
+import { roundToCents } from '@/lib/showProfit';
 import {
-  estimatedShowProfit,
-  totalOwedFromSettlements,
-} from '@/lib/showProfit';
-import { fetchShowFinancials, fetchShowSettlements } from '@/src/lib/api/shows';
+  fetchCompletedShowProfit,
+  fetchShowFinancialProfit,
+  fetchShowFinancialProfits,
+  type ShowFinancialProfitDTO,
+} from '@/src/lib/api/shows';
 
 /**
- * Client-side rollup for a show: payout, settlements owed, estimated profit.
- * Same semantics wherever lists preview money (dashboard week strip, Shows list).
+ * Event-derived show money summary for list/dashboard previews.
+ * Maps Phase 7c profit API responses into the existing UI shape.
  */
 export type ShowFinancialSummary = {
   payoutAfterFees: number;
@@ -15,39 +17,68 @@ export type ShowFinancialSummary = {
   settlementCount: number;
 };
 
-export async function fetchShowFinancialSummary(
-  showId: string,
-): Promise<ShowFinancialSummary> {
-  const [financials, settlementRows] = await Promise.all([
-    fetchShowFinancials(showId).catch(() => null),
-    fetchShowSettlements(showId).catch(() => []),
-  ]);
-  const payout =
-    financials != null ? Number(financials.payout_after_fees_amount) : 0;
-  const payoutNum = Number.isFinite(payout) ? payout : 0;
+export const EMPTY_SHOW_FINANCIAL_SUMMARY: ShowFinancialSummary = {
+  payoutAfterFees: 0,
+  totalOwed: 0,
+  estimatedShowProfit: 0,
+  settlementCount: 0,
+};
+
+/** Map event-derived profit DTO to list/dashboard summary fields. */
+export function mapShowFinancialProfitToSummary(
+  dto: ShowFinancialProfitDTO,
+): ShowFinancialSummary {
+  const payout = Number(dto.payout_after_fees_amount);
+  const payoutAfterFees = Number.isFinite(payout) ? payout : 0;
+  const owed = Number(dto.owed_total);
+  const totalOwed = Number.isFinite(owed) ? owed : 0;
+  const profitRaw = dto.profit != null ? Number(dto.profit) : null;
+  const estimatedShowProfit =
+    profitRaw != null && Number.isFinite(profitRaw)
+      ? profitRaw
+      : roundToCents(payoutAfterFees - totalOwed);
   return {
-    payoutAfterFees: payoutNum,
-    totalOwed: totalOwedFromSettlements(payoutNum, settlementRows),
-    estimatedShowProfit: estimatedShowProfit(payoutNum, settlementRows),
-    settlementCount: settlementRows.length,
+    payoutAfterFees,
+    totalOwed,
+    estimatedShowProfit,
+    settlementCount: dto.settlement_count ?? 0,
   };
 }
 
+export async function fetchShowFinancialSummary(
+  showId: string,
+): Promise<ShowFinancialSummary> {
+  const profit = await fetchShowFinancialProfit(showId);
+  if (profit == null) return { ...EMPTY_SHOW_FINANCIAL_SUMMARY };
+  return mapShowFinancialProfitToSummary(profit);
+}
+
 /**
- * Parallel fetch for many shows; returns a map keyed by show id.
+ * Batch event-derived profit for many shows; returns a map keyed by show id.
  */
 export async function fetchShowFinancialSummariesByShowIds(
   showIds: string[],
 ): Promise<Record<string, ShowFinancialSummary>> {
-  const pairs = await Promise.all(
-    showIds.map(async (id) => {
-      const summary = await fetchShowFinancialSummary(id);
-      return [id, summary] as const;
-    }),
-  );
+  const uniqueIds = [...new Set(showIds.filter(Boolean))];
   const out: Record<string, ShowFinancialSummary> = {};
-  for (const [id, summary] of pairs) {
-    out[id] = summary;
+  if (uniqueIds.length === 0) return out;
+
+  const profits = await fetchShowFinancialProfits(uniqueIds);
+  for (const id of uniqueIds) {
+    const row = profits[id];
+    out[id] =
+      row != null
+        ? mapShowFinancialProfitToSummary(row)
+        : { ...EMPTY_SHOW_FINANCIAL_SUMMARY };
   }
   return out;
+}
+
+export async function fetchCompletedShowProfitTotal(
+  from: string,
+  to: string,
+): Promise<number> {
+  const result = await fetchCompletedShowProfit(from, to);
+  const total = Number(result.total_profit);
+  return Number.isFinite(total) ? total : 0;
 }

@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
+import { loadInventoryInvestedWindowTotal } from '../services/financial-event-summaries';
 import { ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
 import { INVENTORY_CATEGORIES, INVENTORY_PURCHASE_TYPES } from '../constants/inventory';
@@ -216,7 +217,8 @@ export async function inventoryPurchaseRoutes(
     {
       preHandler: adminPre,
       schema: {
-        description: 'Sum of inventory purchase amounts over last N days (for Cash Snapshot)',
+        description:
+          'Sum of inventory purchase amounts over last N days from financial_events (Financials Overview)',
         security: [{ bearerAuth: [] }],
         querystring: {
           type: 'object',
@@ -232,18 +234,9 @@ export async function inventoryPurchaseRoutes(
     },
     async (request, reply) => {
       const days = parseDaysQuery(request.query.days) ?? 14;
-      const since = new Date();
-      since.setDate(since.getDate() - days);
-      const sinceStr = since.toISOString().slice(0, 10);
       const pool = getPool();
-      const result = await pool.query(
-        `SELECT COALESCE(SUM(amount), 0)::numeric::text AS total
-         FROM inventory_purchases
-         WHERE purchase_date >= $1`,
-        [sinceStr]
-      );
-      const total = (result.rows[0] as { total: string }).total;
-      return reply.send({ total });
+      const result = await loadInventoryInvestedWindowTotal(pool, days);
+      return reply.send(result);
     }
   );
 }

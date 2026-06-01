@@ -84,7 +84,7 @@ function sortBalances(
 
 /**
  * Shared balances "view" logic used by JSON and CSV endpoints.
- * Totals remain authoritative via readWholesalerBalances().
+ * Totals remain authoritative via readWholesalerBalances() (event-derived, Phase 7b).
  */
 export async function getWholesalerBalancesView(
   db: QueryableDb,

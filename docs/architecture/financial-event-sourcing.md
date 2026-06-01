@@ -1,17 +1,18 @@
 # FefeAve — Event-First Financials Architecture
 
-Status: Finalized for implementation (planning only — no code, migrations, or API changes in this document)
+Status: **Implemented** (Phases 1–6 cash-movement; Phase 7a–7e obligation, show profit, owner payout, statements)
 Last Updated: 2026-05-30
-Scope: Technical/product architecture for making the **Financials** domain event-first.
+Scope: Technical/product architecture for **Financials** as practical event-driven with relational read models.
 
 Related:
 
 - [`docs/product/financial-decision-center-plan.md`](../product/financial-decision-center-plan.md)
 - [`docs/product/financials-vision-v2.md`](../product/financials-vision-v2.md)
+- [`docs/architecture/financial-event-switchover-readiness.md`](financial-event-switchover-readiness.md) — completion report
 
-> This document is a plan. It does **not** introduce code, migrations, route
-> changes, or API changes. It defines the target architecture and a phased,
-> low-risk path to get there.
+> This document describes the **target architecture and implemented phases**.
+> Code lives under `backend/src/services/financial-events*.ts`,
+> `event-derived-cash.ts`, `financial-event-summaries.ts`, and related routes.
 
 **Terminology (read this first):**
 
@@ -81,11 +82,12 @@ direction, and an actor. That is the definition of an event.
 Today these facts live in separate domain tables (`payments`,
 `inventory_purchases`, `business_expenses`, `owner_self_pay_transactions`,
 `cash_snapshots`, `financial_strategy_settings`, `show_financials`,
-`owed_line_items`). The Recommendation Engine already _reconstructs_ an event
-stream at query time — see `loadCashEventTotals()` in
-`backend/src/services/event-adjusted-cash.ts`, which `UNION`s five tables to
-compute inflows and outflows since the last snapshot. That is event-sourcing by
-hand, without a ledger.
+`owed_line_items`). Before the event ledger, the Recommendation Engine
+_reconstructed_ an event stream at query time — see legacy
+`loadCashEventTotals()` in `backend/src/services/event-adjusted-cash.ts`
+(table `UNION`s). **Production recommendations now use
+`loadCashEventTotalsFromEvents()` by default**; the table path remains for
+emergency rollback only (`FINANCIAL_RECOMMENDATIONS_SOURCE=tables`).
 
 A first-class event ledger gives us:
 
@@ -562,9 +564,11 @@ Future enhancements (not yet implemented):
 - Correction/void chains via `causation_id` once those event types are emitted.
 - Event-derived projections feeding recommendation explanations (switchover).
 
-**Phase 5 note:** Event-derived cash projection parity is implemented in
-`event-derived-cash.ts`; recommendations still use table-derived math until
-explicit switchover approval.
+**Phase 5 note:** Event-derived cash projection and recommendation switchover are
+complete. `GET /financial-recommendations` uses event-derived cash by default
+(`FINANCIAL_RECOMMENDATIONS_SOURCE=events`). Overview summary totals
+(`/admin/business-expenses-total`, `/admin/inventory-invested`) are event-backed
+via `financial-event-summaries.ts` (Phase 6).
 
 ---
 
@@ -607,51 +611,24 @@ Include correction/void events when a domain row is edited or voided (§8).
 Dual-write is **transitional** — it builds complete history while domain tables
 remain authoritative for reads.
 
-**Status: implemented** (dual-write on create/upsert paths; correction/void events
-partially deferred — see follow-ups below).
+**Status: implemented** (dual-write on create/upsert paths; owner correction/void
+events wired — see Phase 5 owner parity notes).
 
-#### Phase 2 follow-ups (known gaps)
+#### Phase 2 follow-ups — owner self-pay (resolved)
 
-**Owner self-pay upsert/void vs `financial_events` (drift risk)**
+**Previously:** re-upsert and void could drift between `owner_self_pay_transactions`
+and `financial_events`.
 
-`PUT /owner-self-pay/:weekStart` uses `INSERT ... ON CONFLICT (account_id,
-week_start_date) DO UPDATE`. Re-marking a week paid updates the existing
-`owner_self_pay_transactions` row in place (same `id`; `amount`, `paid_at`,
-`transaction_type`, etc. may change). Phase 2 emits `OWNER_DRAW_RECORDED` or
-`OWNER_SELF_PAY_RECORDED` with idempotency key
-`owner_self_pay:<id>:<event_type>` and **no version suffix**.
+**Resolved** (`feat/financial-events-switchover-readiness`):
 
-On a re-upsert, `appendFinancialEvent` sees the same key and returns
-`created: false` — **no new event is appended**. The ledger keeps the first
-recorded amount and payload while the domain row reflects the latest state.
+- `PUT /owner-self-pay/:weekStart` emits `OWNER_*_CORRECTED` on material changes.
+- Re-upsert after void emits a new `OWNER_*_RECORDED` with a suffixed idempotency key.
+- `DELETE /owner-self-pay/:weekStart` emits `OWNER_*_VOIDED`.
+- Event-derived cash and owner summary totals use latest event per source and
+  exclude voided rows.
 
-Similarly, `DELETE /owner-self-pay/:weekStart` sets `voided_at` but does **not**
-emit `OWNER_DRAW_VOIDED` / `OWNER_SELF_PAY_VOIDED` (void types not wired in
-Phase 2 scope).
-
-Drift can occur when:
-
-1. A week is paid, then paid again after underlying completed-show payouts
-   change (recomputed `amount` differs).
-2. A voided week is revived via `PUT` (domain row active again; ledger still
-   shows only the original `*_RECORDED` event, or nothing if void were later
-   wired without a matching revive event).
-3. A week is voided via `DELETE` (domain row has `voided_at`; ledger still
-   counts the outflow from `*_RECORDED`).
-
-**Impact:** Low for current hybrid reads (Overview and recommendations still use
-`owner_self_pay_transactions`, not events). **Blocks** owner-activity promotion
-(§13) and any event-derived owner outflow totals until resolved.
-
-**Recommended fix (future branch):**
-
-- On upsert, detect an existing non-void row with material field changes and emit
-  `OWNER_*_CORRECTED` (or append a new `*_RECORDED` with `updated_at` suffix —
-  mirror `SHOW_PAYOUT_UPDATED` / `FINANCIAL_STRATEGY_CHANGED`).
-- On void (`DELETE`), emit `OWNER_*_VOIDED` with `causation_id` → original
-  `*_RECORDED` event (§8).
-- Add integration tests: re-upsert changes amount → ledger reflects correction;
-  void → net outflow zero in event replay.
+**Remaining limitation:** historical rows corrected/voided before dual-write wiring
+may lack matching ledger events until backfill/repair.
 
 ### Phase 3 — Backfill existing financial rows into events
 
@@ -700,10 +677,10 @@ Drift can occur when:
 - Table-derived `event-adjusted-cash.ts` remains available for rollback
   (`FINANCIAL_RECOMMENDATIONS_SOURCE=tables`).
 - Snapshot anchor still reads from `cash_snapshots` (unchanged no-snapshot behavior).
-- This is **recommendation switchover only** — not full Financials source-of-truth
-  promotion (Phases 6–7).
+- This is **recommendation switchover** — Phase 6 extends event authority to
+  Overview spend summaries and owner activity total paid (below).
 
-**Show payout parity (readiness — resolved on `feat/financial-events-switchover-readiness`):**
+**Show payout parity (resolved — `feat/financial-events-switchover-readiness`):**
 
 - Table-derived cash counts show inflows only when `shows.status = 'COMPLETED'`.
 - Event-derived cash counts show payout events only when
@@ -733,42 +710,149 @@ Drift can occur when:
 - `DELETE /owner-self-pay/:weekStart` emits `OWNER_*_VOIDED`.
 - Event-derived cash uses latest owner event per source and excludes voided rows.
 
-**Settlement coverage (readiness — resolved for show-linked paths):**
+**Settlement coverage (readiness — resolved):**
 
 - `POST /shows/:showId/owed-line-items` — `SETTLEMENT_CREATED` (unchanged).
 - `POST /shows/:showId/settlements` (PERCENT / ITEMIZED / MANUAL) — `SETTLEMENT_CREATED`.
 - `DELETE /shows/:showId/settlements/:settlementId` — `SETTLEMENT_VOIDED` (audit only;
   settlements are neutral for cash).
-- **Not covered (documented):** vendor expense obligations (`vendor-expenses.ts`,
-  `obligation_kind = VENDOR_EXPENSE`) — neutral for recommendation cash; seed scripts
-  and migrations are out of band.
+- **Vendor expense obligations** (`vendor-expenses.ts`, `obligation_kind = VENDOR_EXPENSE`):
+  `POST` → `SETTLEMENT_CREATED`; material `PATCH` → `SETTLEMENT_ADJUSTED`; `DELETE` →
+  `SETTLEMENT_VOIDED`. Payload includes `show_id: null`, `account_id`, `wholesaler_id`, and
+  `expense_date` (effective date from `due_date` or `created_at`). Backfill includes vendor rows
+  without requiring a show join.
 
-**Recommendation switchover:** Complete on this branch. See
-`docs/architecture/financial-event-switchover-readiness.md`. Roll back with
-`FINANCIAL_RECOMMENDATIONS_SOURCE=tables` if needed.
+### Phase 7a — Close obligation event gaps (vendor expenses)
+
+**Status: complete** (`feat/financials-event-source-completion`).
+
+- All obligation-creating paths emit ledger events before obligation/profit projections:
+  show-linked settlements (Phase 2) and vendor expenses (this phase).
+- `SETTLEMENT_ADJUSTED` dual-write for vendor expense edits (amount, description, due date).
+- Backfill `owed_line_items` extended for `VENDOR_EXPENSE` rows with `show_id IS NULL`.
+- **Phase 7b unblocked:** `financial-obligation-projections.ts` and wholesaler balance
+  switchover can proceed once projection service is implemented (reads not switched in 7a).
+
+### Phase 7b — Event-derived obligation projections
+
+**Status: complete** (`feat/financials-event-source-completion`).
+
+- `financial-obligation-projections.ts` — derives `owed_total`, `paid_total`,
+  `balance_owed`, and `last_payment_date` from `financial_events`.
+- Latest `SETTLEMENT_*` per `owed_line_item` source (void excluded); payments summed
+  from `WHOLESALER_PAYMENT_RECORDED`.
+- **`GET /wholesalers/balances`** and **`GET /exports/balances.csv`** use event-derived
+  totals via `readWholesalerBalances()`.
+- **`GET /accounts`** financial fields (`owedTotal`, `paidTotal`, `balanceOwed`,
+  `selfPayTotal`) use event projections; owner `selfPayTotal` from owner ledger events.
+- Domain tables (`owed_line_items`, `payments`) remain for CRUD, forms, and statement metadata.
+- **Phase 7c unblocked:** show profit projections can build on payout + obligation
+  events (profit reads not switched in 7b).
+
+### Phase 7c — Event-derived show profit projections
+
+**Status: complete** (`feat/financials-event-source-completion`).
+
+- `financial-show-profit.ts` — per-show and window profit from `financial_events`.
+- Payout: latest `SHOW_PAYOUT_*` per show; owed: latest non-void `SETTLEMENT_*` per
+  show-linked source (event amounts authoritative for PERCENT/ITEMIZED/MANUAL).
+- Profit = payout − owed when latest payout `show_status = COMPLETED`; open shows
+  return `profit: null` and `included_in_profit: false`.
+- **New endpoints:** `GET /shows/:showId/financial-profit`,
+  `GET /shows/financial-profits?showIds=…`, `GET /shows/completed-profit?from=&to=`.
+- Dashboard/show list profit UI uses Phase 7c API endpoints (frontend adoption complete).
+- **Phase 7d unblocked:** owner weekly payout can adopt event show profit.
+
+### Phase 7d — Owner weekly payout and activity profit (event-derived)
+
+**Status: complete** (`feat/financials-event-source-completion`).
+
+- `computeOwnerWeeklyPayout()` uses `loadCompletedShowProfitInDateWindow` from
+  `financial-show-profit.ts` (no table `show_financials` / `owed_line_items` math).
+- **`GET /owner-self-pay/:weekStart/payout`** and **`PUT /owner-self-pay/:weekStart`**
+  validation/amount source use event-derived weekly profit.
+- **`GET /owner-self-pay/activity`** → `sourceContext.closedProfitTotal` is event-backed;
+  per-show `profitAmount` for completed shows uses event profit; show names/dates/status
+  remain operational reads from `shows`.
+- **Phase 7e unblocked:** statements/accounts drilldowns can adopt event projections where
+  safe (not done in 7d).
+
+### Phase 7e — Event-derived statements and drilldowns
+
+**Status: complete** (`feat/financials-event-source-completion`).
+
+- `financial-statement-projections.ts` — latest non-void `SETTLEMENT_*` per source plus
+  `WHOLESALER_PAYMENT_RECORDED` for statement lines and ledger CSV.
+- **`getWholesalerStatement`** (admin + portal) — financial amounts from events; show
+  names, calculation method, and itemized `settlement_lines` from operational tables.
+- **`readUnpaidClosedShowsForWholesaler`** — SHOW_LINKED owed totals grouped by completed
+  show from events; show metadata from `shows`.
+- **`readLedgerEntries`** / **`GET /exports/ledger.csv`** — event-derived owed/payment
+  lines with same ordering as prior table UNION.
+- Voided settlements excluded; adjustments update the same `entry_id` amount.
+
+### Phase 7c UI — Frontend profit adoption
+
+**Status: complete** (`feat/financials-event-source-completion`).
+
+- **`showFinancialSummary.ts`** adapter calls `GET /shows/:showId/financial-profit`,
+  `GET /shows/financial-profits`, and `GET /shows/completed-profit` instead of client
+  payout/settlement table rollups.
+- Dashboard week/YTD/month profit and shows list row profit columns are event-backed.
+- Show detail displays event profit when show is COMPLETED; open-show close-out keeps
+  operational form preview (`computeTotals`).
+- **`lib/showProfit.ts`** remains for settlement form display math only.
+
+**Recommendation switchover:** Complete (`feat/financial-events-switchover-readiness`). Emergency rollback: `FINANCIAL_RECOMMENDATIONS_SOURCE=tables`. See
+`financial-event-switchover-readiness.md`.
 
 ### Phase 6 — Promote selected Financials read models to event-sourced projections
 
-- Where a projection has proven equal or better to its domain table for reads,
-  **promote that read model** to be event-derived (rebuildable from the log).
-- Table-by-table, not all at once — use §13 (Promotion Criteria) and §14
-  (Migration Matrix) per domain area.
-- Domain rows may remain for write ergonomics during dual-write, or shrink to
-  projection caches only where justified.
+**Status: complete** (`feat/financials-event-source-completion`).
+
+- `financial-event-summaries.ts` — event-backed window totals for Overview cards.
+- **`GET /admin/business-expenses-total`** reads `financial_events` (not
+  `SUM(business_expenses)`).
+- **`GET /admin/inventory-invested`** reads `financial_events` (not
+  `SUM(inventory_purchases)`).
+- **`GET /owner-self-pay/activity`** → `summary.totalPaidAmount` reads
+  `financial_events` via `loadOwnerTotalPaidAmount` (not
+  `SUM(owner_self_pay_transactions)`). Counts and transaction list remain on the
+  domain table for operational audit display.
+- Expense/inventory **list and CRUD** routes remain on domain tables (operational
+  read models for forms and editing).
+- Completed-show payout inflow helper exists in the summary service for future
+  promotion; not yet wired to a public endpoint.
+
+**Practical event-driven Financials (current product state):**
+
+- Event ledger is authoritative for financial movement history, Activity,
+  recommendation cash, Overview spend summaries, and owner activity total paid.
+- Domain tables are operational read models / form caches — not competing
+  authorities for financial meaning or calculation.
+- This is **not** half-hybrid; it is event-driven Financials with relational read
+  models where they add operational value.
+
+**Still operational (not promoted in Phase 6–7e):**
+
+- Settlement/show detail forms, itemized line labels, latest cash snapshot anchor.
+- Show detail open-show close-out previews (operational form state during editing).
 
 ### Phase 7 / final direction — Financials event log as durable source of truth
 
+**Status: complete** for first-user Financials delivery (`feat/financials-event-source-completion`).
+
 - **`financial_events` is the authoritative record** of financial movements,
   cash-impacting actions, strategy-affecting decisions, and obligation events.
-- Current financial state for recommendations, Activity, and audit is **derived
-  from the log** (and maintained projections), not from ad hoc multi-table UNIONs.
-- Remaining domain tables, if any, are **operational or projection convenience**,
-  rebuildable when they represent financial state — not a second source of truth.
+- User-facing financial calculations (balances, statements, show profit, owner payout,
+  recommendations, Overview totals, Activity) are **derived from the log** via
+  projection services — not from ad hoc multi-table UNIONs.
+- Remaining domain tables are **operational or projection convenience** (CRUD, forms,
+  settlement labels, cash snapshot anchor) — not competing sources of truth.
 
-Phase 7 is a **direction**, not a deadline. We arrive there when projections and
-operational experience justify it — not by rewriting every table speculatively.
-Use §13 (Promotion Criteria) and §14 (Financial Domain Migration Matrix) when
-deciding whether a specific domain area is ready to promote.
+Phases 7a–7e and frontend profit adoption are **implemented**. Future domains promote
+per §13 (Promotion Criteria) and §14 (Financial Domain Migration Matrix) when new
+areas meet the same evidence bar — not by speculative table rewrites.
 
 ---
 
@@ -832,16 +916,16 @@ dual-writes and Phase 6 promotions.
 Not every area must be promoted simultaneously. **Promotion can happen
 table-by-table** as each row's Phase 7 criteria (§13) are satisfied.
 
-| Domain area                   | Current source                       | Phase 2                                                                                                                       | Phase 4                                                                      | Phase 7 target                                                                               |
-| ----------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| **Expenses**                  | `business_expenses`                  | Dual-write `BUSINESS_EXPENSE_RECORDED`; correct/void on edit                                                                  | Activity timeline shows expense events; CRUD and totals still use table      | Reads and spend rollups from event projection; table rebuildable read model                  |
-| **Inventory purchases**       | `inventory_purchases`                | Dual-write `INVENTORY_PURCHASE_RECORDED`; correct/void on edit                                                                | Activity timeline; inventory spend cards still query table                   | Event-sourced purchase history; table optional projection cache                              |
-| **Payments**                  | `payments` (+ `payment_allocations`) | Dual-write `WHOLESALER_PAYMENT_RECORDED`; void/correct on edit                                                                | Activity timeline; payment CRUD and balances still use tables                | Cash outflows and payment history from events; tables rebuildable                            |
-| **Owner activity**            | `owner_self_pay_transactions`        | Dual-write `OWNER_DRAW_RECORDED`, `OWNER_SELF_PAY_RECORDED`; void on void (**re-upsert/void drift — see Phase 2 follow-ups**) | Activity timeline; owner pages still use table                               | Draw/self-pay history from events; table rebuildable                                         |
-| **Cash snapshots**            | `cash_snapshots`                     | Dual-write `CASH_SNAPSHOT_RECORDED` on reconcile                                                                              | Activity shows anchors; latest snapshot and Overview still use table         | Reconciliation history authoritative in ledger; latest anchor from projection or table cache |
-| **Show payouts**              | `show_financials` (+ `shows`)        | Dual-write `SHOW_PAYOUT_RECORDED`, `SHOW_PAYOUT_UPDATED`                                                                      | Activity timeline; show detail and cash inflows still use table              | Payout/cash-inflow history from events; `show_financials` rebuildable                        |
-| **Settlements / obligations** | `owed_line_items` (+ `adjustments`)  | Dual-write `SETTLEMENT_CREATED`, `SETTLEMENT_ADJUSTED` (may lag cash domains)                                                 | Activity timeline; balances and settlement CRUD still use tables             | Obligation history from events; balance views as projections                                 |
-| **Financial strategy**        | `financial_strategy_settings`        | Dual-write `FINANCIAL_STRATEGY_CHANGED` on save                                                                               | Activity shows strategy changes; current levers still read from settings row | Change history from events; current strategy from latest event or derived projection         |
+| Domain area                   | Current source                       | Phase 2                                                                                     | Phase 4                                                                      | Phase 6 / current                                                                                   | Phase 7 target                                                                               |
+| ----------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **Expenses**                  | `business_expenses`                  | Dual-write `BUSINESS_EXPENSE_RECORDED`; correct/void on edit                                | Activity timeline shows expense events                                       | **Summary total event-backed**; CRUD list still uses table                                          | Table rebuildable read model only                                                            |
+| **Inventory purchases**       | `inventory_purchases`                | Dual-write `INVENTORY_PURCHASE_RECORDED`; correct/void on edit                              | Activity timeline                                                            | **Summary total event-backed**; CRUD list still uses table                                          | Event-sourced purchase history; table optional projection cache                              |
+| **Payments**                  | `payments` (+ `payment_allocations`) | Dual-write `WHOLESALER_PAYMENT_RECORDED`; void/correct on edit                              | Activity timeline; payment CRUD and balances still use tables                | Operational read model                                                                              | Cash outflows and payment history from events; tables rebuildable                            |
+| **Owner activity**            | `owner_self_pay_transactions`        | Dual-write `OWNER_DRAW_RECORDED`, `OWNER_SELF_PAY_RECORDED`; void/correct on edit           | Activity timeline; owner transaction list still uses table                   | **Total paid event-backed**; weekly payout preview still table (profit calc)                        | Draw/self-pay history from events; table rebuildable                                         |
+| **Cash snapshots**            | `cash_snapshots`                     | Dual-write `CASH_SNAPSHOT_RECORDED` on reconcile                                            | Activity shows anchors; latest snapshot and Overview still use table         | Anchor operational read model                                                                       | Reconciliation history authoritative in ledger; latest anchor from projection or table cache |
+| **Show payouts**              | `show_financials` (+ `shows`)        | Dual-write `SHOW_PAYOUT_RECORDED`, `SHOW_PAYOUT_UPDATED`                                    | Activity timeline; show detail still uses table                              | Recommendation cash + summary inflow helpers event-backed                                           | Payout/cash-inflow history from events; `show_financials` rebuildable                        |
+| **Settlements / obligations** | `owed_line_items` (+ `adjustments`)  | Dual-write `SETTLEMENT_CREATED`, `SETTLEMENT_ADJUSTED`, `SETTLEMENT_VOIDED` (show + vendor) | Activity timeline; statement CRUD still uses tables                          | **Balance totals event-backed** (7b); **statements/drilldowns event-backed** (7e); CRUD operational | Obligation history from events; domain tables operational only                               |
+| **Financial strategy**        | `financial_strategy_settings`        | Dual-write `FINANCIAL_STRATEGY_CHANGED` on save                                             | Activity shows strategy changes; current levers still read from settings row | Operational read model                                                                              | Change history from events; current strategy from latest event or derived projection         |
 
 **Phase column meanings:**
 

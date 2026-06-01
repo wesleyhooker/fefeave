@@ -64,7 +64,7 @@ export function WeekDesktopTable({
               <span className="inline-flex items-center justify-end gap-1.5">
                 {WORKFLOW_SHOWS_PROFIT_LABEL}
                 {showProfitHint && (
-                  <HelpTooltip content="Profit = payout after fees − settlements owed to wholesalers">
+                  <HelpTooltip content="Profit from event ledger (payout after fees − settlements owed)">
                     <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-400 bg-gray-50 text-[10px] font-semibold text-gray-500">
                       i
                     </span>

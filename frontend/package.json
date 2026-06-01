@@ -9,7 +9,7 @@
     "package:opennext": "node scripts/package-opennext.mjs",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --import tsx --test lib/auth/session-cookie-options.test.ts lib/auth/session-cookie-response.test.ts lib/auth/session-verify.node.test.ts lib/auth/session-diagnostics.test.ts lib/auth/runtime-secrets.server.test.ts lib/auth/logout-response.test.ts src/lib/financial-activity-display.test.ts",
+    "test": "node --import tsx --test lib/auth/session-cookie-options.test.ts lib/auth/session-cookie-response.test.ts lib/auth/session-verify.node.test.ts lib/auth/session-diagnostics.test.ts lib/auth/runtime-secrets.server.test.ts lib/auth/logout-response.test.ts src/lib/financial-activity-display.test.ts 'app/(admin)/admin/_lib/showFinancialSummary.test.ts'",
     "postinstall": "patch-package",
     "playwright:install": "playwright install chromium",
     "playwright:save-auth": "node scripts/playwright/save-auth.mjs",

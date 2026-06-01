@@ -1,8 +1,16 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
-import { getPool, withTx } from '../db';
+import { withTx } from '../db';
 import { ensureUser } from '../db/ensure-user';
+import {
+  emitSettlementAdjusted,
+  emitSettlementCreated,
+  emitSettlementVoided,
+  resolveActorUserId,
+  vendorExpenseEffectiveDate,
+  vendorExpenseMateriallyChanged,
+} from '../services/financial-event-emission';
 import { NotFoundError, ValidationError } from '../utils/errors';
 
 const uuidSchema = z.string().uuid();
@@ -142,12 +150,15 @@ export async function vendorExpenseRoutes(
              created_by, created_via, obligation_kind, calculation_method
            )
            VALUES (NULL, $1, $2, $3, 'USD', $4, $5, 'PENDING', $6, 'API', 'VENDOR_EXPENSE', NULL)
-           RETURNING id, wholesaler_id, amount, currency, description, due_date, obligation_kind, created_at, updated_at`,
+           RETURNING id, show_id, wholesaler_id, account_id, amount, currency, description, due_date,
+                     obligation_kind, created_at, updated_at`,
           [wholesalerId, accountId, amount, description, due, userId]
         );
-        return result.rows[0] as {
+        const inserted = result.rows[0] as {
           id: string;
+          show_id: string | null;
           wholesaler_id: string;
+          account_id: string;
           amount: string;
           currency: string;
           description: string;
@@ -156,6 +167,23 @@ export async function vendorExpenseRoutes(
           created_at: Date;
           updated_at: Date;
         };
+        const effectiveDate = vendorExpenseEffectiveDate(inserted.due_date, inserted.created_at);
+        await emitSettlementCreated(
+          client,
+          {
+            id: inserted.id,
+            show_id: inserted.show_id,
+            wholesaler_id: inserted.wholesaler_id,
+            account_id: inserted.account_id,
+            amount: inserted.amount,
+            description: inserted.description,
+            obligation_kind: inserted.obligation_kind,
+            due_date: inserted.due_date,
+          },
+          effectiveDate,
+          resolveActorUserId(request.user?.cognitoSub)
+        );
+        return inserted;
       });
 
       return reply.status(201).send({
@@ -239,7 +267,7 @@ export async function vendorExpenseRoutes(
         await ensureUser(client, request);
 
         const cur = await client.query(
-          `SELECT id, wholesaler_id, amount, description, due_date
+          `SELECT id, show_id, wholesaler_id, account_id, amount, description, due_date, obligation_kind, created_at
              FROM owed_line_items
             WHERE id = $1 AND wholesaler_id = $2 AND obligation_kind = 'VENDOR_EXPENSE' AND deleted_at IS NULL`,
           [expenseId, wholesalerId]
@@ -248,15 +276,21 @@ export async function vendorExpenseRoutes(
           throw new NotFoundError('Vendor expense', expenseId);
         }
 
-        const c = cur.rows[0] as {
+        const prior = cur.rows[0] as {
+          id: string;
+          show_id: string | null;
+          wholesaler_id: string;
+          account_id: string;
           amount: string;
           description: string;
           due_date: Date | null;
+          obligation_kind: string;
+          created_at: Date;
         };
 
-        const nextAmount = amount ?? parseFloat(c.amount);
-        const nextDesc = description ?? c.description;
-        let nextDue: Date | null = c.due_date;
+        const nextAmount = amount ?? parseFloat(prior.amount);
+        const nextDesc = description ?? prior.description;
+        let nextDue: Date | null = prior.due_date;
         if (expense_date !== undefined) {
           nextDue = expense_date === null ? null : new Date(expense_date + 'T12:00:00.000Z');
         }
@@ -268,12 +302,15 @@ export async function vendorExpenseRoutes(
                   due_date = $3,
                   updated_at = NOW()
             WHERE id = $4 AND wholesaler_id = $5 AND obligation_kind = 'VENDOR_EXPENSE' AND deleted_at IS NULL
-          RETURNING id, wholesaler_id, amount, currency, description, due_date, obligation_kind, created_at, updated_at`,
+          RETURNING id, show_id, wholesaler_id, account_id, amount, currency, description, due_date,
+                    obligation_kind, created_at, updated_at`,
           [nextAmount, nextDesc, nextDue, expenseId, wholesalerId]
         );
-        return upd.rows[0] as {
+        const updated = upd.rows[0] as {
           id: string;
+          show_id: string | null;
           wholesaler_id: string;
+          account_id: string;
           amount: string;
           currency: string;
           description: string;
@@ -282,6 +319,46 @@ export async function vendorExpenseRoutes(
           created_at: Date;
           updated_at: Date;
         };
+
+        if (
+          vendorExpenseMateriallyChanged(
+            {
+              amount: prior.amount,
+              description: prior.description,
+              due_date: prior.due_date,
+            },
+            {
+              amount: updated.amount,
+              description: updated.description,
+              due_date: updated.due_date,
+            }
+          )
+        ) {
+          const effectiveDate = vendorExpenseEffectiveDate(updated.due_date, updated.updated_at);
+          await emitSettlementAdjusted(
+            client,
+            {
+              id: updated.id,
+              show_id: updated.show_id,
+              wholesaler_id: updated.wholesaler_id,
+              account_id: updated.account_id,
+              amount: updated.amount,
+              description: updated.description,
+              obligation_kind: updated.obligation_kind,
+              due_date: updated.due_date,
+            },
+            effectiveDate,
+            {
+              amount: prior.amount,
+              description: prior.description,
+              due_date: prior.due_date,
+            },
+            resolveActorUserId(request.user?.cognitoSub),
+            updated.updated_at
+          );
+        }
+
+        return updated;
       });
 
       return reply.send({
@@ -331,18 +408,55 @@ export async function vendorExpenseRoutes(
       const wholesalerId = widParsed.data;
       const expenseId = eidParsed.data;
 
-      const pool = getPool();
-      const result = await pool.query(
-        `UPDATE owed_line_items
-            SET deleted_at = NOW(), updated_at = NOW()
-          WHERE id = $1 AND wholesaler_id = $2 AND obligation_kind = 'VENDOR_EXPENSE' AND deleted_at IS NULL
-        RETURNING id`,
-        [expenseId, wholesalerId]
-      );
+      await withTx(async (client) => {
+        const cur = await client.query(
+          `SELECT id, show_id, wholesaler_id, account_id, amount, description, due_date, obligation_kind, created_at
+             FROM owed_line_items
+            WHERE id = $1 AND wholesaler_id = $2 AND obligation_kind = 'VENDOR_EXPENSE' AND deleted_at IS NULL`,
+          [expenseId, wholesalerId]
+        );
+        if (cur.rows.length === 0) {
+          throw new NotFoundError('Vendor expense', expenseId);
+        }
 
-      if (result.rows.length === 0) {
-        throw new NotFoundError('Vendor expense', expenseId);
-      }
+        const prior = cur.rows[0] as {
+          id: string;
+          show_id: string | null;
+          wholesaler_id: string;
+          account_id: string;
+          amount: string;
+          description: string;
+          due_date: Date | null;
+          obligation_kind: string;
+          created_at: Date;
+        };
+
+        const voidedAt = new Date();
+        await client.query(
+          `UPDATE owed_line_items
+              SET deleted_at = $3, updated_at = NOW()
+            WHERE id = $1 AND wholesaler_id = $2 AND obligation_kind = 'VENDOR_EXPENSE' AND deleted_at IS NULL`,
+          [expenseId, wholesalerId, voidedAt]
+        );
+
+        const effectiveDate = vendorExpenseEffectiveDate(prior.due_date, prior.created_at);
+        await emitSettlementVoided(
+          client,
+          {
+            id: prior.id,
+            show_id: prior.show_id,
+            wholesaler_id: prior.wholesaler_id,
+            account_id: prior.account_id,
+            amount: prior.amount,
+            description: prior.description,
+            obligation_kind: prior.obligation_kind,
+            due_date: prior.due_date,
+          },
+          effectiveDate,
+          resolveActorUserId(request.user?.cognitoSub),
+          voidedAt
+        );
+      });
 
       return reply.status(204).send();
     }

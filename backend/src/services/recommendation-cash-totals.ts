@@ -1,8 +1,12 @@
 /**
- * Recommendation cash totals — event-derived by default with table rollback.
+ * Recommendation cash totals — event-derived by default.
  *
- * Snapshot anchor still comes from `cash_snapshots` (domain table); only post-snapshot
- * event math switches between ledger projection and table reads.
+ * Snapshot anchor still comes from `cash_snapshots` (operational read model); post-snapshot
+ * cash math uses `financial_events` by default.
+ *
+ * Emergency rollback only: set `FINANCIAL_RECOMMENDATIONS_SOURCE=tables` to use the legacy
+ * table-derived path (`event-adjusted-cash.ts`). Not a competing source of truth — for
+ * incident response and parity tests only.
  */
 import type { Pool } from 'pg';
 import { getEnv } from '../config/env';

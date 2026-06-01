@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { EXPENSE_CATEGORIES } from '../constants/expenses';
 import { getPool, withTx } from '../db';
+import { loadBusinessExpensesWindowTotal } from '../services/financial-event-summaries';
 import { ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
 import {
@@ -192,7 +193,8 @@ export async function businessExpenseRoutes(
     {
       preHandler: adminPre,
       schema: {
-        description: 'Sum of business expense amounts over last N days (for Financials Overview)',
+        description:
+          'Sum of business expense amounts over last N days from financial_events (Financials Overview)',
         security: [{ bearerAuth: [] }],
         querystring: {
           type: 'object',
@@ -208,18 +210,9 @@ export async function businessExpenseRoutes(
     },
     async (request, reply) => {
       const days = parseDaysQuery(request.query.days) ?? 30;
-      const since = new Date();
-      since.setDate(since.getDate() - days);
-      const sinceStr = since.toISOString().slice(0, 10);
       const pool = getPool();
-      const result = await pool.query(
-        `SELECT COALESCE(SUM(amount), 0)::numeric::text AS total
-         FROM business_expenses
-         WHERE expense_date >= $1`,
-        [sinceStr]
-      );
-      const total = (result.rows[0] as { total: string }).total;
-      return reply.send({ total });
+      const result = await loadBusinessExpensesWindowTotal(pool, days);
+      return reply.send(result);
     }
   );
 }

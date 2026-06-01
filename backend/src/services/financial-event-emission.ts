@@ -485,57 +485,137 @@ export async function emitShowPayoutOnShowStatusChange(
   );
 }
 
-export async function emitSettlementCreated(
-  db: Queryable,
-  row: {
-    id: string;
-    show_id: string;
-    wholesaler_id: string;
+export type SettlementObligationEmitRow = {
+  id: string;
+  show_id: string | null;
+  wholesaler_id: string;
+  account_id?: string | null;
+  amount: string | number;
+  description: string;
+  obligation_kind: string;
+  due_date: string | Date | null;
+};
+
+function settlementPayload(
+  row: SettlementObligationEmitRow,
+  effectiveDate: string,
+  extra?: Record<string, unknown>
+): Record<string, unknown> {
+  const dueDate = row.due_date != null ? toYyyyMmDd(row.due_date) : null;
+  const isVendor = row.obligation_kind === 'VENDOR_EXPENSE';
+  return {
+    obligation_kind: row.obligation_kind,
+    amount: Number(row.amount),
+    show_id: row.show_id,
+    wholesaler_id: row.wholesaler_id,
+    account_id: row.account_id ?? null,
+    description: row.description,
+    due_date: dueDate,
+    expense_date: isVendor ? effectiveDate : null,
+    show_date: row.show_id ? effectiveDate : null,
+    ...extra,
+  };
+}
+
+/** Effective date for vendor expense obligations: due_date, else created/occurred date. */
+export function vendorExpenseEffectiveDate(
+  dueDate: string | Date | null,
+  fallback: string | Date
+): string {
+  if (dueDate != null) return toYyyyMmDd(dueDate);
+  return toYyyyMmDd(fallback);
+}
+
+export function vendorExpenseMateriallyChanged(
+  prior: {
     amount: string | number;
     description: string;
-    obligation_kind: string;
-    due_date: string | null;
+    due_date: string | Date | null;
   },
-  showDate: string,
+  next: {
+    amount: string | number;
+    description: string;
+    due_date: string | Date | null;
+  }
+): boolean {
+  const priorDue = prior.due_date != null ? toYyyyMmDd(prior.due_date) : null;
+  const nextDue = next.due_date != null ? toYyyyMmDd(next.due_date) : null;
+  return (
+    Number(prior.amount) !== Number(next.amount) ||
+    prior.description !== next.description ||
+    priorDue !== nextDue
+  );
+}
+
+export async function emitSettlementCreated(
+  db: Queryable,
+  row: SettlementObligationEmitRow,
+  effectiveDate: string,
   actorUserId: string | null
 ): Promise<void> {
-  const effectiveDate = toYyyyMmDd(showDate);
   await appendFinancialEvent(db, {
     eventType: 'SETTLEMENT_CREATED',
-    effectiveDate,
+    effectiveDate: toYyyyMmDd(effectiveDate),
     amount: Number(row.amount),
     sourceType: 'owed_line_item',
     sourceId: row.id,
     actorUserId,
     idempotencyKey: financialEventIdempotencyKey('owed_line_item', row.id, 'SETTLEMENT_CREATED'),
+    payload: settlementPayload(row, toYyyyMmDd(effectiveDate)),
+  });
+}
+
+export async function emitSettlementAdjusted(
+  db: Queryable,
+  row: SettlementObligationEmitRow,
+  effectiveDate: string,
+  prior: {
+    amount: string | number;
+    description: string;
+    due_date: string | Date | null;
+  },
+  actorUserId: string | null,
+  adjustedAt: Date
+): Promise<void> {
+  const effective = toYyyyMmDd(effectiveDate);
+  const causationId = await findFirstFinancialEventId(
+    db,
+    'owed_line_item',
+    row.id,
+    'SETTLEMENT_CREATED'
+  );
+
+  await appendFinancialEvent(db, {
+    eventType: 'SETTLEMENT_ADJUSTED',
+    effectiveDate: effective,
+    amount: Number(row.amount),
+    sourceType: 'owed_line_item',
+    sourceId: row.id,
+    actorUserId,
+    causationId,
+    idempotencyKey: financialEventIdempotencyKey(
+      'owed_line_item',
+      row.id,
+      'SETTLEMENT_ADJUSTED',
+      adjustedAt.toISOString()
+    ),
     payload: {
-      obligation_kind: row.obligation_kind,
-      amount: Number(row.amount),
-      show_id: row.show_id,
-      wholesaler_id: row.wholesaler_id,
-      description: row.description,
-      due_date: row.due_date ? toYyyyMmDd(row.due_date) : null,
-      show_date: effectiveDate,
+      ...settlementPayload(row, effective),
+      previous_amount: Number(prior.amount),
+      previous_description: prior.description,
+      previous_due_date: prior.due_date != null ? toYyyyMmDd(prior.due_date) : null,
     },
   });
 }
 
 export async function emitSettlementVoided(
   db: Queryable,
-  row: {
-    id: string;
-    show_id: string;
-    wholesaler_id: string;
-    amount: string | number;
-    description: string;
-    obligation_kind: string;
-    due_date: string | null;
-  },
-  showDate: string,
+  row: SettlementObligationEmitRow,
+  effectiveDate: string,
   actorUserId: string | null,
   voidedAt: Date
 ): Promise<void> {
-  const effectiveDate = toYyyyMmDd(showDate);
+  const effective = toYyyyMmDd(effectiveDate);
   const causationId = await findFirstFinancialEventId(
     db,
     'owed_line_item',
@@ -545,7 +625,7 @@ export async function emitSettlementVoided(
 
   await appendFinancialEvent(db, {
     eventType: 'SETTLEMENT_VOIDED',
-    effectiveDate,
+    effectiveDate: effective,
     amount: Number(row.amount),
     sourceType: 'owed_line_item',
     sourceId: row.id,
@@ -558,13 +638,7 @@ export async function emitSettlementVoided(
       voidedAt.toISOString()
     ),
     payload: {
-      obligation_kind: row.obligation_kind,
-      amount: Number(row.amount),
-      show_id: row.show_id,
-      wholesaler_id: row.wholesaler_id,
-      description: row.description,
-      due_date: row.due_date ? toYyyyMmDd(row.due_date) : null,
-      show_date: effectiveDate,
+      ...settlementPayload(row, effective),
       voided_at: voidedAt.toISOString(),
     },
   });

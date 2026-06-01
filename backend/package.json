@@ -11,7 +11,7 @@
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "test": "jest --ci --testPathIgnorePatterns=\"db-smoke|shows-integration|wholesalers-integration|owed-line-items-integration|settlement-ledger-integration|vendor-expense-ledger-integration|closed-show-freeze-integration|inventory-purchases-integration|business-expenses-integration|financial-strategy-integration|cash-snapshots-integration|financial-recommendations-integration|financial-events-integration|financial-events-dual-write-integration|financial-events-backfill-integration|event-derived-cash-parity-integration|financial-activity-integration|portal-integration|exports-balances-csv\"",
+    "test": "jest --ci --testPathIgnorePatterns=\"db-smoke|shows-integration|wholesalers-integration|owed-line-items-integration|settlement-ledger-integration|vendor-expense-ledger-integration|closed-show-freeze-integration|inventory-purchases-integration|business-expenses-integration|financial-strategy-integration|cash-snapshots-integration|financial-recommendations-integration|financial-events-integration|financial-events-dual-write-integration|financial-events-backfill-integration|event-derived-cash-parity-integration|financial-activity-integration|financial-event-summaries-integration|financial-obligation-projections-integration|financial-show-profit-integration|financial-statement-projections-integration|owner-weekly-payout-integration|owner-self-pay-activity-integration|portal-integration|exports-balances-csv\"",
     "test:integration": "bash scripts/run-integration-tests.sh",
     "test:integration:neon": "bash scripts/run-neon-integration-tests.sh",
     "migrate:up": "node-pg-migrate --tsx up -m migrations",

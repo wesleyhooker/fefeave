@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
+import { loadAllAccountFinancialTotals } from '../services/financial-obligation-projections';
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
 
 const uuidSchema = z.string().uuid();
@@ -84,6 +85,7 @@ export async function accountRoutes(
       }
 
       const pool = getPool();
+      const financialTotals = await loadAllAccountFinancialTotals(pool);
       const result = await pool.query(
         `SELECT
            a.id,
@@ -98,39 +100,7 @@ export async function accountRoutes(
            a.notes,
            a.legacy_wholesaler_id,
            a.created_at,
-           a.updated_at,
-           COALESCE((
-             SELECT SUM(oli.amount)::numeric
-             FROM owed_line_items oli
-             WHERE oli.account_id = a.id
-               AND oli.deleted_at IS NULL
-           ), 0::numeric) AS owed_total,
-           COALESCE((
-             SELECT SUM(p.amount)::numeric
-             FROM payments p
-             WHERE p.account_id = a.id
-               AND p.deleted_at IS NULL
-           ), 0::numeric) AS paid_total,
-           (
-             SELECT MAX(p.payment_date)::date
-             FROM payments p
-             WHERE p.account_id = a.id
-               AND p.deleted_at IS NULL
-           ) AS last_payment_date,
-           COALESCE((
-             SELECT SUM(osp.amount)::numeric
-             FROM owner_self_pay_transactions osp
-             WHERE osp.account_id = a.id
-               AND osp.deleted_at IS NULL
-               AND osp.voided_at IS NULL
-           ), 0::numeric) AS self_pay_total,
-           (
-             SELECT MAX(osp.paid_at)
-             FROM owner_self_pay_transactions osp
-             WHERE osp.account_id = a.id
-               AND osp.deleted_at IS NULL
-               AND osp.voided_at IS NULL
-           ) AS last_self_pay_at
+           a.updated_at
          FROM accounts a
          LEFT JOIN users u ON u.id = a.linked_user_id AND u.deleted_at IS NULL
          WHERE a.deleted_at IS NULL
@@ -162,17 +132,18 @@ export async function accountRoutes(
         legacy_wholesaler_id: string | null;
         created_at: Date;
         updated_at: Date;
-        owed_total: string;
-        paid_total: string;
-        last_payment_date: string | null;
-        self_pay_total: string;
-        last_self_pay_at: Date | string | null;
       }>;
 
       return reply.send(
         rows.map((r) => {
-          const owed = Number(r.owed_total || 0);
-          const paid = Number(r.paid_total || 0);
+          const totals = financialTotals.get(r.id) ?? {
+            owed_total: '0',
+            paid_total: '0',
+            balance_owed: '0.0000',
+            last_payment_date: null,
+            self_pay_total: '0',
+            last_self_pay_at: null,
+          };
           return {
             id: r.id,
             displayName: r.display_name,
@@ -185,13 +156,12 @@ export async function accountRoutes(
             contactPhone: r.contact_phone ?? undefined,
             notes: r.notes ?? undefined,
             wholesalerId: r.legacy_wholesaler_id ?? undefined,
-            owedTotal: r.owed_total,
-            paidTotal: r.paid_total,
-            balanceOwed: (owed - paid).toFixed(4),
-            lastPaymentDate: r.last_payment_date ?? undefined,
-            selfPayTotal: r.self_pay_total,
-            lastSelfPayAt:
-              r.last_self_pay_at != null ? new Date(r.last_self_pay_at).toISOString() : undefined,
+            owedTotal: totals.owed_total,
+            paidTotal: totals.paid_total,
+            balanceOwed: totals.balance_owed,
+            lastPaymentDate: totals.last_payment_date ?? undefined,
+            selfPayTotal: totals.self_pay_total,
+            lastSelfPayAt: totals.last_self_pay_at ?? undefined,
             createdAt: r.created_at,
             updatedAt: r.updated_at,
           };
