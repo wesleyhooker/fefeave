@@ -485,8 +485,9 @@ async function backfillOwnerSelfPay(db: Queryable, dryRun: boolean): Promise<Bac
 
 async function backfillOwedLineItems(db: Queryable, dryRun: boolean): Promise<BackfillTableResult> {
   const result = emptyTableResult('owed_line_items');
-  const rows = await db.query(
-    `SELECT oli.id, oli.show_id, oli.wholesaler_id, oli.amount, oli.description,
+
+  const showLinked = await db.query(
+    `SELECT oli.id, oli.show_id, oli.wholesaler_id, oli.account_id, oli.amount, oli.description,
             oli.obligation_kind::text AS obligation_kind, oli.due_date, oli.created_at,
             s.show_date
      FROM owed_line_items oli
@@ -494,19 +495,33 @@ async function backfillOwedLineItems(db: Queryable, dryRun: boolean): Promise<Ba
      WHERE oli.deleted_at IS NULL
      ORDER BY s.show_date ASC, oli.created_at ASC`
   );
-  result.scanned = rows.rows.length;
 
-  for (const row of rows.rows as Array<{
+  const vendor = await db.query(
+    `SELECT oli.id, oli.show_id, oli.wholesaler_id, oli.account_id, oli.amount, oli.description,
+            oli.obligation_kind::text AS obligation_kind, oli.due_date, oli.created_at
+     FROM owed_line_items oli
+     WHERE oli.deleted_at IS NULL
+       AND oli.show_id IS NULL
+       AND oli.obligation_kind = 'VENDOR_EXPENSE'
+     ORDER BY oli.created_at ASC`
+  );
+
+  result.scanned = showLinked.rows.length + vendor.rows.length;
+
+  type ShowLinkedRow = {
     id: string;
     show_id: string;
     wholesaler_id: string;
+    account_id: string;
     amount: string;
     description: string;
     obligation_kind: string;
     due_date: string | null;
     created_at: Date;
     show_date: string;
-  }>) {
+  };
+
+  for (const row of showLinked.rows as ShowLinkedRow[]) {
     const eventType = 'SETTLEMENT_CREATED' as const;
     if (await hasExistingSourceEvent(db, 'owed_line_item', row.id, eventType)) {
       result.skipped += 1;
@@ -528,9 +543,11 @@ async function backfillOwedLineItems(db: Queryable, dryRun: boolean): Promise<Ba
           amount: Number(row.amount),
           show_id: row.show_id,
           wholesaler_id: row.wholesaler_id,
+          account_id: row.account_id,
           description: row.description,
           due_date: row.due_date ? toYyyyMmDd(row.due_date) : null,
           show_date: effectiveDate,
+          expense_date: null,
         },
       });
       if (outcome === 'inserted') result.inserted += 1;
@@ -539,6 +556,56 @@ async function backfillOwedLineItems(db: Queryable, dryRun: boolean): Promise<Ba
       recordBackfillError(result, row.id, eventType, err);
     }
   }
+
+  type VendorRow = {
+    id: string;
+    show_id: null;
+    wholesaler_id: string;
+    account_id: string;
+    amount: string;
+    description: string;
+    obligation_kind: string;
+    due_date: string | null;
+    created_at: Date;
+  };
+
+  for (const row of vendor.rows as VendorRow[]) {
+    const eventType = 'SETTLEMENT_CREATED' as const;
+    if (await hasExistingSourceEvent(db, 'owed_line_item', row.id, eventType)) {
+      result.skipped += 1;
+      continue;
+    }
+    try {
+      const effectiveDate =
+        row.due_date != null ? toYyyyMmDd(row.due_date) : toYyyyMmDd(row.created_at);
+      const outcome = await appendBackfillEvent(db, dryRun, {
+        eventType,
+        occurredAt: row.created_at,
+        effectiveDate,
+        amount: Number(row.amount),
+        sourceType: 'owed_line_item',
+        sourceId: row.id,
+        actorUserId: null,
+        idempotencyKey: backfillIdempotencyKey('owed_line_items', row.id, eventType),
+        payload: {
+          obligation_kind: row.obligation_kind,
+          amount: Number(row.amount),
+          show_id: null,
+          wholesaler_id: row.wholesaler_id,
+          account_id: row.account_id,
+          description: row.description,
+          due_date: row.due_date ? toYyyyMmDd(row.due_date) : null,
+          expense_date: effectiveDate,
+          show_date: null,
+        },
+      });
+      if (outcome === 'inserted') result.inserted += 1;
+      else result.skipped += 1;
+    } catch (err) {
+      recordBackfillError(result, row.id, eventType, err);
+    }
+  }
+
   return result;
 }
 

@@ -189,3 +189,56 @@ export function mapShowToViewModel(show: ShowDTO): ShowViewModel {
     updated_at: show.updated_at,
   };
 }
+
+/** Event-derived show profit (Phase 7c). Profit is null until show is COMPLETED. */
+export interface ShowFinancialProfitDTO {
+  show_id: string;
+  show_status?: string;
+  show_date?: string;
+  payout_after_fees_amount: string;
+  owed_total: string;
+  profit: string | null;
+  settlement_count: number;
+  included_in_profit: boolean;
+}
+
+export interface CompletedShowProfitDTO {
+  from: string;
+  to: string;
+  show_count: number;
+  total_profit: string;
+}
+
+export async function fetchShowFinancialProfit(
+  showId: string,
+): Promise<ShowFinancialProfitDTO | null> {
+  try {
+    return await backendGetJson<ShowFinancialProfitDTO>(
+      `/shows/${showId}/financial-profit`,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('(404 ')) return null;
+    throw error;
+  }
+}
+
+export async function fetchShowFinancialProfits(
+  showIds: string[],
+): Promise<Record<string, ShowFinancialProfitDTO>> {
+  const uniqueIds = [...new Set(showIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return {};
+  return backendGetJson<Record<string, ShowFinancialProfitDTO>>(
+    `/shows/financial-profits?showIds=${encodeURIComponent(uniqueIds.join(','))}`,
+  );
+}
+
+export async function fetchCompletedShowProfit(
+  from: string,
+  to: string,
+): Promise<CompletedShowProfitDTO> {
+  const params = new URLSearchParams({ from, to });
+  return backendGetJson<CompletedShowProfitDTO>(
+    `/shows/completed-profit?${params.toString()}`,
+  );
+}

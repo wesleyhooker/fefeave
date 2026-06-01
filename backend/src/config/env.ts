@@ -32,7 +32,7 @@ const baseEnvSchema = z.object({
   // S3 attachments bucket (Epic 2.1; wire to Terraform output in deployment)
   S3_ATTACHMENTS_BUCKET: z.string().min(1).optional(),
   AWS_REGION: z.string().optional().default('us-east-1'),
-  /** Recommendation cash math: events (ledger projection) or tables (rollback). */
+  /** Emergency rollback for recommendation cash math only (default: events). Not authoritative. */
   FINANCIAL_RECOMMENDATIONS_SOURCE: z.enum(['events', 'tables']).default('events'),
 });
 

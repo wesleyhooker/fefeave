@@ -4,7 +4,11 @@ import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
 import { ensureUser } from '../db/ensure-user';
 import { resolveOwnerAccountId } from '../db/owner-account';
-import { computeOwnerWeeklyPayout } from '../services/owner-weekly-payout';
+import {
+  computeOwnerWeeklyPayout,
+  loadOwnerPayoutSourceContextMap,
+} from '../services/owner-weekly-payout';
+import { loadOwnerTotalPaidAmount } from '../services/financial-event-summaries';
 import {
   emitOwnerSelfPayCorrected,
   emitOwnerSelfPayRecorded,
@@ -97,15 +101,13 @@ type OwnerPayoutSourceShowDto = {
   includedInPayout: boolean;
 };
 
-type OwnerPayoutSourceContextDto = {
-  closedShowsCount: number;
-  openShowsExcludedCount: number;
-  closedProfitTotal: string;
-  shows: OwnerPayoutSourceShowDto[];
-};
-
 type OwnerActivityTransactionDto = OwnerSelfPayDto & {
-  sourceContext: OwnerPayoutSourceContextDto;
+  sourceContext: {
+    closedShowsCount: number;
+    openShowsExcludedCount: number;
+    closedProfitTotal: string;
+    shows: OwnerPayoutSourceShowDto[];
+  };
 };
 
 function toOwnerSelfPayDto(row: OwnerSelfPayRow): OwnerSelfPayDto {
@@ -172,7 +174,7 @@ export async function ownerSelfPayRoutes(
       preHandler: adminPre,
       schema: {
         description:
-          'Owner payout activity: summary plus transactions (includes voided rows for audit)',
+          'Owner payout activity: summary plus transactions (includes voided rows for audit). Summary totalPaidAmount and closedProfitTotal use event-backed show profit.',
         security: [{ bearerAuth: [] }],
       },
     },
@@ -185,113 +187,72 @@ export async function ownerSelfPayRoutes(
       const ownerAccountId = await resolveOwnerAccountId();
       const pool = getPool();
 
-      const summaryResult = await pool.query(
-        `SELECT
-           COALESCE(SUM(amount) FILTER (WHERE voided_at IS NULL), 0)::text AS total_paid_amount,
-           COUNT(*) FILTER (WHERE voided_at IS NULL)::int AS active_payout_count,
-           COUNT(*) FILTER (WHERE voided_at IS NOT NULL)::int AS voided_payout_count,
-           MAX(paid_at) FILTER (WHERE voided_at IS NULL) AS last_paid_at
-         FROM owner_self_pay_transactions
-         WHERE account_id = $1
-           AND deleted_at IS NULL`,
-        [ownerAccountId]
-      );
+      const [summaryResult, totalPaidAmount] = await Promise.all([
+        pool.query(
+          `SELECT
+             COUNT(*) FILTER (WHERE voided_at IS NULL)::int AS active_payout_count,
+             COUNT(*) FILTER (WHERE voided_at IS NOT NULL)::int AS voided_payout_count,
+             MAX(paid_at) FILTER (WHERE voided_at IS NULL) AS last_paid_at
+           FROM owner_self_pay_transactions
+           WHERE account_id = $1
+             AND deleted_at IS NULL`,
+          [ownerAccountId]
+        ),
+        loadOwnerTotalPaidAmount(pool),
+      ]);
 
       const s = summaryResult.rows[0] as {
-        total_paid_amount: string;
         active_payout_count: number;
         voided_payout_count: number;
         last_paid_at: Date | null;
       };
 
       const txResult = await pool.query(
-        `WITH tx AS (
-           SELECT id, account_id, account_type::text AS account_type, amount,
-                  week_start_date, week_end_date, paid_at, transaction_type::text AS transaction_type,
-                  reference, note, voided_at, created_at, updated_at
-           FROM owner_self_pay_transactions
-           WHERE account_id = $1
-             AND deleted_at IS NULL
-           ORDER BY (voided_at IS NULL) DESC, paid_at DESC NULLS LAST, created_at DESC
-           LIMIT $2
-         ),
-         weekly_shows AS (
-           SELECT
-             tx.id AS tx_id,
-             s.id AS show_id,
-             s.name AS show_name,
-             s.show_date::date::text AS show_date,
-             s.status::text AS show_status,
-             (
-               COALESCE(sf.payout_after_fees_amount, 0::numeric) - COALESCE(owed.owed_total, 0::numeric)
-             )::text AS profit_amount
-           FROM tx
-           LEFT JOIN shows s
-             ON s.deleted_at IS NULL
-            AND s.show_date >= tx.week_start_date
-            AND s.show_date <= tx.week_end_date
-           LEFT JOIN show_financials sf ON sf.show_id = s.id
-           LEFT JOIN LATERAL (
-             SELECT COALESCE(SUM(oli.amount), 0::numeric) AS owed_total
-             FROM owed_line_items oli
-             WHERE oli.deleted_at IS NULL
-               AND oli.show_id = s.id
-               AND oli.obligation_kind = 'SHOW_LINKED'
-           ) owed ON TRUE
-         )
-         SELECT
-           tx.id, tx.account_id, tx.account_type, tx.amount,
-           tx.week_start_date, tx.week_end_date, tx.paid_at, tx.transaction_type,
-           tx.reference, tx.note, tx.voided_at, tx.created_at, tx.updated_at,
-           COALESCE(COUNT(*) FILTER (WHERE ws.show_status = 'COMPLETED'), 0)::int AS closed_shows_count,
-           COALESCE(COUNT(*) FILTER (WHERE ws.show_id IS NOT NULL AND ws.show_status <> 'COMPLETED'), 0)::int AS open_shows_excluded_count,
-           COALESCE(SUM((ws.profit_amount)::numeric) FILTER (WHERE ws.show_status = 'COMPLETED'), 0::numeric)::text AS closed_profit_total,
-           COALESCE(
-             json_agg(
-               json_build_object(
-                 'showId', ws.show_id,
-                 'name', ws.show_name,
-                 'showDate', ws.show_date,
-                 'status', ws.show_status,
-                 'profitAmount', ws.profit_amount,
-                 'includedInPayout', (ws.show_status = 'COMPLETED')
-               )
-               ORDER BY ws.show_date ASC, ws.show_name ASC
-             ) FILTER (WHERE ws.show_id IS NOT NULL),
-             '[]'::json
-           ) AS source_shows
-         FROM tx
-         LEFT JOIN weekly_shows ws ON ws.tx_id = tx.id
-         GROUP BY
-           tx.id, tx.account_id, tx.account_type, tx.amount,
-           tx.week_start_date, tx.week_end_date, tx.paid_at, tx.transaction_type,
-           tx.reference, tx.note, tx.voided_at, tx.created_at, tx.updated_at
-         ORDER BY (tx.voided_at IS NULL) DESC, tx.paid_at DESC NULLS LAST, tx.created_at DESC`,
+        `SELECT id, account_id, account_type::text AS account_type, amount,
+                week_start_date, week_end_date, paid_at, transaction_type::text AS transaction_type,
+                reference, note, voided_at, created_at, updated_at
+         FROM owner_self_pay_transactions
+         WHERE account_id = $1
+           AND deleted_at IS NULL
+         ORDER BY (voided_at IS NULL) DESC, paid_at DESC NULLS LAST, created_at DESC
+         LIMIT $2`,
         [ownerAccountId, limit]
       );
 
-      const txRows = txResult.rows as Array<
-        OwnerSelfPayRow & {
-          closed_shows_count: number;
-          open_shows_excluded_count: number;
-          closed_profit_total: string;
-          source_shows: OwnerPayoutSourceShowDto[];
-        }
-      >;
+      const txRows = txResult.rows as OwnerSelfPayRow[];
 
-      const transactions: OwnerActivityTransactionDto[] = txRows.map((row) => ({
-        ...toOwnerSelfPayDto(row),
-        sourceContext: {
-          closedShowsCount: Number(row.closed_shows_count) || 0,
-          openShowsExcludedCount: Number(row.open_shows_excluded_count) || 0,
-          closedProfitTotal: row.closed_profit_total,
-          shows: Array.isArray(row.source_shows) ? row.source_shows : [],
-        },
-      }));
+      const sourceContextMap = await loadOwnerPayoutSourceContextMap(
+        pool,
+        txRows.map((row) => ({
+          weekStartDate: toYyyyMmDd(row.week_start_date),
+          weekEndDate: toYyyyMmDd(row.week_end_date),
+        }))
+      );
+
+      const transactions: OwnerActivityTransactionDto[] = txRows.map((row) => {
+        const weekStart = toYyyyMmDd(row.week_start_date);
+        const weekEnd = toYyyyMmDd(row.week_end_date);
+        const sourceContext = sourceContextMap.get(`${weekStart}|${weekEnd}`) ?? {
+          closedShowsCount: 0,
+          openShowsExcludedCount: 0,
+          closedProfitTotal: '0',
+          shows: [],
+        };
+
+        return {
+          ...toOwnerSelfPayDto(row),
+          sourceContext: {
+            closedShowsCount: sourceContext.closedShowsCount,
+            openShowsExcludedCount: sourceContext.openShowsExcludedCount,
+            closedProfitTotal: sourceContext.closedProfitTotal,
+            shows: sourceContext.shows,
+          },
+        };
+      });
 
       return reply.send({
         summary: {
-          totalPaidAmount: s.total_paid_amount,
+          totalPaidAmount,
           activePayoutCount: Number(s.active_payout_count),
           voidedPayoutCount: Number(s.voided_payout_count),
           lastPaidAt: s.last_paid_at != null ? new Date(s.last_paid_at).toISOString() : null,

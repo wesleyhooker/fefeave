@@ -563,6 +563,134 @@ describe('Financial event dual-write integration', () => {
     expect(events[1].payload.voided_at).toBeDefined();
   });
 
+  test('POST vendor expense writes SETTLEMENT_CREATED', async () => {
+    const wholesaler = await createWholesaler('Vendor Expense Co');
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers/${wholesaler.id}/vendor-expenses`,
+      payload: {
+        amount: 75,
+        description: 'Freight',
+        expense_date: '2026-06-05',
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.payload);
+
+    const events = await eventsForSource('owed_line_item', body.id);
+    expect(events).toHaveLength(1);
+    expect(events[0].event_type).toBe('SETTLEMENT_CREATED');
+    expect(events[0].direction).toBe('NEUTRAL');
+    expect(Number(events[0].amount)).toBe(75);
+    expect(toYyyyMmDd(events[0].effective_date!)).toBe('2026-06-05');
+    expect(events[0].payload).toMatchObject({
+      obligation_kind: 'VENDOR_EXPENSE',
+      amount: 75,
+      show_id: null,
+      wholesaler_id: wholesaler.id,
+      description: 'Freight',
+      expense_date: '2026-06-05',
+    });
+    expect(events[0].payload.account_id).toBeDefined();
+  });
+
+  test('PATCH vendor expense writes SETTLEMENT_ADJUSTED when amount changes', async () => {
+    const wholesaler = await createWholesaler('Vendor Adjust Co');
+
+    const createRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers/${wholesaler.id}/vendor-expenses`,
+      payload: {
+        amount: 100,
+        description: 'Supplies',
+        expense_date: '2026-06-06',
+      },
+    });
+    expect(createRes.statusCode).toBe(201);
+    const expense = JSON.parse(createRes.payload);
+
+    const patchRes = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/wholesalers/${wholesaler.id}/vendor-expenses/${expense.id}`,
+      payload: { amount: 120, description: 'Supplies (updated)' },
+    });
+    expect(patchRes.statusCode).toBe(200);
+
+    const events = await eventsForSource('owed_line_item', expense.id);
+    expect(events).toHaveLength(2);
+    expect(events[1].event_type).toBe('SETTLEMENT_ADJUSTED');
+    expect(events[1].direction).toBe('NEUTRAL');
+    expect(events[1].payload).toMatchObject({
+      obligation_kind: 'VENDOR_EXPENSE',
+      amount: 120,
+      show_id: null,
+      wholesaler_id: wholesaler.id,
+      previous_amount: 100,
+      previous_description: 'Supplies',
+      previous_due_date: '2026-06-06',
+    });
+  });
+
+  test('PATCH vendor expense with no material change does not append events', async () => {
+    const wholesaler = await createWholesaler('Vendor No-op Co');
+
+    const createRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers/${wholesaler.id}/vendor-expenses`,
+      payload: {
+        amount: 50,
+        description: 'Unchanged',
+        expense_date: '2026-06-07',
+      },
+    });
+    const expense = JSON.parse(createRes.payload);
+
+    const patchRes = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/wholesalers/${wholesaler.id}/vendor-expenses/${expense.id}`,
+      payload: { amount: 50, description: 'Unchanged' },
+    });
+    expect(patchRes.statusCode).toBe(200);
+
+    const events = await eventsForSource('owed_line_item', expense.id);
+    expect(events).toHaveLength(1);
+    expect(events[0].event_type).toBe('SETTLEMENT_CREATED');
+  });
+
+  test('DELETE vendor expense writes SETTLEMENT_VOIDED', async () => {
+    const wholesaler = await createWholesaler('Vendor Void Co');
+
+    const createRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers/${wholesaler.id}/vendor-expenses`,
+      payload: {
+        amount: 80,
+        description: 'To void',
+        expense_date: '2026-06-08',
+      },
+    });
+    const expense = JSON.parse(createRes.payload);
+
+    const deleteRes = await app.inject({
+      method: 'DELETE',
+      url: `${prefix}/wholesalers/${wholesaler.id}/vendor-expenses/${expense.id}`,
+    });
+    expect(deleteRes.statusCode).toBe(204);
+
+    const events = await eventsForSource('owed_line_item', expense.id);
+    expect(events).toHaveLength(2);
+    expect(events[1].event_type).toBe('SETTLEMENT_VOIDED');
+    expect(events[1].direction).toBe('NEUTRAL');
+    expect(events[1].payload).toMatchObject({
+      obligation_kind: 'VENDOR_EXPENSE',
+      amount: 80,
+      show_id: null,
+      wholesaler_id: wholesaler.id,
+    });
+    expect(events[1].payload.voided_at).toBeDefined();
+  });
+
   test('idempotency key prevents duplicate events for the same source write', async () => {
     const res = await app.inject({
       method: 'POST',

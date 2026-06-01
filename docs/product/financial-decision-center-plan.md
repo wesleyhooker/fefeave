@@ -377,8 +377,8 @@ Phase 3 ships in steps. **V1 (implemented)** is the decision-support Overview su
 
 - **Financial Snapshot** cards from existing data:
   - Owed to wholesalers (sum of wholesaler `balance_owed`)
-  - Inventory spend — last 30 days (`GET /admin/inventory-invested?days=30`)
-  - Business expenses — last 30 days (`GET /admin/business-expenses-total?days=30`)
+  - Inventory spend — last 30 days (`GET /admin/inventory-invested?days=30`) — **event-backed**
+  - Business expenses — last 30 days (`GET /admin/business-expenses-total?days=30`) — **event-backed**
   - Current strategy (label)
 - **Strategy Preview**, **Recommendation Summary**, **What's Missing** — as above.
 

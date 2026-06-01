@@ -9,7 +9,8 @@ import {
 } from "@/src/lib/api/wholesalers";
 import { fetchShows, type ShowDTO } from "@/src/lib/api/shows";
 import {
-  fetchShowFinancialSummary,
+  fetchShowFinancialSummariesByShowIds,
+  fetchCompletedShowProfitTotal,
   type ShowFinancialSummary,
 } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
@@ -138,19 +139,12 @@ export default function AdminDashboardPage() {
     }
 
     let cancelled = false;
-    Promise.all(
-      list.map(async (show) => {
-        const summary = await fetchShowFinancialSummary(show.id);
-        return [show.id, summary] as const;
-      }),
-    ).then((pairs) => {
-      if (cancelled) return;
-      const next: Record<string, ShowFinancialSummary> = {};
-      for (const [id, summary] of pairs) {
-        next[id] = summary;
-      }
-      setWeekPreviewSummaries(next);
-    });
+    fetchShowFinancialSummariesByShowIds(list.map((show) => show.id)).then(
+      (next) => {
+        if (cancelled) return;
+        setWeekPreviewSummaries(next);
+      },
+    );
 
     return () => {
       cancelled = true;
@@ -172,16 +166,12 @@ export default function AdminDashboardPage() {
     }
     setYtdProfit(null);
     setYtdProfitError(null);
-    Promise.all(
-      list.map(async (show) => {
-        const s = await fetchShowFinancialSummary(show.id);
-        return s.estimatedShowProfit;
-      }),
+    fetchCompletedShowProfitTotal(
+      `${snapshotYear}-01-01`,
+      `${snapshotYear}-12-31`,
     )
-      .then((profits) => {
-        if (!cancelled) {
-          setYtdProfit(profits.reduce((a, b) => a + b, 0));
-        }
+      .then((total) => {
+        if (!cancelled) setYtdProfit(total);
       })
       .catch((e) => {
         if (!cancelled) {
@@ -254,14 +244,12 @@ export default function AdminDashboardPage() {
         }
 
         try {
-          const profits = await Promise.all(
-            closedThisWeek.map(async (show) => {
-              const s = await fetchShowFinancialSummary(show.id);
-              return s.estimatedShowProfit;
-            }),
+          const total = await fetchCompletedShowProfitTotal(
+            weekBounds.startStr,
+            weekBounds.endStr,
           );
           if (!cancelled && effectRunIdRef.current === runId) {
-            setWeekProfit(profits.reduce((a, b) => a + b, 0));
+            setWeekProfit(total);
           }
         } catch (e) {
           if (!cancelled && effectRunIdRef.current === runId) {
@@ -343,21 +331,21 @@ export default function AdminDashboardPage() {
 
     setMonthDailyProfits(null);
     setMonthDailyError(null);
-    Promise.all(
-      list.map(async (show) => {
-        const s = await fetchShowFinancialSummary(show.id);
-        return { show_date: show.show_date, profit: s.estimatedShowProfit };
-      }),
-    )
-      .then((rows) => {
+    fetchShowFinancialSummariesByShowIds(list.map((show) => show.id))
+      .then((summaries) => {
         if (!cancelled) {
           const byDay = new Map<string, number>();
-          for (const row of rows) {
-            const ymd = row.show_date;
+          for (const show of list) {
+            const summary = summaries[show.id];
+            if (summary == null) continue;
+            const ymd = show.show_date;
             if (ymd == null) continue;
             const dayKey = ymd.slice(0, 10);
             if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) continue;
-            byDay.set(dayKey, (byDay.get(dayKey) ?? 0) + row.profit);
+            byDay.set(
+              dayKey,
+              (byDay.get(dayKey) ?? 0) + summary.estimatedShowProfit,
+            );
           }
           setMonthDailyProfits(
             buildCalendarMonthDailySeries(byDay, dashboardCalendar.ref),

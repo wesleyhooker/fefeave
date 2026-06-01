@@ -4,6 +4,11 @@ import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
 import { emitShowPayoutRecorded, resolveActorUserId } from '../services/financial-event-emission';
+import {
+  loadCompletedShowProfitInDateWindow,
+  loadShowFinancialProfit,
+  loadShowProfitsForShows,
+} from '../services/financial-show-profit';
 
 const uuidSchema = z.string().uuid();
 
@@ -265,6 +270,191 @@ export async function showFinancialsRoutes(
         created_at: r.created_at,
         updated_at: r.updated_at,
       });
+    }
+  );
+
+  fastify.get<{ Params: { showId: string } }>(
+    '/shows/:showId/financial-profit',
+    {
+      preHandler: adminPre,
+      schema: {
+        description:
+          'Event-derived show profit (payout minus show-linked settlements). Profit is null until show is COMPLETED.',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['showId'],
+          properties: { showId: { type: 'string', format: 'uuid' } },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              show_id: { type: 'string' },
+              show_status: { type: 'string' },
+              show_date: { type: 'string' },
+              payout_after_fees_amount: { type: 'string' },
+              owed_total: { type: 'string' },
+              profit: { type: ['string', 'null'] },
+              settlement_count: { type: 'integer' },
+              included_in_profit: { type: 'boolean' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const parsed = uuidSchema.safeParse(request.params.showId);
+      if (!parsed.success) {
+        throw new ValidationError('Invalid showId', parsed.error.errors);
+      }
+      const showId = parsed.data;
+      const pool = getPool();
+
+      const showCheck = await pool.query(
+        `SELECT id FROM shows WHERE id = $1 AND deleted_at IS NULL`,
+        [showId]
+      );
+      if (showCheck.rows.length === 0) {
+        throw new NotFoundError('Show', showId);
+      }
+
+      const profit = await loadShowFinancialProfit(pool, showId);
+      if (!profit) {
+        throw new NotFoundError('Show financial profit', showId);
+      }
+
+      return reply.send({
+        show_id: profit.show_id,
+        show_status: profit.show_status ?? undefined,
+        show_date: profit.show_date ?? undefined,
+        payout_after_fees_amount: profit.payout_after_fees_amount,
+        owed_total: profit.owed_total,
+        profit: profit.profit,
+        settlement_count: profit.settlement_count,
+        included_in_profit: profit.included_in_profit,
+      });
+    }
+  );
+
+  fastify.get<{ Querystring: { showIds?: string } }>(
+    '/shows/financial-profits',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Batch event-derived show profit for comma-separated show ids',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          required: ['showIds'],
+          properties: {
+            showIds: { type: 'string', description: 'Comma-separated show UUIDs' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                show_id: { type: 'string' },
+                payout_after_fees_amount: { type: 'string' },
+                owed_total: { type: 'string' },
+                profit: { type: ['string', 'null'] },
+                settlement_count: { type: 'integer' },
+                included_in_profit: { type: 'boolean' },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const raw = request.query.showIds?.trim() ?? '';
+      if (raw === '') {
+        throw new ValidationError('showIds query parameter is required');
+      }
+      const ids = raw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      for (const id of ids) {
+        const parsed = uuidSchema.safeParse(id);
+        if (!parsed.success) {
+          throw new ValidationError('Invalid showIds', parsed.error.errors);
+        }
+      }
+
+      const pool = getPool();
+      const profits = await loadShowProfitsForShows(pool, ids);
+      const body: Record<string, unknown> = {};
+      for (const [showId, row] of profits) {
+        body[showId] = {
+          show_id: row.show_id,
+          show_status: row.show_status ?? undefined,
+          show_date: row.show_date ?? undefined,
+          payout_after_fees_amount: row.payout_after_fees_amount,
+          owed_total: row.owed_total,
+          profit: row.profit,
+          settlement_count: row.settlement_count,
+          included_in_profit: row.included_in_profit,
+        };
+      }
+      return reply.send(body);
+    }
+  );
+
+  fastify.get<{ Querystring: { from: string; to: string } }>(
+    '/shows/completed-profit',
+    {
+      preHandler: adminPre,
+      schema: {
+        description: 'Sum event-derived profit for COMPLETED shows with show_date in [from, to]',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          required: ['from', 'to'],
+          properties: {
+            from: { type: 'string', format: 'date' },
+            to: { type: 'string', format: 'date' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              from: { type: 'string' },
+              to: { type: 'string' },
+              show_count: { type: 'integer' },
+              total_profit: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const fromParsed = z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .safeParse(request.query.from);
+      const toParsed = z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .safeParse(request.query.to);
+      if (!fromParsed.success || !toParsed.success) {
+        throw new ValidationError('from and to must be YYYY-MM-DD dates');
+      }
+      if (fromParsed.data > toParsed.data) {
+        throw new ValidationError('Invalid date range: from must be <= to');
+      }
+
+      const pool = getPool();
+      const window = await loadCompletedShowProfitInDateWindow(
+        pool,
+        fromParsed.data,
+        toParsed.data
+      );
+      return reply.send(window);
     }
   );
 }

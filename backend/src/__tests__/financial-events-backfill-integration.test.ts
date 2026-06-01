@@ -5,6 +5,11 @@ import { getPool } from '../db';
 import { runFinancialEventsBackfill } from '../services/financial-events-backfill';
 import { buildAppForTest, buildUniqueDevBypassIdentity, runTestSchemaMigrations } from './helpers';
 
+function toYyyyMmDd(value: string | Date): string {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return new Date(value).toISOString().slice(0, 10);
+}
+
 describe('Financial events backfill integration', () => {
   let restoreEnv: () => void;
 
@@ -132,5 +137,126 @@ describe('Financial events backfill integration', () => {
       [row.id]
     );
     expect((events.rows[0] as { c: number }).c).toBe(1);
+  });
+
+  test('backfill inserts SETTLEMENT_CREATED for vendor expense obligations', async () => {
+    const pool = getPool();
+
+    const wh = await pool.query(
+      `INSERT INTO wholesalers (name) VALUES ('Backfill Vendor') RETURNING id`
+    );
+    const wholesalerId = (wh.rows[0] as { id: string }).id;
+
+    const acct = await pool.query(
+      `INSERT INTO accounts (display_name, type, status, legacy_wholesaler_id)
+       VALUES ('Backfill Vendor Acct', 'WHOLESALER', 'ACTIVE', $1)
+       RETURNING id`,
+      [wholesalerId]
+    );
+    const accountId = (acct.rows[0] as { id: string }).id;
+
+    const user = await pool.query(
+      `INSERT INTO users (cognito_user_id, email, role)
+       VALUES ($1, $2, 'ADMIN')
+       RETURNING id`,
+      [`backfill-vendor-created-${Date.now()}`, `backfill-vendor-${Date.now()}@test.local`]
+    );
+    const userId = (user.rows[0] as { id: string }).id;
+
+    const oli = await pool.query(
+      `INSERT INTO owed_line_items (
+         show_id, wholesaler_id, account_id, amount, currency, description, due_date,
+         status, created_by, created_via, obligation_kind, calculation_method
+       )
+       VALUES (NULL, $1, $2, 88.25, 'USD', 'Historical freight', '2026-03-10', 'PENDING', $3, 'API', 'VENDOR_EXPENSE', NULL)
+       RETURNING id`,
+      [wholesalerId, accountId, userId]
+    );
+    const oliId = (oli.rows[0] as { id: string }).id;
+
+    const report = await runFinancialEventsBackfill(pool);
+    const owedTable = report.tables.find((t) => t.table === 'owed_line_items');
+    expect(owedTable?.inserted).toBeGreaterThanOrEqual(1);
+
+    const events = await pool.query(
+      `SELECT event_type, idempotency_key, effective_date, payload
+       FROM financial_events
+       WHERE source_type = 'owed_line_item' AND source_id = $1
+       ORDER BY created_at ASC`,
+      [oliId]
+    );
+    expect(events.rows).toHaveLength(1);
+    expect(events.rows[0].event_type).toBe('SETTLEMENT_CREATED');
+    expect(events.rows[0].idempotency_key).toBe(
+      `backfill:owed_line_items:${oliId}:SETTLEMENT_CREATED`
+    );
+    expect(toYyyyMmDd(events.rows[0].effective_date)).toBe('2026-03-10');
+    expect(events.rows[0].payload).toMatchObject({
+      obligation_kind: 'VENDOR_EXPENSE',
+      amount: 88.25,
+      show_id: null,
+      wholesaler_id: wholesalerId,
+      account_id: accountId,
+      expense_date: '2026-03-10',
+    });
+  });
+
+  test('rerunning backfill does not duplicate vendor expense events', async () => {
+    const pool = getPool();
+
+    const wh = await pool.query(
+      `INSERT INTO wholesalers (name) VALUES ('Backfill Vendor Rerun') RETURNING id`
+    );
+    const wholesalerId = (wh.rows[0] as { id: string }).id;
+
+    const acct = await pool.query(
+      `INSERT INTO accounts (display_name, type, status, legacy_wholesaler_id)
+       VALUES ('Backfill Vendor Rerun Acct', 'WHOLESALER', 'ACTIVE', $1)
+       RETURNING id`,
+      [wholesalerId]
+    );
+    const accountId = (acct.rows[0] as { id: string }).id;
+
+    const user = await pool.query(
+      `INSERT INTO users (cognito_user_id, email, role)
+       VALUES ($1, $2, 'ADMIN')
+       RETURNING id`,
+      [`backfill-vendor-created-${Date.now()}`, `backfill-vendor-${Date.now()}@test.local`]
+    );
+    const userId = (user.rows[0] as { id: string }).id;
+
+    const oli = await pool.query(
+      `INSERT INTO owed_line_items (
+         show_id, wholesaler_id, account_id, amount, currency, description,
+         status, created_by, created_via, obligation_kind, calculation_method
+       )
+       VALUES (NULL, $1, $2, 42, 'USD', 'No due date vendor', 'PENDING', $3, 'API', 'VENDOR_EXPENSE', NULL)
+       RETURNING id, created_at`,
+      [wholesalerId, accountId, userId]
+    );
+    const oliId = (oli.rows[0] as { id: string }).id;
+    const createdAt = (oli.rows[0] as { created_at: Date }).created_at;
+
+    await runFinancialEventsBackfill(pool);
+    await runFinancialEventsBackfill(pool);
+
+    const events = await pool.query(
+      `SELECT COUNT(*)::int AS c FROM financial_events
+       WHERE source_type = 'owed_line_item' AND source_id = $1`,
+      [oliId]
+    );
+    expect((events.rows[0] as { c: number }).c).toBe(1);
+
+    const detail = await pool.query(
+      `SELECT effective_date, payload FROM financial_events
+       WHERE source_type = 'owed_line_item' AND source_id = $1`,
+      [oliId]
+    );
+    expect(toYyyyMmDd(detail.rows[0].effective_date)).toBe(toYyyyMmDd(createdAt));
+    expect(detail.rows[0].payload).toMatchObject({
+      obligation_kind: 'VENDOR_EXPENSE',
+      show_id: null,
+      expense_date: toYyyyMmDd(createdAt),
+    });
   });
 });

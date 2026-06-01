@@ -1,5 +1,5 @@
 import { QueryableDb } from '../read-models/db';
-import { toYyyyMmDd } from '../utils/pg-date';
+import { loadWholesalerStatementEventRows } from './financial-statement-projections';
 
 export interface SettlementLineEntry {
   item_name: string;
@@ -41,116 +41,88 @@ export interface WholesalerStatementEntry {
   description?: string;
 }
 
+type OwedMetadataRow = {
+  id: string;
+  calculation_method: string | null;
+  show_name: string | null;
+  description: string | null;
+};
+
+async function loadOwedMetadataByEntryId(
+  db: QueryableDb,
+  entryIds: string[]
+): Promise<Map<string, OwedMetadataRow>> {
+  if (entryIds.length === 0) return new Map();
+
+  const result = await db.query(
+    `SELECT
+       oli.id::text AS id,
+       oli.calculation_method,
+       s.name AS show_name,
+       oli.description
+     FROM owed_line_items oli
+     LEFT JOIN shows s ON s.id = oli.show_id AND s.deleted_at IS NULL
+     WHERE oli.id = ANY($1::uuid[])`,
+    [entryIds]
+  );
+
+  const map = new Map<string, OwedMetadataRow>();
+  for (const row of result.rows as OwedMetadataRow[]) {
+    map.set(row.id, row);
+  }
+  return map;
+}
+
 /**
  * Shared wholesaler statement logic used by admin and portal endpoints.
+ * Financial amounts from `financial_events`; labels/metadata from operational tables.
  */
 export async function getWholesalerStatement(
   db: QueryableDb,
   wholesalerId: string
 ): Promise<WholesalerStatementEntry[]> {
-  const result = await db.query(
-    `WITH wholesaler_account AS (
-       SELECT id
-       FROM accounts
-       WHERE type = 'WHOLESALER'
-         AND legacy_wholesaler_id = $1
-         AND deleted_at IS NULL
-       LIMIT 1
-     )
-     (SELECT 'OWED' AS type,
-             COALESCE(oli.due_date, oli.created_at::date) AS date,
-             oli.amount,
-             oli.show_id,
-             oli.created_at,
-             oli.id AS entry_id,
-             oli.calculation_method,
-             oli.obligation_kind,
-             oli.description,
-             s.name AS show_name
-       FROM owed_line_items oli
-       LEFT JOIN shows s ON s.id = oli.show_id AND s.deleted_at IS NULL
-      WHERE (
-        oli.account_id = (SELECT id FROM wholesaler_account)
-        OR (
-          oli.account_id IS NULL
-          AND oli.wholesaler_id = $1
-        )
-      )
-      AND oli.deleted_at IS NULL)
-     UNION ALL
-     (SELECT 'PAYMENT' AS type,
-             p.payment_date AS date,
-             p.amount,
-             NULL::uuid AS show_id,
-             p.created_at,
-             p.id AS entry_id,
-             NULL::text AS calculation_method,
-             NULL::text AS obligation_kind,
-             NULL::text AS description,
-             NULL::text AS show_name
-       FROM payments p
-      WHERE (
-        p.account_id = (SELECT id FROM wholesaler_account)
-        OR (
-          p.account_id IS NULL
-          AND p.wholesaler_id = $1
-        )
-      )
-      AND p.deleted_at IS NULL)
-     ORDER BY date ASC, created_at ASC, entry_id ASC`,
-    [wholesalerId]
-  );
-
-  const rows = result.rows as Array<{
-    type: string;
-    date: string;
-    amount: string;
-    show_id: string | null;
-    created_at: Date;
-    entry_id: string;
-    calculation_method: string | null;
-    obligation_kind: string | null;
-    description: string | null;
-    show_name: string | null;
-  }>;
+  const eventRows = await loadWholesalerStatementEventRows(db, wholesalerId);
+  const owedEntryIds = eventRows.filter((row) => row.type === 'OWED').map((row) => row.entry_id);
+  const owedMetadata = await loadOwedMetadataByEntryId(db, owedEntryIds);
 
   let running = 0;
-  const entries: WholesalerStatementEntry[] = rows.map((r) => {
-    const amount = parseFloat(r.amount);
-    if (r.type === 'OWED') running += amount;
+  const entries: WholesalerStatementEntry[] = eventRows.map((row) => {
+    const amount = parseFloat(row.amount);
+    if (row.type === 'OWED') running += amount;
     else running -= amount;
 
-    const dateNorm = toYyyyMmDd(r.date);
+    if (row.type === 'PAYMENT') {
+      return {
+        type: 'PAYMENT',
+        date: row.date,
+        amount: row.amount,
+        running_balance: running.toFixed(4),
+        entry_id: row.entry_id,
+        ledger_entry_kind: 'PAYMENT',
+      };
+    }
 
+    const meta = owedMetadata.get(row.entry_id);
     const obligationKind =
-      r.type === 'OWED' && r.obligation_kind != null
-        ? (r.obligation_kind as ObligationKind)
-        : undefined;
-
+      row.obligation_kind != null ? (row.obligation_kind as ObligationKind) : undefined;
     const ledger_entry_kind: LedgerEntryKind =
-      r.type === 'PAYMENT'
-        ? 'PAYMENT'
-        : obligationKind === 'VENDOR_EXPENSE'
-          ? 'VENDOR_EXPENSE'
-          : 'SHOW_OBLIGATION';
+      obligationKind === 'VENDOR_EXPENSE' ? 'VENDOR_EXPENSE' : 'SHOW_OBLIGATION';
+    const description = row.description ?? meta?.description ?? undefined;
+    const showName = meta?.show_name ?? undefined;
+    const calculationMethod = meta?.calculation_method ?? undefined;
 
     return {
-      type: r.type as 'OWED' | 'PAYMENT',
-      date: dateNorm,
-      amount: r.amount,
+      type: 'OWED',
+      date: row.date,
+      amount: row.amount,
       running_balance: running.toFixed(4),
-      entry_id: r.entry_id,
+      entry_id: row.entry_id,
       ledger_entry_kind,
-      ...(r.show_id != null && { show_id: r.show_id }),
-      ...(r.type === 'OWED' &&
-        r.calculation_method != null && { calculation_method: r.calculation_method }),
+      ...(row.show_id != null && { show_id: row.show_id }),
+      ...(calculationMethod != null && { calculation_method: calculationMethod }),
       ...(obligationKind != null && { obligation_kind: obligationKind }),
-      ...(r.type === 'OWED' &&
-        r.show_name != null &&
-        r.show_name !== '' && { show_name: r.show_name }),
-      ...(r.type === 'OWED' &&
-        r.description != null &&
-        r.description !== '' && { description: r.description }),
+      ...(showName != null && showName !== '' && { show_name: showName }),
+      ...(description != null && description !== '' && { description }),
     };
   });
 

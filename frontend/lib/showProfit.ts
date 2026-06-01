@@ -1,10 +1,11 @@
 import type { ShowSettlementDTO } from '@/src/lib/api/shows';
 
+/** Display rounding helper — not authoritative for Financials profit totals. */
 export function roundToCents(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** Same settlement → owed math as the Shows list and show detail views. */
+/** Settlement → owed math for operational form previews (show detail close-out). */
 export function totalOwedFromSettlements(
   payoutAfterFees: number,
   settlements: ShowSettlementDTO[],

@@ -104,11 +104,13 @@ import {
   createShowSettlement,
   deleteShowSettlement,
   fetchShow,
+  fetchShowFinancialProfit,
   fetchShowFinancials,
   fetchShowSettlements,
   updateShowStatus,
   upsertShowFinancials,
   type SettlementLineDTO,
+  type ShowFinancialProfitDTO,
   type ShowSettlementDTO,
 } from "@/src/lib/api/shows";
 
@@ -266,6 +268,9 @@ export function ShowDetailView({ id }: { id: string }) {
     "WHATNOT" | "INSTAGRAM" | "OTHER" | ""
   >("");
   const [closedAt, setClosedAt] = useState<string | undefined>(undefined);
+  const [eventProfit, setEventProfit] = useState<ShowFinancialProfitDTO | null>(
+    null,
+  );
   const [payoutAfterFees, setPayoutAfterFees] = useState(0);
   /** Informational only (capture foundation); null when not recorded. */
   const [platformFee, setPlatformFee] = useState<number | null>(null);
@@ -344,37 +349,48 @@ export function ShowDetailView({ id }: { id: string }) {
       fetchShowSettlements(id),
       fetchWholesalerBalances(),
       fetchShowAttachments(id),
+      fetchShowFinancialProfit(id),
     ])
-      .then(([show, financials, settlementRows, balances, attachments]) => {
-        if (cancelled) return;
-        const nameByWholesalerId = balances.reduce<Record<string, string>>(
-          (acc, row) => {
-            acc[row.wholesaler_id] = row.name;
-            return acc;
-          },
-          {},
-        );
-        setShowName(show.name);
-        setShowDate(show.show_date);
-        setPlatform(show.platform ?? "");
-        const payout = Number(financials?.payout_after_fees_amount ?? "0");
-        setPayoutAfterFees(Number.isFinite(payout) ? payout : 0);
-        const fee =
-          financials?.platform_fee_amount != null
-            ? Number(financials.platform_fee_amount)
-            : null;
-        setPlatformFee(fee != null && Number.isFinite(fee) ? fee : null);
-        setClosedAt(
-          show.status === "COMPLETED" ? (show.updated_at ?? "") : undefined,
-        );
-        setSettlements(
-          settlementRows.map((row) =>
-            mapSettlementRow(row, nameByWholesalerId),
-          ),
-        );
-        setWholesalers(balances);
-        setShowAttachments(attachments);
-      })
+      .then(
+        ([
+          show,
+          financials,
+          settlementRows,
+          balances,
+          attachments,
+          profitRow,
+        ]) => {
+          if (cancelled) return;
+          const nameByWholesalerId = balances.reduce<Record<string, string>>(
+            (acc, row) => {
+              acc[row.wholesaler_id] = row.name;
+              return acc;
+            },
+            {},
+          );
+          setShowName(show.name);
+          setShowDate(show.show_date);
+          setPlatform(show.platform ?? "");
+          const payout = Number(financials?.payout_after_fees_amount ?? "0");
+          setPayoutAfterFees(Number.isFinite(payout) ? payout : 0);
+          const fee =
+            financials?.platform_fee_amount != null
+              ? Number(financials.platform_fee_amount)
+              : null;
+          setPlatformFee(fee != null && Number.isFinite(fee) ? fee : null);
+          setClosedAt(
+            show.status === "COMPLETED" ? (show.updated_at ?? "") : undefined,
+          );
+          setSettlements(
+            settlementRows.map((row) =>
+              mapSettlementRow(row, nameByWholesalerId),
+            ),
+          );
+          setWholesalers(balances);
+          setShowAttachments(attachments);
+          setEventProfit(profitRow);
+        },
+      )
       .catch((err) => {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : String(err));
@@ -392,6 +408,14 @@ export function ShowDetailView({ id }: { id: string }) {
     () => computeTotals(payoutAfterFees, settlements, closedAt),
     [payoutAfterFees, settlements, closedAt],
   );
+
+  const displayProfit = useMemo(() => {
+    if (closedAt && eventProfit?.profit != null) {
+      const profit = Number(eventProfit.profit);
+      return Number.isFinite(profit) ? profit : totals.profitEstimate;
+    }
+    return totals.profitEstimate;
+  }, [closedAt, eventProfit, totals.profitEstimate]);
 
   const closeOutBlock = useMemo(
     () =>
@@ -2076,10 +2100,10 @@ export function ShowDetailView({ id }: { id: string }) {
                           Est. profit
                         </span>
                         <span
-                          className={`text-left text-[1.5rem] font-bold leading-none tracking-tight sm:text-[1.85rem] ${workspaceMoneyTabular} ${workspaceMoneyClassForSigned(totals.profitEstimate)}`}
-                          aria-label={`Profit ${formatCurrency(totals.profitEstimate)}`}
+                          className={`text-left text-[1.5rem] font-bold leading-none tracking-tight sm:text-[1.85rem] ${workspaceMoneyTabular} ${workspaceMoneyClassForSigned(displayProfit)}`}
+                          aria-label={`Profit ${formatCurrency(displayProfit)}`}
                         >
-                          {formatCurrencyAbs(totals.profitEstimate)}
+                          {formatCurrencyAbs(displayProfit)}
                         </span>
                       </div>
 
