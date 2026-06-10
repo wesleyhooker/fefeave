@@ -6,7 +6,18 @@ import {
   TrashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  WORKFLOW_VENDOR_CHARGE_DESCRIPTION_PLACEHOLDER,
+  WORKFLOW_VENDOR_CHARGE_EDIT_TITLE,
+  WORKFLOW_VENDOR_CHARGE_INVENTORY_GUIDANCE,
+  WORKFLOW_VENDOR_CHARGE_RECORD_INVENTORY_LINK,
+  WORKFLOW_VENDOR_CHARGE_SCOPE,
+  WORKFLOW_VENDOR_CHARGE_SECTION_TITLE,
+  WORKFLOW_VENDOR_CHARGE_SUBMIT_LABEL,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import { purchasesInventoryAcquisitionHref } from "@/app/(admin)/admin/purchases/purchasesLedgerLinks";
 import { formatCurrency } from "@/lib/format";
 import {
   createVendorExpense,
@@ -304,7 +315,9 @@ export function WholesalerInlineExpenseSection({
     <div className={workspaceSectionToolbar}>
       <div className="flex w-full min-w-0 items-center justify-between gap-3">
         <h2 id="wholesaler-expense-heading" className={workspaceSectionTitle}>
-          {isEdit ? "Edit expense" : "Add expense"}
+          {isEdit
+            ? WORKFLOW_VENDOR_CHARGE_EDIT_TITLE
+            : WORKFLOW_VENDOR_CHARGE_SECTION_TITLE}
         </h2>
         {isEdit ? (
           <button
@@ -337,6 +350,18 @@ export function WholesalerInlineExpenseSection({
       {headerBlock}
 
       <form onSubmit={handleSubmit} className={`${formStack} ${formPadding}`}>
+        {!isEdit ? (
+          <div className="rounded-lg border border-amber-200/90 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
+            <p>{WORKFLOW_VENDOR_CHARGE_INVENTORY_GUIDANCE}</p>
+            <Link
+              href={purchasesInventoryAcquisitionHref({ wholesalerId })}
+              className="mt-2 inline-block font-medium text-amber-950 underline decoration-amber-400/80 underline-offset-2 hover:text-stone-900"
+            >
+              {WORKFLOW_VENDOR_CHARGE_RECORD_INVENTORY_LINK}
+            </Link>
+          </div>
+        ) : null}
+
         {submitError ? (
           <div
             className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
@@ -430,7 +455,7 @@ export function WholesalerInlineExpenseSection({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className={`${textField} ${isCompact ? "mt-1.5" : "mt-2"}`}
-              placeholder="e.g. Shipping, supplies"
+              placeholder={WORKFLOW_VENDOR_CHARGE_DESCRIPTION_PLACEHOLDER}
               autoComplete="off"
             />
             {fieldErrors.description ? (
@@ -446,7 +471,7 @@ export function WholesalerInlineExpenseSection({
             <p
               className={`${workspaceFormLabelSecondary} text-sm leading-snug text-gray-700`}
             >
-              Scope: Vendor only
+              {WORKFLOW_VENDOR_CHARGE_SCOPE}
             </p>
           </div>
           <div className="min-w-0">
@@ -532,7 +557,7 @@ export function WholesalerInlineExpenseSection({
               <WorkspaceActionLabel
                 icon={<DocumentTextIcon className={workspaceActionIconMd} />}
               >
-                {submitting ? "Saving…" : "Record expense"}
+                {submitting ? "Saving…" : WORKFLOW_VENDOR_CHARGE_SUBMIT_LABEL}
               </WorkspaceActionLabel>
             </button>
           </div>

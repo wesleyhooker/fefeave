@@ -1,4 +1,5 @@
-import { WholesalerDetailView } from "./WholesalerDetailView";
+import { redirect } from "next/navigation";
+import { vendorDetailHref } from "../../_lib/vendorRoutes";
 
 export default async function AdminWholesalerDetailPage({
   params,
@@ -6,5 +7,5 @@ export default async function AdminWholesalerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <WholesalerDetailView key={id} id={id} />;
+  redirect(vendorDetailHref(id));
 }

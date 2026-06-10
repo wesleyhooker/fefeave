@@ -3,7 +3,7 @@ import { backendGetJson } from './backend';
 export interface ShowDTO {
   id: string;
   show_date: string;
-  platform: 'WHATNOT' | 'INSTAGRAM' | 'OTHER';
+  platform: 'WHATNOT' | 'TIKTOK' | 'INSTAGRAM' | 'OTHER';
   name: string;
   notes?: string;
   external_reference?: string;
@@ -24,7 +24,7 @@ export interface ShowViewModel {
 
 export interface CreateShowDTO {
   show_date: string;
-  platform: 'WHATNOT' | 'INSTAGRAM' | 'OTHER';
+  platform: 'WHATNOT' | 'TIKTOK' | 'INSTAGRAM' | 'OTHER';
   name?: string;
   notes?: string;
   external_reference?: string;

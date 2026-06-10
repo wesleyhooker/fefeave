@@ -77,8 +77,9 @@ Prerequisites: Node.js 20+, Docker (for Postgres), `make`.
 ```bash
 docker compose up -d postgres
 make dev-migrate
-make dev-seed          # optional sample data
 make dev             # backend :3000 + frontend :3001 (tmux)
+make dev-seed        # optional: realistic mock data + financial_events
+make dev-seed-verify # optional: confirm event-backed Financials are ready
 ```
 
 | URL                              | Service     |

@@ -16,10 +16,16 @@ export type FinancialEventType =
   | 'SETTLEMENT_CREATED'
   | 'SETTLEMENT_ADJUSTED'
   | 'WHOLESALER_PAYMENT_RECORDED'
+  | 'WHOLESALER_PAYMENT_CORRECTED'
+  | 'WHOLESALER_PAYMENT_VOIDED'
   | 'INVENTORY_PURCHASE_RECORDED'
   | 'BUSINESS_EXPENSE_RECORDED'
   | 'OWNER_DRAW_RECORDED'
   | 'OWNER_SELF_PAY_RECORDED'
+  | 'TAX_SET_ASIDE_RECORDED'
+  | 'REINVESTMENT_SET_ASIDE_RECORDED'
+  | 'TAX_SET_ASIDE_VOIDED'
+  | 'REINVESTMENT_SET_ASIDE_VOIDED'
   | 'CASH_SNAPSHOT_RECORDED'
   | 'FINANCIAL_STRATEGY_CHANGED';
 
@@ -107,7 +113,7 @@ export const FINANCIAL_EVENT_CATEGORY_OPTIONS: Array<{
 }> = [
   { value: '', label: 'All categories' },
   { value: 'FINANCIAL', label: 'Financial' },
-  { value: 'INVENTORY', label: 'Inventory' },
+  { value: 'INVENTORY', label: 'Inventory purchases' },
   { value: 'PAYMENT', label: 'Payment' },
   { value: 'OWNER', label: 'Owner' },
   { value: 'STRATEGY', label: 'Strategy' },
@@ -123,11 +129,32 @@ export const FINANCIAL_EVENT_TYPE_OPTIONS: Array<{
   { value: 'SHOW_PAYOUT_RECORDED', label: 'Show payout recorded' },
   { value: 'SHOW_PAYOUT_UPDATED', label: 'Show payout updated' },
   { value: 'SETTLEMENT_CREATED', label: 'Settlement created' },
-  { value: 'WHOLESALER_PAYMENT_RECORDED', label: 'Wholesaler payment' },
-  { value: 'INVENTORY_PURCHASE_RECORDED', label: 'Inventory purchase' },
+  {
+    value: 'WHOLESALER_PAYMENT_RECORDED',
+    label: 'Wholesaler payment recorded',
+  },
+  {
+    value: 'WHOLESALER_PAYMENT_CORRECTED',
+    label: 'Wholesaler payment corrected',
+  },
+  { value: 'WHOLESALER_PAYMENT_VOIDED', label: 'Wholesaler payment voided' },
+  {
+    value: 'INVENTORY_PURCHASE_RECORDED',
+    label: 'Inventory purchase recorded',
+  },
   { value: 'BUSINESS_EXPENSE_RECORDED', label: 'Business expense' },
   { value: 'OWNER_DRAW_RECORDED', label: 'Owner draw' },
   { value: 'OWNER_SELF_PAY_RECORDED', label: 'Owner self-pay' },
+  { value: 'TAX_SET_ASIDE_RECORDED', label: 'Tax set-aside recorded' },
+  {
+    value: 'REINVESTMENT_SET_ASIDE_RECORDED',
+    label: 'Reinvestment set-aside recorded',
+  },
+  { value: 'TAX_SET_ASIDE_VOIDED', label: 'Tax set-aside voided' },
+  {
+    value: 'REINVESTMENT_SET_ASIDE_VOIDED',
+    label: 'Reinvestment set-aside voided',
+  },
   { value: 'CASH_SNAPSHOT_RECORDED', label: 'Cash snapshot' },
   { value: 'FINANCIAL_STRATEGY_CHANGED', label: 'Strategy changed' },
 ];

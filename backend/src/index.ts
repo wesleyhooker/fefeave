@@ -32,6 +32,7 @@ import { financialActivityRoutes } from './routes/financial-activity';
 import { portalRoutes } from './routes/portal';
 import { accountRoutes } from './routes/accounts';
 import { ownerSelfPayRoutes } from './routes/owner-self-pay';
+import { strategyAllocationRoutes } from './routes/strategy-allocation';
 import { hydrateBackendRuntimeSecrets } from './secrets/runtime-secret';
 
 async function buildApp() {
@@ -144,6 +145,7 @@ async function buildApp() {
   await app.register(portalRoutes, { prefix: env.API_PREFIX });
   await app.register(accountRoutes, { prefix: env.API_PREFIX });
   await app.register(ownerSelfPayRoutes, { prefix: env.API_PREFIX });
+  await app.register(strategyAllocationRoutes, { prefix: env.API_PREFIX });
 
   return app;
 }

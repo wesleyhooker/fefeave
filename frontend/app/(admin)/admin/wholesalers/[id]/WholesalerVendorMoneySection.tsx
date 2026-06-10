@@ -1,6 +1,7 @@
 "use client";
 
 import type { PaymentDTO } from "@/src/lib/api/payments";
+import { WORKFLOW_VENDOR_CHARGE_TAB_LABEL } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { WorkspaceSegmentedControl } from "@/app/(admin)/admin/_components/WorkspaceSegmentedControl";
 import {
   workspaceCard,
@@ -16,7 +17,7 @@ export type VendorMoneyTab = "payment" | "expense";
 
 const MONEY_TAB_OPTIONS = [
   { value: "payment" as const, label: "Payment" },
-  { value: "expense" as const, label: "Expense" },
+  { value: "expense" as const, label: WORKFLOW_VENDOR_CHARGE_TAB_LABEL },
 ];
 
 /**
@@ -46,7 +47,8 @@ export function WholesalerVendorMoneySection({
 }) {
   return (
     <section
-      className={`min-w-0 overflow-hidden ring-1 ring-gray-200/55 ${workspaceCard}`}
+      id="vendor-payment"
+      className={`min-w-0 scroll-mt-24 overflow-hidden ring-1 ring-gray-200/55 ${workspaceCard}`}
       aria-labelledby="wholesaler-transactions-workspace-heading"
     >
       <div className="border-b border-gray-200 bg-gray-50/50 px-4 py-3 sm:px-5">
@@ -67,7 +69,7 @@ export function WholesalerVendorMoneySection({
             Transaction type
           </p>
           <WorkspaceSegmentedControl
-            ariaLabel="Payment or vendor expense"
+            ariaLabel="Payment or non-inventory vendor charge"
             aria-describedby="wholesaler-money-tab-hint"
             value={activeTab}
             onChange={onTabChange}

@@ -1,33 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
-import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
-import { AdminWorkspacePageLayout } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
-import { workspacePageContentWidthWide } from "@/app/(admin)/admin/_components/workspaceUi";
-import { WORKFLOW_LOG_SHOW_PANEL_TITLE } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
-import { ShowCreateForm } from "./ShowCreateForm";
-
+/** Log show uses the index drawer — keep this route as a bookmark-safe redirect. */
 export default function AdminShowsNewPage() {
-  return (
-    <AdminWorkspacePageLayout
-      introVariant="entity-detail"
-      contentWidthClassName={workspacePageContentWidthWide}
-      intro={
-        <AdminPageIntro
-          variant="entity-detail"
-          breadcrumb={
-            <AdminEntityBreadcrumb
-              segments={[
-                { href: "/admin/shows", label: "Shows" },
-                { label: WORKFLOW_LOG_SHOW_PANEL_TITLE, current: true },
-              ]}
-            />
-          }
-          title={WORKFLOW_LOG_SHOW_PANEL_TITLE}
-        />
-      }
-    >
-      <ShowCreateForm />
-    </AdminWorkspacePageLayout>
-  );
+  redirect("/admin/shows?log=1");
 }

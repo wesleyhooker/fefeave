@@ -16,13 +16,16 @@ LOCAL_AUTH_USER_ID := local-dev-user
 LOCAL_AUTH_EMAIL := local@fefeave.local
 LOCAL_AUTH_ROLE := ADMIN
 
+# WSL2 / cross-editor saves: webpack and nodemon poll when native file events are unreliable.
+DEV_POLL_ENV := WATCHPACK_POLLING=true CHOKIDAR_USEPOLLING=true WATCHPACK_POLLING_INTERVAL=1000
+
 .DEFAULT_GOAL := help
 
 .PHONY: help format format-check lint test build check doctor
 .PHONY: backend-lint backend-test backend-build backend-check
 .PHONY: frontend-lint frontend-build frontend-check
 .PHONY: dev dev-up dev-down dev-status dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-cognito
-.PHONY: dev-db-up dev-db-down dev-db-reset dev-migrate dev-seed check-cognito-env
+.PHONY: dev-db-up dev-db-down dev-db-reset dev-migrate dev-seed dev-seed-verify dev-reset dev-backfill-financial-events check-cognito-env
 .PHONY: init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-backend-health dev-backend-wholesalers
 
 # ------------------------------------------------------------------------------
@@ -70,7 +73,10 @@ help:
 	@echo "    make dev-db-down        Stop Postgres"
 	@echo "    make dev-db-reset       Reset Postgres volume and restart"
 	@echo "    make dev-migrate        Run migrations against local DB"
-	@echo "    make dev-seed           Seed dev data (after dev-migrate)"
+	@echo "    make dev-seed           Seed dev data + financial_events backfill (after dev-migrate)"
+	@echo "    make dev-seed-verify    Print Financials mock-data health metrics (DB + API if up)"
+	@echo "    make dev-reset          Reset local DB schema, migrate, seed (clean Financials mock)"
+	@echo "    make dev-backfill-financial-events  Backfill financial_events only (local dev DB)"
 	@echo ""
 	@echo "  Outer-loop / AWS (low-cost hosting; use plan-dev/plan-prod to preview cost-related changes):"
 	@echo "    Local: build/run via make dev*; AWS prod/dev workspaces are S3/CloudFront-first unless you opt into ECS in tfvars."
@@ -291,8 +297,21 @@ dev-migrate:
 	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run migrate:up
 
 dev-seed:
-	@echo "Seeding dev data (wholesalers, shows, settlements, payments)"
+	@echo "Seeding dev data (domain tables + financial_events backfill)"
 	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run seed:dev
+
+dev-seed-verify:
+	@echo "Verifying dev seed / event-backed Financials mock data"
+	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run seed:verify
+
+dev-reset:
+	@echo "Resetting local DB (schema), migrating, and seeding (dev only)"
+	@$(MAKE) dev-db-up
+	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" bash backend/scripts/db-reset.sh
+
+dev-backfill-financial-events:
+	@echo "Backfilling financial_events from domain tables (local dev only)"
+	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run backfill:financial-events
 
 # ------------------------------------------------------------------------------
 # Local dev / app run
@@ -339,24 +358,38 @@ check-cognito-env:
 
 dev-api:
 	@echo "Starting backend on http://0.0.0.0:3000 (dev_bypass)"
-	@PORT=3000 \
+	@if grep -qi microsoft /proc/version 2>/dev/null; then \
+	  echo "WSL detected — backend file polling enabled (nodemon --legacy-watch)"; \
+	  dev_script=dev:poll; \
+	else \
+	  dev_script=dev; \
+	fi; \
+	PORT=3000 \
 	 DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" \
 	 AUTH_MODE="$${AUTH_MODE:-$(LOCAL_AUTH_MODE)}" \
 	 AUTH_DEV_BYPASS_USER_ID="$${AUTH_DEV_BYPASS_USER_ID:-$(LOCAL_AUTH_USER_ID)}" \
 	 AUTH_DEV_BYPASS_EMAIL="$${AUTH_DEV_BYPASS_EMAIL:-$(LOCAL_AUTH_EMAIL)}" \
 	 AUTH_DEV_BYPASS_ROLE="$${AUTH_DEV_BYPASS_ROLE:-$(LOCAL_AUTH_ROLE)}" \
-	 npm --prefix backend run dev
+	 npm --prefix backend run $$dev_script
 
 dev-api-cognito: check-cognito-env
 	@echo "Starting backend on http://0.0.0.0:3000 (cognito)"
-	@PORT=3000 \
+	@if grep -qi microsoft /proc/version 2>/dev/null; then \
+	  dev_script=dev:poll; \
+	else \
+	  dev_script=dev; \
+	fi; \
+	PORT=3000 \
 	 DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" \
 	 AUTH_MODE=cognito \
-	 npm --prefix backend run dev
+	 npm --prefix backend run $$dev_script
 
 dev-ui:
 	@echo "Starting frontend on http://0.0.0.0:3001 with /api proxy to localhost:3000"
-	@NEXT_PUBLIC_BACKEND_URL=/api npm --prefix frontend run dev -- -H 0.0.0.0 -p 3001
+	@if grep -qi microsoft /proc/version 2>/dev/null; then \
+	  echo "WSL detected — frontend file polling enabled (webpack watchOptions.poll)"; \
+	fi
+	@$(DEV_POLL_ENV) NEXT_PUBLIC_BACKEND_URL=/api npm --prefix frontend run dev -- -H 0.0.0.0 -p 3001
 
 dev-tmux:
 	@if ! test -t 1 || ! command -v tmux >/dev/null 2>&1; then \

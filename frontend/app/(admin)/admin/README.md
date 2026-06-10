@@ -14,7 +14,7 @@ Admin-only chrome (top bar) lives in `_components/headers/`. Public chrome lives
 
 ## Page structure (three layers)
 
-1. **Global chrome** — `AdminLayoutClient` → `AdminSidebar` (Home, Shows, expandable **Financials**) + `WorkspaceHeader`
+1. **Global chrome** — `AdminLayoutClient` → `AdminSidebar` (Dashboard, Shows, Vendors, Purchases, Owner) + `WorkspaceHeader` (search, notifications, settings, profile)
 2. **Page intro** — `AdminWorkspacePageLayout` or `AdminPageIntroSection` + `AdminPageIntro` / `AdminWorkspacePageIntro`
 3. **Work surface** — `AdminPageContainer` children (cards, tables, forms)
 
@@ -22,22 +22,28 @@ Admin-only chrome (top bar) lives in `_components/headers/`. Public chrome lives
 
 `/admin/dashboard` may use slightly richer module surfaces via `dashboard/_components/dashboardStructure.ts` (`rounded-2xl`, warm stone shadows). That is intentional — the dashboard is the hub — and is **not** required on every `workspaceCard` page.
 
-## Shared components
+## Layout primitives
 
-| Component                  | When to use                                                |
-| -------------------------- | ---------------------------------------------------------- |
-| `AdminWorkspacePageLayout` | Standard index/form pages: intro band + content column     |
-| `AdminWorkspacePageIntro`  | List page titles (no wave, no accent rail)                 |
-| `AdminEntityBreadcrumb`    | Entity-detail or compact parent/current trails             |
-| `WorkspaceEmptyState`      | List/table/week empty copy (`dashed`, `inset`, `plain`, …) |
-| `WorkspaceInlineError`     | Failed fetch with retry                                    |
-| `workspaceUi.ts`           | Class tokens for actions, cards, tables, money             |
+Every reseller page should compose **`AdminWorkspacePageLayout`** + **`WorkspaceGrid`** / **`WorkspaceGridItem`** + **`WorkspaceCard`** (when a bordered section is needed). See [`docs/architecture/workspace-layout.md`](../../../../docs/architecture/workspace-layout.md).
+
+| Component                  | When to use                                                                |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `AdminWorkspacePageLayout` | Intro band + content column; set `containerTier`                           |
+| `WorkspaceGrid`            | `stack`, `twelve`, or `ledger-aside` page grids                            |
+| `WorkspaceGridItem`        | Column span (`full`, `primary`, `secondary`, …)                            |
+| `WorkspaceCard`            | Form, table, or module shell (`surface`: `card` \| `panel` \| `dashboard`) |
+| `AdminWorkspacePageIntro`  | List page titles (no wave, no accent rail)                                 |
+| `AdminEntityBreadcrumb`    | Entity-detail or compact parent/current trails                             |
+| `WorkspaceEmptyState`      | List/table/week empty copy                                                 |
+| `WorkspaceInlineError`     | Failed fetch with retry                                                    |
+| `workspaceUi.ts`           | Visual tokens (actions, money, table chrome)                               |
 
 ## Adding a page
 
-1. Prefer `AdminWorkspacePageLayout` with `intro={<AdminWorkspacePageIntro … />}` (or `AdminPageIntro` for entity detail).
-2. Reuse `workspaceAction*` for buttons; do not duplicate primary/secondary Tailwind.
-3. Use `AdminEntityBreadcrumb` for parent/current navigation in intros.
-4. Use `WorkspaceEmptyState` for empty lists/tables.
+1. `AdminWorkspacePageLayout` with the correct `containerTier` and intro.
+2. `WorkspaceGrid` for the work surface (see layout doc for span recipes).
+3. `WorkspaceCard` for bordered sections; keep dashboard hub modules on `surface="dashboard"` when needed.
+4. Reuse `workspaceAction*` for buttons; do not duplicate primary/secondary Tailwind.
+5. `AdminEntityBreadcrumb` for entity-detail intros; `WorkspaceEmptyState` for empty lists.
 
-See `docs/architecture.md` and the header comment in `workspaceUi.ts`.
+See `docs/architecture/workspace-layout.md` and the header comment in `workspaceUi.ts`.

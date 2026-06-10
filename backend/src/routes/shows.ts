@@ -8,9 +8,10 @@ import {
   emitShowPayoutOnShowStatusChange,
   resolveActorUserId,
 } from '../services/financial-event-emission';
+import { assertShowCanComplete } from '../services/show-completion-validation';
 
-const PLATFORM_API = ['WHATNOT', 'INSTAGRAM', 'OTHER'] as const;
-const PLATFORM_DB = ['WHATNOT', 'INSTAGRAM', 'MANUAL'] as const;
+const PLATFORM_API = ['WHATNOT', 'TIKTOK', 'INSTAGRAM', 'OTHER'] as const;
+const PLATFORM_DB = ['WHATNOT', 'TIKTOK', 'INSTAGRAM', 'MANUAL'] as const;
 /** Maps API platform value to DB enum (OTHER -> MANUAL) */
 function toDbPlatform(api: string): (typeof PLATFORM_DB)[number] {
   return api === 'OTHER' ? 'MANUAL' : (api as (typeof PLATFORM_DB)[number]);
@@ -284,6 +285,19 @@ export async function showRoutes(
       const { status } = bodyParsed.data;
 
       const row = await withTx(async (client) => {
+        const existing = await client.query<{ status: string }>(
+          `SELECT status FROM shows WHERE id = $1 AND deleted_at IS NULL`,
+          [id]
+        );
+        const current = existing.rows[0];
+        if (!current) {
+          throw new NotFoundError('Show', id);
+        }
+
+        if (status === 'COMPLETED' && current.status !== 'COMPLETED') {
+          await assertShowCanComplete(client, id);
+        }
+
         const result = await client.query(
           `UPDATE shows SET status = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL
            RETURNING ${SHOW_COLUMNS}`,

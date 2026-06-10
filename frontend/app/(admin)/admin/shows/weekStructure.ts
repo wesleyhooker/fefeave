@@ -19,6 +19,13 @@ export function sortShowsByDateAsc(shows: ShowViewModel[]): ShowViewModel[] {
   );
 }
 
+/** ACTIVE shows across all weeks — operational close-out queue (date ascending). */
+export function collectOpenShows(rows: ShowViewModel[]): ShowViewModel[] {
+  return sortShowsByDateAsc(
+    rows.filter((s) => (s.status ?? '').toUpperCase() === 'ACTIVE'),
+  );
+}
+
 /**
  * Partition shows into the current ISO week, prior weeks (newest first), and unscheduled rows.
  */

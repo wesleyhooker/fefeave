@@ -37,4 +37,23 @@ describe('buildActivityDisplayFields', () => {
     expect(result.display_amount_line).toBe('$200 obligation');
     expect(result.payload_summary).toBe('Booth fee');
   });
+
+  test('formats wholesaler payment corrected with prior amount', () => {
+    const result = buildActivityDisplayFields('WHOLESALER_PAYMENT_CORRECTED', 'OUTFLOW', '75.5', {
+      payment_date: '2026-08-05',
+      previous_amount: 100,
+    });
+    expect(result.display_title).toBe('Wholesaler payment corrected');
+    expect(result.display_amount_line).toBe('-$75.5');
+    expect(result.payload_summary).toBe('-$75.5 · 2026-08-05 · was $100');
+  });
+
+  test('formats wholesaler payment voided', () => {
+    const result = buildActivityDisplayFields('WHOLESALER_PAYMENT_VOIDED', 'NEUTRAL', '75.5', {
+      payment_date: '2026-08-05',
+    });
+    expect(result.display_title).toBe('Wholesaler payment voided');
+    expect(result.display_amount_line).toBe('$75.5');
+    expect(result.payload_summary).toBe('$75.5 · 2026-08-05');
+  });
 });

@@ -11,12 +11,26 @@ describe('Smoke tests', () => {
     if (app) await app.close();
   });
 
-  it('GET {API_PREFIX}/health returns 200 and { status: "ok" }', async () => {
+  it('GET {API_PREFIX}/health returns 200 with readiness checks when DB not configured', async () => {
     const result = await buildAppForTest({ NODE_ENV: 'test', LOG_LEVEL: 'error' });
     app = result.app;
     restoreEnv = result.restoreEnv;
     const prefix = getEnv().API_PREFIX;
     const res = await app.inject({ method: 'GET', url: `${prefix}/health` });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.payload);
+    expect(body.status).toBe('ok');
+    expect(body.checks.app.status).toBe('ok');
+    expect(body.checks.database.status).toBe('skipped');
+    expect(body.checks.migrations.status).toBe('skipped');
+  });
+
+  it('GET {API_PREFIX}/health/live returns 200 and { status: "ok" }', async () => {
+    const result = await buildAppForTest({ NODE_ENV: 'test', LOG_LEVEL: 'error' });
+    app = result.app;
+    restoreEnv = result.restoreEnv;
+    const prefix = getEnv().API_PREFIX;
+    const res = await app.inject({ method: 'GET', url: `${prefix}/health/live` });
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res.payload)).toEqual({ status: 'ok' });
   });

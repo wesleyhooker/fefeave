@@ -6,8 +6,11 @@ import { ensureUser } from '../db/ensure-user';
 import { NotFoundError, ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
 import {
+  emitWholesalerPaymentCorrected,
   emitWholesalerPaymentRecorded,
+  emitWholesalerPaymentVoided,
   resolveActorUserId,
+  wholesalerPaymentMateriallyChanged,
 } from '../services/financial-event-emission';
 
 const uuidSchema = z.string().uuid();
@@ -307,36 +310,63 @@ export async function paymentRoutes(
       const paymentId = idParsed.data;
       const { amount, payment_date, reference, notes } = bodyParsed.data;
 
-      const pool = getPool();
-      const result = await pool.query(
-        `UPDATE payments
-            SET amount = $1,
-                payment_date = $2,
-                reference = $3,
-                notes = $4,
-                updated_at = NOW()
-          WHERE id = $5 AND deleted_at IS NULL
-          RETURNING id, wholesaler_id, amount, currency, payment_date, reference, notes, created_at, updated_at`,
-        [amount, payment_date, reference ?? null, notes ?? null, paymentId]
-      );
+      const row = await withTx(async (client) => {
+        const priorResult = await client.query(
+          `SELECT id, wholesaler_id, account_id, amount, payment_date, reference, notes
+           FROM payments
+           WHERE id = $1 AND deleted_at IS NULL`,
+          [paymentId]
+        );
+        if (priorResult.rows.length === 0) {
+          throw new NotFoundError('Payment', paymentId);
+        }
 
-      const row = result.rows[0] as
-        | {
-            id: string;
-            wholesaler_id: string;
-            amount: string;
-            currency: string;
-            payment_date: string;
-            reference: string | null;
-            notes: string | null;
-            created_at: Date;
-            updated_at: Date;
-          }
-        | undefined;
+        const prior = priorResult.rows[0] as {
+          id: string;
+          wholesaler_id: string;
+          account_id: string;
+          amount: string;
+          payment_date: string;
+          reference: string | null;
+          notes: string | null;
+        };
 
-      if (!row) {
-        throw new NotFoundError('Payment', paymentId);
-      }
+        const result = await client.query(
+          `UPDATE payments
+              SET amount = $1,
+                  payment_date = $2,
+                  reference = $3,
+                  notes = $4,
+                  updated_at = NOW()
+            WHERE id = $5 AND deleted_at IS NULL
+            RETURNING id, wholesaler_id, account_id, amount, currency, payment_date, reference, notes, created_at, updated_at`,
+          [amount, payment_date, reference ?? null, notes ?? null, paymentId]
+        );
+
+        const updated = result.rows[0] as {
+          id: string;
+          wholesaler_id: string;
+          account_id: string;
+          amount: string;
+          currency: string;
+          payment_date: string;
+          reference: string | null;
+          notes: string | null;
+          created_at: Date;
+          updated_at: Date;
+        };
+
+        if (wholesalerPaymentMateriallyChanged(prior, updated)) {
+          await emitWholesalerPaymentCorrected(
+            client,
+            updated,
+            prior,
+            resolveActorUserId(request.user?.cognitoSub)
+          );
+        }
+
+        return updated;
+      });
 
       return reply.send({
         id: row.id,
@@ -374,17 +404,46 @@ export async function paymentRoutes(
       }
       const paymentId = idParsed.data;
 
-      const pool = getPool();
-      const result = await pool.query(
-        `UPDATE payments SET deleted_at = NOW(), updated_at = NOW()
-          WHERE id = $1 AND deleted_at IS NULL
-          RETURNING id`,
-        [paymentId]
-      );
+      await withTx(async (client) => {
+        const priorResult = await client.query(
+          `SELECT id, wholesaler_id, account_id, amount, payment_date, reference, notes
+           FROM payments
+           WHERE id = $1 AND deleted_at IS NULL`,
+          [paymentId]
+        );
+        if (priorResult.rows.length === 0) {
+          throw new NotFoundError('Payment', paymentId);
+        }
 
-      if (result.rows.length === 0) {
-        throw new NotFoundError('Payment', paymentId);
-      }
+        const prior = priorResult.rows[0] as {
+          id: string;
+          wholesaler_id: string;
+          account_id: string;
+          amount: string;
+          payment_date: string;
+          reference: string | null;
+          notes: string | null;
+        };
+
+        const voidedAt = new Date();
+        const result = await client.query(
+          `UPDATE payments SET deleted_at = $2, updated_at = NOW()
+            WHERE id = $1 AND deleted_at IS NULL
+            RETURNING id`,
+          [paymentId, voidedAt]
+        );
+
+        if (result.rows.length === 0) {
+          throw new NotFoundError('Payment', paymentId);
+        }
+
+        await emitWholesalerPaymentVoided(
+          client,
+          prior,
+          resolveActorUserId(request.user?.cognitoSub),
+          voidedAt
+        );
+      });
 
       return reply.status(204).send();
     }

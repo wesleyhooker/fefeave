@@ -42,6 +42,9 @@ jobs:
       - name: Lint backend
         run: |
           npm run lint || (echo "Lint failed. Run: make lint"; exit 1)
+      - name: Build backend
+        run: |
+          npm run build || (echo "Build failed. Run: cd backend && npm run build"; exit 1)
       - name: Test backend
         run: |
           npm test --if-present || (echo "Tests failed. Run: make check"; exit 1)
@@ -49,3 +52,39 @@ jobs:
         if: failure()
         run: |
           echo "One or more checks failed. Run: make check to reproduce locally."
+
+  integration-critical:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fefeave
+          POSTGRES_PASSWORD: fefeave
+          POSTGRES_DB: fefeave
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fefeave"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgres://fefeave:fefeave@localhost:5432/fefeave
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Critical integration tests
+        run: npm run test:integration:critical
+      - name: CI failure hint
+        if: failure()
+        run: |
+          echo "Critical integration tests failed. Run: cd backend && npm run test:integration:critical"

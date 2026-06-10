@@ -7,6 +7,8 @@
  */
 import type { PoolClient } from 'pg';
 import type { FinancialEventType } from '../constants/financial-events';
+import type { StrategyAllocationType } from '../constants/strategy-allocation';
+import { STRATEGY_ALLOCATION_SOURCE_TYPE } from '../constants/strategy-allocation';
 import { todayIsoDateUtc } from './financial-recommendations';
 import { appendFinancialEvent, type Queryable } from './financial-events';
 import { toYyyyMmDd } from '../utils/pg-date';
@@ -71,14 +73,21 @@ export async function emitInventoryPurchaseRecorded(
     category: string | null;
     purchase_type: string | null;
     notes: string | null;
+    payment_status?: string;
+    wholesaler_id?: string | null;
+    vendor_obligation_id?: string | null;
   },
   actorUserId: string | null
 ): Promise<void> {
   const purchaseDate = toYyyyMmDd(row.purchase_date);
+  const paymentStatus = row.payment_status ?? 'PAID_NOW';
+  const direction = paymentStatus === 'OWE_VENDOR' ? 'NEUTRAL' : 'OUTFLOW';
+
   await appendFinancialEvent(db, {
     eventType: 'INVENTORY_PURCHASE_RECORDED',
     effectiveDate: purchaseDate,
     amount: Number(row.amount),
+    direction,
     sourceType: 'inventory_purchase',
     sourceId: row.id,
     actorUserId,
@@ -94,21 +103,38 @@ export async function emitInventoryPurchaseRecorded(
       category: row.category ?? null,
       purchase_type: row.purchase_type ?? null,
       notes: row.notes ?? null,
+      payment_status: paymentStatus,
+      wholesaler_id: row.wholesaler_id ?? null,
+      vendor_obligation_id: row.vendor_obligation_id ?? null,
     },
   });
 }
 
+export type WholesalerPaymentEmitRow = {
+  id: string;
+  wholesaler_id: string;
+  account_id?: string | null;
+  amount: string | number;
+  payment_date: string;
+  reference: string | null;
+  notes: string | null;
+};
+
+export function wholesalerPaymentMateriallyChanged(
+  prior: WholesalerPaymentEmitRow,
+  next: WholesalerPaymentEmitRow
+): boolean {
+  return (
+    Number(prior.amount) !== Number(next.amount) ||
+    toYyyyMmDd(prior.payment_date) !== toYyyyMmDd(next.payment_date) ||
+    (prior.reference ?? null) !== (next.reference ?? null) ||
+    (prior.notes ?? null) !== (next.notes ?? null)
+  );
+}
+
 export async function emitWholesalerPaymentRecorded(
   db: Queryable,
-  row: {
-    id: string;
-    wholesaler_id: string;
-    account_id?: string | null;
-    amount: string | number;
-    payment_date: string;
-    reference: string | null;
-    notes: string | null;
-  },
+  row: WholesalerPaymentEmitRow,
   actorUserId: string | null
 ): Promise<void> {
   const paymentDate = toYyyyMmDd(row.payment_date);
@@ -127,6 +153,90 @@ export async function emitWholesalerPaymentRecorded(
       account_id: row.account_id ?? null,
       reference: row.reference ?? null,
       notes: row.notes ?? null,
+    },
+  });
+}
+
+export async function emitWholesalerPaymentCorrected(
+  db: Queryable,
+  row: WholesalerPaymentEmitRow & { updated_at: Date },
+  prior: WholesalerPaymentEmitRow,
+  actorUserId: string | null
+): Promise<void> {
+  const paymentDate = toYyyyMmDd(row.payment_date);
+  const priorPaymentDate = toYyyyMmDd(prior.payment_date);
+  const causationId = await findFirstFinancialEventId(
+    db,
+    'payment',
+    row.id,
+    'WHOLESALER_PAYMENT_RECORDED'
+  );
+
+  await appendFinancialEvent(db, {
+    eventType: 'WHOLESALER_PAYMENT_CORRECTED',
+    effectiveDate: paymentDate,
+    amount: Number(row.amount),
+    sourceType: 'payment',
+    sourceId: row.id,
+    actorUserId,
+    causationId,
+    idempotencyKey: financialEventIdempotencyKey(
+      'payment',
+      row.id,
+      'WHOLESALER_PAYMENT_CORRECTED',
+      row.updated_at.toISOString()
+    ),
+    payload: {
+      payment_date: paymentDate,
+      previous_payment_date: priorPaymentDate,
+      amount: Number(row.amount),
+      previous_amount: Number(prior.amount),
+      wholesaler_id: row.wholesaler_id,
+      account_id: row.account_id ?? null,
+      reference: row.reference ?? null,
+      previous_reference: prior.reference ?? null,
+      notes: row.notes ?? null,
+      previous_notes: prior.notes ?? null,
+    },
+  });
+}
+
+export async function emitWholesalerPaymentVoided(
+  db: Queryable,
+  row: WholesalerPaymentEmitRow,
+  actorUserId: string | null,
+  voidedAt: Date
+): Promise<void> {
+  const paymentDate = toYyyyMmDd(row.payment_date);
+  const causationId = await findFirstFinancialEventId(
+    db,
+    'payment',
+    row.id,
+    'WHOLESALER_PAYMENT_RECORDED'
+  );
+
+  await appendFinancialEvent(db, {
+    eventType: 'WHOLESALER_PAYMENT_VOIDED',
+    effectiveDate: paymentDate,
+    amount: Number(row.amount),
+    sourceType: 'payment',
+    sourceId: row.id,
+    actorUserId,
+    causationId,
+    idempotencyKey: financialEventIdempotencyKey(
+      'payment',
+      row.id,
+      'WHOLESALER_PAYMENT_VOIDED',
+      voidedAt.toISOString()
+    ),
+    payload: {
+      payment_date: paymentDate,
+      amount: Number(row.amount),
+      wholesaler_id: row.wholesaler_id,
+      account_id: row.account_id ?? null,
+      reference: row.reference ?? null,
+      notes: row.notes ?? null,
+      voided_at: voidedAt.toISOString(),
     },
   });
 }
@@ -551,7 +661,8 @@ export async function emitSettlementCreated(
   db: Queryable,
   row: SettlementObligationEmitRow,
   effectiveDate: string,
-  actorUserId: string | null
+  actorUserId: string | null,
+  payloadExtra?: Record<string, unknown>
 ): Promise<void> {
   await appendFinancialEvent(db, {
     eventType: 'SETTLEMENT_CREATED',
@@ -561,7 +672,7 @@ export async function emitSettlementCreated(
     sourceId: row.id,
     actorUserId,
     idempotencyKey: financialEventIdempotencyKey('owed_line_item', row.id, 'SETTLEMENT_CREATED'),
-    payload: settlementPayload(row, toYyyyMmDd(effectiveDate)),
+    payload: settlementPayload(row, toYyyyMmDd(effectiveDate), payloadExtra),
   });
 }
 
@@ -639,6 +750,115 @@ export async function emitSettlementVoided(
     ),
     payload: {
       ...settlementPayload(row, effective),
+      voided_at: voidedAt.toISOString(),
+    },
+  });
+}
+
+function strategyAllocationRecordedEventType(
+  allocationType: StrategyAllocationType
+): FinancialEventType {
+  return allocationType === 'TAX_SET_ASIDE'
+    ? 'TAX_SET_ASIDE_RECORDED'
+    : 'REINVESTMENT_SET_ASIDE_RECORDED';
+}
+
+function strategyAllocationVoidedEventType(
+  allocationType: StrategyAllocationType
+): FinancialEventType {
+  return allocationType === 'TAX_SET_ASIDE'
+    ? 'TAX_SET_ASIDE_VOIDED'
+    : 'REINVESTMENT_SET_ASIDE_VOIDED';
+}
+
+export async function emitStrategyAllocationRecorded(
+  db: Queryable,
+  row: {
+    id: string;
+    amount: string | number;
+    allocation_type: StrategyAllocationType;
+    period_week_start: string;
+    period_week_end: string;
+    recorded_at: Date | string;
+    note: string | null;
+  },
+  actorUserId: string | null
+): Promise<void> {
+  const eventType = strategyAllocationRecordedEventType(row.allocation_type);
+  const recordedAt = row.recorded_at instanceof Date ? row.recorded_at : new Date(row.recorded_at);
+  const effectiveDate = toYyyyMmDd(recordedAt);
+
+  await appendFinancialEvent(db, {
+    eventType,
+    effectiveDate,
+    amount: Number(row.amount),
+    direction: 'NEUTRAL',
+    sourceType: STRATEGY_ALLOCATION_SOURCE_TYPE,
+    sourceId: row.id,
+    actorUserId,
+    idempotencyKey: financialEventIdempotencyKey(
+      STRATEGY_ALLOCATION_SOURCE_TYPE,
+      row.id,
+      eventType
+    ),
+    payload: {
+      amount: Number(row.amount),
+      allocation_type: row.allocation_type,
+      recorded_at: recordedAt.toISOString(),
+      period_week_start: toYyyyMmDd(row.period_week_start),
+      period_week_end: toYyyyMmDd(row.period_week_end),
+      note: row.note ?? null,
+    },
+  });
+}
+
+export async function emitStrategyAllocationVoided(
+  db: Queryable,
+  row: {
+    id: string;
+    amount: string | number;
+    allocation_type: StrategyAllocationType;
+    period_week_start: string;
+    period_week_end: string;
+    recorded_at: Date | string;
+    note: string | null;
+  },
+  actorUserId: string | null,
+  voidedAt: Date
+): Promise<void> {
+  const recordedType = strategyAllocationRecordedEventType(row.allocation_type);
+  const eventType = strategyAllocationVoidedEventType(row.allocation_type);
+  const recordedAt = row.recorded_at instanceof Date ? row.recorded_at : new Date(row.recorded_at);
+  const effectiveDate = toYyyyMmDd(recordedAt);
+  const causationId = await findFirstFinancialEventId(
+    db,
+    STRATEGY_ALLOCATION_SOURCE_TYPE,
+    row.id,
+    recordedType
+  );
+
+  await appendFinancialEvent(db, {
+    eventType,
+    effectiveDate,
+    amount: Number(row.amount),
+    direction: 'NEUTRAL',
+    sourceType: STRATEGY_ALLOCATION_SOURCE_TYPE,
+    sourceId: row.id,
+    actorUserId,
+    causationId,
+    idempotencyKey: financialEventIdempotencyKey(
+      STRATEGY_ALLOCATION_SOURCE_TYPE,
+      row.id,
+      eventType,
+      voidedAt.toISOString()
+    ),
+    payload: {
+      amount: Number(row.amount),
+      allocation_type: row.allocation_type,
+      recorded_at: recordedAt.toISOString(),
+      period_week_start: toYyyyMmDd(row.period_week_start),
+      period_week_end: toYyyyMmDd(row.period_week_end),
+      note: row.note ?? null,
       voided_at: voidedAt.toISOString(),
     },
   });

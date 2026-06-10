@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
   WORKFLOW_EMPTY_WEEK_SCHEDULE,
+  WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
   WORKFLOW_THIS_WEEK_HEADING,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
 import {
   workspaceThisWeekHeaderBand,
   workspaceThisWeekHeaderPadding,
@@ -13,36 +14,28 @@ import {
   workspaceThisWeekShowsListHeader,
   workspaceThisWeekSectionRoot,
   workspaceThisWeekSubtitle,
-  workspaceThisWeekTitle,
 } from "@/app/(admin)/admin/_lib/workspaceThisWeekSurface";
 import type { WeekBounds } from "@/lib/weekRange";
 import type { ShowViewModel } from "@/src/lib/api/shows";
-import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
 import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
 import { ShowMobileCard } from "./ShowMobileCard";
-import { ShowsThisWeekWorkflowStrip } from "./ShowsThisWeekWorkflowStrip";
 import { WeekDesktopTable } from "./WeekDesktopTable";
-import { WeekStripStats } from "./WeekStripStats";
 
 export function ShowsThisWeekSection({
   currentWeek,
   currentShows,
   summaries,
+  isCreateOpen,
+  onLogShow,
+  highlightShowId = null,
 }: {
   currentWeek: WeekBounds;
   currentShows: ShowViewModel[];
   summaries: Record<string, ShowFinancialSummary>;
+  isCreateOpen: boolean;
+  onLogShow: () => void;
+  highlightShowId?: string | null;
 }) {
-  const completedWeekProfitForSnapshot = useMemo(() => {
-    let sum = 0;
-    for (const show of currentShows) {
-      if ((show.status ?? "").toUpperCase() !== "COMPLETED") continue;
-      const s = summaries[show.id];
-      if (s != null) sum += s.estimatedShowProfit;
-    }
-    return sum;
-  }, [currentShows, summaries]);
-
   return (
     <section
       className={workspaceThisWeekSectionRoot}
@@ -51,25 +44,22 @@ export function ShowsThisWeekSection({
       <div
         className={`${workspaceThisWeekHeaderPadding} ${workspaceThisWeekHeaderBand}`}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 id="shows-this-week-heading" className={workspaceThisWeekTitle}>
+            <h2
+              id="shows-this-week-heading"
+              className="text-lg font-semibold tracking-tight text-admin-ink sm:text-xl"
+            >
               {WORKFLOW_THIS_WEEK_HEADING}
             </h2>
             <p className={workspaceThisWeekSubtitle}>{currentWeek.labelLong}</p>
-            <WeekStripStats
-              shows={currentShows}
-              summaries={summaries}
-              omitShowCount
-            />
           </div>
-          <WorkspaceRowChevron className="mt-0.5 shrink-0 text-stone-400" />
-        </div>
-        <div className="mt-3 w-full">
-          <ShowsThisWeekWorkflowStrip
-            weekStartStr={currentWeek.startStr}
-            weekEndStr={currentWeek.endStr}
-            completedWeekProfitForSnapshot={completedWeekProfitForSnapshot}
+          <WorkspaceSidePanelTrigger
+            variant="primary"
+            open={isCreateOpen}
+            label={WORKFLOW_LOG_SHOW_TRIGGER_LABEL}
+            onClick={onLogShow}
+            className="w-full shrink-0 sm:w-auto"
           />
         </div>
       </div>
@@ -90,6 +80,7 @@ export function ShowsThisWeekSection({
                   show={show}
                   summary={summaries[show.id]}
                   payoutContext
+                  highlighted={highlightShowId === show.id}
                 />
               ))
             )}
@@ -102,6 +93,7 @@ export function ShowsThisWeekSection({
             showProfitHint={false}
             emptyLabel={WORKFLOW_EMPTY_WEEK_SCHEDULE}
             payoutContext
+            highlightShowId={highlightShowId}
           />
         </div>
       </div>

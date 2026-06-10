@@ -33,6 +33,7 @@ describe('Inventory purchases API integration', () => {
     const pool = getPool();
     await pool.query('DELETE FROM financial_events');
     await pool.query('DELETE FROM inventory_purchases');
+    await pool.query('DELETE FROM owed_line_items');
   });
 
   afterEach(async () => {
@@ -255,6 +256,103 @@ describe('Inventory purchases API integration', () => {
     expect(body).toHaveProperty('total');
     expect(typeof body.total).toBe('string');
     expect(Number(body.total)).toBe(300);
+  });
+
+  test('POST OWE_VENDOR creates acquisition, vendor obligation, and correct events', async () => {
+    const withinDate = new Date();
+    withinDate.setDate(withinDate.getDate() - 5);
+    const purchaseDate = withinDate.toISOString().slice(0, 10);
+
+    const whRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers`,
+      payload: { name: 'Acquisition Vendor Co' },
+    });
+    expect(whRes.statusCode).toBe(201);
+    const wholesaler = JSON.parse(whRes.payload);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `${prefix}/inventory-purchases`,
+      payload: {
+        purchase_date: purchaseDate,
+        amount: 450,
+        supplier: 'Acquisition Vendor Co',
+        category: 'Shoes',
+        purchase_type: 'Pallet',
+        payment_status: 'OWE_VENDOR',
+        wholesaler_id: wholesaler.id,
+        notes: 'Spring restock',
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.payload);
+    expect(body.payment_status).toBe('OWE_VENDOR');
+    expect(body.wholesaler_id).toBe(wholesaler.id);
+    expect(body.vendor_obligation_id).toBeDefined();
+    expect(Number(body.amount)).toBe(450);
+
+    const pool = getPool();
+    const events = await pool.query(
+      `SELECT event_type, direction, amount::text AS amount, source_type, source_id
+       FROM financial_events
+       WHERE source_id = ANY($1::uuid[])
+       ORDER BY occurred_at ASC, id ASC`,
+      [[body.id, body.vendor_obligation_id]]
+    );
+    const eventRows = events.rows as Array<{
+      event_type: string;
+      direction: string;
+      amount: string;
+      source_type: string;
+    }>;
+    expect(eventRows.some((e) => e.event_type === 'INVENTORY_PURCHASE_RECORDED')).toBe(true);
+    expect(eventRows.some((e) => e.event_type === 'SETTLEMENT_CREATED')).toBe(true);
+    const inventoryEvent = eventRows.find((e) => e.event_type === 'INVENTORY_PURCHASE_RECORDED');
+    expect(inventoryEvent?.direction).toBe('NEUTRAL');
+
+    const balRes = await app.inject({
+      method: 'GET',
+      url: `${prefix}/wholesalers/balances`,
+    });
+    const balanceRow = (
+      JSON.parse(balRes.payload) as Array<{
+        wholesaler_id: string;
+        owed_total: string;
+        paid_total: string;
+        balance_owed: string;
+      }>
+    ).find((r) => r.wholesaler_id === wholesaler.id);
+    expect(Number(balanceRow!.owed_total)).toBe(450);
+    expect(Number(balanceRow!.paid_total)).toBe(0);
+    expect(Number(balanceRow!.balance_owed)).toBe(450);
+
+    const investedRes = await app.inject({
+      method: 'GET',
+      url: `${prefix}/admin/inventory-invested?days=30`,
+    });
+    expect(Number(JSON.parse(investedRes.payload).total)).toBe(450);
+
+    const snapshotDate = new Date();
+    snapshotDate.setDate(snapshotDate.getDate() - 10);
+    const snapshotStr = snapshotDate.toISOString().slice(0, 10);
+
+    const { loadCashEventTotalsFromEvents } = await import('../services/event-derived-cash');
+    const cashTotals = await loadCashEventTotalsFromEvents(pool, snapshotStr, 10000);
+    expect(cashTotals.total_outflows).toBe(0);
+  });
+
+  test('POST rejects OWE_VENDOR without wholesaler_id', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `${prefix}/inventory-purchases`,
+      payload: {
+        purchase_date: '2026-04-11',
+        amount: 100,
+        payment_status: 'OWE_VENDOR',
+      },
+    });
+    expect(res.statusCode).toBe(400);
   });
 
   test('GET /inventory-purchases?days=14 returns only purchases in window', async () => {

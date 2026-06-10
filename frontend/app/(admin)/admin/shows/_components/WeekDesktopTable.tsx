@@ -12,6 +12,7 @@ export function WeekDesktopTable({
   showProfitHint,
   emptyLabel = "No shows in this group.",
   payoutContext = false,
+  highlightShowId = null,
 }: {
   shows: ShowViewModel[];
   summaries: Record<string, ShowFinancialSummary>;
@@ -19,6 +20,7 @@ export function WeekDesktopTable({
   /** Shown when `shows` is empty (e.g. “None this week.” for the current week). */
   emptyLabel?: string;
   payoutContext?: boolean;
+  highlightShowId?: string | null;
 }) {
   if (shows.length === 0) {
     return (
@@ -84,6 +86,7 @@ export function WeekDesktopTable({
               show={show}
               summary={summaries[show.id]}
               payoutContext={payoutContext}
+              highlighted={highlightShowId === show.id}
             />
           ))}
         </tbody>

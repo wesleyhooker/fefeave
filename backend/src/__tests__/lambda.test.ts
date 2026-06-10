@@ -76,10 +76,12 @@ describe('lambda handler', () => {
 
     const first = (await handler(event, context)) as { statusCode: number; body: string };
     expect(first.statusCode).toBe(200);
-    expect(JSON.parse(first.body)).toEqual({ status: 'ok' });
+    const firstBody = JSON.parse(first.body);
+    expect(firstBody.status).toBe('ok');
+    expect(firstBody.checks.app.status).toBe('ok');
 
     const second = (await handler(event, context)) as { statusCode: number; body: string };
     expect(second.statusCode).toBe(200);
-    expect(JSON.parse(second.body)).toEqual({ status: 'ok' });
+    expect(JSON.parse(second.body).status).toBe('ok');
   });
 });

@@ -24,11 +24,30 @@ export type OwnerSelfPayWeekDTO = {
   transaction: OwnerSelfPayTransactionDTO | null;
 };
 
+export type OwnerPayoutCalculationMode = 'PROFIT_ONLY' | 'PROFIT_AND_CASH_CAP';
+
 export type OwnerWeeklyPayoutDTO = {
   weekStartDate: string;
   weekEndDate: string;
   completedShowCount: number;
+  /** Final available owner payout (after strategy and optional cash cap). */
   amount: string;
+  closedShowProfit: string;
+  strategyType: string;
+  taxReserveBps: number;
+  reinvestmentBps: number;
+  taxReserve: string;
+  afterTax: string;
+  reinvestmentReserve: string;
+  profitBasedPayout: string;
+  allowedPayoutForPeriod: string;
+  ownerPaidThisPeriod: string;
+  remainingAvailablePayout: string;
+  cashCapAvailable: boolean;
+  safeOwnerDraw: string | null;
+  cashCapConfidence: string | null;
+  calculationMode: OwnerPayoutCalculationMode;
+  cashCapApplied: boolean;
 };
 
 export async function getOwnerSelfPayWeek(

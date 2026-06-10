@@ -1,21 +1,10 @@
 "use client";
 
-import {
-  ArrowDownTrayIcon,
-  BanknotesIcon,
-  Cog6ToothIcon,
-  CreditCardIcon,
-  FunnelIcon,
-} from "@heroicons/react/24/outline";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { downloadCsv } from "@/lib/csv";
-import { apiGetText } from "@/lib/api";
-import { AdminWorkspaceToolbar } from "@/app/(admin)/admin/_components/AdminWorkspaceToolbar";
 import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
 import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
-import { WorkspaceToolbarMenu } from "@/app/(admin)/admin/_components/WorkspaceToolbarMenu";
 import { WorkspaceListPaymentStatus } from "@/app/(admin)/admin/_components/WorkspaceListStatus";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
 import {
@@ -25,16 +14,24 @@ import {
   workspaceTableHeaderCellPadding,
 } from "@/app/(admin)/admin/_components/WorkspaceTableRow";
 import { getWorkspacePaymentStatus } from "@/app/(admin)/admin/_lib/workspacePaymentStatus";
+import { vendorDetailHref } from "@/app/(admin)/admin/_lib/vendorRoutes";
 import {
   WORKFLOW_EMPTY_BALANCES_HINT,
   WORKFLOW_EMPTY_BALANCES_TITLE,
-  WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
+  WORKFLOW_EMPTY_VENDORS_FILTERED_HINT,
+  WORKFLOW_EMPTY_VENDORS_FILTERED_TITLE,
+  WORKFLOW_EMPTY_VENDORS_NEEDS_PAYMENT_HINT,
+  WORKFLOW_EMPTY_VENDORS_NEEDS_PAYMENT_TITLE,
+  WORKFLOW_EMPTY_VENDORS_PARTIALLY_PAID_HINT,
+  WORKFLOW_EMPTY_VENDORS_PARTIALLY_PAID_TITLE,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
-  workspaceActionIconMd,
-  workspaceActionSecondarySm,
-  workspaceActionUtilityMd,
-  workspaceActionSecondaryMd,
+  VENDORS_PAYMENT_VIEW_ALL,
+  VENDORS_PAYMENT_VIEW_NEEDS_PAYMENT,
+  VENDORS_PAYMENT_VIEW_PARTIALLY_PAID,
+  type VendorsPaymentView,
+} from "./vendorsPaymentView";
+import {
   workspaceBalancesPrimaryTableShell,
   workspaceMoneyClassForLiability,
   workspaceMoneyTabular,
@@ -42,8 +39,8 @@ import {
   workspaceTableCellSecondary,
   workspaceFormLabelSecondary,
   workspaceTableTheadFinancial,
-  workspaceToolbarSearchInput,
 } from "../_components/workspaceUi";
+import type { VendorsTableSortKey } from "./VendorsResourceToolbar";
 
 export interface WholesalerBalanceRow {
   wholesaler_id: string;
@@ -59,40 +56,95 @@ function parseNum(s: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-type SortKey =
-  | "name"
-  | "owed_total"
-  | "paid_total"
-  | "balance_owed"
-  | "last_payment_date";
+type SortKey = VendorsTableSortKey;
 
 const thBtn =
   "inline-flex max-w-full items-center gap-0.5 text-left font-medium text-gray-600 transition-colors hover:text-gray-900";
 const thBtnRight = `${thBtn} w-full justify-end text-right`;
 
-function wholesalerDetailHref(wholesalerId: string): string {
-  return `/admin/wholesalers/${wholesalerId}`;
+function matchesPaymentView(
+  row: WholesalerBalanceRow,
+  paymentView: VendorsPaymentView,
+): boolean {
+  const balance = parseNum(row.balance_owed);
+  const paid = parseNum(row.paid_total);
+  const status = getWorkspacePaymentStatus(balance, paid);
+  switch (paymentView) {
+    case VENDORS_PAYMENT_VIEW_NEEDS_PAYMENT:
+      return balance > 0;
+    case VENDORS_PAYMENT_VIEW_PARTIALLY_PAID:
+      return status === "Partially paid";
+    case VENDORS_PAYMENT_VIEW_ALL:
+    default:
+      return true;
+  }
 }
 
-export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
-  const [search, setSearch] = useState("");
-  const [filterScope, setFilterScope] = useState<"all" | "balance">("all");
-  const owingOnly = filterScope === "balance";
-  const [sortKey, setSortKey] = useState<SortKey>("balance_owed");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [exportError, setExportError] = useState<string | null>(null);
+function emptyCopyForView(paymentView: VendorsPaymentView): {
+  title: string;
+  hint: string;
+} {
+  switch (paymentView) {
+    case VENDORS_PAYMENT_VIEW_NEEDS_PAYMENT:
+      return {
+        title: WORKFLOW_EMPTY_VENDORS_NEEDS_PAYMENT_TITLE,
+        hint: WORKFLOW_EMPTY_VENDORS_NEEDS_PAYMENT_HINT,
+      };
+    case VENDORS_PAYMENT_VIEW_PARTIALLY_PAID:
+      return {
+        title: WORKFLOW_EMPTY_VENDORS_PARTIALLY_PAID_TITLE,
+        hint: WORKFLOW_EMPTY_VENDORS_PARTIALLY_PAID_HINT,
+      };
+    case VENDORS_PAYMENT_VIEW_ALL:
+    default:
+      return {
+        title: WORKFLOW_EMPTY_BALANCES_TITLE,
+        hint: WORKFLOW_EMPTY_BALANCES_HINT,
+      };
+  }
+}
 
+export function BalancesTable({
+  data,
+  paymentView,
+  search,
+  sortKey,
+  sortDir,
+  onSortKeyChange,
+  onSortDirChange,
+}: {
+  data: WholesalerBalanceRow[];
+  paymentView: VendorsPaymentView;
+  search: string;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+  onSortKeyChange: (key: SortKey) => void;
+  onSortDirChange: (dir: "asc" | "desc") => void;
+}) {
   const filtered = useMemo(() => {
-    let list = data;
+    let list = data.filter((r) => matchesPaymentView(r, paymentView));
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter((r) => r.name.toLowerCase().includes(q));
     }
-    if (owingOnly) {
-      list = list.filter((r) => parseNum(r.balance_owed) > 0);
-    }
     return list;
-  }, [data, search, owingOnly]);
+  }, [data, search, paymentView]);
+
+  const emptyCopy = useMemo(() => {
+    if (data.length === 0) {
+      return {
+        title: WORKFLOW_EMPTY_BALANCES_TITLE,
+        hint: WORKFLOW_EMPTY_BALANCES_HINT,
+      };
+    }
+    if (search.trim()) {
+      return {
+        title: WORKFLOW_EMPTY_VENDORS_FILTERED_TITLE,
+        hint: WORKFLOW_EMPTY_VENDORS_FILTERED_HINT,
+      };
+    }
+    return emptyCopyForView(paymentView);
+  }, [data.length, paymentView, search]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -132,10 +184,10 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      onSortDirChange(sortDir === "asc" ? "desc" : "asc");
     } else {
-      setSortKey(key);
-      setSortDir(key === "balance_owed" ? "desc" : "asc");
+      onSortKeyChange(key);
+      onSortDirChange(key === "balance_owed" ? "desc" : "asc");
     }
   };
 
@@ -145,29 +197,6 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         {sortDir === "asc" ? "▲" : "▼"}
       </span>
     ) : null;
-
-  const getFilename = () => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `balances-${yyyy}-${mm}-${dd}.csv`;
-  };
-
-  const handleDownloadCsv = async () => {
-    try {
-      const csvText = await apiGetText("exports/balances.csv", {
-        search: search.trim(),
-        owingOnly: owingOnly ? "true" : "false",
-        sortKey,
-        sortDir,
-      });
-      setExportError(null);
-      downloadCsv(getFilename(), csvText, { includeBom: false });
-    } catch {
-      setExportError("Balances export failed. Please retry.");
-    }
-  };
 
   const rowNavigateLabel = (name: string) => `Open ${name}`;
 
@@ -185,8 +214,8 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
       key === "balance_owed" ||
       key === "last_payment_date"
     ) {
-      setSortKey(key);
-      setSortDir(dir);
+      onSortKeyChange(key);
+      onSortDirChange(dir);
     }
   };
 
@@ -196,86 +225,8 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
       aria-labelledby="balances-table-heading"
     >
       <h2 id="balances-table-heading" className="sr-only">
-        Wholesaler balances
+        Vendor balances
       </h2>
-
-      <AdminWorkspaceToolbar
-        left={
-          <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-            <input
-              type="search"
-              placeholder="Search wholesalers…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className={`${workspaceToolbarSearchInput} min-w-0 sm:max-w-xs md:max-w-sm`}
-              aria-label="Search wholesalers"
-            />
-            <WorkspaceToolbarMenu
-              label="Filter"
-              leadingIcon={<FunnelIcon className={workspaceActionIconMd} />}
-              menuId="balances-filter"
-              items={[
-                {
-                  id: "all",
-                  label: "All wholesalers",
-                  selected: filterScope === "all",
-                  onSelect: () => setFilterScope("all"),
-                },
-                {
-                  id: "balance",
-                  label: WORKFLOW_WHOLESALERS_WITH_BALANCE_ROW_LABEL,
-                  selected: filterScope === "balance",
-                  onSelect: () => setFilterScope("balance"),
-                },
-              ]}
-            />
-          </div>
-        }
-        right={
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-            <Link
-              href="/admin/payments"
-              className={`${workspaceActionSecondarySm} gap-1.5`}
-              aria-label="View recorded payments"
-            >
-              <CreditCardIcon className={workspaceActionIconMd} aria-hidden />
-              Payments
-            </Link>
-            <Link
-              href="/admin/balances/owner"
-              className={`${workspaceActionSecondarySm} gap-1.5`}
-              aria-label="Owner payout activity"
-            >
-              <BanknotesIcon className={workspaceActionIconMd} aria-hidden />
-              Owner activity
-            </Link>
-            <Link
-              href="/admin/balances/accounts"
-              className={workspaceActionUtilityMd}
-              aria-label="Manage accounts"
-            >
-              <Cog6ToothIcon className={workspaceActionIconMd} />
-              Manage accounts
-            </Link>
-            <WorkspaceToolbarMenu
-              label="Export"
-              leadingIcon={
-                <ArrowDownTrayIcon className={workspaceActionIconMd} />
-              }
-              menuId="balances-export"
-              items={[
-                {
-                  id: "balances-csv",
-                  label: "Download balances CSV",
-                  onSelect: () => {
-                    void handleDownloadCsv();
-                  },
-                },
-              ]}
-            />
-          </div>
-        }
-      />
 
       <div className="border-b border-gray-100 bg-gray-50/30 px-4 py-3 md:hidden">
         <label className="block min-w-0">
@@ -285,7 +236,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
           <WorkspaceNativeSelect
             value={mobileSortValue}
             onChange={(e) => handleMobileSort(e.target.value)}
-            aria-label="Sort wholesaler list"
+            aria-label="Sort vendor list"
           >
             <option value="balance_owed:desc">
               Balance owed (highest first)
@@ -309,31 +260,15 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         </label>
       </div>
 
-      {exportError != null ? (
-        <div
-          role="alert"
-          className="flex flex-wrap items-center gap-2 border-b border-rose-100 bg-rose-50/90 px-4 py-2.5 text-xs text-rose-900"
-        >
-          <span className="min-w-0 flex-1">{exportError}</span>
-          <button
-            type="button"
-            onClick={handleDownloadCsv}
-            className={workspaceActionSecondarySm}
-          >
-            Retry
-          </button>
-        </div>
-      ) : null}
-
       <div className="md:hidden">
         <div className="space-y-2.5 p-3 sm:p-4">
           {sorted.length === 0 ? (
             <WorkspaceEmptyState variant="dashed" as="div">
               <span className="block font-medium text-gray-600">
-                {WORKFLOW_EMPTY_BALANCES_TITLE}
+                {emptyCopy.title}
               </span>
               <span className="mt-1 block text-xs text-gray-500">
-                {WORKFLOW_EMPTY_BALANCES_HINT}
+                {emptyCopy.hint}
               </span>
             </WorkspaceEmptyState>
           ) : (
@@ -348,7 +283,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                 hasBalance &&
                 maxPositiveBalance > 0 &&
                 balance >= maxPositiveBalance * 0.6;
-              const href = wholesalerDetailHref(r.wholesaler_id);
+              const href = vendorDetailHref(r.wholesaler_id);
               return (
                 <Link
                   key={r.wholesaler_id}
@@ -427,7 +362,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
         </div>
       </div>
 
-      <div className="mt-6 hidden overflow-x-auto md:mt-7 md:block">
+      <div className="hidden overflow-x-auto md:block">
         <table className="min-w-full table-fixed divide-y divide-gray-100">
           <colgroup>
             <col className="w-[5rem] sm:w-[5.5rem]" />
@@ -455,7 +390,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                   onClick={() => handleSort("name")}
                   className={`${thBtn} min-w-0`}
                 >
-                  Wholesaler
+                  Vendor
                   <SortIndicator column="name" />
                 </button>
               </th>
@@ -522,10 +457,10 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                 <td colSpan={7} className="px-4 py-10">
                   <WorkspaceEmptyState variant="plain" as="div">
                     <span className="block font-medium text-gray-600">
-                      {WORKFLOW_EMPTY_BALANCES_TITLE}
+                      {emptyCopy.title}
                     </span>
                     <span className="mt-1 block text-xs text-gray-500">
-                      {WORKFLOW_EMPTY_BALANCES_HINT}
+                      {emptyCopy.hint}
                     </span>
                   </WorkspaceEmptyState>
                 </td>
@@ -540,7 +475,7 @@ export function BalancesTable({ data }: { data: WholesalerBalanceRow[] }) {
                   hasBalance &&
                   maxPositiveBalance > 0 &&
                   balance >= maxPositiveBalance * 0.6;
-                const href = wholesalerDetailHref(r.wholesaler_id);
+                const href = vendorDetailHref(r.wholesaler_id);
                 return (
                   <WorkspaceTableNavRow
                     key={r.wholesaler_id}

@@ -86,7 +86,9 @@ const EVENT_TYPE_TITLES: Record<FinancialEventType, string> = {
   SETTLEMENT_ADJUSTED: 'Settlement adjusted',
   SETTLEMENT_VOIDED: 'Settlement voided',
   WHOLESALER_PAYMENT_RECORDED: 'Wholesaler payment recorded',
-  INVENTORY_PURCHASE_RECORDED: 'Inventory purchased',
+  WHOLESALER_PAYMENT_CORRECTED: 'Wholesaler payment corrected',
+  WHOLESALER_PAYMENT_VOIDED: 'Wholesaler payment voided',
+  INVENTORY_PURCHASE_RECORDED: 'Inventory purchase recorded',
   BUSINESS_EXPENSE_RECORDED: 'Business expense recorded',
   OWNER_DRAW_RECORDED: 'Owner draw',
   OWNER_SELF_PAY_RECORDED: 'Owner self-pay recorded',
@@ -96,6 +98,10 @@ const EVENT_TYPE_TITLES: Record<FinancialEventType, string> = {
   OWNER_SELF_PAY_VOIDED: 'Owner self-pay voided',
   CASH_SNAPSHOT_RECORDED: 'Cash snapshot recorded',
   FINANCIAL_STRATEGY_CHANGED: 'Strategy changed',
+  TAX_SET_ASIDE_RECORDED: 'Tax set-aside recorded',
+  REINVESTMENT_SET_ASIDE_RECORDED: 'Reinvestment set-aside recorded',
+  TAX_SET_ASIDE_VOIDED: 'Tax set-aside voided',
+  REINVESTMENT_SET_ASIDE_VOIDED: 'Reinvestment set-aside voided',
 };
 
 function formatUsd(amount: number): string {
@@ -195,6 +201,22 @@ function buildPayloadSummary(
     }
   }
   if (
+    (eventType === 'WHOLESALER_PAYMENT_RECORDED' ||
+      eventType === 'WHOLESALER_PAYMENT_CORRECTED' ||
+      eventType === 'WHOLESALER_PAYMENT_VOIDED') &&
+    typeof payload.payment_date === 'string'
+  ) {
+    const dateSuffix = ` · ${payload.payment_date}`;
+    if (
+      eventType === 'WHOLESALER_PAYMENT_CORRECTED' &&
+      typeof payload.previous_amount === 'number'
+    ) {
+      const was = formatUsd(payload.previous_amount);
+      return amountLine ? `${amountLine}${dateSuffix} · was ${was}` : `Was ${was}${dateSuffix}`;
+    }
+    return amountLine ? `${amountLine}${dateSuffix}` : `Payment ${payload.payment_date}`;
+  }
+  if (
     (eventType === 'OWNER_DRAW_RECORDED' ||
       eventType === 'OWNER_SELF_PAY_RECORDED' ||
       eventType === 'OWNER_DRAW_CORRECTED' ||
@@ -207,6 +229,18 @@ function buildPayloadSummary(
     return amountLine
       ? `${amountLine} · week ${payload.week_start_date} – ${payload.week_end_date}`
       : `Week ${payload.week_start_date} – ${payload.week_end_date}`;
+  }
+  if (
+    (eventType === 'TAX_SET_ASIDE_RECORDED' ||
+      eventType === 'REINVESTMENT_SET_ASIDE_RECORDED' ||
+      eventType === 'TAX_SET_ASIDE_VOIDED' ||
+      eventType === 'REINVESTMENT_SET_ASIDE_VOIDED') &&
+    typeof payload.period_week_start === 'string' &&
+    typeof payload.period_week_end === 'string'
+  ) {
+    return amountLine
+      ? `${amountLine} · period ${payload.period_week_start} – ${payload.period_week_end}`
+      : `Period ${payload.period_week_start} – ${payload.period_week_end}`;
   }
   return amountLine;
 }

@@ -1,14 +1,11 @@
 /**
  * Derives whether the show detail page can safely offer "close out" from current
- * client-side financial state (no new backend workflow flags).
+ * client-side financial state (mirrors server close rules: payout required, settlements optional).
  */
 
-export type CloseOutScrollTarget = 'payout' | 'settlements';
+export type CloseOutScrollTarget = 'payout';
 
-export function getShowCloseOutBlock(input: {
-  payoutAfterFees: number;
-  settlementsCount: number;
-}): {
+export function getShowCloseOutBlock(input: { payoutAfterFees: number }): {
   reason: string | null;
   scrollTarget: CloseOutScrollTarget | null;
 } {
@@ -19,19 +16,12 @@ export function getShowCloseOutBlock(input: {
       scrollTarget: 'payout',
     };
   }
-  if (input.settlementsCount === 0) {
-    return {
-      reason: 'Add at least one settlement.',
-      scrollTarget: 'settlements',
-    };
-  }
   return { reason: null, scrollTarget: null };
 }
 
 /** @deprecated Prefer getShowCloseOutBlock for scroll targets */
 export function getShowCloseOutBlockedReason(input: {
   payoutAfterFees: number;
-  settlementsCount: number;
 }): string | null {
   return getShowCloseOutBlock(input).reason;
 }

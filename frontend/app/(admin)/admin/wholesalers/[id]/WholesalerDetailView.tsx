@@ -12,11 +12,10 @@ import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
-import {
-  BALANCES_PAGE_BREADCRUMB,
-  FINANCIALS_WORKSPACE_BREADCRUMB,
-} from "@/app/(admin)/admin/_lib/adminSidebarNav";
+import { BALANCES_PAGE_BREADCRUMB } from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
+import { vendorBatchPayHref } from "@/app/(admin)/admin/_lib/vendorRoutes";
+import { WORKFLOW_VENDORS_BALANCE_BREAKDOWN_LINK } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
@@ -46,8 +45,8 @@ import {
   workspaceLedgerShowNameLink,
   workspaceLedgerShowNamePlain,
   workspaceLedgerTableDivide,
-  workspacePageContentWidthWide,
   workspaceStatEyebrow,
+  workspaceActionTertiaryLink,
   workspaceMoneyClassForLiability,
   workspaceMoneyClassForRunningBalance,
   workspaceMoneyPositive,
@@ -110,7 +109,7 @@ function LedgerEntryTypeLabel({ row }: { row: WholesalerStatementRowView }) {
           aria-hidden
         />
         <span className="text-[11px] font-medium leading-none text-gray-600">
-          Expense
+          Vendor charge
         </span>
       </span>
     );
@@ -154,11 +153,10 @@ function runningBalanceClass(value: number): string {
   return workspaceMoneyClassForRunningBalance(value);
 }
 
-function wholesalerDetailBreadcrumb(currentLabel: string) {
+function vendorDetailBreadcrumb(currentLabel: string) {
   return (
     <AdminEntityBreadcrumb
       segments={[
-        FINANCIALS_WORKSPACE_BREADCRUMB,
         BALANCES_PAGE_BREADCRUMB,
         { label: currentLabel, current: true },
       ]}
@@ -319,10 +317,10 @@ export function WholesalerDetailView({ id }: { id: string }) {
   if (loading && reloadToken === 0) {
     return (
       <>
-        <AdminPageIntroSection variant="entity-detail">
+        <AdminPageIntroSection variant="entity-detail" containerTier="full">
           <AdminPageIntro variant="entity-detail" title="Loading…" />
         </AdminPageIntroSection>
-        <AdminPageContainer>
+        <AdminPageContainer containerTier="full">
           <p className="text-sm text-stone-600">Loading…</p>
         </AdminPageContainer>
       </>
@@ -332,14 +330,14 @@ export function WholesalerDetailView({ id }: { id: string }) {
   if (error) {
     return (
       <>
-        <AdminPageIntroSection variant="entity-detail">
+        <AdminPageIntroSection variant="entity-detail" containerTier="full">
           <AdminPageIntro
             variant="entity-detail"
-            breadcrumb={wholesalerDetailBreadcrumb("Wholesaler")}
+            breadcrumb={vendorDetailBreadcrumb("Vendor")}
             title="Unable to load vendor"
           />
         </AdminPageIntroSection>
-        <AdminPageContainer>
+        <AdminPageContainer containerTier="full">
           <WorkspaceInlineError
             title="Something went wrong"
             message={error}
@@ -353,21 +351,21 @@ export function WholesalerDetailView({ id }: { id: string }) {
   if (!wholesaler) {
     return (
       <>
-        <AdminPageIntroSection variant="entity-detail">
+        <AdminPageIntroSection variant="entity-detail" containerTier="full">
           <AdminPageIntro
             variant="entity-detail"
-            breadcrumb={wholesalerDetailBreadcrumb("Not found")}
-            title="Wholesaler not found"
-            subtitle="This vendor isn't in your balances list, or the link may be outdated."
+            breadcrumb={vendorDetailBreadcrumb("Not found")}
+            title="Vendor not found"
+            subtitle="This vendor isn't in your vendor list, or the link may be outdated."
           />
         </AdminPageIntroSection>
-        <AdminPageContainer>
+        <AdminPageContainer containerTier="full">
           <p className="text-sm text-stone-600">
             <Link
-              href="/admin/balances"
+              href={BALANCES_PAGE_BREADCRUMB.href}
               className="font-medium text-stone-800 underline decoration-stone-300 underline-offset-2 hover:text-stone-950"
             >
-              Return to Balances
+              Return to vendors
             </Link>{" "}
             to pick a vendor.
           </p>
@@ -378,26 +376,26 @@ export function WholesalerDetailView({ id }: { id: string }) {
 
   return (
     <>
-      <AdminPageIntroSection variant="entity-detail">
+      <AdminPageIntroSection variant="entity-detail" containerTier="full">
         <AdminPageIntro
           variant="entity-detail"
-          breadcrumb={wholesalerDetailBreadcrumb(wholesaler.name)}
+          breadcrumb={vendorDetailBreadcrumb(wholesaler.name)}
           title={wholesaler.name}
           subtitle={lastPaymentSubtext}
         />
       </AdminPageIntroSection>
 
-      <AdminPageContainer contentWidthClassName={workspacePageContentWidthWide}>
+      <AdminPageContainer containerTier="full">
         <div className={workspaceFinancialVendorMainGrid}>
           <div className={workspaceFinancialVendorPrimaryColumn}>
-            <section className="min-w-0" aria-label="Wholesaler summary">
+            <section className="min-w-0" aria-label="Vendor summary">
               <div className={workspaceBalanceDetailControlShell}>
                 <div className="grid grid-cols-1 sm:grid-cols-3 sm:items-stretch sm:divide-x sm:divide-gray-200/80">
                   <div className="min-w-0 border-b border-gray-200/80 px-4 py-4 sm:border-b-0 sm:px-5 sm:py-4">
                     <div className="flex h-full flex-col justify-center">
                       <p
                         className={`${workspaceStatEyebrow} min-w-0 break-words [hyphens:auto]`}
-                        title="Outstanding amount: total owed minus total paid (matches Balances)."
+                        title="Outstanding amount: total owed minus total paid (matches Vendors list)."
                       >
                         Current balance
                       </p>
@@ -433,6 +431,16 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     </p>
                   </div>
                 </div>
+                {balance > 0 ? (
+                  <div className="border-t border-gray-200/80 px-4 py-3 sm:px-5">
+                    <Link
+                      href={vendorBatchPayHref(id)}
+                      className={`${workspaceActionTertiaryLink} text-sm`}
+                    >
+                      {WORKFLOW_VENDORS_BALANCE_BREAKDOWN_LINK}
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             </section>
 
@@ -460,14 +468,14 @@ export function WholesalerDetailView({ id }: { id: string }) {
           <div className={workspaceFinancialVendorLedgerColumn}>
             <section
               className={`min-w-0 overflow-hidden ${workspaceBalanceDetailLedgerShell}`}
-              aria-labelledby="wholesaler-ledger-heading"
+              aria-labelledby="vendor-ledger-heading"
             >
               <div
                 className={`${workspaceSectionToolbar} flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between`}
               >
                 <div className="min-w-0 flex-1">
                   <h2
-                    id="wholesaler-ledger-heading"
+                    id="vendor-ledger-heading"
                     className={workspaceSectionTitle}
                   >
                     Ledger
@@ -635,7 +643,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                               isPaymentRow
                                 ? "Payment — select to edit in Make payment"
                                 : isVendorExpenseRow
-                                  ? "Expense — select to edit in Add expense"
+                                  ? "Vendor charge — select to edit in Record vendor charge"
                                   : isItemized
                                     ? "Settlement with line items — expand or collapse"
                                     : undefined

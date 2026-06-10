@@ -11,17 +11,17 @@ export type LedgerHealthItem = {
 export const ACTIVITY_LEDGER_HEALTH_ITEMS: LedgerHealthItem[] = [
   {
     id: 'owner-corrections',
-    label: 'Owner activity corrections',
-    status: 'Pending future enhancement',
+    label: 'Owner payout corrections',
+    status: 'Live',
     detail:
-      'OWNER_DRAW_CORRECTED, OWNER_SELF_PAY_CORRECTED, and OWNER_*_VOIDED events are not yet emitted on re-upsert or void.',
+      'Void and re-record on Business Health emit OWNER_SELF_PAY_VOIDED, OWNER_SELF_PAY_CORRECTED, and OWNER_SELF_PAY_RECORDED.',
   },
   {
     id: 'settlement-coverage',
-    label: 'Settlement coverage',
-    status: 'Pending future enhancement',
+    label: 'Settlement adjustments and voids',
+    status: 'Live',
     detail:
-      'SETTLEMENT_ADJUSTED, settlement voids, and batch settlement write paths are not fully event-producing yet.',
+      'Show settlement deletes, vendor charge updates, and vendor charge deletes emit SETTLEMENT_VOIDED or SETTLEMENT_ADJUSTED.',
   },
   {
     id: 'strategy-history',

@@ -7,11 +7,16 @@
  * unless we deliberately promote a pattern workspace-wide.
  *
  * Warm stone neutrals, rose accent for nav/CTA; semantic greens reserved for money/paid.
- * Page-level stacks/grids live in `admin/_lib/workspacePageRegions.ts`.
+ * Page-level grids: `WorkspaceGrid` + `admin/_lib/workspaceLayoutGrid.ts`.
  *
  * **This week** outer shell is shared with Shows — see `workspaceThisWeekSurface.ts`.
  */
 
+import {
+  WORKSPACE_GRID_ROW_CLASS,
+  WORKSPACE_GRID_STACK_CLASS,
+  workspaceGridItemClass,
+} from '@/app/(admin)/admin/_lib/workspaceLayoutGrid';
 import {
   workspaceThisWeekHeaderBand as workspaceThisWeekHeaderBandBase,
   workspaceThisWeekHeaderPadding,
@@ -50,10 +55,6 @@ export const dashboardWeeklyHeaderBand = `${workspaceThisWeekHeaderPadding} ${wo
 
 export const dashboardWeeklyHeroInsetWrapper = `${dashboardPadX} pb-6 sm:pb-7`;
 
-/** Default weekly summary shell (neutral). Paid state layered in `DashboardThisWeekCard`. */
-export const dashboardWeeklyHeroInset =
-  'rounded-xl border border-stone-100/95 bg-stone-50/45 p-5 sm:p-6';
-
 export const dashboardWeeklyShowsToolbar = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/45 pb-3 pt-3.5 max-sm:pt-3 sm:pb-3.5 sm:pt-5`;
 
 export const dashboardPrimaryListShell = 'bg-white/[0.97]';
@@ -71,27 +72,22 @@ export const dashboardRowPad = `${dashboardPadX} py-3.5 max-sm:px-3.5 sm:py-3.5`
 
 export const dashboardCardFooterNote = `${dashboardPadX} border-t border-stone-100/90 py-3 text-center text-xs text-stone-500 sm:py-2.5`;
 
-export const dashboardWeeklyListToggleBand = `${dashboardPadX} border-t border-stone-100/90 bg-stone-50/35 py-3 max-sm:py-2.5 sm:py-3`;
-
 // --- Secondary module ----------------------------------------------------------
 
 export const dashboardModulePanel = `min-w-0 w-full overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`;
 
-/** Needs-attention module — olive-sage wash (distinct from neutral white cards). */
-export const dashboardAttentionModulePanel =
-  'min-w-0 w-full overflow-hidden rounded-2xl border border-lime-900/20 bg-admin-kpiSage/40 shadow-workspace-surface-warm-sm';
-
 export const dashboardModulePanelHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/35 py-3 sm:py-2.5`;
 
-export const dashboardAttentionModulePanelHeader = `${dashboardPadX} border-b border-lime-900/15 bg-admin-kpiSage/25 py-3 sm:py-2.5`;
+// --- Command center layout (Dashboard) -----------------------------------------
 
-export const dashboardNarrowModuleLayout = 'w-full max-w-sm self-start';
+/** @deprecated Prefer `WorkspaceGrid` `variant="stack"`. */
+export const dashboardCommandStack = WORKSPACE_GRID_STACK_CLASS;
 
-// --- Analytics module (extensible: swap body for category / vendor / season later) ---
+/** @deprecated Prefer `WorkspaceGrid` `variant="twelve"`. */
+export const dashboardCommandRow = WORKSPACE_GRID_ROW_CLASS;
 
-export const dashboardAnalyticsCard = `min-w-0 overflow-hidden ${dashboardRoundedCard} ${dashboardCardShadow}`;
+/** @deprecated Prefer `WorkspaceGridItem` `span="primary"`. */
+export const dashboardCommandPrimaryCol = workspaceGridItemClass('primary');
 
-/** Compact analytics header — light, not a second hero. */
-export const dashboardAnalyticsHeader = `${dashboardPadX} border-b border-stone-100/90 bg-stone-50/40 py-3.5 sm:py-3`;
-
-export const dashboardAnalyticsBody = `${dashboardPadX} py-4 sm:py-3.5`;
+/** @deprecated Prefer `WorkspaceGridItem` `span="secondary"`. */
+export const dashboardCommandSecondaryCol = workspaceGridItemClass('secondary');

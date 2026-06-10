@@ -92,6 +92,14 @@ const envSchema = baseEnvSchema.superRefine((data, ctx) => {
         path: ['COGNITO_APP_CLIENT_ID'],
       });
   }
+
+  if (data.NODE_ENV === 'production' && data.AUTH_MODE === 'dev_bypass') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'AUTH_MODE=dev_bypass is not allowed when NODE_ENV=production',
+      path: ['AUTH_MODE'],
+    });
+  }
 });
 
 let env: Env;

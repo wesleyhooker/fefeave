@@ -16,6 +16,14 @@ export const SETTLEMENT_OBLIGATION_EVENT_TYPES = [
 
 export const SETTLEMENT_VOIDED_EVENT_TYPE = 'SETTLEMENT_VOIDED';
 
+export const PAYMENT_OBLIGATION_EVENT_TYPES = [
+  'WHOLESALER_PAYMENT_RECORDED',
+  'WHOLESALER_PAYMENT_CORRECTED',
+  'WHOLESALER_PAYMENT_VOIDED',
+] as const;
+
+export const PAYMENT_VOIDED_EVENT_TYPE = 'WHOLESALER_PAYMENT_VOIDED';
+
 export type WholesalerObligationFilters = {
   wholesalerId?: string;
   accountId?: string;
@@ -102,14 +110,27 @@ async function loadActiveObligationEventRows(db: QueryableDb): Promise<Obligatio
 
 async function loadPaymentEventRows(db: QueryableDb): Promise<PaymentEventRow[]> {
   const result = await db.query(
-    `SELECT
-       payload->>'wholesaler_id' AS wholesaler_id,
-       payload->>'account_id' AS account_id,
+    `WITH latest_payment AS (
+       SELECT DISTINCT ON (source_id)
+         payload->>'wholesaler_id' AS wholesaler_id,
+         payload->>'account_id' AS account_id,
+         amount::numeric AS amount,
+         effective_date,
+         event_type
+       FROM financial_events
+       WHERE source_type = 'payment'
+         AND event_type = ANY($1::text[])
+       ORDER BY source_id, occurred_at DESC, id DESC
+     )
+     SELECT
+       wholesaler_id,
+       account_id,
        amount::text AS amount,
        effective_date::text AS payment_date
-     FROM financial_events
-     WHERE event_type = 'WHOLESALER_PAYMENT_RECORDED'
-       AND amount IS NOT NULL`
+     FROM latest_payment
+     WHERE event_type <> $2
+       AND amount IS NOT NULL`,
+    [PAYMENT_OBLIGATION_EVENT_TYPES, PAYMENT_VOIDED_EVENT_TYPE]
   );
   return result.rows as PaymentEventRow[];
 }

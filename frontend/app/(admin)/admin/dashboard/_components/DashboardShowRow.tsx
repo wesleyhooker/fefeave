@@ -1,4 +1,5 @@
 import { formatCurrency, formatDate } from "@/lib/format";
+import { showNavigateHref } from "@/app/(admin)/admin/_lib/showRoutes";
 import type { ShowDTO } from "@/src/lib/api/shows";
 import {
   workspaceMoneyClassForSigned,
@@ -23,7 +24,7 @@ export function DashboardShowRow({
       Excluded
     </span>
   ) : null;
-  const href = `/admin/shows/${show.id}`;
+  const href = showNavigateHref(show.id, show.status);
   const label = `${show.name}, ${formatDate(show.show_date)}`;
 
   const trailing =

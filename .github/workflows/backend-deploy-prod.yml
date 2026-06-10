@@ -1,6 +1,7 @@
 # Prod deploy is manual-only (workflow_dispatch). Backend → Lambda (no ECS/ECR).
 # Uses OIDC. Requires GitHub env "prod" vars: BACKEND_DEPLOY_ROLE_ARN, AWS_REGION,
 # BACKEND_LAMBDA_FUNCTION_NAME. Optional: BACKEND_API_GATEWAY_URL (post-deploy health check).
+# Optional secret: DATABASE_URL — enables pre-deploy migration verification.
 
 name: Backend Deploy (prod)
 
@@ -36,12 +37,6 @@ jobs:
             exit 1
           fi
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.BACKEND_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -49,10 +44,28 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Verify migrations (optional)
+        if: ${{ secrets.DATABASE_URL != '' }}
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npm run verify:migrations
+          echo "Migration verification passed."
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.BACKEND_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
       - name: Build and package Lambda
         working-directory: backend
         run: |
-          npm ci
           npm run build:lambda
           npm run package:lambda
           ls -lh lambda.zip
@@ -66,19 +79,26 @@ jobs:
             --function-name "${{ vars.BACKEND_LAMBDA_FUNCTION_NAME }}"
           echo "Lambda updated: ${{ vars.BACKEND_LAMBDA_FUNCTION_NAME }}"
 
-      - name: Post-deploy health check
+      - name: Post-deploy readiness check
         run: |
           set -euo pipefail
           if [ -z "${{ vars.BACKEND_API_GATEWAY_URL }}" ]; then
-            echo "Skipping health check (BACKEND_API_GATEWAY_URL not set)."
+            echo "Skipping readiness check (BACKEND_API_GATEWAY_URL not set)."
             exit 0
           fi
           BASE="${{ vars.BACKEND_API_GATEWAY_URL }}"
           BASE="${BASE%/}"
           BODY="$(curl -sfS "${BASE}/api/health")"
-          printf '%s\n' "$BODY" | head -c 500
+          printf '%s\n' "$BODY" | head -c 800
           echo ""
-          echo "Health check OK: ${BASE}/api/health"
+          STATUS="$(printf '%s' "$BODY" | node -e "const j=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write(j.status||'');")"
+          DB="$(printf '%s' "$BODY" | node -e "const j=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write(j.checks?.database?.status||'');")"
+          MIG="$(printf '%s' "$BODY" | node -e "const j=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write(j.checks?.migrations?.status||'');")"
+          if [ "$STATUS" != "ok" ] || [ "$DB" != "ok" ] || [ "$MIG" != "ok" ]; then
+            echo "::error::Readiness check failed (status=$STATUS database=$DB migrations=$MIG)"
+            exit 1
+          fi
+          echo "Readiness check OK: ${BASE}/api/health"
 
       - name: Deployment summary
         run: |
@@ -89,5 +109,7 @@ jobs:
           echo "| **Commit** | \`${SHA_SHORT}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Lambda** | \`${{ vars.BACKEND_LAMBDA_FUNCTION_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ vars.BACKEND_API_GATEWAY_URL }}" ]; then
-            echo "| **API** | ${{ vars.BACKEND_API_GATEWAY_URL }}/api |" >> $GITHUB_STEP_SUMMARY
+            echo "| **API readiness** | ${{ vars.BACKEND_API_GATEWAY_URL }}/api/health |" >> $GITHUB_STEP_SUMMARY
           fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [deploy-checklist.md](../../docs/deployment/deploy-checklist.md) for operator steps." >> $GITHUB_STEP_SUMMARY

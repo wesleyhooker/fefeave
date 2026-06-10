@@ -16,7 +16,6 @@ import {
   WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
   WORKFLOW_THIS_WEEK_HEADING,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
-import { useRegisterWorkspaceHeaderActions } from "@/app/(admin)/admin/_components/headers/WorkspaceHeaderSlots";
 
 export function DashboardPageHeader({
   weekRangeLabel,
@@ -31,20 +30,6 @@ export function DashboardPageHeader({
   newShowPanelOpen: boolean;
 }) {
   const { email } = useAdminWorkspace();
-
-  const headerActions = useMemo(
-    () => (
-      <WorkspaceSidePanelTrigger
-        label={WORKFLOW_LOG_SHOW_TRIGGER_LABEL}
-        variant="primary"
-        open={newShowPanelOpen}
-        onClick={onNewShowClick}
-      />
-    ),
-    [newShowPanelOpen, onNewShowClick],
-  );
-
-  useRegisterWorkspaceHeaderActions(headerActions);
 
   const welcomeSubtitle = useMemo(() => {
     const line = email?.trim();
@@ -88,7 +73,17 @@ export function DashboardPageHeader({
         </span>
       }
       subtitle={welcomeSubtitle}
-      action={weekPill}
+      action={
+        <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+          <WorkspaceSidePanelTrigger
+            label={WORKFLOW_LOG_SHOW_TRIGGER_LABEL}
+            variant="primary"
+            open={newShowPanelOpen}
+            onClick={onNewShowClick}
+          />
+          {weekPill}
+        </div>
+      }
     />
   );
 }

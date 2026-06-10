@@ -1,36 +1,31 @@
 "use client";
 
 import type { ReactNode } from "react";
+import type { WorkspaceContainerTier } from "../_lib/workspacePageContentWidth";
+import { workspaceContainerFrameClass } from "../_lib/workspacePageContentWidth";
 import {
-  workspaceMainContentInset,
   workspacePageContentStack,
-  workspacePageContentWidth,
-  workspacePageEntityIntroZone,
-  workspacePageGutter,
   workspacePageIntroToContentGap,
+  workspacePageEntityIntroZone,
   workspacePageIntroZone,
   workspacePageIntroZoneInner,
 } from "./workspaceUi";
 
 export function AdminPageContainer({
   children,
-  contentWidthClassName = workspacePageContentWidth,
+  containerTier = "standard",
   contentStackClassName = workspacePageContentStack,
 }: {
   children: ReactNode;
-  /** Override default `workspacePageContentWidth` for dense pages (e.g. Shows). */
-  contentWidthClassName?: string;
-  /** Override vertical rhythm between page sections (e.g. Shows index). */
+  /** Centered workspace container tier. */
+  containerTier?: WorkspaceContainerTier;
   contentStackClassName?: string;
 }) {
-  const frameClass =
-    contentWidthClassName === workspacePageContentWidth
-      ? workspaceMainContentInset
-      : `${workspacePageGutter} ${contentWidthClassName}`;
-
   return (
     <div className="min-w-0">
-      <div className={`${frameClass} pb-5 md:pb-6`}>
+      <div
+        className={`${workspaceContainerFrameClass(containerTier)} pb-5 md:pb-6`}
+      >
         <div
           className={`${contentStackClassName} ${workspacePageIntroToContentGap}`}
         >
@@ -43,12 +38,11 @@ export function AdminPageContainer({
 
 export function AdminPageIntroSection({
   children,
-  contentWidthClassName = workspacePageContentWidth,
+  containerTier = "standard",
   variant = "default",
 }: {
   children: ReactNode;
-  contentWidthClassName?: string;
-  /** `entity-detail`: flatter background for nested entity pages (e.g. wholesaler detail). */
+  containerTier?: WorkspaceContainerTier;
   variant?: "default" | "entity-detail";
 }) {
   const zoneClassName =
@@ -56,14 +50,9 @@ export function AdminPageIntroSection({
       ? workspacePageEntityIntroZone
       : workspacePageIntroZone;
 
-  const frameClass =
-    contentWidthClassName === workspacePageContentWidth
-      ? workspaceMainContentInset
-      : `${workspacePageGutter} ${contentWidthClassName}`;
-
   return (
     <section className={zoneClassName}>
-      <div className={frameClass}>
+      <div className={workspaceContainerFrameClass(containerTier)}>
         <div className={workspacePageIntroZoneInner}>{children}</div>
       </div>
     </section>
