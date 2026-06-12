@@ -3,10 +3,7 @@
 import { AdminWorkspaceToolbar } from "@/app/(admin)/admin/_components/AdminWorkspaceToolbar";
 import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
 import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
-import {
-  WORKFLOW_PURCHASES_RECORD_EXPENSE_LABEL,
-  WORKFLOW_PURCHASES_RECORD_INVENTORY_LABEL,
-} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import { WORKFLOW_PURCHASES_RECORD_PURCHASE_LABEL } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
   workspaceFormLabelSecondary,
   workspaceToolbarSearchInput,
@@ -27,10 +24,8 @@ export function PurchasesResourceToolbar({
   onInventoryTypeFilterChange,
   expenseCategoryFilter,
   onExpenseCategoryFilterChange,
-  isInventoryPanelOpen,
-  isExpensePanelOpen,
-  onRecordInventory,
-  onRecordExpense,
+  isRecordPanelOpen,
+  onRecordPurchase,
 }: {
   activeTab: PurchasesTab;
   search: string;
@@ -39,10 +34,8 @@ export function PurchasesResourceToolbar({
   onInventoryTypeFilterChange: (value: string) => void;
   expenseCategoryFilter: string;
   onExpenseCategoryFilterChange: (value: string) => void;
-  isInventoryPanelOpen: boolean;
-  isExpensePanelOpen: boolean;
-  onRecordInventory: () => void;
-  onRecordExpense: () => void;
+  isRecordPanelOpen: boolean;
+  onRecordPurchase: () => void;
 }) {
   const searchPlaceholder =
     activeTab === PURCHASES_TAB_INVENTORY
@@ -102,23 +95,13 @@ export function PurchasesResourceToolbar({
           </div>
         }
         right={
-          activeTab === PURCHASES_TAB_INVENTORY ? (
-            <WorkspaceSidePanelTrigger
-              variant="primary"
-              open={isInventoryPanelOpen}
-              label={WORKFLOW_PURCHASES_RECORD_INVENTORY_LABEL}
-              onClick={onRecordInventory}
-              className="w-full sm:w-auto"
-            />
-          ) : (
-            <WorkspaceSidePanelTrigger
-              variant="primary"
-              open={isExpensePanelOpen}
-              label={WORKFLOW_PURCHASES_RECORD_EXPENSE_LABEL}
-              onClick={onRecordExpense}
-              className="w-full sm:w-auto"
-            />
-          )
+          <WorkspaceSidePanelTrigger
+            variant="primary"
+            open={isRecordPanelOpen}
+            label={WORKFLOW_PURCHASES_RECORD_PURCHASE_LABEL}
+            onClick={onRecordPurchase}
+            className="w-full sm:w-auto"
+          />
         }
       />
       {activeTab === PURCHASES_TAB_INVENTORY ? (

@@ -74,6 +74,8 @@ export type FinancialActivityQuery = {
   event_type?: FinancialEventType | '';
   effective_date_from?: string;
   effective_date_to?: string;
+  /** Canonical vendor scope — maps to GET /financial-activity?vendor= */
+  vendor?: string;
 };
 
 function buildQueryString(params: FinancialActivityQuery): string {
@@ -88,6 +90,9 @@ function buildQueryString(params: FinancialActivityQuery): string {
   }
   if (params.effective_date_to) {
     search.set('effective_date_to', params.effective_date_to);
+  }
+  if (params.vendor) {
+    search.set('vendor', params.vendor);
   }
   const qs = search.toString();
   return qs ? `?${qs}` : '';

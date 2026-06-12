@@ -10,6 +10,10 @@ import {
   type FinancialEventCategory,
   type FinancialEventType,
 } from '../constants/financial-events';
+import {
+  PAYMENT_OBLIGATION_EVENT_TYPES,
+  SETTLEMENT_OBLIGATION_EVENT_TYPES,
+} from './financial-obligation-projections';
 import type { Queryable } from './financial-events';
 import { toYyyyMmDd } from '../utils/pg-date';
 
@@ -18,6 +22,8 @@ export type FinancialActivityFilters = {
   eventType?: FinancialEventType;
   effectiveDateFrom?: string;
   effectiveDateTo?: string;
+  /** Canonical vendor scope — wholesaler UUID. */
+  vendorId?: string;
 };
 
 export type FinancialActivityListParams = FinancialActivityFilters & {
@@ -269,7 +275,10 @@ function toActivityDto(row: FinancialEventRow): FinancialActivityEventDto {
   };
 }
 
-function buildWhereClause(filters: FinancialActivityFilters): {
+function buildWhereClause(
+  filters: FinancialActivityFilters,
+  vendorAccountId: string | null = null
+): {
   conditions: string[];
   values: unknown[];
 } {
@@ -292,15 +301,71 @@ function buildWhereClause(filters: FinancialActivityFilters): {
     values.push(filters.effectiveDateTo);
     conditions.push(`effective_date <= $${values.length}::date`);
   }
+  if (filters.vendorId) {
+    values.push(vendorAccountId);
+    const accountParam = values.length;
+    values.push(filters.vendorId);
+    const vendorParam = values.length;
+    const settlementTypes = SETTLEMENT_OBLIGATION_EVENT_TYPES.map((t) => `'${t}'`).join(', ');
+    const paymentTypes = PAYMENT_OBLIGATION_EVENT_TYPES.map((t) => `'${t}'`).join(', ');
+    conditions.push(`(
+      (
+        source_type = 'owed_line_item'
+        AND event_type IN (${settlementTypes})
+        AND (
+          ($${accountParam}::uuid IS NOT NULL AND payload->>'account_id' = $${accountParam}::text)
+          OR (
+            payload->>'account_id' IS NULL
+            AND payload->>'wholesaler_id' = $${vendorParam}
+          )
+        )
+      )
+      OR (
+        source_type = 'payment'
+        AND event_type IN (${paymentTypes})
+        AND (
+          ($${accountParam}::uuid IS NOT NULL AND payload->>'account_id' = $${accountParam}::text)
+          OR (
+            payload->>'account_id' IS NULL
+            AND payload->>'wholesaler_id' = $${vendorParam}
+          )
+        )
+      )
+      OR (
+        source_type = 'inventory_purchase'
+        AND event_type = 'INVENTORY_PURCHASE_RECORDED'
+        AND payload->>'wholesaler_id' = $${vendorParam}
+      )
+    )`);
+  }
 
   return { conditions, values };
+}
+
+async function resolveWholesalerAccountId(
+  db: Queryable,
+  wholesalerId: string
+): Promise<string | null> {
+  const result = await db.query(
+    `SELECT id FROM accounts
+     WHERE type = 'WHOLESALER'
+       AND legacy_wholesaler_id = $1
+       AND deleted_at IS NULL
+     LIMIT 1`,
+    [wholesalerId]
+  );
+  if (result.rows.length === 0) return null;
+  return (result.rows[0] as { id: string }).id;
 }
 
 export async function listFinancialActivity(
   db: Queryable,
   params: FinancialActivityListParams
 ): Promise<FinancialActivityListResult> {
-  const { conditions, values } = buildWhereClause(params);
+  const vendorAccountId = params.vendorId
+    ? await resolveWholesalerAccountId(db, params.vendorId)
+    : null;
+  const { conditions, values } = buildWhereClause(params, vendorAccountId);
   const whereSql = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const countResult = await db.query(

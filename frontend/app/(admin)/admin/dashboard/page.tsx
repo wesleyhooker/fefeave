@@ -1,71 +1,69 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DashboardSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
+  fetchWholesalerBalanceSnapshots,
   fetchWholesalerBalances,
   type BackendWholesalerBalanceRow,
 } from "@/src/lib/api/wholesalers";
-import { fetchShows, type ShowDTO } from "@/src/lib/api/shows";
 import {
-  fetchShowFinancialSummariesByShowIds,
-  fetchCompletedShowProfitTotal,
-  type ShowFinancialSummary,
-} from "@/app/(admin)/admin/_lib/showFinancialSummary";
+  fetchCompletedShowProfit,
+  fetchShows,
+  type ShowDTO,
+} from "@/src/lib/api/shows";
+import { fetchCompletedShowProfitTotal } from "@/app/(admin)/admin/_lib/showFinancialSummary";
+import {
+  getComparablePriorMonthBounds,
+  getMonthToDateBounds,
+} from "@/lib/monthRange";
 import {
   formatWeekRangeCompact,
   getCurrentWeekBounds,
   isDateInWeek,
 } from "@/lib/weekRange";
-import {
-  deriveOwnerDrawWeekStatus,
-  formatOwnerDrawDashboardTeaser,
-} from "@/app/(admin)/admin/_lib/ownerDrawStatus";
-import {
-  loadSelfPayAndPayoutServer,
-  type OwnerWeeklyPayoutState,
-  type SelfPayStored,
-} from "./selfPayStorage";
-import {
-  getOwnerActivityPage,
-  getOwnerSelfPayWeeklyPayout,
-} from "@/src/lib/api/ownerSelfPay";
-import { findCurrentWeekTransactions } from "@/app/(admin)/admin/business-health/owner-draw/ownerWeekStatus";
-import { showCloseOutHref } from "@/app/(admin)/admin/_lib/showRoutes";
 import { formatCurrency } from "@/lib/format";
-import { DASHBOARD_THIS_WEEK_SHOWS_LIMIT } from "./constants";
+import {
+  fetchBusinessExpenses,
+  fetchBusinessExpensesTotal,
+  type BusinessExpenseDTO,
+} from "@/src/lib/api/business-expenses";
+import {
+  fetchInventoryInvested,
+  fetchInventoryPurchases,
+  type InventoryPurchaseDTO,
+} from "@/src/lib/api/inventory-purchases";
+import { getOwnerSelfPayWeeklyPayout } from "@/src/lib/api/ownerSelfPay";
+import { getPeriodAllocations } from "@/src/lib/api/strategyAllocations";
 import { WorkspaceGrid, WorkspaceGridItem } from "../_components/WorkspaceGrid";
-import {
-  buildWorkspaceAttentionItems,
-  countActiveShows,
-  countVendorsOwing,
-  parseBalanceAmount,
-} from "../_lib/workspaceAttentionItems";
-import { DashboardNeedsAttentionCard } from "./_components/DashboardNeedsAttentionCard";
-import { DashboardBusinessSnapshot } from "./_components/DashboardBusinessSnapshot";
 import { DashboardPageHeader } from "./_components/DashboardPageHeader";
-import { DashboardThisWeekCard } from "./_components/DashboardThisWeekCard";
-import { DashboardRecentActivityCard } from "./_components/DashboardRecentActivityCard";
-import { DashboardQuickActions } from "./_components/DashboardQuickActions";
+import { DashboardWeekHero } from "./_components/DashboardWeekHero";
+import { DashboardWorkspaceOverview } from "./_components/DashboardWorkspaceOverview";
+import { DashboardTrendStrip } from "./_components/DashboardTrendStrip";
 import { AdminWorkspacePageLayout } from "../_components/AdminWorkspacePageLayout";
-import { WorkspacePageWithRightPanel } from "../_components/WorkspacePageWithRightPanel";
-import { ShowCreateForm } from "../shows/new/ShowCreateForm";
 import {
-  WORKFLOW_LOG_SHOW_PANEL_SUBTITLE,
-  WORKFLOW_LOG_SHOW_PANEL_TITLE,
-} from "../_lib/adminWorkflowCopy";
-import { fetchFinancialActivity } from "@/src/lib/api/financial-activity";
-import type { FinancialActivityEventDTO } from "@/src/lib/api/financial-activity";
-import { fetchBusinessExpensesTotal } from "@/src/lib/api/business-expenses";
-import { fetchInventoryInvested } from "@/src/lib/api/inventory-purchases";
+  buildDashboardHeroSummary,
+  countActiveShows,
+  countCompletedShowsThisWeek,
+  sumVendorBalanceTotal,
+} from "./_lib/dashboardSummary";
+import {
+  buildDashboardWorkspaceCards,
+  computeBusinessHealthRemaining,
+} from "./_lib/dashboardWorkspaceCards";
+import {
+  buildDashboardTrendStrip,
+  countCompletedShowsInRange,
+} from "./_lib/dashboardTrendStrip";
 
-const RECENT_ACTIVITY_LIMIT = 5;
-const SNAPSHOT_LOOKBACK_DAYS = 30;
+const PURCHASES_LOOKBACK_DAYS = 30;
+
+function parseAmount(value: string): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
 
 export default function AdminDashboardPage() {
-  const router = useRouter();
-  const [isCreateShowOpen, setIsCreateShowOpen] = useState(false);
   const weekBounds = useMemo(() => getCurrentWeekBounds(), []);
 
   const [balances, setBalances] = useState<
@@ -77,101 +75,47 @@ export default function AdminDashboardPage() {
   const [showsError, setShowsError] = useState<string | null>(null);
   const [weekProfit, setWeekProfit] = useState<number | null>(null);
   const [weekProfitError, setWeekProfitError] = useState<string | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
-  const effectRunIdRef = useRef(0);
-
-  const [selfPay, setSelfPay] = useState<SelfPayStored | null>(null);
-  const [weeklyPayoutState, setWeeklyPayoutState] =
-    useState<OwnerWeeklyPayoutState>({
-      amount: 0,
-      canRecordPayout: false,
-    });
-  const [ownerDrawPaidThisPeriod, setOwnerDrawPaidThisPeriod] = useState(0);
-  const [ownerDrawAllowed, setOwnerDrawAllowed] = useState(0);
-  const [ownerDrawVoidedThisWeek, setOwnerDrawVoidedThisWeek] = useState(false);
-  const [weekPreviewSummaries, setWeekPreviewSummaries] = useState<
-    Record<string, ShowFinancialSummary>
-  >({});
-
-  const [expensesTotal30, setExpensesTotal30] = useState<number | null>(null);
-  const [expensesError, setExpensesError] = useState<string | null>(null);
-  const [inventoryTotal30, setInventoryTotal30] = useState<number | null>(null);
-  const [inventoryError, setInventoryError] = useState<string | null>(null);
-  const [snapshotLoading, setSnapshotLoading] = useState(true);
-
-  const [recentActivity, setRecentActivity] = useState<
-    FinancialActivityEventDTO[] | null
-  >(null);
-  const [recentActivityError, setRecentActivityError] = useState<string | null>(
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [inventoryTotal, setInventoryTotal] = useState<number | null>(null);
+  const [expensesTotal, setExpensesTotal] = useState<number | null>(null);
+  const [inventoryPurchases, setInventoryPurchases] = useState<
+    InventoryPurchaseDTO[]
+  >([]);
+  const [businessExpenses, setBusinessExpenses] = useState<
+    BusinessExpenseDTO[]
+  >([]);
+  const [purchasesError, setPurchasesError] = useState(false);
+  const [businessHealthError, setBusinessHealthError] = useState(false);
+  const [ownerRemaining, setOwnerRemaining] = useState(0);
+  const [taxRemaining, setTaxRemaining] = useState(0);
+  const [reinvestRemaining, setReinvestRemaining] = useState(0);
+  const [hasPeriodPlan, setHasPeriodPlan] = useState(false);
+  const [trendLoading, setTrendLoading] = useState(true);
+  const [mtdProfit, setMtdProfit] = useState<number | null>(null);
+  const [priorMonthProfit, setPriorMonthProfit] = useState<number | null>(null);
+  const [mtdShowCount, setMtdShowCount] = useState<number | null>(null);
+  const [priorMonthShowCount, setPriorMonthShowCount] = useState<number | null>(
     null,
   );
-  const [recentActivityLoading, setRecentActivityLoading] = useState(true);
-  const [activityReloadToken, setActivityReloadToken] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([
-      loadSelfPayAndPayoutServer({ weekStartYmd: weekBounds.startStr }),
-      getOwnerSelfPayWeeklyPayout(weekBounds.startStr),
-      getOwnerActivityPage(50),
-    ])
-      .then(([{ selfPay: selfPayState, payout }, payoutDto, activity]) => {
-        if (!cancelled) {
-          setSelfPay(selfPayState);
-          setWeeklyPayoutState(payout);
-          setOwnerDrawPaidThisPeriod(
-            Number(payoutDto.ownerPaidThisPeriod) || 0,
-          );
-          setOwnerDrawAllowed(Number(payoutDto.allowedPayoutForPeriod) || 0);
-          const { voided } = findCurrentWeekTransactions(
-            activity.transactions,
-            weekBounds.startStr,
-          );
-          setOwnerDrawVoidedThisWeek(voided != null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSelfPay({ paid: false });
-          setWeeklyPayoutState({ amount: 0, canRecordPayout: false });
-          setOwnerDrawPaidThisPeriod(0);
-          setOwnerDrawAllowed(0);
-          setOwnerDrawVoidedThisWeek(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [weekBounds.startStr]);
-
-  useEffect(() => {
-    const list = [...(shows ?? [])]
-      .filter((s) =>
-        isDateInWeek(s.show_date, weekBounds.startStr, weekBounds.endStr),
-      )
-      .sort(
-        (a, b) =>
-          new Date(a.show_date).getTime() - new Date(b.show_date).getTime(),
-      )
-      .slice(0, DASHBOARD_THIS_WEEK_SHOWS_LIMIT);
-
-    if (list.length === 0) {
-      setWeekPreviewSummaries({});
-      return;
-    }
-
-    let cancelled = false;
-    fetchShowFinancialSummariesByShowIds(list.map((show) => show.id)).then(
-      (next) => {
-        if (cancelled) return;
-        setWeekPreviewSummaries(next);
-      },
-    );
-
-    return () => {
-      cancelled = true;
-    };
-  }, [shows, weekBounds.startStr, weekBounds.endStr]);
+  const [trendProfitUnavailable, setTrendProfitUnavailable] = useState(false);
+  const [trendShowsUnavailable, setTrendShowsUnavailable] = useState(false);
+  const [priorComparisonAvailable, setPriorComparisonAvailable] =
+    useState(false);
+  const [trendVendorBalance, setTrendVendorBalance] = useState<number | null>(
+    null,
+  );
+  const [priorVendorBalance, setPriorVendorBalance] = useState<number | null>(
+    null,
+  );
+  const [
+    vendorSnapshotComparisonAvailable,
+    setVendorSnapshotComparisonAvailable,
+  ] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const effectRunIdRef = useRef(0);
+  const overviewRunIdRef = useRef(0);
+  const trendRunIdRef = useRef(0);
+  const monthBounds = useMemo(() => getMonthToDateBounds(), []);
 
   useEffect(() => {
     const runId = ++effectRunIdRef.current;
@@ -259,248 +203,345 @@ export default function AdminDashboardPage() {
   }, [reloadToken, weekBounds.startStr, weekBounds.endStr]);
 
   useEffect(() => {
+    const runId = ++overviewRunIdRef.current;
     let cancelled = false;
-    setSnapshotLoading(true);
-    setExpensesError(null);
-    setInventoryError(null);
+    setOverviewLoading(true);
+    setPurchasesError(false);
+    setBusinessHealthError(false);
 
-    Promise.allSettled([
-      fetchBusinessExpensesTotal(SNAPSHOT_LOOKBACK_DAYS),
-      fetchInventoryInvested(SNAPSHOT_LOOKBACK_DAYS),
-    ])
-      .then(([expensesResult, inventoryResult]) => {
-        if (cancelled) return;
-        if (expensesResult.status === "fulfilled") {
-          setExpensesTotal30(parseBalanceAmount(expensesResult.value.total));
-        } else {
-          setExpensesError(
-            expensesResult.reason instanceof Error
-              ? expensesResult.reason.message
-              : String(expensesResult.reason),
-          );
-        }
-        if (inventoryResult.status === "fulfilled") {
-          setInventoryTotal30(parseBalanceAmount(inventoryResult.value.total));
-        } else {
-          setInventoryError(
-            inventoryResult.reason instanceof Error
-              ? inventoryResult.reason.message
-              : String(inventoryResult.reason),
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setSnapshotLoading(false);
-      });
+    Promise.all([
+      Promise.all([
+        fetchInventoryInvested(PURCHASES_LOOKBACK_DAYS),
+        fetchInventoryPurchases(PURCHASES_LOOKBACK_DAYS),
+        fetchBusinessExpensesTotal(PURCHASES_LOOKBACK_DAYS),
+        fetchBusinessExpenses(PURCHASES_LOOKBACK_DAYS),
+      ])
+        .then(
+          ([
+            inventoryInvested,
+            purchaseRows,
+            expensesTotalResponse,
+            expenseRows,
+          ]) => {
+            if (cancelled || overviewRunIdRef.current !== runId) return;
+            setInventoryTotal(parseAmount(inventoryInvested.total));
+            setInventoryPurchases(purchaseRows);
+            setExpensesTotal(parseAmount(expensesTotalResponse.total));
+            setBusinessExpenses(expenseRows);
+          },
+        )
+        .catch(() => {
+          if (cancelled || overviewRunIdRef.current !== runId) return;
+          setPurchasesError(true);
+          setInventoryTotal(null);
+          setInventoryPurchases([]);
+          setExpensesTotal(null);
+          setBusinessExpenses([]);
+        }),
+      Promise.all([
+        getOwnerSelfPayWeeklyPayout(weekBounds.startStr),
+        getPeriodAllocations(weekBounds.startStr),
+      ])
+        .then(([payout, allocations]) => {
+          if (cancelled || overviewRunIdRef.current !== runId) return;
+          const remaining = computeBusinessHealthRemaining({
+            taxTarget: payout.taxReserve,
+            reinvestTarget: payout.reinvestmentReserve,
+            ownerTarget: payout.allowedPayoutForPeriod,
+            taxRecorded: allocations.taxSetAside.recorded,
+            reinvestRecorded: allocations.reinvestmentSetAside.recorded,
+            ownerRecorded: payout.ownerPaidThisPeriod,
+            completedShowCount: payout.completedShowCount,
+          });
+          setOwnerRemaining(remaining.ownerRemaining);
+          setTaxRemaining(remaining.taxRemaining);
+          setReinvestRemaining(remaining.reinvestRemaining);
+          setHasPeriodPlan(remaining.hasPeriodPlan);
+        })
+        .catch(() => {
+          if (cancelled || overviewRunIdRef.current !== runId) return;
+          setBusinessHealthError(true);
+          setOwnerRemaining(0);
+          setTaxRemaining(0);
+          setReinvestRemaining(0);
+          setHasPeriodPlan(false);
+        }),
+    ]).finally(() => {
+      if (!cancelled && overviewRunIdRef.current === runId) {
+        setOverviewLoading(false);
+      }
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [reloadToken]);
+  }, [reloadToken, weekBounds.startStr]);
 
   useEffect(() => {
+    const runId = ++trendRunIdRef.current;
     let cancelled = false;
-    setRecentActivityLoading(true);
-    setRecentActivityError(null);
+    setTrendLoading(true);
+    setTrendProfitUnavailable(false);
+    setTrendShowsUnavailable(showsError != null);
+    setPriorComparisonAvailable(false);
+    setTrendVendorBalance(null);
+    setPriorVendorBalance(null);
+    setVendorSnapshotComparisonAvailable(false);
+    setMtdProfit(null);
+    setPriorMonthProfit(null);
+    setMtdShowCount(null);
+    setPriorMonthShowCount(null);
 
-    fetchFinancialActivity({ limit: RECENT_ACTIVITY_LIMIT, page: 1 })
-      .then((response) => {
-        if (!cancelled) setRecentActivity(response.items);
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setRecentActivityError(
-            e instanceof Error ? e.message : "Could not load activity.",
-          );
-          setRecentActivity(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setRecentActivityLoading(false);
-      });
+    const priorBounds = getComparablePriorMonthBounds(monthBounds);
+    const showList = shows ?? [];
+
+    const setMtdShowCountFromShows = () => {
+      if (showsError != null) {
+        setTrendShowsUnavailable(true);
+        setMtdShowCount(null);
+        return;
+      }
+      setMtdShowCount(
+        countCompletedShowsInRange(
+          showList,
+          monthBounds.startStr,
+          monthBounds.endStr,
+        ),
+      );
+    };
+
+    const setPriorShowCountFromShows = () => {
+      if (priorBounds == null || showsError != null) return;
+      setPriorMonthShowCount(
+        countCompletedShowsInRange(
+          showList,
+          priorBounds.startStr,
+          priorBounds.endStr,
+        ),
+      );
+      setPriorComparisonAvailable(true);
+    };
+
+    const profitRequests: Promise<void>[] = [
+      fetchCompletedShowProfit(monthBounds.startStr, monthBounds.endStr)
+        .then((mtd) => {
+          if (cancelled || trendRunIdRef.current !== runId) return;
+          const total = Number(mtd.total_profit);
+          setMtdProfit(Number.isFinite(total) ? total : 0);
+          setMtdShowCount(mtd.show_count);
+        })
+        .catch(() => {
+          if (cancelled || trendRunIdRef.current !== runId) return;
+          setTrendProfitUnavailable(true);
+          setMtdProfit(null);
+          setMtdShowCountFromShows();
+        }),
+    ];
+
+    if (priorBounds != null) {
+      profitRequests.push(
+        fetchCompletedShowProfit(priorBounds.startStr, priorBounds.endStr)
+          .then((prior) => {
+            if (cancelled || trendRunIdRef.current !== runId) return;
+            const total = Number(prior.total_profit);
+            setPriorMonthProfit(Number.isFinite(total) ? total : 0);
+            setPriorMonthShowCount(prior.show_count);
+            setPriorComparisonAvailable(true);
+          })
+          .catch(() => {
+            if (cancelled || trendRunIdRef.current !== runId) return;
+            setPriorMonthProfit(null);
+            setPriorShowCountFromShows();
+          }),
+      );
+    }
+
+    const snapshotRequests: Promise<void>[] = [];
+    if (priorBounds != null && balancesError == null) {
+      snapshotRequests.push(
+        fetchWholesalerBalanceSnapshots([
+          monthBounds.endStr,
+          priorBounds.endStr,
+        ])
+          .then((response) => {
+            if (cancelled || trendRunIdRef.current !== runId) return;
+            const byDate = new Map(
+              response.snapshots.map((snapshot) => [
+                snapshot.as_of,
+                Number(snapshot.total_outstanding),
+              ]),
+            );
+            const current = byDate.get(monthBounds.endStr);
+            const prior = byDate.get(priorBounds.endStr);
+            if (current != null && Number.isFinite(current)) {
+              setTrendVendorBalance(current);
+            }
+            if (prior != null && Number.isFinite(prior)) {
+              setPriorVendorBalance(prior);
+            }
+            if (
+              current != null &&
+              Number.isFinite(current) &&
+              prior != null &&
+              Number.isFinite(prior)
+            ) {
+              setVendorSnapshotComparisonAvailable(true);
+            }
+          })
+          .catch(() => {
+            if (cancelled || trendRunIdRef.current !== runId) return;
+            setTrendVendorBalance(null);
+            setPriorVendorBalance(null);
+            setVendorSnapshotComparisonAvailable(false);
+          }),
+      );
+    }
+
+    Promise.all([...profitRequests, ...snapshotRequests]).finally(() => {
+      if (!cancelled && trendRunIdRef.current === runId) {
+        setTrendLoading(false);
+      }
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [activityReloadToken]);
+  }, [reloadToken, monthBounds, shows, showsError, balancesError]);
 
-  const openShowsCount = useMemo(() => countActiveShows(shows ?? []), [shows]);
-
-  const vendorsOwingCount = useMemo(
-    () => countVendorsOwing(balances ?? []),
-    [balances],
-  );
-
-  const totalVendorBalance = useMemo(() => {
-    if (balances === null) return null;
-    return balances.reduce(
-      (sum, r) => sum + parseBalanceAmount(r.balance_owed),
-      0,
-    );
-  }, [balances]);
-
-  const attentionItems = useMemo(
-    () =>
-      buildWorkspaceAttentionItems({
-        showsError,
+  const heroSummary = useMemo(() => {
+    return buildDashboardHeroSummary(
+      {
+        weekProfit,
+        weekProfitError,
+        totalVendorBalance:
+          balances === null ? null : sumVendorBalanceTotal(balances),
         balancesError,
-        openShowsCount,
-        vendorsOwingCount,
-        totalOutstandingBalance: totalVendorBalance,
-      }),
-    [
-      showsError,
-      balancesError,
-      openShowsCount,
-      vendorsOwingCount,
-      totalVendorBalance,
-    ],
-  );
+        showsError,
+        completedThisWeekCount: countCompletedShowsThisWeek(
+          shows ?? [],
+          weekBounds.startStr,
+          weekBounds.endStr,
+        ),
+        openShowsCount: countActiveShows(shows ?? []),
+      },
+      formatCurrency,
+    );
+  }, [
+    weekProfit,
+    weekProfitError,
+    balances,
+    balancesError,
+    showsError,
+    shows,
+    weekBounds.startStr,
+    weekBounds.endStr,
+  ]);
 
-  const { showsThisWeek, showsThisWeekTotal, completedThisWeekCount } =
-    useMemo(() => {
-      const inWeek = (shows ?? []).filter((s) =>
-        isDateInWeek(s.show_date, weekBounds.startStr, weekBounds.endStr),
-      );
-      const sorted = [...inWeek].sort(
-        (a, b) =>
-          new Date(a.show_date).getTime() - new Date(b.show_date).getTime(),
-      );
-      const completedThisWeek = sorted.filter(
-        (s) => (s.status ?? "").toUpperCase() === "COMPLETED",
-      ).length;
-      return {
-        showsThisWeek: sorted.slice(0, DASHBOARD_THIS_WEEK_SHOWS_LIMIT),
-        showsThisWeekTotal: sorted.length,
-        completedThisWeekCount: completedThisWeek,
-      };
-    }, [shows, weekBounds.startStr, weekBounds.endStr]);
+  const workspaceCards = useMemo(() => {
+    return buildDashboardWorkspaceCards({
+      shows: shows ?? [],
+      weekStartStr: weekBounds.startStr,
+      weekEndStr: weekBounds.endStr,
+      showsError,
+      balances: balances ?? [],
+      balancesError,
+      inventoryTotal,
+      expensesTotal,
+      purchases: inventoryPurchases,
+      expenses: businessExpenses,
+      purchasesError,
+      ownerRemaining,
+      taxRemaining,
+      reinvestRemaining,
+      hasPeriodPlan,
+      businessHealthError,
+      formatCurrency,
+    });
+  }, [
+    shows,
+    weekBounds.startStr,
+    weekBounds.endStr,
+    showsError,
+    balances,
+    balancesError,
+    inventoryTotal,
+    expensesTotal,
+    inventoryPurchases,
+    businessExpenses,
+    purchasesError,
+    ownerRemaining,
+    taxRemaining,
+    reinvestRemaining,
+    hasPeriodPlan,
+    businessHealthError,
+  ]);
+
+  const trendStrip = useMemo(() => {
+    const balanceTotal =
+      balances === null ? null : sumVendorBalanceTotal(balances);
+    return buildDashboardTrendStrip({
+      mtdProfit,
+      priorMonthProfit,
+      mtdShowCount,
+      priorMonthShowCount,
+      totalVendorBalance: trendVendorBalance ?? balanceTotal,
+      priorVendorBalance,
+      profitUnavailable: trendProfitUnavailable,
+      showsUnavailable: trendShowsUnavailable || showsError != null,
+      vendorBalanceUnavailable: balancesError != null,
+      priorComparisonAvailable,
+      vendorSnapshotComparisonAvailable,
+      formatCurrency,
+    });
+  }, [
+    mtdProfit,
+    priorMonthProfit,
+    mtdShowCount,
+    priorMonthShowCount,
+    balances,
+    trendVendorBalance,
+    priorVendorBalance,
+    trendProfitUnavailable,
+    trendShowsUnavailable,
+    showsError,
+    balancesError,
+    priorComparisonAvailable,
+    vendorSnapshotComparisonAvailable,
+  ]);
 
   if (loading) {
     return <DashboardSkeleton />;
   }
 
-  const hasActiveOwnerDraw = selfPay?.paid === true;
-  const hasVoidedOwnerDraw = ownerDrawVoidedThisWeek;
-  const ownerDrawStatus = deriveOwnerDrawWeekStatus({
-    remainingAmount: weeklyPayoutState.amount,
-    ownerPaidThisPeriod: ownerDrawPaidThisPeriod,
-    allowedPayoutForPeriod: ownerDrawAllowed,
-    hasActivePayout: hasActiveOwnerDraw,
-    hasVoidedThisWeek: hasVoidedOwnerDraw,
-  });
-  const ownerPayoutPaidAtLabel =
-    selfPay?.paidAt != null
-      ? new Date(selfPay.paidAt).toLocaleString(undefined, {
-          month: "short",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-        })
-      : null;
-  const ownerDrawTeaserLine = formatOwnerDrawDashboardTeaser({
-    status: ownerDrawStatus,
-    remainingAmount: weeklyPayoutState.amount,
-    ownerPaidThisPeriod: ownerDrawPaidThisPeriod,
-    paidAtLabel: ownerPayoutPaidAtLabel,
-    formatCurrency,
-  });
-
-  const weekProfitDisplay =
-    weekProfitError != null ? null : weekProfit !== null ? weekProfit : null;
-
-  const weekProfitPending = weekProfit === null && weekProfitError == null;
-
   return (
-    <WorkspacePageWithRightPanel
-      open={isCreateShowOpen}
-      onClose={() => setIsCreateShowOpen(false)}
-      title={WORKFLOW_LOG_SHOW_PANEL_TITLE}
-      panelSubtitle={WORKFLOW_LOG_SHOW_PANEL_SUBTITLE}
-      panel={
-        <ShowCreateForm
-          variant="drawer"
-          onSuccess={(show) => {
-            setIsCreateShowOpen(false);
-            router.push(showCloseOutHref(show.id));
-          }}
-          onCancel={() => setIsCreateShowOpen(false)}
+    <AdminWorkspacePageLayout
+      containerTier="full"
+      intro={
+        <DashboardPageHeader
+          weekRangeLabel={formatWeekRangeCompact(weekBounds)}
+          weekStartYmd={weekBounds.startStr}
         />
       }
     >
-      <AdminWorkspacePageLayout
-        containerTier="full"
-        intro={
-          <DashboardPageHeader
+      <WorkspaceGrid variant="stack">
+        <WorkspaceGridItem span="full">
+          <DashboardWeekHero
             weekRangeLabel={formatWeekRangeCompact(weekBounds)}
-            weekStartYmd={weekBounds.startStr}
-            newShowPanelOpen={isCreateShowOpen}
-            onNewShowClick={() => setIsCreateShowOpen(true)}
+            summary={heroSummary}
+            weekProfitError={weekProfitError}
+            onRetry={() => setReloadToken((v) => v + 1)}
           />
-        }
-      >
-        <WorkspaceGrid variant="stack">
-          <WorkspaceGrid variant="twelve">
-            <WorkspaceGridItem span="primary">
-              <DashboardNeedsAttentionCard
-                items={attentionItems}
-                onRetry={() => setReloadToken((v) => v + 1)}
-              />
-            </WorkspaceGridItem>
-            <WorkspaceGridItem span="secondary">
-              <DashboardQuickActions
-                onLogShowClick={() => setIsCreateShowOpen(true)}
-              />
-            </WorkspaceGridItem>
-          </WorkspaceGrid>
-
-          <WorkspaceGrid variant="twelve">
-            <WorkspaceGridItem span="primary">
-              <DashboardThisWeekCard
-                weekRangeLabel={formatWeekRangeCompact(weekBounds)}
-                weekProfitError={weekProfitError}
-                weekProfitDisplay={weekProfitDisplay}
-                showsError={showsError}
-                onRetryShows={() => setReloadToken((v) => v + 1)}
-                showsThisWeek={showsThisWeek}
-                weekPreviewSummaries={weekPreviewSummaries}
-                showsThisWeekTotal={showsThisWeekTotal}
-                showsLimit={DASHBOARD_THIS_WEEK_SHOWS_LIMIT}
-                completedThisWeekCount={completedThisWeekCount}
-                ownerDrawTeaserLine={ownerDrawTeaserLine}
-              />
-            </WorkspaceGridItem>
-            <WorkspaceGridItem span="secondary">
-              <DashboardBusinessSnapshot
-                weekProfit={weekProfit}
-                weekProfitError={weekProfitError}
-                weekProfitPending={weekProfitPending}
-                totalVendorBalance={totalVendorBalance}
-                balancesError={balancesError}
-                expensesTotal30={expensesTotal30}
-                expensesError={expensesError}
-                expensesPending={snapshotLoading && expensesTotal30 === null}
-                inventoryTotal30={inventoryTotal30}
-                inventoryError={inventoryError}
-                inventoryPending={snapshotLoading && inventoryTotal30 === null}
-                completedShowsThisWeek={completedThisWeekCount}
-                showsError={showsError}
-              />
-            </WorkspaceGridItem>
-          </WorkspaceGrid>
-
-          <WorkspaceGrid variant="twelve">
-            <WorkspaceGridItem span="full">
-              <DashboardRecentActivityCard
-                events={recentActivity}
-                loading={recentActivityLoading}
-                error={recentActivityError}
-                onRetry={() => setActivityReloadToken((v) => v + 1)}
-              />
-            </WorkspaceGridItem>
-          </WorkspaceGrid>
-        </WorkspaceGrid>
-      </AdminWorkspacePageLayout>
-    </WorkspacePageWithRightPanel>
+        </WorkspaceGridItem>
+        <WorkspaceGridItem span="full">
+          <DashboardWorkspaceOverview
+            cards={workspaceCards}
+            loading={overviewLoading}
+          />
+        </WorkspaceGridItem>
+        <WorkspaceGridItem span="full">
+          <DashboardTrendStrip model={trendStrip} loading={trendLoading} />
+        </WorkspaceGridItem>
+      </WorkspaceGrid>
+    </AdminWorkspacePageLayout>
   );
 }

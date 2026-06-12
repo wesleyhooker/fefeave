@@ -7,19 +7,8 @@ import {
   WorkspaceGridItem,
 } from "@/app/(admin)/admin/_components/WorkspaceGrid";
 import {
-  dashboardCommandPrimaryCol,
-  dashboardCommandRow,
-  dashboardCommandSecondaryCol,
-  dashboardCommandStack,
-  dashboardModulePanel,
-  dashboardModulePanelHeader,
   dashboardPadX,
-  dashboardPrimaryListShell,
-  dashboardRowList,
-  dashboardRowPad,
   dashboardWeeklyHeaderBand,
-  dashboardWeeklyHeroInsetWrapper,
-  dashboardWeeklyShowsToolbar,
   dashboardWeeklyStatusCard,
 } from "@/app/(admin)/admin/dashboard/_components/dashboardStructure";
 import {
@@ -94,7 +83,7 @@ export function TableSkeleton({
   );
 }
 
-/** Dashboard: command-center grid (attention + actions → week + snapshot → activity). */
+/** Dashboard: This Week hero — four metric columns + status band. */
 export function DashboardSkeleton() {
   return (
     <>
@@ -105,121 +94,84 @@ export function DashboardSkeleton() {
               <SkeletonBar className="h-8 w-52 max-w-full" />
               <SkeletonBar className="mt-2 h-4 w-64 max-w-full" />
             </div>
-            <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-28" />
+            <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-36" />
           </div>
         </header>
       </AdminPageIntroSection>
 
       <AdminPageContainer containerTier="full">
         <WorkspaceGrid variant="stack">
-          <WorkspaceGrid variant="twelve">
-            <WorkspaceGridItem span="primary">
-              <aside className={dashboardModulePanel} aria-hidden>
-                <div className={dashboardModulePanelHeader}>
-                  <SkeletonBar className="h-2 w-24" />
-                </div>
-                <ul className={dashboardRowList}>
-                  {[0, 1].map((i) => (
-                    <li key={i}>
-                      <div
-                        className={`flex min-w-0 items-center gap-1.5 ${dashboardRowPad}`}
-                      >
-                        <SkeletonBar className="h-2 w-2 shrink-0 rounded-sm" />
-                        <SkeletonBar className="h-2.5 w-full max-w-[12rem]" />
-                        <SkeletonBar className="h-2.5 w-10 shrink-0" />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </aside>
-            </WorkspaceGridItem>
-            <WorkspaceGridItem span="secondary">
-              <section className={dashboardModulePanel} aria-hidden>
-                <div className={dashboardModulePanelHeader}>
-                  <SkeletonBar className="h-2 w-20" />
-                </div>
-                <div className={`${dashboardPadX} grid grid-cols-2 gap-2 py-3`}>
+          <WorkspaceGridItem span="full">
+            <section className={dashboardWeeklyStatusCard} aria-hidden>
+              <div className={dashboardWeeklyHeaderBand}>
+                <SkeletonBar className="h-5 w-32 max-w-full" />
+                <SkeletonBar className="mt-2 h-3 w-40 max-w-full" />
+              </div>
+              <div className={`${dashboardPadX} py-3 sm:py-4`}>
+                <div className="grid grid-cols-2 gap-px rounded-xl border border-stone-200/90 bg-stone-200/80 p-px lg:grid-cols-4">
                   {[0, 1, 2, 3].map((i) => (
-                    <SkeletonBar key={i} className="h-10 w-full rounded-lg" />
-                  ))}
-                </div>
-              </section>
-            </WorkspaceGridItem>
-          </WorkspaceGrid>
-
-          <WorkspaceGrid variant="twelve">
-            <WorkspaceGridItem span="primary">
-              <section className={dashboardWeeklyStatusCard}>
-                <div className={dashboardWeeklyHeaderBand}>
-                  <SkeletonBar className="h-5 w-32 max-w-full" />
-                </div>
-                <div
-                  className={`${dashboardWeeklyHeroInsetWrapper} rounded-xl bg-stone-50/55 p-1 sm:p-1.5`}
-                >
-                  <div className="overflow-hidden rounded-[0.65rem] border border-stone-200/90 bg-white p-6 shadow-sm sm:p-7">
-                    <SkeletonBar className="h-2.5 w-28" />
-                    <SkeletonBar className="mt-3 h-10 w-44 max-w-full" />
-                    <SkeletonBar className="mt-3 h-2.5 w-40 max-w-full" />
-                  </div>
-                </div>
-                <div className={dashboardWeeklyShowsToolbar}>
-                  <SkeletonBar className="h-2 w-16" />
-                </div>
-                <ul
-                  className={`${dashboardPrimaryListShell} ${dashboardRowList}`}
-                >
-                  {[0, 1, 2].map((i) => (
-                    <li key={i}>
-                      <div
-                        className={`flex min-w-0 items-center gap-3 ${dashboardRowPad}`}
-                      >
-                        <SkeletonBar className="h-3 w-full max-w-[11rem]" />
-                        <SkeletonBar className="h-3 w-16 shrink-0" />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </WorkspaceGridItem>
-            <WorkspaceGridItem span="secondary">
-              <section className={dashboardModulePanel} aria-hidden>
-                <div className={dashboardModulePanelHeader}>
-                  <SkeletonBar className="h-2 w-28" />
-                </div>
-                <div className={`${dashboardPadX} grid grid-cols-2 gap-2 py-3`}>
-                  {[0, 1, 2, 3, 4].map((i) => (
                     <div
                       key={i}
-                      className="rounded-lg border border-stone-200/90 bg-stone-50/45 px-2.5 py-2"
+                      className={`flex min-h-[7.5rem] flex-col bg-white px-5 py-6 sm:px-6 ${i === 0 ? "sm:py-8" : "sm:py-7"}`}
                     >
-                      <SkeletonBar className="h-2 w-16" />
-                      <SkeletonBar className="mt-2 h-4 w-12" />
+                      <SkeletonBar className="h-2.5 w-16" />
+                      <SkeletonBar
+                        className={`${i === 0 ? "mt-3 h-10 w-32" : "mt-2.5 h-7 w-20"} max-w-full`}
+                      />
+                      <SkeletonBar className="mt-3 h-3 w-full max-w-[8rem]" />
                     </div>
                   ))}
                 </div>
-              </section>
-            </WorkspaceGridItem>
-          </WorkspaceGrid>
-
-          <WorkspaceGrid variant="twelve">
-            <WorkspaceGridItem span="full">
-              <section className={dashboardModulePanel} aria-hidden>
-                <div className={dashboardModulePanelHeader}>
-                  <SkeletonBar className="h-2 w-24" />
-                </div>
-                <ul className={dashboardRowList}>
-                  {[0, 1, 2].map((i) => (
-                    <li key={i}>
-                      <div className={`${dashboardPadX} py-3`}>
-                        <SkeletonBar className="h-3 w-48 max-w-full" />
-                        <SkeletonBar className="mt-2 h-2.5 w-32" />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </WorkspaceGridItem>
-          </WorkspaceGrid>
+              </div>
+              <div className="border-t border-stone-100/90 px-4 py-3 sm:px-5">
+                <SkeletonBar className="h-3 w-full max-w-md" />
+              </div>
+            </section>
+          </WorkspaceGridItem>
+          <WorkspaceGridItem span="full">
+            <div className="mt-1" aria-hidden>
+              <SkeletonBar className="h-3 w-36" />
+              <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-12 lg:gap-6">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="min-h-[15.5rem] rounded-2xl border border-stone-200/90 bg-white lg:col-span-6"
+                  >
+                    <div className="border-b border-stone-100/90 bg-stone-50/35 px-4 py-3">
+                      <SkeletonBar className="h-9 w-28" />
+                    </div>
+                    <div className="space-y-3 px-4 py-4">
+                      {[0, 1, 2].map((j) => (
+                        <div key={j} className="flex justify-between gap-3">
+                          <SkeletonBar className="h-3 w-24" />
+                          <SkeletonBar className="h-3 w-28" />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-stone-100/90 px-4 py-3">
+                      <SkeletonBar className="h-10 w-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </WorkspaceGridItem>
+          <WorkspaceGridItem span="full">
+            <div
+              className="mt-1 rounded-2xl border border-stone-200/90 bg-stone-50/55 px-4 py-4 sm:px-5"
+              aria-hidden
+            >
+              <div className="grid grid-cols-1 gap-4 divide-y divide-stone-200/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="space-y-2 px-1 py-1 sm:px-3">
+                    <SkeletonBar className="h-3 w-28" />
+                    <SkeletonBar className="h-6 w-24" />
+                    <SkeletonBar className="h-3 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </WorkspaceGridItem>
         </WorkspaceGrid>
       </AdminPageContainer>
     </>

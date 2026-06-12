@@ -14,8 +14,16 @@ import {
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
 import { BALANCES_PAGE_BREADCRUMB } from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
-import { vendorBatchPayHref } from "@/app/(admin)/admin/_lib/vendorRoutes";
-import { WORKFLOW_VENDORS_BALANCE_BREAKDOWN_LINK } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import { vendorFullLedgerHref } from "@/app/(admin)/admin/_lib/vendorLedgerLinks";
+import {
+  WORKFLOW_VENDOR_DETAIL_BALANCE_CURRENT_HINT,
+  WORKFLOW_VENDOR_DETAIL_BALANCE_TOTAL_OWED_HINT,
+  WORKFLOW_VENDOR_DETAIL_BALANCE_TOTAL_PAID_HINT,
+  WORKFLOW_VENDOR_LEDGER_HEADING,
+  WORKFLOW_VENDOR_LEDGER_SUBTITLE,
+  WORKFLOW_VENDOR_VIEW_FULL_LEDGER,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import { VendorBalanceByShowSection } from "@/app/(admin)/admin/vendors/_lib/VendorBalanceByShowSection";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
@@ -46,7 +54,7 @@ import {
   workspaceLedgerShowNamePlain,
   workspaceLedgerTableDivide,
   workspaceStatEyebrow,
-  workspaceActionTertiaryLink,
+  workspaceActionUtilitySm,
   workspaceMoneyClassForLiability,
   workspaceMoneyClassForRunningBalance,
   workspaceMoneyPositive,
@@ -71,16 +79,15 @@ import {
   SETTLEMENT_LABELS,
 } from "@/app/(admin)/admin/_lib/settlementUi";
 import { WholesalerLedgerExportMenu } from "./WholesalerLedgerExportMenu";
-import {
-  WholesalerVendorMoneySection,
-  type VendorMoneyTab,
-} from "./WholesalerVendorMoneySection";
+import { WholesalerVendorMoneySection } from "./WholesalerVendorMoneySection";
 import type { VendorExpenseEditDraft } from "./WholesalerInlineExpenseSection";
 import {
+  fetchClosedShowsInBalance,
   fetchWholesalerBalances,
   fetchWholesalerStatement,
   mapBalanceRowToListView,
   mapStatementRowToDetailView,
+  type ClosedShowInBalanceRow,
   type WholesalerListRowView,
   type WholesalerStatementRowView,
 } from "@/src/lib/api/wholesalers";
@@ -182,12 +189,14 @@ export function WholesalerDetailView({ id }: { id: string }) {
     string | null
   >(null);
   const [payments, setPayments] = useState<PaymentDTO[]>([]);
+  const [closedShowsInBalance, setClosedShowsInBalance] = useState<
+    ClosedShowInBalanceRow[]
+  >([]);
   const [ledgerFocus, setLedgerFocus] = useState<
     | { kind: "PAYMENT"; id: string }
     | { kind: "VENDOR_EXPENSE"; id: string }
     | null
   >(null);
-  const [moneyTab, setMoneyTab] = useState<VendorMoneyTab>("payment");
 
   const toggleExpanded = (entryId: string) => {
     setExpandedEntryIds((prev) => {
@@ -209,8 +218,9 @@ export function WholesalerDetailView({ id }: { id: string }) {
       fetchWholesalerBalances(),
       fetchWholesalerStatement(id),
       fetchPayments({ wholesalerId: id }),
+      fetchClosedShowsInBalance(id),
     ])
-      .then(([balances, statementRows, paymentRows]) => {
+      .then(([balances, statementRows, paymentRows, showsInBalance]) => {
         if (cancelled) return;
         const found = balances
           .map(mapBalanceRowToListView)
@@ -218,6 +228,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
         setWholesaler(found ?? null);
         setStatement(statementRows.map(mapStatementRowToDetailView));
         setPayments(paymentRows);
+        setClosedShowsInBalance(showsInBalance);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -280,19 +291,8 @@ export function WholesalerDetailView({ id }: { id: string }) {
         })()
       : null;
 
-  function handleMoneyTabChange(tab: VendorMoneyTab) {
-    setMoneyTab(tab);
-    if (tab === "payment" && ledgerFocus?.kind === "VENDOR_EXPENSE") {
-      setLedgerFocus(null);
-    }
-    if (tab === "expense" && ledgerFocus?.kind === "PAYMENT") {
-      setLedgerFocus(null);
-    }
-  }
-
   function handleLedgerRowActivate(row: WholesalerStatementRowView) {
     if (row.type === "PAYMENT") {
-      setMoneyTab("payment");
       setLedgerFocus((prev) =>
         prev?.kind === "PAYMENT" && prev.id === row.entryId
           ? null
@@ -301,7 +301,6 @@ export function WholesalerDetailView({ id }: { id: string }) {
       return;
     }
     if (row.ledgerEntryKind === "VENDOR_EXPENSE") {
-      setMoneyTab("expense");
       setLedgerFocus((prev) =>
         prev?.kind === "VENDOR_EXPENSE" && prev.id === row.entryId
           ? null
@@ -395,9 +394,11 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     <div className="flex h-full flex-col justify-center">
                       <p
                         className={`${workspaceStatEyebrow} min-w-0 break-words [hyphens:auto]`}
-                        title="Outstanding amount: total owed minus total paid (matches Vendors list)."
                       >
                         Current balance
+                      </p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
+                        {WORKFLOW_VENDOR_DETAIL_BALANCE_CURRENT_HINT}
                       </p>
                       <p
                         className={`mt-1.5 text-2xl font-semibold tabular-nums tracking-tight sm:text-[1.65rem] ${workspaceMoneyClassForLiability(balance)}`}
@@ -412,6 +413,9 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     >
                       Total owed
                     </p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
+                      {WORKFLOW_VENDOR_DETAIL_BALANCE_TOTAL_OWED_HINT}
+                    </p>
                     <p
                       className={`mt-1.5 text-base font-semibold tabular-nums text-stone-800 sm:text-lg ${workspaceMoneyTabular}`}
                     >
@@ -424,6 +428,9 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     >
                       Total paid
                     </p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
+                      {WORKFLOW_VENDOR_DETAIL_BALANCE_TOTAL_PAID_HINT}
+                    </p>
                     <p
                       className={`mt-1.5 text-base font-semibold tabular-nums text-stone-800 sm:text-lg ${workspaceMoneyTabular}`}
                     >
@@ -431,24 +438,12 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     </p>
                   </div>
                 </div>
-                {balance > 0 ? (
-                  <div className="border-t border-gray-200/80 px-4 py-3 sm:px-5">
-                    <Link
-                      href={vendorBatchPayHref(id)}
-                      className={`${workspaceActionTertiaryLink} text-sm`}
-                    >
-                      {WORKFLOW_VENDORS_BALANCE_BREAKDOWN_LINK}
-                    </Link>
-                  </div>
-                ) : null}
               </div>
             </section>
 
             <WholesalerVendorMoneySection
               wholesalerId={id}
               currentBalance={balance}
-              activeTab={moneyTab}
-              onTabChange={handleMoneyTabChange}
               paymentEdit={editPaymentForForm}
               expenseEdit={editExpenseForForm}
               onCancelPaymentEdit={() =>
@@ -465,7 +460,18 @@ export function WholesalerDetailView({ id }: { id: string }) {
             />
           </div>
 
-          <div className={workspaceFinancialVendorLedgerColumn}>
+          <div
+            className={`${workspaceFinancialVendorLedgerColumn} flex flex-col gap-7 md:gap-9`}
+          >
+            {balance > 0 && wholesaler ? (
+              <VendorBalanceByShowSection
+                vendorId={id}
+                balance={balance}
+                paySchedule={wholesaler.pay_schedule}
+                closedShows={closedShowsInBalance}
+              />
+            ) : null}
+
             <section
               className={`min-w-0 overflow-hidden ${workspaceBalanceDetailLedgerShell}`}
               aria-labelledby="vendor-ledger-heading"
@@ -478,10 +484,20 @@ export function WholesalerDetailView({ id }: { id: string }) {
                     id="vendor-ledger-heading"
                     className={workspaceSectionTitle}
                   >
-                    Ledger
+                    {WORKFLOW_VENDOR_LEDGER_HEADING}
                   </h2>
+                  <p className="mt-1 text-sm leading-snug text-stone-600">
+                    {WORKFLOW_VENDOR_LEDGER_SUBTITLE}
+                  </p>
                 </div>
-                <div className="min-w-0 shrink-0 self-start md:self-center">
+                <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2 self-start md:self-center">
+                  <Link
+                    href={vendorFullLedgerHref(id)}
+                    className={workspaceActionUtilitySm}
+                    aria-label="View full Ledger for this vendor"
+                  >
+                    {WORKFLOW_VENDOR_VIEW_FULL_LEDGER}
+                  </Link>
                   <WholesalerLedgerExportMenu
                     wholesalerId={id}
                     onStatementError={setStatementExportError}
@@ -643,7 +659,7 @@ export function WholesalerDetailView({ id }: { id: string }) {
                               isPaymentRow
                                 ? "Payment — select to edit in Make payment"
                                 : isVendorExpenseRow
-                                  ? "Vendor charge — select to edit in Record vendor charge"
+                                  ? "Vendor charge — select to edit correction"
                                   : isItemized
                                     ? "Settlement with line items — expand or collapse"
                                     : undefined

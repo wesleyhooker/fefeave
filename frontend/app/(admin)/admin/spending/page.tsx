@@ -9,5 +9,8 @@ export default async function AdminSpendingRedirectPage({
   if (tab === "expenses" || tab === "inventory") {
     redirect(`/admin/purchases?tab=${tab}`);
   }
+  if (tab === "vendor-charges") {
+    redirect("/admin/purchases?tab=inventory");
+  }
   redirect("/admin/purchases");
 }

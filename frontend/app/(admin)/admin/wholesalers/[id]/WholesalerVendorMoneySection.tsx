@@ -1,34 +1,33 @@
 "use client";
 
+import { useState } from "react";
 import type { PaymentDTO } from "@/src/lib/api/payments";
-import { WORKFLOW_VENDOR_CHARGE_TAB_LABEL } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
-import { WorkspaceSegmentedControl } from "@/app/(admin)/admin/_components/WorkspaceSegmentedControl";
 import {
+  WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_HELP,
+  WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_TOGGLE,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import {
+  workspaceActionIconMd,
+  workspaceActionSecondaryMd,
+  workspaceActionTertiaryLink,
   workspaceCard,
   workspaceSectionTitle,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import {
   WholesalerInlineExpenseSection,
   type VendorExpenseEditDraft,
 } from "./WholesalerInlineExpenseSection";
 import { WholesalerInlinePaySection } from "./WholesalerInlinePaySection";
 
-export type VendorMoneyTab = "payment" | "expense";
-
-const MONEY_TAB_OPTIONS = [
-  { value: "payment" as const, label: "Payment" },
-  { value: "expense" as const, label: WORKFLOW_VENDOR_CHARGE_TAB_LABEL },
-];
-
 /**
- * Vendor transactions workspace: Payment / Expense switch + one inline form.
- * Forms render embedded (no nested card) so this reads as one surface.
+ * Vendor transactions workspace: payment create/edit plus ledger-row charge corrections.
+ * Rare manual vendor obligations use the advanced create flow below.
  */
 export function WholesalerVendorMoneySection({
   wholesalerId,
   currentBalance,
-  activeTab,
-  onTabChange,
   paymentEdit,
   expenseEdit,
   onCancelPaymentEdit,
@@ -37,14 +36,17 @@ export function WholesalerVendorMoneySection({
 }: {
   wholesalerId: string;
   currentBalance: number;
-  activeTab: VendorMoneyTab;
-  onTabChange: (tab: VendorMoneyTab) => void;
   paymentEdit: PaymentDTO | null;
   expenseEdit: VendorExpenseEditDraft | null;
   onCancelPaymentEdit: () => void;
   onCancelExpenseEdit: () => void;
   onRecorded: () => void;
 }) {
+  const [advancedObligationOpen, setAdvancedObligationOpen] = useState(false);
+
+  const showAdvancedToggle =
+    !paymentEdit && !expenseEdit && !advancedObligationOpen;
+
   return (
     <section
       id="vendor-payment"
@@ -61,46 +63,78 @@ export function WholesalerVendorMoneySection({
       </div>
 
       <div className="min-w-0 bg-gray-50/50">
-        <div className="border-b border-gray-200/60 px-4 py-3 sm:px-5 sm:py-2.5">
-          <p
-            className="mb-2 text-[11px] font-medium uppercase tracking-wide text-gray-500 md:hidden"
-            id="wholesaler-money-tab-hint"
-          >
-            Transaction type
-          </p>
-          <WorkspaceSegmentedControl
-            ariaLabel="Payment or non-inventory vendor charge"
-            aria-describedby="wholesaler-money-tab-hint"
-            value={activeTab}
-            onChange={onTabChange}
-            options={MONEY_TAB_OPTIONS}
-          />
-        </div>
-
         <div className="min-w-0 px-4 pb-7 pt-5 sm:px-5 sm:pb-8 sm:pt-7">
-          {activeTab === "payment" ? (
-            <WholesalerInlinePaySection
-              wholesalerId={wholesalerId}
-              currentBalance={currentBalance}
-              mode={paymentEdit ? "edit" : "create"}
-              editPayment={paymentEdit}
-              onCancelEdit={onCancelPaymentEdit}
-              onRecorded={onRecorded}
-              density="compact"
-              embedded
-            />
-          ) : (
-            <WholesalerInlineExpenseSection
-              wholesalerId={wholesalerId}
-              currentBalance={currentBalance}
-              mode={expenseEdit ? "edit" : "create"}
-              editExpense={expenseEdit}
-              onCancelEdit={onCancelExpenseEdit}
-              onRecorded={onRecorded}
-              density="compact"
-              embedded
-            />
-          )}
+          <WholesalerInlinePaySection
+            wholesalerId={wholesalerId}
+            currentBalance={currentBalance}
+            mode={paymentEdit ? "edit" : "create"}
+            editPayment={paymentEdit}
+            onCancelEdit={onCancelPaymentEdit}
+            onRecorded={onRecorded}
+            density="compact"
+            embedded
+          />
+
+          {showAdvancedToggle ? (
+            <div className="mt-5 border-t border-gray-200/60 pt-4">
+              <p className="text-sm text-gray-600">
+                {WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_HELP}
+              </p>
+              <button
+                type="button"
+                className={`${workspaceActionTertiaryLink} mt-2 text-sm font-medium`}
+                onClick={() => setAdvancedObligationOpen(true)}
+              >
+                {WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_TOGGLE}
+              </button>
+            </div>
+          ) : null}
+
+          {advancedObligationOpen && !expenseEdit ? (
+            <div className="mt-5 border-t border-gray-200/60 pt-4">
+              <div className="mb-3 flex justify-end">
+                <button
+                  type="button"
+                  className={`${workspaceActionSecondaryMd} shrink-0 text-sm`}
+                  onClick={() => setAdvancedObligationOpen(false)}
+                >
+                  <WorkspaceActionLabel
+                    icon={<XMarkIcon className={workspaceActionIconMd} />}
+                  >
+                    Cancel
+                  </WorkspaceActionLabel>
+                </button>
+              </div>
+              <WholesalerInlineExpenseSection
+                wholesalerId={wholesalerId}
+                currentBalance={currentBalance}
+                mode="create"
+                editExpense={null}
+                onCancelEdit={() => setAdvancedObligationOpen(false)}
+                onRecorded={() => {
+                  setAdvancedObligationOpen(false);
+                  onRecorded();
+                }}
+                density="compact"
+                embedded
+              />
+            </div>
+          ) : null}
+
+          {expenseEdit ? (
+            <div className="mt-5 border-t border-gray-200/60 pt-4">
+              <WholesalerInlineExpenseSection
+                wholesalerId={wholesalerId}
+                currentBalance={currentBalance}
+                mode="edit"
+                editExpense={expenseEdit}
+                onCancelEdit={onCancelExpenseEdit}
+                onRecorded={onRecorded}
+                density="compact"
+                embedded
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

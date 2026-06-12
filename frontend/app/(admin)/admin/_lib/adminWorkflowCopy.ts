@@ -261,6 +261,74 @@ export const WORKFLOW_BH_LINK_VENDORS = 'View vendors →';
 
 export const WORKFLOW_COMPLETED_THIS_WEEK_LABEL = 'Completed this week';
 
+export const WORKFLOW_DASHBOARD_VENDOR_BALANCES_LABEL = 'Vendor balances';
+
+export const WORKFLOW_DASHBOARD_HERO_PROFIT_LABEL = 'Profit';
+export const WORKFLOW_DASHBOARD_HERO_PROFIT_HELPER =
+  'Net profit after fees this week';
+export const WORKFLOW_DASHBOARD_HERO_VENDOR_HELPER = 'Owed to vendors';
+export const WORKFLOW_DASHBOARD_HERO_COMPLETED_LABEL = 'Completed shows';
+export const WORKFLOW_DASHBOARD_HERO_COMPLETED_HELPER =
+  'Shows completed this week';
+export const WORKFLOW_DASHBOARD_HERO_OPEN_LABEL = 'Open shows';
+export const WORKFLOW_DASHBOARD_HERO_OPEN_HELPER = 'Needs close-out';
+export const WORKFLOW_DASHBOARD_VIEW_VENDORS = 'View vendors';
+export const WORKFLOW_DASHBOARD_VIEW_SHOWS = 'View shows';
+
+export const WORKFLOW_DASHBOARD_PERFECT_WEEK_CALM =
+  'All caught up for now — nothing needs your attention.';
+
+export const WORKFLOW_DASHBOARD_WORKSPACE_OVERVIEW_HEADING =
+  'Workspace overview';
+
+export const WORKFLOW_DASHBOARD_CARD_SHOWS = 'Shows';
+export const WORKFLOW_DASHBOARD_CARD_VENDORS = 'Vendors';
+export const WORKFLOW_DASHBOARD_CARD_PURCHASES = 'Purchases';
+export const WORKFLOW_DASHBOARD_CARD_BUSINESS_HEALTH = 'Business Health';
+
+export const WORKFLOW_DASHBOARD_VIEW_PURCHASES = 'View purchases';
+export const WORKFLOW_DASHBOARD_OPEN_BUSINESS_HEALTH = 'Open business health';
+
+export const WORKFLOW_DASHBOARD_SHOWS_NEXT_LABEL = 'Next show';
+export const WORKFLOW_DASHBOARD_SHOWS_LAST_COMPLETED_LABEL =
+  'Last completed this week';
+export const WORKFLOW_DASHBOARD_SHOWS_NO_NEXT = 'Nothing scheduled yet';
+export const WORKFLOW_DASHBOARD_SHOWS_NO_COMPLETED_WEEK =
+  'No completed shows this week';
+
+export const WORKFLOW_DASHBOARD_VENDORS_OWED_LABEL = 'Vendors owed';
+export const WORKFLOW_DASHBOARD_VENDORS_LARGEST_LABEL = 'Largest balance';
+export const WORKFLOW_DASHBOARD_VENDORS_RECENT_PAYMENT_LABEL = 'Recent payment';
+export const WORKFLOW_DASHBOARD_VENDORS_NONE_OWING = 'None owing';
+export const WORKFLOW_DASHBOARD_VENDORS_NO_PAYMENTS =
+  'No payments recorded yet';
+
+export const WORKFLOW_DASHBOARD_PURCHASES_EXPENSES_30D =
+  'Business expenses (30d)';
+export const WORKFLOW_DASHBOARD_PURCHASES_RECENT_LABEL = 'Recent activity';
+export const WORKFLOW_DASHBOARD_PURCHASES_NO_RECENT =
+  'No purchases or expenses in the last 30 days';
+
+export const WORKFLOW_DASHBOARD_BH_UNAVAILABLE =
+  'Close a show this week to unlock period plan.';
+
+export const WORKFLOW_DASHBOARD_TREND_PROFIT_LABEL = 'Profit this month (MTD)';
+export const WORKFLOW_DASHBOARD_TREND_SHOWS_LABEL = 'Total shows this month';
+export const WORKFLOW_DASHBOARD_TREND_VENDOR_LABEL =
+  'Total outstanding to vendors';
+
+export const WORKFLOW_DASHBOARD_TREND_PROFIT_HELPER =
+  'Net profit from closed shows this month';
+export const WORKFLOW_DASHBOARD_TREND_SHOWS_HELPER =
+  'Completed shows dated this month';
+export const WORKFLOW_DASHBOARD_TREND_VENDOR_HELPER =
+  'Current vendor liability snapshot';
+
+export const WORKFLOW_DASHBOARD_TREND_NO_PRIOR_PROFIT =
+  'No profit in prior month to compare';
+
+export const WORKFLOW_DASHBOARD_DATE_UNAVAILABLE = 'Date not available';
+
 export const WORKFLOW_QUICK_ACTION_RECORD_EXPENSE = 'Record expense';
 
 export const WORKFLOW_QUICK_ACTION_RECORD_INVENTORY =
@@ -277,10 +345,47 @@ export const WORKFLOW_OUTSTANDING_BALANCES_ROW_LABEL = 'Outstanding balances';
 
 /** Vendors index */
 export const WORKFLOW_VENDORS_PAGE_SUBTITLE =
-  'Manage vendor balances, statements, and payments.';
+  'Manage vendor balances, ledger, and payments.';
+
+/** Vendors index toolbar — opens Full Ledger filtered to payment events. */
+export const WORKFLOW_VENDORS_PAYMENT_LEDGER_LINK = 'Payment Ledger';
+
+/** Vendor detail — embedded ledger from financial events (settlements + payments). */
+export const WORKFLOW_VENDOR_LEDGER_HEADING = 'Vendor Ledger';
+export const WORKFLOW_VENDOR_LEDGER_SUBTITLE =
+  'Chronological ledger events for this vendor.';
+
+/** Vendor detail — link to full Ledger scoped to this vendor. */
+export const WORKFLOW_VENDOR_VIEW_FULL_LEDGER = 'View full Ledger';
+
+/** Vendor detail — balance summary stat hints */
+export const WORKFLOW_VENDOR_DETAIL_BALANCE_CURRENT_HINT =
+  'Total owed minus total paid.';
+export const WORKFLOW_VENDOR_DETAIL_BALANCE_TOTAL_OWED_HINT =
+  'All obligations recorded for this vendor.';
+export const WORKFLOW_VENDOR_DETAIL_BALANCE_TOTAL_PAID_HINT =
+  'All payments recorded to this vendor.';
 
 /** Vendors index — header primary action */
 export const WORKFLOW_NEW_VENDOR_TRIGGER_LABEL = 'New vendor';
+export const WORKFLOW_NEW_VENDOR_PANEL_TITLE = 'New vendor';
+export const WORKFLOW_NEW_VENDOR_PANEL_SUBTITLE =
+  'Create a vendor record for balances, payments, and ledger.';
+export const WORKFLOW_NEW_VENDOR_NAME_LABEL = 'Vendor name';
+export const WORKFLOW_NEW_VENDOR_FORM_SUBMIT_LABEL = 'Create vendor';
+
+/** Vendors index — account lifecycle filter */
+export const WORKFLOW_VENDORS_STATUS_ACTIVE = 'Active';
+export const WORKFLOW_VENDORS_STATUS_ARCHIVED = 'Archived';
+export const WORKFLOW_VENDORS_STATUS_ALL = 'All vendors';
+
+/** Transitional link to legacy People & Accounts (pre-removal). */
+export const WORKFLOW_VENDORS_ADVANCED_ACCOUNT_SETTINGS =
+  'Advanced account settings';
+
+/** @deprecated People & Accounts is transitional — prefer Vendors for vendor setup. */
+export const WORKFLOW_SETTINGS_ACCOUNTS_DEPRECATED_NOTE =
+  'Vendor setup and directory live on Vendors. This page remains for transitional account administration until profile and portal tools move to vendor detail.';
 
 /** Vendors index — obligation strip */
 export const WORKFLOW_VENDORS_OUTSTANDING_LABEL = 'Outstanding';
@@ -306,15 +411,24 @@ export const WORKFLOW_VENDORS_RAIL_RECORD_PAYMENT = 'Record payment';
 export const WORKFLOW_VENDORS_RAIL_NO_RECENT_PAYMENTS =
   'No vendor payments recorded yet.';
 
-/** Vendor detail — manual non-inventory charges (inventory purchases belong on Purchases). */
-export const WORKFLOW_VENDOR_CHARGE_TAB_LABEL = 'Non-inventory charge';
-export const WORKFLOW_VENDOR_CHARGE_SECTION_TITLE = 'Record vendor charge';
+/** Vendor charges — ledger correction on Vendor Detail; rare create via advanced flow. */
+export const WORKFLOW_VENDOR_CHARGE_SECTION_TITLE = 'Record vendor obligation';
 export const WORKFLOW_VENDOR_CHARGE_EDIT_TITLE = 'Edit vendor charge';
-export const WORKFLOW_VENDOR_CHARGE_SUBMIT_LABEL = 'Record charge';
+export const WORKFLOW_VENDOR_CHARGE_SUBMIT_LABEL = 'Record obligation';
 export const WORKFLOW_VENDOR_CHARGE_DESCRIPTION_PLACEHOLDER =
   'e.g. Freight, handling fee, restocking fee';
 export const WORKFLOW_VENDOR_CHARGE_SCOPE =
-  'Non-inventory only — increases what you owe this vendor.';
+  'Increases what you owe this vendor. Cash moves when you record a payment.';
+export const WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_TOGGLE =
+  'Record vendor obligation (advanced)';
+export const WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_HELP =
+  'Rare fees not tied to inventory or a show. Prefer inventory purchases or show close-out when possible.';
+/** @deprecated Removed from Vendor Detail primary CTAs — use advanced obligation flow. */
+export const WORKFLOW_VENDOR_DETAIL_RECORD_CHARGE_CTA =
+  WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_TOGGLE;
+/** @deprecated */
+export const WORKFLOW_VENDOR_DETAIL_RECORD_CHARGE_HELP =
+  WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_HELP;
 export const WORKFLOW_VENDOR_CHARGE_INVENTORY_GUIDANCE =
   'Buying inventory or stock? Record an inventory purchase under Purchases so inventory and this vendor balance stay linked.';
 export const WORKFLOW_VENDOR_CHARGE_RECORD_INVENTORY_LINK =
@@ -338,11 +452,29 @@ export const WORKFLOW_EMPTY_VENDORS_FILTERED_HINT =
 /** Purchases index */
 export const WORKFLOW_PURCHASES_TAB_INVENTORY_LABEL = 'Inventory purchases';
 export const WORKFLOW_PURCHASES_PAGE_SUBTITLE =
-  'Track overhead and inventory purchases — full history lives in Ledger.';
+  'Record inventory purchases and business expenses.';
 export const WORKFLOW_PURCHASES_TAB_EXPENSES_LABEL = 'Expenses';
+export const WORKFLOW_PURCHASES_TAB_INVENTORY_HELPER =
+  'Use Inventory purchases for pallets, lots, and vendor buys. Choose “Owe vendor” when you have not paid yet.';
+export const WORKFLOW_PURCHASES_TAB_EXPENSES_HELPER =
+  'Use Expenses for business costs paid now that do not create vendor balance.';
+/** @deprecated Vendor charges tab removed from Purchases. */
+export const WORKFLOW_PURCHASES_TAB_VENDOR_CHARGES_LABEL = 'Vendor charges';
+/** @deprecated */
+export const WORKFLOW_PURCHASES_RECORD_VENDOR_CHARGE_LABEL =
+  'Record vendor charge';
+/** @deprecated */
+export const WORKFLOW_PURCHASES_RECORD_VENDOR_CHARGE_PANEL_TITLE =
+  'Record vendor charge';
 export const WORKFLOW_PURCHASES_RECORD_INVENTORY_LABEL =
   'Record inventory purchase';
 export const WORKFLOW_PURCHASES_RECORD_EXPENSE_LABEL = 'Record expense';
+export const WORKFLOW_PURCHASES_RECORD_PURCHASE_LABEL = 'Record purchase';
+export const WORKFLOW_PURCHASES_RECORD_PURCHASE_PANEL_TITLE = 'Record purchase';
+export const WORKFLOW_PURCHASES_RECORD_TYPE_INVENTORY_LABEL =
+  'Inventory purchase';
+export const WORKFLOW_PURCHASES_RECORD_TYPE_EXPENSE_LABEL = 'Business expense';
+export const WORKFLOW_PURCHASES_RECORD_TYPE_FIELD_LABEL = 'Purchase type';
 export const WORKFLOW_PURCHASES_RECORD_INVENTORY_PANEL_TITLE =
   'Record inventory purchase';
 export const WORKFLOW_PURCHASES_INVENTORY_RECENT_TITLE =
@@ -357,6 +489,8 @@ export const WORKFLOW_PURCHASES_PAYMENT_PAID_NOW = 'Paid now';
 export const WORKFLOW_PURCHASES_PAYMENT_OWE_VENDOR = 'Owe vendor';
 export const WORKFLOW_PURCHASES_VENDOR_REQUIRED =
   'Select a vendor when you owe them.';
+export const WORKFLOW_PURCHASES_VENDOR_CHARGE_SELECT_HINT =
+  'Select a vendor to record a vendor charge.';
 export const WORKFLOW_PURCHASES_RECORD_EXPENSE_PANEL_TITLE = 'Record expense';
 
 export const WORKFLOW_EMPTY_PAYMENTS_TITLE = 'No payments recorded yet.';
@@ -389,7 +523,41 @@ export const WORKFLOW_OWNER_DRAW_STATUS_VOIDED = 'Voided';
 
 export const WORKFLOW_SHOWS_OPEN_BUSINESS_HEALTH = 'Open Business Health';
 
-export const WORKFLOW_VENDORS_BALANCE_BREAKDOWN_LINK = 'Balance breakdown';
+export const WORKFLOW_VENDORS_BALANCE_BY_SHOW_HEADING = 'Balance by show';
+export const WORKFLOW_VENDORS_BALANCE_BY_SHOW_SUBTITLE =
+  'Shows that currently contribute to this vendor’s balance.';
+export const WORKFLOW_VENDORS_BALANCE_BY_SHOW_JUMP_LINK = 'Balance by show';
+/** @deprecated In-page jump removed when section is visible on vendor detail. Kept for external deep links. */
+export const WORKFLOW_VENDORS_BALANCE_BY_SHOW_RECORD_PAYMENT = 'Record payment';
+export const WORKFLOW_VENDORS_BALANCE_BY_SHOW_NON_SHOW_NOTE =
+  'Current balance also includes vendor charges or other obligations not tied to a closed show. Those amounts are not listed below.';
+
+/** @deprecated Use {@link WORKFLOW_VENDORS_BALANCE_BY_SHOW_JUMP_LINK}. */
+export const WORKFLOW_VENDORS_BALANCE_BREAKDOWN_LINK =
+  WORKFLOW_VENDORS_BALANCE_BY_SHOW_JUMP_LINK;
+
+export const WORKFLOW_EMPTY_BALANCE_BY_SHOW_NO_SHOWS_TITLE =
+  'No closed shows contribute to this balance.';
+export const WORKFLOW_EMPTY_BALANCE_BY_SHOW_NO_SHOWS_HINT =
+  'Non-show obligations appear in Vendor Ledger below.';
+
+export const WORKFLOW_EMPTY_BALANCE_BY_SHOW_FILTERED_TITLE =
+  'No closed shows in the selected pay window.';
+export const WORKFLOW_EMPTY_BALANCE_BY_SHOW_FILTERED_HINT =
+  'Try a wider pay window or choose All.';
+
+/** @deprecated Use balance-by-show empty-state constants. */
+export const WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_TITLE =
+  WORKFLOW_EMPTY_BALANCE_BY_SHOW_NO_SHOWS_TITLE;
+/** @deprecated Use balance-by-show empty-state constants. */
+export const WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_HINT =
+  WORKFLOW_EMPTY_BALANCE_BY_SHOW_NO_SHOWS_HINT;
+/** @deprecated Use balance-by-show empty-state constants. */
+export const WORKFLOW_EMPTY_BATCH_PAY_FILTERED_TITLE =
+  WORKFLOW_EMPTY_BALANCE_BY_SHOW_FILTERED_TITLE;
+/** @deprecated Use balance-by-show empty-state constants. */
+export const WORKFLOW_EMPTY_BATCH_PAY_FILTERED_HINT =
+  WORKFLOW_EMPTY_BALANCE_BY_SHOW_FILTERED_HINT;
 
 export const WORKFLOW_OWNER_HISTORY_HEADING = 'Payout history';
 export const WORKFLOW_OWNER_HISTORY_SUBTITLE =
@@ -416,22 +584,12 @@ export const WORKFLOW_EMPTY_OWNER_ACTIVITY_HINT_WITH_CURRENT =
 export const WORKFLOW_EMPTY_INVENTORY_TITLE =
   'No inventory purchases in the last 30 days.';
 export const WORKFLOW_EMPTY_INVENTORY_HINT =
-  'Use Record inventory purchase to add one.';
+  'Record pallets, lots, and vendor buys. Choose Owe vendor when you have not paid yet.';
 
 export const WORKFLOW_EMPTY_EXPENSES_TITLE =
   'No business expenses in the last 30 days.';
 export const WORKFLOW_EMPTY_EXPENSES_HINT =
-  'Use Record expense to add overhead like shipping, supplies, and software.';
-
-export const WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_TITLE =
-  'No closed shows for this wholesaler.';
-export const WORKFLOW_EMPTY_BATCH_PAY_NO_SHOWS_HINT =
-  'Open the wholesaler ledger if this balance includes open-show amounts.';
-
-export const WORKFLOW_EMPTY_BATCH_PAY_FILTERED_TITLE =
-  'No closed shows in the selected date range.';
-export const WORKFLOW_EMPTY_BATCH_PAY_FILTERED_HINT =
-  'Try a wider date range or choose All.';
+  'Record business costs paid now that do not create vendor balance.';
 
 export const WORKFLOW_EMPTY_SHOWS_TITLE = 'No shows yet.';
 export const WORKFLOW_EMPTY_SHOWS_HINT =

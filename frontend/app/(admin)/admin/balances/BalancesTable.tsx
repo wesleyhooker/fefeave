@@ -32,6 +32,10 @@ import {
   type VendorsPaymentView,
 } from "./vendorsPaymentView";
 import {
+  matchesVendorsAccountStatusFilter,
+  type VendorsAccountStatusFilter,
+} from "./vendorsAccountStatusFilter";
+import {
   workspaceBalancesPrimaryTableShell,
   workspaceMoneyClassForLiability,
   workspaceMoneyTabular,
@@ -45,6 +49,7 @@ import type { VendorsTableSortKey } from "./VendorsResourceToolbar";
 export interface WholesalerBalanceRow {
   wholesaler_id: string;
   name: string;
+  status?: "ACTIVE" | "ARCHIVED";
   owed_total: string;
   paid_total: string;
   balance_owed: string;
@@ -107,6 +112,7 @@ function emptyCopyForView(paymentView: VendorsPaymentView): {
 export function BalancesTable({
   data,
   paymentView,
+  accountStatusFilter,
   search,
   sortKey,
   sortDir,
@@ -115,6 +121,7 @@ export function BalancesTable({
 }: {
   data: WholesalerBalanceRow[];
   paymentView: VendorsPaymentView;
+  accountStatusFilter: VendorsAccountStatusFilter;
   search: string;
   sortKey: SortKey;
   sortDir: "asc" | "desc";
@@ -122,13 +129,17 @@ export function BalancesTable({
   onSortDirChange: (dir: "asc" | "desc") => void;
 }) {
   const filtered = useMemo(() => {
-    let list = data.filter((r) => matchesPaymentView(r, paymentView));
+    let list = data.filter(
+      (r) =>
+        matchesPaymentView(r, paymentView) &&
+        matchesVendorsAccountStatusFilter(r, accountStatusFilter),
+    );
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter((r) => r.name.toLowerCase().includes(q));
     }
     return list;
-  }, [data, search, paymentView]);
+  }, [data, search, paymentView, accountStatusFilter]);
 
   const emptyCopy = useMemo(() => {
     if (data.length === 0) {
@@ -308,6 +319,11 @@ export function BalancesTable({
                     }`}
                   >
                     {r.name}
+                    {r.status === "ARCHIVED" ? (
+                      <span className="ml-2 text-xs font-medium text-stone-500">
+                        Archived
+                      </span>
+                    ) : null}
                   </p>
 
                   <div className="mt-3 rounded-md border border-gray-100 bg-stone-50/40 px-3 py-2.5">
@@ -503,6 +519,11 @@ export function BalancesTable({
                         }`}
                       >
                         {r.name}
+                        {r.status === "ARCHIVED" ? (
+                          <span className="ml-2 text-xs font-medium text-stone-500">
+                            Archived
+                          </span>
+                        ) : null}
                       </span>
                     </td>
                     <td

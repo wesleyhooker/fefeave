@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BalancesPageSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
@@ -7,10 +8,15 @@ import {
   AdminWorkspacePageLayout,
 } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
 import { WorkspaceSegmentedControl } from "@/app/(admin)/admin/_components/WorkspaceSegmentedControl";
+import { AddVendorForm } from "@/app/(admin)/admin/vendors/_lib/AddVendorForm";
+import { vendorDetailHref } from "@/app/(admin)/admin/_lib/vendorRoutes";
 import { apiGet } from "@/lib/api";
 import { VENDOR_BALANCES_INVALIDATE_EVENT } from "@/lib/vendorBalancesInvalidate";
 import {
+  WORKFLOW_NEW_VENDOR_PANEL_SUBTITLE,
+  WORKFLOW_NEW_VENDOR_PANEL_TITLE,
   WORKFLOW_VENDORS_PAGE_SUBTITLE,
   WORKFLOW_VENDORS_VIEW_ALL_VENDORS,
   WORKFLOW_VENDORS_VIEW_NEEDS_PAYMENT,
@@ -24,6 +30,11 @@ import {
   VENDORS_INDEX_LAYOUT_MAIN,
   VENDORS_INDEX_LAYOUT_ROW,
 } from "./vendorsIndexLayout";
+import {
+  matchesVendorsAccountStatusFilter,
+  VENDORS_ACCOUNT_STATUS_FILTER_DEFAULT,
+  type VendorsAccountStatusFilter,
+} from "./vendorsAccountStatusFilter";
 import {
   VENDORS_PAYMENT_VIEW_ALL,
   VENDORS_PAYMENT_VIEW_DEFAULT,
@@ -50,6 +61,8 @@ const VENDORS_PAYMENT_VIEW_OPTIONS = [
 ] as const;
 
 export default function AdminBalancesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<WholesalerBalanceRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchBusy, setFetchBusy] = useState(false);
@@ -58,9 +71,22 @@ export default function AdminBalancesPage() {
   const [paymentView, setPaymentView] = useState<VendorsPaymentView>(
     VENDORS_PAYMENT_VIEW_DEFAULT,
   );
+  const [accountStatusFilter, setAccountStatusFilter] =
+    useState<VendorsAccountStatusFilter>(VENDORS_ACCOUNT_STATUS_FILTER_DEFAULT);
+  const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
   const visibilityRef = useRef<string | null>(null);
   const dataRef = useRef<WholesalerBalanceRow[] | null>(null);
   const isFetchingRef = useRef(false);
+
+  const openAddVendorPanel = useCallback(() => {
+    setIsAddVendorOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") !== "1") return;
+    setIsAddVendorOpen(true);
+    router.replace("/admin/vendors", { scroll: false });
+  }, [searchParams, router]);
 
   useEffect(() => {
     dataRef.current = data;
@@ -126,13 +152,20 @@ export default function AdminBalancesPage() {
       );
   }, [fetchBalances]);
 
-  const obligationSummary = useMemo(() => {
+  const visibleData = useMemo(() => {
     if (!data) return null;
+    return data.filter((row) =>
+      matchesVendorsAccountStatusFilter(row, accountStatusFilter),
+    );
+  }, [data, accountStatusFilter]);
+
+  const obligationSummary = useMemo(() => {
+    if (!visibleData) return null;
     let totalOutstanding = 0;
     let totalOwed = 0;
     let totalPaid = 0;
     let vendorsWithBalance = 0;
-    for (const r of data) {
+    for (const r of visibleData) {
       const owed = parseNum(r.owed_total);
       const paid = parseNum(r.paid_total);
       const balance = parseNum(r.balance_owed);
@@ -147,7 +180,7 @@ export default function AdminBalancesPage() {
       totalPaid,
       vendorsWithBalance,
     };
-  }, [data]);
+  }, [visibleData]);
 
   if (loading) {
     return <BalancesPageSkeleton />;
@@ -182,51 +215,73 @@ export default function AdminBalancesPage() {
   }
 
   return (
-    <AdminWorkspacePageLayout
-      containerTier="full"
-      intro={
-        <AdminWorkspacePageIntro
-          title="Vendors"
-          subtitle={WORKFLOW_VENDORS_PAGE_SUBTITLE}
+    <WorkspacePageWithRightPanel
+      open={isAddVendorOpen}
+      onClose={() => setIsAddVendorOpen(false)}
+      title={WORKFLOW_NEW_VENDOR_PANEL_TITLE}
+      panelSubtitle={WORKFLOW_NEW_VENDOR_PANEL_SUBTITLE}
+      panel={
+        <AddVendorForm
+          onCancel={() => setIsAddVendorOpen(false)}
+          onCreated={(account) => {
+            setIsAddVendorOpen(false);
+            fetchBalances();
+            if (account.wholesalerId) {
+              router.push(vendorDetailHref(account.wholesalerId));
+            }
+          }}
         />
       }
     >
-      {refreshError != null ? (
-        <WorkspaceInlineError
-          title="Refresh failed"
-          message={refreshError}
-          onRetry={() => fetchBalances()}
-          retryDisabled={fetchBusy}
-          className="mb-6"
-        />
-      ) : null}
+      <AdminWorkspacePageLayout
+        containerTier="full"
+        intro={
+          <AdminWorkspacePageIntro
+            title="Vendors"
+            subtitle={WORKFLOW_VENDORS_PAGE_SUBTITLE}
+          />
+        }
+      >
+        {refreshError != null ? (
+          <WorkspaceInlineError
+            title="Refresh failed"
+            message={refreshError}
+            onRetry={() => fetchBalances()}
+            retryDisabled={fetchBusy}
+            className="mb-6"
+          />
+        ) : null}
 
-      <div className={VENDORS_INDEX_LAYOUT_ROW}>
-        <div className={VENDORS_INDEX_LAYOUT_MAIN}>
-          {obligationSummary != null ? (
-            <VendorsObligationStrip summary={obligationSummary} />
-          ) : null}
+        <div className={VENDORS_INDEX_LAYOUT_ROW}>
+          <div className={VENDORS_INDEX_LAYOUT_MAIN}>
+            {obligationSummary != null ? (
+              <VendorsObligationStrip summary={obligationSummary} />
+            ) : null}
 
-          {data != null ? (
-            <VendorsTableSection
-              data={data}
-              paymentView={paymentView}
-              tabs={
-                <WorkspaceSegmentedControl
-                  value={paymentView}
-                  onChange={setPaymentView}
-                  options={VENDORS_PAYMENT_VIEW_OPTIONS}
-                  ariaLabel="Vendor payment views"
-                />
-              }
-            />
+            {data != null ? (
+              <VendorsTableSection
+                data={data}
+                paymentView={paymentView}
+                accountStatusFilter={accountStatusFilter}
+                onAccountStatusFilterChange={setAccountStatusFilter}
+                onNewVendor={openAddVendorPanel}
+                tabs={
+                  <WorkspaceSegmentedControl
+                    value={paymentView}
+                    onChange={setPaymentView}
+                    options={VENDORS_PAYMENT_VIEW_OPTIONS}
+                    ariaLabel="Vendor payment views"
+                  />
+                }
+              />
+            ) : null}
+          </div>
+
+          {visibleData != null && obligationSummary != null ? (
+            <VendorsOperationalRail data={visibleData} />
           ) : null}
         </div>
-
-        {data != null && obligationSummary != null ? (
-          <VendorsOperationalRail data={data} />
-        ) : null}
-      </div>
-    </AdminWorkspacePageLayout>
+      </AdminWorkspacePageLayout>
+    </WorkspacePageWithRightPanel>
   );
 }

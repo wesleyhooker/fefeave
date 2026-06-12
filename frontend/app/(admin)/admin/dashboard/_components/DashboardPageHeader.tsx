@@ -4,7 +4,6 @@ import { CalendarDaysIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { useMemo } from "react";
 import { useAdminWorkspace } from "@/app/(admin)/admin/AdminWorkspaceContext";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
-import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
 import {
   workspacePageIntroMetaDatePill,
   workspacePageIntroMetaDatePillCalendarIcon,
@@ -12,22 +11,15 @@ import {
   workspacePageIntroMetaDatePillRange,
   workspacePageIntroMetaDatePillTextCol,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import {
-  WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
-  WORKFLOW_THIS_WEEK_HEADING,
-} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import { WORKFLOW_THIS_WEEK_HEADING } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 
 export function DashboardPageHeader({
   weekRangeLabel,
   weekStartYmd,
-  onNewShowClick,
-  newShowPanelOpen,
 }: {
   weekRangeLabel: string;
   /** Monday (local) for the operating week — for `<time dateTime>` on the week pill. */
   weekStartYmd: string;
-  onNewShowClick: () => void;
-  newShowPanelOpen: boolean;
 }) {
   const { email } = useAdminWorkspace();
 
@@ -73,17 +65,7 @@ export function DashboardPageHeader({
         </span>
       }
       subtitle={welcomeSubtitle}
-      action={
-        <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-          <WorkspaceSidePanelTrigger
-            label={WORKFLOW_LOG_SHOW_TRIGGER_LABEL}
-            variant="primary"
-            open={newShowPanelOpen}
-            onClick={onNewShowClick}
-          />
-          {weekPill}
-        </div>
-      }
+      action={weekPill}
     />
   );
 }

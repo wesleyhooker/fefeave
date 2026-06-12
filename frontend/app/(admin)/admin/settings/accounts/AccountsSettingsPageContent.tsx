@@ -1,16 +1,12 @@
 "use client";
 
 import {
-  BanknotesIcon,
   InformationCircleIcon,
   Cog6ToothIcon,
   MagnifyingGlassIcon,
-  PlusIcon,
-  ScaleIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AdminWorkspacePageIntro,
@@ -21,34 +17,33 @@ import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceI
 import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
 import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
-import { WorkspaceSidePanelTrigger } from "@/app/(admin)/admin/_components/WorkspaceSidePanelTrigger";
 import {
   workspaceActionIconMd,
-  workspaceActionPrimaryMd,
   workspaceActionSecondaryMd,
   workspaceActionUtilitySm,
   workspaceCard,
-  workspaceFormLabel,
   workspaceInsetFlatList,
   workspacePanel,
   workspaceSectionToolbar,
   workspaceSectionTitle,
   workspaceTableCellMeta,
-  workspaceTextInput,
   workspaceToolbarSearchInput,
   workspaceMoneyClassForLiability,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import { BUSINESS_HEALTH_HREF } from "@/app/(admin)/admin/_lib/adminSidebarNav";
+import {
+  BUSINESS_HEALTH_HREF,
+  VENDORS_HREF,
+} from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import {
   WORKFLOW_EMPTY_ACCOUNTS_OWNER_HINT,
   WORKFLOW_EMPTY_ACCOUNTS_OWNER_TITLE,
   WORKFLOW_EMPTY_ACCOUNTS_WHOLESALER_HINT,
   WORKFLOW_EMPTY_ACCOUNTS_WHOLESALER_TITLE,
+  WORKFLOW_SETTINGS_ACCOUNTS_DEPRECATED_NOTE,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
   type AccountDTO,
   type AccountStatus,
-  createAccount,
   listAccounts,
 } from "@/src/lib/api/accounts";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -58,181 +53,7 @@ function toNum(value?: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function extractPhoneDigits(value: string): string {
-  return value.replace(/\D/g, "").slice(0, 10);
-}
-
-function formatPhoneNumber(value: string): string {
-  const digits = extractPhoneDigits(value);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-}
-
-type AddAccountFormProps = {
-  onCreated: () => void;
-  onCancel: () => void;
-};
-
-function AddAccountForm({ onCreated, onCancel }: AddAccountFormProps) {
-  const [displayName, setDisplayName] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactPhoneDigits, setContactPhoneDigits] = useState("");
-  const [notes, setNotes] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [emailTouched, setEmailTouched] = useState(false);
-
-  const trimmedEmail = contactEmail.trim();
-  const emailError =
-    trimmedEmail.length > 0 && !isValidEmail(trimmedEmail)
-      ? "Enter a valid email address."
-      : null;
-  const showEmailError = emailTouched && emailError != null;
-
-  const onSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setEmailTouched(true);
-    if (emailError) return;
-    setError(null);
-    setSubmitting(true);
-    try {
-      await createAccount({
-        displayName: displayName.trim(),
-        type: "WHOLESALER",
-        contactName: contactName.trim() ? contactName.trim() : undefined,
-        contactEmail: trimmedEmail ? trimmedEmail : undefined,
-        contactPhone: contactPhoneDigits || undefined,
-        notes: notes.trim() ? notes.trim() : undefined,
-      });
-      onCreated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      {error ? (
-        <WorkspaceInlineError
-          title="Could not create account"
-          message="Check the form values and retry."
-        >
-          <p className="mt-1 text-xs text-rose-900">{error}</p>
-        </WorkspaceInlineError>
-      ) : null}
-
-      <div>
-        <label htmlFor="account-name" className={workspaceFormLabel}>
-          Account name
-        </label>
-        <input
-          id="account-name"
-          required
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          className={`${workspaceTextInput} mt-1.5 w-full`}
-          placeholder="Wholesaler name"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="account-contact-name" className={workspaceFormLabel}>
-          Contact person (optional)
-        </label>
-        <input
-          id="account-contact-name"
-          value={contactName}
-          onChange={(e) => setContactName(e.target.value)}
-          className={`${workspaceTextInput} mt-1.5 w-full`}
-          placeholder="Contact person"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="account-contact-email" className={workspaceFormLabel}>
-          Email (optional)
-        </label>
-        <input
-          id="account-contact-email"
-          type="email"
-          value={contactEmail}
-          onChange={(e) => setContactEmail(e.target.value)}
-          onBlur={() => setEmailTouched(true)}
-          aria-invalid={showEmailError}
-          className={`${workspaceTextInput} mt-1.5 w-full ${
-            showEmailError
-              ? "border-rose-300 focus:border-rose-500 focus:ring-rose-300"
-              : ""
-          }`}
-          placeholder="name@company.com"
-        />
-        {showEmailError ? (
-          <p className="mt-1.5 text-xs font-medium text-rose-700">
-            {emailError}
-          </p>
-        ) : null}
-      </div>
-
-      <div>
-        <label htmlFor="account-contact-phone" className={workspaceFormLabel}>
-          Phone (optional)
-        </label>
-        <input
-          id="account-contact-phone"
-          inputMode="tel"
-          value={formatPhoneNumber(contactPhoneDigits)}
-          onChange={(e) =>
-            setContactPhoneDigits(extractPhoneDigits(e.target.value))
-          }
-          className={`${workspaceTextInput} mt-1.5 w-full`}
-          placeholder="(555) 555-5555"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="account-notes" className={workspaceFormLabel}>
-          Notes
-        </label>
-        <textarea
-          id="account-notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className={`${workspaceTextInput} mt-1.5 min-h-24 h-auto w-full resize-y py-2.5 align-top`}
-          placeholder="Optional notes"
-        />
-      </div>
-
-      <div className="flex flex-col gap-3 border-t border-stone-200/80 pt-4 sm:flex-row sm:justify-end sm:gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className={workspaceActionSecondaryMd}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={submitting || emailError != null}
-          className={`${workspaceActionPrimaryMd} disabled:opacity-60`}
-        >
-          <PlusIcon className={workspaceActionIconMd} />
-          {submitting ? "Creating…" : "Create account"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
 export default function AccountsPage() {
-  const searchParams = useSearchParams();
   const [accounts, setAccounts] = useState<AccountDTO[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -240,7 +61,7 @@ export default function AccountsPage() {
   const [statusFilter, setStatusFilter] = useState<"ALL" | AccountStatus>(
     "ALL",
   );
-  const [panelMode, setPanelMode] = useState<"add" | "ownerInfo" | null>(null);
+  const [panelMode, setPanelMode] = useState<"ownerInfo" | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -258,12 +79,6 @@ export default function AccountsPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setPanelMode("add");
-    }
-  }, [searchParams]);
 
   const ownerAccount = useMemo(
     () => accounts?.find((a) => a.type === "OWNER") ?? null,
@@ -285,7 +100,6 @@ export default function AccountsPage() {
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }, [accounts, search, statusFilter]);
 
-  const isAddOpen = panelMode === "add";
   const isOwnerInfoOpen = panelMode === "ownerInfo";
 
   const linkedUserLabel = useCallback((linkedUserEmail?: string): string => {
@@ -297,14 +111,8 @@ export default function AccountsPage() {
     <WorkspacePageWithRightPanel
       open={panelMode != null}
       onClose={() => setPanelMode(null)}
-      title={
-        isOwnerInfoOpen ? "Owner payout account" : "Add wholesaler account"
-      }
-      panelSubtitle={
-        isOwnerInfoOpen
-          ? "This account is system-owned and represents the internal payout ledger party."
-          : "Create a wholesaler balance account used for payouts, wholesaler balances, and payments."
-      }
+      title="Owner payout account"
+      panelSubtitle="This account is system-owned and represents the internal payout ledger party."
       panel={
         isOwnerInfoOpen ? (
           <div className="space-y-4">
@@ -368,15 +176,7 @@ export default function AccountsPage() {
               Close
             </button>
           </div>
-        ) : (
-          <AddAccountForm
-            onCreated={() => {
-              setPanelMode(null);
-              void load();
-            }}
-            onCancel={() => setPanelMode(null)}
-          />
-        )
+        ) : null
       }
     >
       <AdminWorkspacePageLayout
@@ -384,18 +184,22 @@ export default function AccountsPage() {
         intro={
           <AdminWorkspacePageIntro
             title="People & Accounts"
-            subtitle="Vendor and owner account setup — the directory behind balances, payments, and owner payouts."
-            action={
-              <WorkspaceSidePanelTrigger
-                label="Add vendor account"
-                open={isAddOpen}
-                onClick={() => setPanelMode("add")}
-              />
-            }
+            subtitle="Transitional account administration — vendor setup lives on Vendors."
           />
         }
       >
         <div className="space-y-5 md:space-y-6">
+          <div className="rounded-lg border border-amber-100 bg-amber-50/80 px-4 py-3 text-sm text-stone-700">
+            <p>{WORKFLOW_SETTINGS_ACCOUNTS_DEPRECATED_NOTE}</p>
+            <p className="mt-2">
+              <Link
+                href={VENDORS_HREF}
+                className="font-medium text-stone-900 underline-offset-2 hover:underline"
+              >
+                Go to Vendors
+              </Link>
+            </p>
+          </div>
           {loading ? (
             <p
               className={`${workspaceCard} px-4 py-8 text-center text-sm text-gray-500`}
@@ -630,9 +434,21 @@ export default function AccountsPage() {
               </section>
 
               <div className="rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-stone-600">
-                Accounts are the setup layer for Business Health and Vendors.
-                Wholesaler accounts feed vendor balances and payments; the owner
-                account feeds owner payout activity in Business Health.
+                Owner payout workflow lives on{" "}
+                <Link
+                  href={BUSINESS_HEALTH_HREF}
+                  className="font-medium text-stone-800 underline-offset-2 hover:underline"
+                >
+                  Business Health
+                </Link>
+                . Use{" "}
+                <Link
+                  href={VENDORS_HREF}
+                  className="font-medium text-stone-800 underline-offset-2 hover:underline"
+                >
+                  Vendors
+                </Link>{" "}
+                for vendor directory, creation, and payments.
               </div>
             </>
           ) : null}

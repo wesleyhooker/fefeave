@@ -14,19 +14,19 @@ import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/Wor
 import { WorkspaceSegmentedControl } from "@/app/(admin)/admin/_components/WorkspaceSegmentedControl";
 import {
   WORKFLOW_PURCHASES_PAGE_SUBTITLE,
-  WORKFLOW_PURCHASES_RECORD_EXPENSE_PANEL_TITLE,
-  WORKFLOW_PURCHASES_RECORD_INVENTORY_PANEL_TITLE,
+  WORKFLOW_PURCHASES_RECORD_PURCHASE_PANEL_TITLE,
+  WORKFLOW_PURCHASES_TAB_EXPENSES_HELPER,
+  WORKFLOW_PURCHASES_TAB_INVENTORY_HELPER,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
-import {
-  ExpensesActivityPanel,
-  RecordExpenseForm,
-} from "../expenses/ExpensesPageContent";
-import {
-  InventoryActivityPanel,
-  RecordInventoryPurchaseForm,
-} from "../inventory/InventoryPageContent";
+import { ExpensesActivityPanel } from "../expenses/ExpensesPageContent";
+import { InventoryActivityPanel } from "../inventory/InventoryPageContent";
 import { PurchasesActivityStrip } from "./PurchasesActivityStrip";
 import { PurchasesResourceToolbar } from "./PurchasesResourceToolbar";
+import { RecordPurchasePanel } from "./RecordPurchasePanel";
+import {
+  defaultRecordPurchaseTypeForTab,
+  type RecordPurchaseType,
+} from "./recordPurchaseTypes";
 import {
   PURCHASES_TAB_EXPENSES,
   PURCHASES_TAB_INVENTORY,
@@ -35,8 +35,6 @@ import {
   purchasesTabFromParam,
   type PurchasesTab,
 } from "./purchasesTabs";
-
-type PurchasesPanel = "inventory" | "expense" | null;
 
 export default function PurchasesPageContent() {
   const router = useRouter();
@@ -47,36 +45,39 @@ export default function PurchasesPageContent() {
   const oweFromQuery = searchParams.get("owe") === "1";
   const recordFromQuery = searchParams.get("record") === "1";
 
-  const [panel, setPanel] = useState<PurchasesPanel>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [recordType, setRecordType] = useState<RecordPurchaseType>(() =>
+    defaultRecordPurchaseTypeForTab(activeTab),
+  );
   const [reloadToken, setReloadToken] = useState(0);
   const [search, setSearch] = useState("");
   const [inventoryTypeFilter, setInventoryTypeFilter] = useState("");
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState("");
 
-  const openInventoryPanel = useCallback(() => {
-    setPanel("inventory");
-  }, []);
+  const resetRecordType = useCallback(() => {
+    setRecordType(defaultRecordPurchaseTypeForTab(activeTab));
+  }, [activeTab]);
 
-  const openExpensePanel = useCallback(() => {
-    setPanel("expense");
-  }, []);
+  const openRecordPanel = useCallback(() => {
+    resetRecordType();
+    setPanelOpen(true);
+  }, [resetRecordType]);
 
   const closePanel = useCallback(() => {
-    setPanel(null);
-  }, []);
+    setPanelOpen(false);
+    resetRecordType();
+  }, [resetRecordType]);
 
   const handleRecorded = useCallback(() => {
     setReloadToken((t) => t + 1);
-    setPanel(null);
-  }, []);
+    setPanelOpen(false);
+    resetRecordType();
+  }, [resetRecordType]);
 
   useEffect(() => {
     if (!recordFromQuery) return;
-    if (activeTab === PURCHASES_TAB_INVENTORY) {
-      setPanel("inventory");
-    } else if (activeTab === PURCHASES_TAB_EXPENSES) {
-      setPanel("expense");
-    }
+    setRecordType(defaultRecordPurchaseTypeForTab(activeTab));
+    setPanelOpen(true);
   }, [recordFromQuery, activeTab]);
 
   const handleTabChange = (next: PurchasesTab) => {
@@ -87,26 +88,24 @@ export default function PurchasesPageContent() {
     router.replace(purchasesHrefForTab(next));
   };
 
-  const panelTitle =
-    panel === "inventory"
-      ? WORKFLOW_PURCHASES_RECORD_INVENTORY_PANEL_TITLE
-      : WORKFLOW_PURCHASES_RECORD_EXPENSE_PANEL_TITLE;
+  const tabHelperCopy =
+    activeTab === PURCHASES_TAB_INVENTORY
+      ? WORKFLOW_PURCHASES_TAB_INVENTORY_HELPER
+      : WORKFLOW_PURCHASES_TAB_EXPENSES_HELPER;
 
   return (
     <WorkspacePageWithRightPanel
-      open={panel != null}
+      open={panelOpen}
       onClose={closePanel}
-      title={panelTitle}
+      title={WORKFLOW_PURCHASES_RECORD_PURCHASE_PANEL_TITLE}
       panel={
-        panel === "inventory" ? (
-          <RecordInventoryPurchaseForm
-            onSuccess={handleRecorded}
-            initialWholesalerId={vendorFromQuery ?? undefined}
-            initialPaymentStatus={oweFromQuery ? "OWE_VENDOR" : undefined}
-          />
-        ) : panel === "expense" ? (
-          <RecordExpenseForm onSuccess={handleRecorded} />
-        ) : null
+        <RecordPurchasePanel
+          recordType={recordType}
+          onRecordTypeChange={setRecordType}
+          onSuccess={handleRecorded}
+          initialWholesalerId={vendorFromQuery ?? undefined}
+          initialPaymentStatus={oweFromQuery ? "OWE_VENDOR" : undefined}
+        />
       }
     >
       <AdminWorkspacePageLayout
@@ -132,6 +131,9 @@ export default function PurchasesPageContent() {
               options={PURCHASES_TAB_OPTIONS}
               ariaLabel="Purchases sections"
             />
+            <p className="mt-2 text-sm leading-snug text-gray-600">
+              {tabHelperCopy}
+            </p>
           </WorkspaceGridItem>
           <WorkspaceGridItem span="full">
             <PurchasesResourceToolbar
@@ -142,10 +144,8 @@ export default function PurchasesPageContent() {
               onInventoryTypeFilterChange={setInventoryTypeFilter}
               expenseCategoryFilter={expenseCategoryFilter}
               onExpenseCategoryFilterChange={setExpenseCategoryFilter}
-              isInventoryPanelOpen={panel === "inventory"}
-              isExpensePanelOpen={panel === "expense"}
-              onRecordInventory={openInventoryPanel}
-              onRecordExpense={openExpensePanel}
+              isRecordPanelOpen={panelOpen}
+              onRecordPurchase={openRecordPanel}
             />
           </WorkspaceGridItem>
           <WorkspaceGridItem span="full">

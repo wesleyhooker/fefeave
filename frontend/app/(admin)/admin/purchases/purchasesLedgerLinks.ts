@@ -17,3 +17,15 @@ export function purchasesInventoryAcquisitionHref(args?: {
   }
   return `/admin/purchases?${params.toString()}`;
 }
+
+/**
+ * Legacy vendor-charge deep links — normalize to inventory acquisition flow.
+ * Manual vendor obligations belong on Vendor Detail (advanced) or inventory owe.
+ */
+export function purchasesVendorChargeHref(args?: {
+  wholesalerId?: string;
+}): string {
+  return purchasesInventoryAcquisitionHref(
+    args?.wholesalerId ? { wholesalerId: args.wholesalerId } : undefined,
+  );
+}

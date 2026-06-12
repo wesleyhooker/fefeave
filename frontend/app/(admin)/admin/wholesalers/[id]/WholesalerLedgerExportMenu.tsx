@@ -28,7 +28,7 @@ export function WholesalerLedgerExportMenu({
       const filename = `wholesaler-statement-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}.csv`;
       downloadCsv(filename, csvText, { includeBom: false });
     } catch {
-      onStatementError("Statement export failed. Please retry.");
+      onStatementError("Vendor ledger export failed. Please retry.");
     }
   };
 
@@ -57,7 +57,7 @@ export function WholesalerLedgerExportMenu({
       items={[
         {
           id: "statement-csv",
-          label: "Download statement CSV",
+          label: "Download vendor ledger CSV",
           onSelect: () => {
             void downloadStatement();
           },

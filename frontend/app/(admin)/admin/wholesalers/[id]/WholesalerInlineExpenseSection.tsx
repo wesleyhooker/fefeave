@@ -345,7 +345,7 @@ export function WholesalerInlineExpenseSection({
       id="vendor-inline-expense"
       className={outerClass}
       aria-labelledby={embedded ? undefined : "wholesaler-expense-heading"}
-      aria-label={embedded ? "Expense" : undefined}
+      aria-label={embedded ? "Vendor charge" : undefined}
     >
       {headerBlock}
 
@@ -367,7 +367,7 @@ export function WholesalerInlineExpenseSection({
             className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
             role="alert"
           >
-            <p className="font-medium">Could not save expense.</p>
+            <p className="font-medium">Could not save vendor charge.</p>
             <p className="mt-1">{submitError}</p>
           </div>
         ) : null}
@@ -409,7 +409,7 @@ export function WholesalerInlineExpenseSection({
                   }}
                   className={`${textField} w-full ${isCompact ? "pl-6" : "pl-7"} tabular-nums`}
                   placeholder="0.00"
-                  aria-label="Expense amount in dollars"
+                  aria-label="Vendor charge amount in dollars"
                 />
               </div>
             </div>
@@ -432,7 +432,7 @@ export function WholesalerInlineExpenseSection({
                 </p>
                 {projected !== null ? (
                   <p className="mt-1">
-                    After this expense:{" "}
+                    After this charge:{" "}
                     <span className="font-medium text-stone-900">
                       {formatCurrency(projected)}
                     </span>
@@ -479,7 +479,7 @@ export function WholesalerInlineExpenseSection({
               htmlFor="wholesaler-expense-date"
               className={`${workspaceFormLabelSecondary} block`}
             >
-              Expense date
+              Charge date
             </label>
             <input
               id="wholesaler-expense-date"
@@ -532,7 +532,7 @@ export function WholesalerInlineExpenseSection({
               <WorkspaceActionLabel
                 icon={<TrashIcon className={workspaceActionIconMd} />}
               >
-                Delete expense
+                Delete vendor charge
               </WorkspaceActionLabel>
             </button>
             <button
@@ -569,9 +569,9 @@ export function WholesalerInlineExpenseSection({
         onOpenChange={setDeleteOpen}
         tone="danger"
         icon="×"
-        title="Delete this expense?"
-        description="This removes the expense from the ledger. You can add a new expense later if needed."
-        confirmLabel={deleting ? "Deleting…" : "Delete expense"}
+        title="Delete this vendor charge?"
+        description="This removes the charge from the ledger. Record a new charge on Purchases if needed."
+        confirmLabel={deleting ? "Deleting…" : "Delete vendor charge"}
         cancelLabel="Cancel"
         onConfirm={handleDeleteConfirm}
       />

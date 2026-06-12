@@ -1,12 +1,8 @@
-import Link from "next/link";
 import {
   AdminWorkspacePageIntro,
   AdminWorkspacePageLayout,
 } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
-import {
-  SETTINGS_ACCOUNTS_HREF,
-  SETTINGS_FINANCIAL_HREF,
-} from "@/app/(admin)/admin/_lib/adminSidebarNav";
+import { SETTINGS_FINANCIAL_HREF } from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import {
   WorkspaceCard,
   WorkspaceCardBody,
@@ -15,18 +11,13 @@ import {
   WorkspaceGrid,
   WorkspaceGridItem,
 } from "@/app/(admin)/admin/_components/WorkspaceGrid";
+import Link from "next/link";
 import {
   workspaceNavItemBase,
   workspaceNavItemInactive,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 
 const SETTINGS_SECTIONS = [
-  {
-    href: SETTINGS_ACCOUNTS_HREF,
-    title: "People & Accounts",
-    description:
-      "Vendor and owner account setup, directory, and account linkage.",
-  },
   {
     href: SETTINGS_FINANCIAL_HREF,
     title: "Financial Preferences",

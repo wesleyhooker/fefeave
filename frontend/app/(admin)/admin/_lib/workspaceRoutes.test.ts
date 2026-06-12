@@ -8,7 +8,10 @@ import {
   showNavigateHref,
 } from './showRoutes.ts';
 import {
+  VENDOR_BALANCE_BY_SHOW_HASH,
   VENDOR_PAYMENT_HASH,
+  vendorBatchPayHref,
+  vendorDetailBalanceByShowHref,
   vendorDetailHref,
   vendorDetailPaymentHref,
   vendorPaymentNewHref,
@@ -41,5 +44,21 @@ describe('vendorRoutes', () => {
       `/admin/vendors/v1${VENDOR_PAYMENT_HASH}`,
     );
     assert.equal(vendorPaymentNewHref('v1'), vendorDetailPaymentHref('v1'));
+  });
+
+  it('embeds balance-by-show on vendor detail', () => {
+    assert.equal(VENDOR_BALANCE_BY_SHOW_HASH, '#balance-by-show');
+    assert.equal(
+      vendorDetailBalanceByShowHref('v1'),
+      '/admin/vendors/v1#balance-by-show',
+    );
+  });
+
+  it('keeps legacy batch-pay path for server redirect only', () => {
+    assert.equal(vendorBatchPayHref('v1'), '/admin/vendors/v1/batch-pay');
+    assert.notEqual(
+      vendorBatchPayHref('v1'),
+      vendorDetailBalanceByShowHref('v1'),
+    );
   });
 });

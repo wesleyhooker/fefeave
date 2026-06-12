@@ -1,8 +1,9 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDate } from "@/lib/format";
+import { LEDGER_VENDOR_QUERY_PARAM } from "@/app/(admin)/admin/_lib/vendorLedgerLinks";
 import {
   AdminWorkspacePageIntro,
   AdminWorkspacePageLayout,
@@ -44,6 +45,7 @@ import {
   workspaceMoneyTabular,
   workspaceTableCellMeta,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import { fetchWholesalerBalances } from "@/src/lib/api/wholesalers";
 
 function amountLineClass(direction: string | null): string {
   if (direction === "INFLOW") return "text-emerald-700";
@@ -87,6 +89,7 @@ function ActivityTimelineRow({ event }: { event: FinancialActivityEventDTO }) {
 }
 
 export default function FinancialActivityPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialCategoryApplied = useRef(false);
   const [events, setEvents] = useState<FinancialActivityEventDTO[]>([]);
@@ -103,6 +106,8 @@ export default function FinancialActivityPage() {
   const [eventType, setEventType] = useState<FinancialEventType | "">("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [vendorFilterId, setVendorFilterId] = useState("");
+  const [vendorFilterName, setVendorFilterName] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   function resetPageForFilterChange() {
@@ -115,6 +120,7 @@ export default function FinancialActivityPage() {
     const eventTypeParam = searchParams.get("event_type");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const vendor = searchParams.get(LEDGER_VENDOR_QUERY_PARAM);
     let applied = false;
     if (eventTypeParam) {
       setEventType(eventTypeParam as FinancialEventType);
@@ -146,8 +152,32 @@ export default function FinancialActivityPage() {
       setDateTo(to);
       applied = true;
     }
+    if (vendor) {
+      setVendorFilterId(vendor);
+      applied = true;
+    }
     if (applied) initialCategoryApplied.current = true;
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!vendorFilterId) {
+      setVendorFilterName(null);
+      return;
+    }
+    let cancelled = false;
+    fetchWholesalerBalances()
+      .then((rows) => {
+        if (cancelled) return;
+        const row = rows.find((r) => r.wholesaler_id === vendorFilterId);
+        setVendorFilterName(row?.name ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setVendorFilterName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [vendorFilterId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,6 +193,7 @@ export default function FinancialActivityPage() {
             event_type: eventType || undefined,
             effective_date_from: dateFrom || undefined,
             effective_date_to: dateTo || undefined,
+            vendor: vendorFilterId || undefined,
           }),
           fetchFinancialActivityStats(),
         ]);
@@ -182,7 +213,30 @@ export default function FinancialActivityPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, category, eventType, dateFrom, dateTo, reloadToken]);
+  }, [
+    page,
+    category,
+    eventType,
+    dateFrom,
+    dateTo,
+    vendorFilterId,
+    reloadToken,
+  ]);
+
+  function ledgerHrefWithoutVendorFilter(): string {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete(LEDGER_VENDOR_QUERY_PARAM);
+    params.delete("wholesalerId");
+    const qs = params.toString();
+    return qs ? `/admin/ledger?${qs}` : "/admin/ledger";
+  }
+
+  function clearVendorFilter() {
+    setVendorFilterId("");
+    setPage(1);
+    setReloadToken((t) => t + 1);
+    router.replace(ledgerHrefWithoutVendorFilter());
+  }
 
   function applyFilters(e: React.FormEvent) {
     e.preventDefault();
@@ -195,8 +249,10 @@ export default function FinancialActivityPage() {
     setEventType("");
     setDateFrom("");
     setDateTo("");
+    setVendorFilterId("");
     setPage(1);
     setReloadToken((t) => t + 1);
+    router.replace("/admin/ledger");
   }
 
   const statItems = useMemo((): AdminSummaryStatItem[] => {
@@ -284,6 +340,23 @@ export default function FinancialActivityPage() {
                       >
                         Filters
                       </h2>
+                      {vendorFilterId ? (
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-stone-800">
+                          <span>
+                            Vendor:{" "}
+                            <span className="font-medium">
+                              {vendorFilterName ?? "Vendor filter active"}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            className={workspaceActionSecondarySm}
+                            onClick={clearVendorFilter}
+                          >
+                            Clear vendor
+                          </button>
+                        </div>
+                      ) : null}
                       <form
                         onSubmit={applyFilters}
                         className="mt-4 grid gap-4 sm:grid-cols-2"

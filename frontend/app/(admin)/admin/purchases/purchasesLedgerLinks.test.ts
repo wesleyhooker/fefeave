@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { purchasesInventoryAcquisitionHref } from './purchasesLedgerLinks';
+import {
+  purchasesInventoryAcquisitionHref,
+  purchasesVendorChargeHref,
+} from './purchasesLedgerLinks';
 
 test('purchasesInventoryAcquisitionHref opens inventory record panel', () => {
   const href = purchasesInventoryAcquisitionHref();
@@ -13,4 +16,13 @@ test('purchasesInventoryAcquisitionHref preselects vendor owe flow', () => {
   const href = purchasesInventoryAcquisitionHref({ wholesalerId: vendorId });
   assert.match(href, new RegExp(`vendor=${vendorId}`));
   assert.match(href, /owe=1/);
+});
+
+test('purchasesVendorChargeHref legacy alias normalizes to inventory flow', () => {
+  const href = purchasesVendorChargeHref({ wholesalerId: 'abc' });
+  assert.match(href, /tab=inventory/);
+  assert.match(href, /record=1/);
+  assert.match(href, /vendor=abc/);
+  assert.match(href, /owe=1/);
+  assert.doesNotMatch(href, /vendor-charges/);
 });
