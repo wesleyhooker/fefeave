@@ -20,10 +20,10 @@ import {
   WORKFLOW_THIS_WEEK_HEADING,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
-  workspaceMoneyMuted,
   workspaceThisWeekSupportingMeta,
   workspaceThisWeekTitle,
 } from "@/app/(admin)/admin/_lib/workspaceThisWeekSurface";
+import { workspaceMoneyMuted } from "@/app/(admin)/admin/_components/workspaceUi";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import type { DashboardHeroSummary } from "../_lib/dashboardSummary";
 import { DashboardHeroMetric } from "./DashboardHeroMetric";

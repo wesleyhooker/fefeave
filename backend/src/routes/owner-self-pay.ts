@@ -374,19 +374,30 @@ export async function ownerSelfPayRoutes(
 
       const pool = getPool();
       const ownerAccountId = await resolveOwnerAccountId();
+      const existingResult = await pool.query(
+        `SELECT id, amount, paid_at, transaction_type::text AS transaction_type,
+                week_start_date, week_end_date, reference, note, voided_at, updated_at
+         FROM owner_self_pay_transactions
+         WHERE account_id = $1 AND week_start_date = $2 AND deleted_at IS NULL`,
+        [ownerAccountId, weekStart]
+      );
+      const priorForGuard = existingResult.rows[0] as OwnerSelfPayRow | undefined;
+      const isWeekCorrection = priorForGuard != null && priorForGuard.voided_at == null;
+
       const computedPayout = await computeOwnerPayoutWithStrategy(
         pool,
         weekStart,
         week_end_date,
         ownerAccountId
       );
-      if (computedPayout.remainingAvailablePayout <= 0) {
+      if (!isWeekCorrection && computedPayout.remainingAvailablePayout <= 0) {
         throw new ValidationError(
           `No remaining owner payout available for ${weekStart} to ${week_end_date}`
         );
       }
       if (
         amount !== undefined &&
+        !isWeekCorrection &&
         Math.abs(amount - computedPayout.remainingAvailablePayout) > 0.01
       ) {
         throw new ValidationError(
@@ -395,11 +406,22 @@ export async function ownerSelfPayRoutes(
           )}`
         );
       }
+      if (
+        amount !== undefined &&
+        isWeekCorrection &&
+        Math.abs(amount - Number(priorForGuard!.amount)) > 0.01
+      ) {
+        throw new ValidationError(
+          `amount ${amount.toFixed(2)} does not match recorded payout ${Number(priorForGuard!.amount).toFixed(2)}`
+        );
+      }
 
-      const storedPayoutAmount = ownerPayoutAmountToRecord(
-        computedPayout.ownerPaidThisPeriod,
-        computedPayout.remainingAvailablePayout
-      );
+      const storedPayoutAmount = isWeekCorrection
+        ? Number(priorForGuard!.amount)
+        : ownerPayoutAmountToRecord(
+            computedPayout.ownerPaidThisPeriod,
+            computedPayout.remainingAvailablePayout
+          );
       const row = await withTx(async (client) => {
         const userId = await ensureUser(client, request);
         const existingResult = await client.query(

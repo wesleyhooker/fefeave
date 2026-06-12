@@ -485,6 +485,10 @@ describe('Event-derived cash parity integration', () => {
       },
     });
     expect(firstRes.statusCode).toBe(200);
+    const firstBody = JSON.parse(firstRes.payload) as {
+      transaction: { amount: string };
+    };
+    const expectedOutflow = Number(firstBody.transaction.amount);
 
     const secondRes = await app.inject({
       method: 'PUT',
@@ -500,7 +504,7 @@ describe('Event-derived cash parity integration', () => {
     await backfillAndAssertParity('owner correction');
     const pool = getPool();
     const parity = await assertCashEventTotalsParity(pool);
-    expect(parity.tableDerived.total_outflows).toBe(700);
-    expect(parity.eventDerived.total_outflows).toBe(700);
+    expect(parity.tableDerived.total_outflows).toBe(expectedOutflow);
+    expect(parity.eventDerived.total_outflows).toBe(expectedOutflow);
   });
 });

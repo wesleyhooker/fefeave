@@ -186,9 +186,12 @@ try {
     });
     await page.waitForLoadState("networkidle");
     await snap(page, i++, "wholesaler-detail");
-    await page.goto(`${baseUrl}/admin/vendors/${wholesalerId}#balance-by-show`, {
-      waitUntil: "domcontentloaded",
-    });
+    await page.goto(
+      `${baseUrl}/admin/vendors/${wholesalerId}#balance-by-show`,
+      {
+        waitUntil: "domcontentloaded",
+      },
+    );
     await page.waitForLoadState("networkidle");
     await snap(page, i++, "vendor-balance-by-show");
   } else {

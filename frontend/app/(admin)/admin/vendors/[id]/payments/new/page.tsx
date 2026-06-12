@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { vendorDetailPaymentHref } from "../../_lib/vendorRoutes";
+import { vendorDetailPaymentHref } from "@/app/(admin)/admin/_lib/vendorRoutes";
 
 /** Vendor detail inline payment is the canonical create surface. */
 export default async function AdminVendorRecordPaymentPage({
