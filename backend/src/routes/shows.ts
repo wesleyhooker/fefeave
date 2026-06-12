@@ -8,6 +8,7 @@ import {
   emitShowPayoutOnShowStatusChange,
   resolveActorUserId,
 } from '../services/financial-event-emission';
+import { notifyShowClosed } from '../services/notification-emission';
 import { assertShowCanComplete } from '../services/show-completion-validation';
 
 const PLATFORM_API = ['WHATNOT', 'TIKTOK', 'INSTAGRAM', 'OTHER'] as const;
@@ -294,7 +295,9 @@ export async function showRoutes(
           throw new NotFoundError('Show', id);
         }
 
-        if (status === 'COMPLETED' && current.status !== 'COMPLETED') {
+        const isClosingShow = status === 'COMPLETED' && current.status !== 'COMPLETED';
+
+        if (isClosingShow) {
           await assertShowCanComplete(client, id);
         }
 
@@ -313,6 +316,9 @@ export async function showRoutes(
           status,
           resolveActorUserId(request.user?.cognitoSub)
         );
+        if (isClosingShow) {
+          await notifyShowClosed(client, id, resolveActorUserId(request.user?.cognitoSub));
+        }
         return updated;
       });
       return reply.send(serializeShow(row));
