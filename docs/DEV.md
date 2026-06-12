@@ -11,7 +11,25 @@ make dev-api
 make dev-ui
 ```
 
-Or one command (tmux): `make dev` — same ports, includes `dev_bypass` backend.
+Or one command (tmux): `make dev` — DB up, migrate, backend + frontend in tmux (`dev_bypass`).
+
+### Event-backed Financials mock data (recommended)
+
+After `make dev` (or with DB + API running):
+
+```bash
+make dev-seed          # domain tables + financial_events backfill
+make dev-seed-verify   # print key Financials health metrics
+```
+
+For a **clean** local DB with only fresh seed data:
+
+```bash
+make dev-reset         # schema reset + migrate + seed (dev only)
+make dev-seed-verify
+```
+
+`make dev` does **not** run seed automatically — run `make dev-seed` once per session or after schema changes.
 
 Open **http://localhost:3001** (UI). API: **http://localhost:3000/api/health**, Swagger: **http://localhost:3000/docs**.
 
@@ -25,7 +43,10 @@ Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). In
 - `make dev-db-down` — stop local Postgres
 - `make dev-db-reset` — reset local Postgres volume and restart
 - `make dev-migrate` — run DB migrations against local Postgres
-- `make dev-seed` — seed sample dev data (after migrate)
+- `make dev-seed` — seed sample dev data + backfill `financial_events` (after migrate)
+- `make dev-seed-verify` — print Financials mock-data health metrics (DB + API if backend up)
+- `make dev-reset` — reset local DB schema, migrate, and seed (clean Financials mock)
+- `make dev-backfill-financial-events` — re-run local financial events backfill only (no domain re-seed)
 - `make dev` — DB up, migrate, backend + frontend in tmux (`dev_bypass`)
 - `make dev-api` — run backend locally on `:3000` with dev bypass auth
 - `make dev-ui` — run frontend locally on `:3001` (bind `0.0.0.0`)
@@ -90,7 +111,10 @@ The script loads `.env.local`, hits dev-bootstrap, then opens the target route. 
   - Each file in `backend/migrations/` must have a **unique** numeric prefix (the part before the first `_`). Two migrations must not share the same prefix (e.g. colliding with another branch’s `1771120000000_*`).
   - Prefer `npm run migrate:create -- <name>` from `backend/` so `node-pg-migrate` generates a fresh timestamp; avoid copying another file’s prefix when adding migrations by hand.
 - **Reset local DB**
-  - Run `make dev-db-reset`, then `make dev-migrate`.
+  - Run `make dev-db-reset`, then `make dev-migrate`, then `make dev-seed`.
+- **Event-backed Financials looks empty after migrate**
+  - Run `make dev-seed` (includes backfill) or `make dev-backfill-financial-events` if domain rows already exist.
+  - Re-running `make dev-seed` is safe: it deletes seed-namespace rows and their `financial_events`, then re-inserts and backfills.
 
 ## Docker on Windows + WSL integration
 
@@ -117,6 +141,23 @@ This is usually **not a routes problem** — a previous `next dev` (or `make dev
 ### TypeScript errors about missing `.next/types/*.ts`
 
 After cleaning `.next` or switching branches, run `make dev-ui` or `npm run build` once in `frontend/` so Next regenerates route types. Or delete `frontend/tsconfig.tsbuildinfo` and retry.
+
+### UI or API changes do not appear until `make dev` is restarted
+
+On **WSL2**, file watchers often miss saves (especially if the repo lives under `/mnt/c/...` or the editor runs on Windows). `make dev-ui` / `make dev-api` now enable **polling** automatically when WSL is detected:
+
+- **Frontend:** webpack `watchOptions.poll` (see `frontend/next.config.ts`)
+- **Backend:** `nodemon --legacy-watch` via `npm run dev:poll`
+
+After pulling this fix, run **`make dev-down`** once, then **`make dev`** again so both panes start with polling.
+
+**Still no hot reload?**
+
+1. Keep the repo in the **Linux filesystem** (`~/dev/...`), not `/mnt/c/...`.
+2. Hard-refresh the browser (Ctrl+Shift+R) — the dev server may have recompiled but the tab is stale.
+3. Clear a bad Next cache: `rm -rf frontend/.next`, then `make dev-ui`.
+4. Force polling in `frontend/.env.local`: `WATCHPACK_POLLING=true` (disable with `WATCHPACK_POLLING=false`).
+5. Backend API-only edits: confirm the backend tmux pane shows `Restarting...` after you save; if not, the backend pane may need `dev:poll` (WSL) or a manual restart.
 
 ### Docker/WSL troubleshooting
 

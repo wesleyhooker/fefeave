@@ -12,6 +12,10 @@ import {
   roundMoney,
 } from './event-adjusted-cash';
 import type { Queryable } from './financial-events';
+import {
+  PAYMENT_OBLIGATION_EVENT_TYPES,
+  PAYMENT_VOIDED_EVENT_TYPE,
+} from './financial-obligation-projections';
 import { toYyyyMmDd } from '../utils/pg-date';
 
 export type { CashEventTotals };
@@ -37,7 +41,6 @@ export type CashParityResult = {
 const SHOW_PAYOUT_EVENT_TYPES = ['SHOW_PAYOUT_RECORDED', 'SHOW_PAYOUT_UPDATED'] as const;
 
 const CASH_OUTFLOW_EVENT_TYPES = [
-  'WHOLESALER_PAYMENT_RECORDED',
   'INVENTORY_PURCHASE_RECORDED',
   'BUSINESS_EXPENSE_RECORDED',
 ] as const;
@@ -120,6 +123,23 @@ export async function loadCashEventTotalsFromEvents(
        FROM latest_owner_outflow
        WHERE event_type <> ALL($5::text[])
          AND amount IS NOT NULL
+     ),
+     latest_payment_outflow AS (
+       SELECT DISTINCT ON (source_id)
+         source_id,
+         amount::numeric AS amount,
+         event_type
+       FROM financial_events
+       WHERE event_type = ANY($6::text[])
+         AND source_type = 'payment'
+         AND effective_date > $1::date
+       ORDER BY source_id, occurred_at DESC, id DESC
+     ),
+     payment_outflows AS (
+       SELECT COALESCE(SUM(amount), 0)::numeric AS total
+       FROM latest_payment_outflow
+       WHERE event_type <> $7
+         AND amount IS NOT NULL
      )
      SELECT
        (SELECT total FROM show_payout_inflows) AS show_payout_inflows,
@@ -131,6 +151,7 @@ export async function loadCashEventTotalsFromEvents(
              AND direction = 'OUTFLOW'
              AND effective_date > $1::date
          ), 0)
+         + (SELECT total FROM payment_outflows)
          + (SELECT total FROM owner_outflows)
        )::numeric AS total_outflows`,
     [
@@ -139,6 +160,8 @@ export async function loadCashEventTotalsFromEvents(
       CASH_OUTFLOW_EVENT_TYPES,
       OWNER_OUTFLOW_EVENT_TYPES,
       OWNER_VOIDED_EVENT_TYPES,
+      PAYMENT_OBLIGATION_EVENT_TYPES,
+      PAYMENT_VOIDED_EVENT_TYPE,
     ]
   );
 

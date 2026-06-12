@@ -29,20 +29,30 @@ For full stack (frontend + `AUTH_MODE=dev_bypass`), from repo root: `make dev-mi
 
 ## 2. Available Scripts
 
-| Script                     | Purpose                                                        |
-| -------------------------- | -------------------------------------------------------------- |
-| `npm run dev`              | Dev server with watch                                          |
-| `npm run build`            | Compile to `dist/`                                             |
-| `npm run build:lambda`     | Build + verify `dist/lambda.js` exports `handler`              |
-| `npm run package:lambda`   | Stage `lambda.zip` (dist + prod deps; deploy in a later phase) |
-| `npm start`                | Run compiled app                                               |
-| `npm run lint`             | ESLint                                                         |
-| `npm run format`           | Prettier                                                       |
-| `npm test`                 | Unit tests (Jest, DB-free; excludes integration suites)        |
-| `npm run test:integration` | Integration tests (Docker Postgres + isolated `test` schema)   |
-| `npm run migrate:up`       | Run migrations                                                 |
-| `npm run migrate:down`     | Rollback last migration                                        |
-| `npm run migrate:create`   | Create new migration                                           |
+| Script                                      | Purpose                                                                 |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| `npm run dev`                               | Dev server with watch                                                   |
+| `npm run build`                             | Compile to `dist/`                                                      |
+| `npm run build:lambda`                      | Build + verify `dist/lambda.js` exports `handler`                       |
+| `npm run package:lambda`                    | Stage `lambda.zip` (dist + prod deps; deploy in a later phase)          |
+| `npm start`                                 | Run compiled app                                                        |
+| `npm run lint`                              | ESLint                                                                  |
+| `npm run format`                            | Prettier                                                                |
+| `npm test`                                  | Unit tests (Jest, DB-free; excludes integration suites)                 |
+| `npm run test:integration`                  | Integration tests (Docker Postgres + isolated `test` schema)            |
+| `npm run migrate:up`                        | Run migrations                                                          |
+| `npm run migrate:down`                      | Rollback last migration                                                 |
+| `npm run migrate:create`                    | Create new migration                                                    |
+| `npm run seed:dev`                          | Dev seed (domain tables + financial_events backfill)                    |
+| `npm run seed:verify`                       | Verify dev seed / Financials mock metrics (local only)                  |
+| `npm run backfill:financial-events`         | Backfill domain rows into `financial_events` (CLI; prod/staging manual) |
+| `npm run backfill:financial-events:dry-run` | Preview backfill counts without inserting                               |
+
+### Dev seed and event-backed Financials
+
+Local Financials calculations read from `financial_events`. `npm run seed:dev` (or `make dev-seed`) writes operational domain rows, then runs the same backfill service as `npm run backfill:financial-events`. Re-running seed deletes seed-namespace `financial_events` before re-inserting domain data, so duplicate events do not accumulate.
+
+Prod/staging backfill remains **manual** — seed never runs outside local dev.
 
 ---
 

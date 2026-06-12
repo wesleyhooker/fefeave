@@ -81,16 +81,16 @@ export async function loadSelfPayAndPayoutServer(args: {
 
 export function deriveOwnerWeeklyPayoutUiState(args: {
   selfPay: SelfPayStored | null;
-  payoutAmount: number;
+  remainingAmount: number;
 }): OwnerWeeklyPayoutUiState {
-  const isPaid = args.selfPay?.paid === true;
-  const isUnpaid = !isPaid;
-  const canRecordPayout = args.payoutAmount > 0;
+  const hasActivePayout = args.selfPay?.paid === true;
+  const isFullyPaid = hasActivePayout && args.remainingAmount <= 0;
+  const canRecordPayout = args.remainingAmount > 0;
   return {
-    isPaid,
-    isUnpaid,
-    canMarkPaid: isUnpaid && canRecordPayout,
-    canMarkUnpaid: isPaid,
+    isPaid: isFullyPaid,
+    isUnpaid: !isFullyPaid,
+    canMarkPaid: canRecordPayout,
+    canMarkUnpaid: hasActivePayout,
   };
 }
 

@@ -5,9 +5,11 @@ import { getPool, withTx } from '../db';
 import { ensureUser } from '../db/ensure-user';
 import { resolveOwnerAccountId } from '../db/owner-account';
 import {
-  computeOwnerWeeklyPayout,
-  loadOwnerPayoutSourceContextMap,
-} from '../services/owner-weekly-payout';
+  computeOwnerPayoutWithStrategy,
+  toOwnerPayoutComputationDto,
+} from '../services/owner-payout-computation';
+import { ownerPayoutAmountToRecord } from '../services/owner-payout-strategy';
+import { loadOwnerPayoutSourceContextMap } from '../services/owner-weekly-payout';
 import { loadOwnerTotalPaidAmount } from '../services/financial-event-summaries';
 import {
   emitOwnerSelfPayCorrected,
@@ -47,6 +49,10 @@ const upsertOwnerSelfPaySchema = z.object({
   reference: z.string().trim().optional(),
   note: z.string().trim().optional(),
 });
+
+function ownerPayoutAmountsMatch(a: number, b: number): boolean {
+  return Math.abs(a - b) <= 0.01;
+}
 
 function addDays(yyyyMmDd: string, days: number): string {
   const year = Number(yyyyMmDd.slice(0, 4));
@@ -280,13 +286,14 @@ export async function ownerSelfPayRoutes(
       const weekEnd = addDays(weekStart, 6);
 
       const pool = getPool();
-      const payout = await computeOwnerWeeklyPayout(pool, weekStart, weekEnd);
-      return reply.send({
-        weekStartDate: payout.weekStartDate,
-        weekEndDate: payout.weekEndDate,
-        completedShowCount: payout.completedShowCount,
-        amount: payout.amount.toFixed(2),
-      });
+      const ownerAccountId = await resolveOwnerAccountId();
+      const computed = await computeOwnerPayoutWithStrategy(
+        pool,
+        weekStart,
+        weekEnd,
+        ownerAccountId
+      );
+      return reply.send(toOwnerPayoutComputationDto(computed));
     }
   );
 
@@ -370,21 +377,60 @@ export async function ownerSelfPayRoutes(
       }
 
       const pool = getPool();
-      const computedPayout = await computeOwnerWeeklyPayout(pool, weekStart, week_end_date);
-      if (computedPayout.amount <= 0) {
-        throw new ValidationError(
-          `No owner payout available for ${weekStart} to ${week_end_date}; payout must be greater than 0`
-        );
-      }
-      if (amount !== undefined && Math.abs(amount - computedPayout.amount) > 0.01) {
-        throw new ValidationError(
-          `amount ${amount.toFixed(2)} does not match computed weekly payout ${computedPayout.amount.toFixed(
-            2
-          )}`
-        );
-      }
-
       const ownerAccountId = await resolveOwnerAccountId();
+      const existingResult = await pool.query(
+        `SELECT id, amount, paid_at, transaction_type::text AS transaction_type,
+                week_start_date, week_end_date, reference, note, voided_at, updated_at
+         FROM owner_self_pay_transactions
+         WHERE account_id = $1 AND week_start_date = $2 AND deleted_at IS NULL`,
+        [ownerAccountId, weekStart]
+      );
+      const priorForGuard = existingResult.rows[0] as OwnerSelfPayRow | undefined;
+      const hasActivePrior = priorForGuard != null && priorForGuard.voided_at == null;
+      const priorRecordedAmount = hasActivePrior ? Number(priorForGuard!.amount) : 0;
+
+      const computedPayout = await computeOwnerPayoutWithStrategy(
+        pool,
+        weekStart,
+        week_end_date,
+        ownerAccountId
+      );
+      const remainingAvailable = computedPayout.remainingAvailablePayout;
+
+      let storedPayoutAmount: number;
+
+      if (!hasActivePrior) {
+        if (remainingAvailable <= 0) {
+          throw new ValidationError(
+            `No remaining owner payout available for ${weekStart} to ${week_end_date}`
+          );
+        }
+        if (amount !== undefined && !ownerPayoutAmountsMatch(amount, remainingAvailable)) {
+          throw new ValidationError(
+            `amount ${amount.toFixed(2)} does not match remaining available payout ${remainingAvailable.toFixed(2)}`
+          );
+        }
+        storedPayoutAmount = ownerPayoutAmountToRecord(
+          computedPayout.ownerPaidThisPeriod,
+          remainingAvailable
+        );
+      } else if (
+        remainingAvailable > 0 &&
+        amount !== undefined &&
+        ownerPayoutAmountsMatch(amount, remainingAvailable)
+      ) {
+        storedPayoutAmount = ownerPayoutAmountToRecord(priorRecordedAmount, remainingAvailable);
+      } else if (amount === undefined || ownerPayoutAmountsMatch(amount, priorRecordedAmount)) {
+        storedPayoutAmount = priorRecordedAmount;
+      } else if (remainingAvailable > 0) {
+        throw new ValidationError(
+          `amount ${amount!.toFixed(2)} must match remaining available payout ${remainingAvailable.toFixed(2)} for an incremental owner payout, or recorded payout ${priorRecordedAmount.toFixed(2)} for metadata-only correction`
+        );
+      } else {
+        throw new ValidationError(
+          `amount ${amount!.toFixed(2)} does not match recorded payout ${priorRecordedAmount.toFixed(2)}`
+        );
+      }
       const row = await withTx(async (client) => {
         const userId = await ensureUser(client, request);
         const existingResult = await client.query(
@@ -431,7 +477,7 @@ export async function ownerSelfPayRoutes(
                      reference, note, voided_at, created_at, updated_at`,
           [
             ownerAccountId,
-            computedPayout.amount,
+            storedPayoutAmount,
             weekStart,
             week_end_date,
             paid_at ?? null,

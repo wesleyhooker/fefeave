@@ -36,6 +36,8 @@ export const FINANCIAL_EVENT_TYPES = [
   'SETTLEMENT_ADJUSTED',
   'SETTLEMENT_VOIDED',
   'WHOLESALER_PAYMENT_RECORDED',
+  'WHOLESALER_PAYMENT_CORRECTED',
+  'WHOLESALER_PAYMENT_VOIDED',
   'INVENTORY_PURCHASE_RECORDED',
   'BUSINESS_EXPENSE_RECORDED',
   'OWNER_DRAW_RECORDED',
@@ -46,6 +48,10 @@ export const FINANCIAL_EVENT_TYPES = [
   'OWNER_SELF_PAY_VOIDED',
   'CASH_SNAPSHOT_RECORDED',
   'FINANCIAL_STRATEGY_CHANGED',
+  'TAX_SET_ASIDE_RECORDED',
+  'REINVESTMENT_SET_ASIDE_RECORDED',
+  'TAX_SET_ASIDE_VOIDED',
+  'REINVESTMENT_SET_ASIDE_VOIDED',
 ] as const;
 export type FinancialEventType = (typeof FINANCIAL_EVENT_TYPES)[number];
 
@@ -63,6 +69,8 @@ export const FINANCIAL_EVENT_TYPE_META: Record<FinancialEventType, FinancialEven
   SETTLEMENT_ADJUSTED: { category: 'SETTLEMENT', defaultDirection: 'NEUTRAL' },
   SETTLEMENT_VOIDED: { category: 'SETTLEMENT', defaultDirection: 'NEUTRAL' },
   WHOLESALER_PAYMENT_RECORDED: { category: 'PAYMENT', defaultDirection: 'OUTFLOW' },
+  WHOLESALER_PAYMENT_CORRECTED: { category: 'PAYMENT', defaultDirection: 'OUTFLOW' },
+  WHOLESALER_PAYMENT_VOIDED: { category: 'PAYMENT', defaultDirection: 'NEUTRAL' },
   INVENTORY_PURCHASE_RECORDED: { category: 'INVENTORY', defaultDirection: 'OUTFLOW' },
   BUSINESS_EXPENSE_RECORDED: { category: 'FINANCIAL', defaultDirection: 'OUTFLOW' },
   OWNER_DRAW_RECORDED: { category: 'OWNER', defaultDirection: 'OUTFLOW' },
@@ -73,6 +81,10 @@ export const FINANCIAL_EVENT_TYPE_META: Record<FinancialEventType, FinancialEven
   OWNER_SELF_PAY_VOIDED: { category: 'OWNER', defaultDirection: 'NEUTRAL' },
   CASH_SNAPSHOT_RECORDED: { category: 'FINANCIAL', defaultDirection: 'NEUTRAL' },
   FINANCIAL_STRATEGY_CHANGED: { category: 'STRATEGY', defaultDirection: 'NEUTRAL' },
+  TAX_SET_ASIDE_RECORDED: { category: 'FINANCIAL', defaultDirection: 'NEUTRAL' },
+  REINVESTMENT_SET_ASIDE_RECORDED: { category: 'FINANCIAL', defaultDirection: 'NEUTRAL' },
+  TAX_SET_ASIDE_VOIDED: { category: 'FINANCIAL', defaultDirection: 'NEUTRAL' },
+  REINVESTMENT_SET_ASIDE_VOIDED: { category: 'FINANCIAL', defaultDirection: 'NEUTRAL' },
 };
 
 /** Type guard: is this string a known event type? */

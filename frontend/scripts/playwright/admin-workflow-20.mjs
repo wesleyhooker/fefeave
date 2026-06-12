@@ -186,14 +186,17 @@ try {
     });
     await page.waitForLoadState("networkidle");
     await snap(page, i++, "wholesaler-detail");
-    await page.goto(`${baseUrl}/admin/wholesalers/${wholesalerId}/batch-pay`, {
-      waitUntil: "domcontentloaded",
-    });
+    await page.goto(
+      `${baseUrl}/admin/vendors/${wholesalerId}#balance-by-show`,
+      {
+        waitUntil: "domcontentloaded",
+      },
+    );
     await page.waitForLoadState("networkidle");
-    await snap(page, i++, "wholesaler-batch-pay");
+    await snap(page, i++, "vendor-balance-by-show");
   } else {
     await snap(page, i++, "wholesaler-detail-unavailable");
-    await snap(page, i++, "wholesaler-batch-pay-unavailable");
+    await snap(page, i++, "vendor-balance-by-show-unavailable");
   }
 
   // Payments + inventory + admin home

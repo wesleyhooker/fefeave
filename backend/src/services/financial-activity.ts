@@ -10,6 +10,10 @@ import {
   type FinancialEventCategory,
   type FinancialEventType,
 } from '../constants/financial-events';
+import {
+  PAYMENT_OBLIGATION_EVENT_TYPES,
+  SETTLEMENT_OBLIGATION_EVENT_TYPES,
+} from './financial-obligation-projections';
 import type { Queryable } from './financial-events';
 import { toYyyyMmDd } from '../utils/pg-date';
 
@@ -18,6 +22,8 @@ export type FinancialActivityFilters = {
   eventType?: FinancialEventType;
   effectiveDateFrom?: string;
   effectiveDateTo?: string;
+  /** Canonical vendor scope — wholesaler UUID. */
+  vendorId?: string;
 };
 
 export type FinancialActivityListParams = FinancialActivityFilters & {
@@ -86,7 +92,9 @@ const EVENT_TYPE_TITLES: Record<FinancialEventType, string> = {
   SETTLEMENT_ADJUSTED: 'Settlement adjusted',
   SETTLEMENT_VOIDED: 'Settlement voided',
   WHOLESALER_PAYMENT_RECORDED: 'Wholesaler payment recorded',
-  INVENTORY_PURCHASE_RECORDED: 'Inventory purchased',
+  WHOLESALER_PAYMENT_CORRECTED: 'Wholesaler payment corrected',
+  WHOLESALER_PAYMENT_VOIDED: 'Wholesaler payment voided',
+  INVENTORY_PURCHASE_RECORDED: 'Inventory purchase recorded',
   BUSINESS_EXPENSE_RECORDED: 'Business expense recorded',
   OWNER_DRAW_RECORDED: 'Owner draw',
   OWNER_SELF_PAY_RECORDED: 'Owner self-pay recorded',
@@ -96,6 +104,10 @@ const EVENT_TYPE_TITLES: Record<FinancialEventType, string> = {
   OWNER_SELF_PAY_VOIDED: 'Owner self-pay voided',
   CASH_SNAPSHOT_RECORDED: 'Cash snapshot recorded',
   FINANCIAL_STRATEGY_CHANGED: 'Strategy changed',
+  TAX_SET_ASIDE_RECORDED: 'Tax set-aside recorded',
+  REINVESTMENT_SET_ASIDE_RECORDED: 'Reinvestment set-aside recorded',
+  TAX_SET_ASIDE_VOIDED: 'Tax set-aside voided',
+  REINVESTMENT_SET_ASIDE_VOIDED: 'Reinvestment set-aside voided',
 };
 
 function formatUsd(amount: number): string {
@@ -195,6 +207,22 @@ function buildPayloadSummary(
     }
   }
   if (
+    (eventType === 'WHOLESALER_PAYMENT_RECORDED' ||
+      eventType === 'WHOLESALER_PAYMENT_CORRECTED' ||
+      eventType === 'WHOLESALER_PAYMENT_VOIDED') &&
+    typeof payload.payment_date === 'string'
+  ) {
+    const dateSuffix = ` · ${payload.payment_date}`;
+    if (
+      eventType === 'WHOLESALER_PAYMENT_CORRECTED' &&
+      typeof payload.previous_amount === 'number'
+    ) {
+      const was = formatUsd(payload.previous_amount);
+      return amountLine ? `${amountLine}${dateSuffix} · was ${was}` : `Was ${was}${dateSuffix}`;
+    }
+    return amountLine ? `${amountLine}${dateSuffix}` : `Payment ${payload.payment_date}`;
+  }
+  if (
     (eventType === 'OWNER_DRAW_RECORDED' ||
       eventType === 'OWNER_SELF_PAY_RECORDED' ||
       eventType === 'OWNER_DRAW_CORRECTED' ||
@@ -207,6 +235,18 @@ function buildPayloadSummary(
     return amountLine
       ? `${amountLine} · week ${payload.week_start_date} – ${payload.week_end_date}`
       : `Week ${payload.week_start_date} – ${payload.week_end_date}`;
+  }
+  if (
+    (eventType === 'TAX_SET_ASIDE_RECORDED' ||
+      eventType === 'REINVESTMENT_SET_ASIDE_RECORDED' ||
+      eventType === 'TAX_SET_ASIDE_VOIDED' ||
+      eventType === 'REINVESTMENT_SET_ASIDE_VOIDED') &&
+    typeof payload.period_week_start === 'string' &&
+    typeof payload.period_week_end === 'string'
+  ) {
+    return amountLine
+      ? `${amountLine} · period ${payload.period_week_start} – ${payload.period_week_end}`
+      : `Period ${payload.period_week_start} – ${payload.period_week_end}`;
   }
   return amountLine;
 }
@@ -235,7 +275,10 @@ function toActivityDto(row: FinancialEventRow): FinancialActivityEventDto {
   };
 }
 
-function buildWhereClause(filters: FinancialActivityFilters): {
+function buildWhereClause(
+  filters: FinancialActivityFilters,
+  vendorAccountId: string | null = null
+): {
   conditions: string[];
   values: unknown[];
 } {
@@ -258,15 +301,71 @@ function buildWhereClause(filters: FinancialActivityFilters): {
     values.push(filters.effectiveDateTo);
     conditions.push(`effective_date <= $${values.length}::date`);
   }
+  if (filters.vendorId) {
+    values.push(vendorAccountId);
+    const accountParam = values.length;
+    values.push(filters.vendorId);
+    const vendorParam = values.length;
+    const settlementTypes = SETTLEMENT_OBLIGATION_EVENT_TYPES.map((t) => `'${t}'`).join(', ');
+    const paymentTypes = PAYMENT_OBLIGATION_EVENT_TYPES.map((t) => `'${t}'`).join(', ');
+    conditions.push(`(
+      (
+        source_type = 'owed_line_item'
+        AND event_type IN (${settlementTypes})
+        AND (
+          ($${accountParam}::uuid IS NOT NULL AND payload->>'account_id' = $${accountParam}::text)
+          OR (
+            payload->>'account_id' IS NULL
+            AND payload->>'wholesaler_id' = $${vendorParam}
+          )
+        )
+      )
+      OR (
+        source_type = 'payment'
+        AND event_type IN (${paymentTypes})
+        AND (
+          ($${accountParam}::uuid IS NOT NULL AND payload->>'account_id' = $${accountParam}::text)
+          OR (
+            payload->>'account_id' IS NULL
+            AND payload->>'wholesaler_id' = $${vendorParam}
+          )
+        )
+      )
+      OR (
+        source_type = 'inventory_purchase'
+        AND event_type = 'INVENTORY_PURCHASE_RECORDED'
+        AND payload->>'wholesaler_id' = $${vendorParam}
+      )
+    )`);
+  }
 
   return { conditions, values };
+}
+
+async function resolveWholesalerAccountId(
+  db: Queryable,
+  wholesalerId: string
+): Promise<string | null> {
+  const result = await db.query(
+    `SELECT id FROM accounts
+     WHERE type = 'WHOLESALER'
+       AND legacy_wholesaler_id = $1
+       AND deleted_at IS NULL
+     LIMIT 1`,
+    [wholesalerId]
+  );
+  if (result.rows.length === 0) return null;
+  return (result.rows[0] as { id: string }).id;
 }
 
 export async function listFinancialActivity(
   db: Queryable,
   params: FinancialActivityListParams
 ): Promise<FinancialActivityListResult> {
-  const { conditions, values } = buildWhereClause(params);
+  const vendorAccountId = params.vendorId
+    ? await resolveWholesalerAccountId(db, params.vendorId)
+    : null;
+  const { conditions, values } = buildWhereClause(params, vendorAccountId);
   const whereSql = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const countResult = await db.query(

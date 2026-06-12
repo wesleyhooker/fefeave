@@ -4,6 +4,7 @@ import { QueryableDb } from './db';
 export interface WholesalerBalanceReadRow {
   wholesaler_id: string;
   wholesaler_name: string;
+  account_status: 'ACTIVE' | 'ARCHIVED';
   owed_total: string;
   paid_total: string;
   balance_owed: string;
@@ -25,6 +26,7 @@ export async function readWholesalerBalances(db: QueryableDb): Promise<Wholesale
        a.id,
        a.legacy_wholesaler_id,
        a.display_name,
+       a.status::text AS account_status,
        COALESCE(a.pay_schedule::text, 'AD_HOC') AS pay_schedule
      FROM accounts a
      WHERE a.id = ANY($1::uuid[])
@@ -38,6 +40,7 @@ export async function readWholesalerBalances(db: QueryableDb): Promise<Wholesale
         id: string;
         legacy_wholesaler_id: string;
         display_name: string;
+        account_status: 'ACTIVE' | 'ARCHIVED';
         pay_schedule: string;
       }>
     ).map((row) => [row.id, row])
@@ -50,6 +53,7 @@ export async function readWholesalerBalances(db: QueryableDb): Promise<Wholesale
       return {
         wholesaler_id: t.wholesaler_id,
         wholesaler_name: meta.display_name,
+        account_status: meta.account_status,
         owed_total: t.owed_total,
         paid_total: t.paid_total,
         balance_owed: t.balance_owed,

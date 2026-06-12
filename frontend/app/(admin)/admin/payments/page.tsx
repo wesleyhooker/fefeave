@@ -1,5 +1,5 @@
-import { PaymentsListView } from "./PaymentsListView";
+import { redirect } from "next/navigation";
 
 export default function AdminPaymentsPage() {
-  return <PaymentsListView />;
+  redirect("/admin/ledger?type=payment");
 }

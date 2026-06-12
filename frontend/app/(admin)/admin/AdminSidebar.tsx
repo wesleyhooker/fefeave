@@ -1,81 +1,56 @@
 "use client";
 
 import {
-  ArrowRightOnRectangleIcon,
+  BanknotesIcon,
   CalendarDaysIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  HomeIcon,
-  ScaleIcon,
+  Squares2X2Icon,
+  TruckIcon,
+  UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LogoutForm } from "@/app/_components/auth/LogoutForm";
 import {
-  FINANCIALS_NAV_CHILDREN,
-  FINANCIALS_WORKSPACE_LABEL,
-  isFinancialsChildActive,
-  isFinancialsSectionActive,
+  PRIMARY_NAV_ITEMS,
+  isPrimaryNavItemActive,
 } from "./_lib/adminSidebarNav";
 import {
   workspaceActionIconMd,
   workspaceChromeHoverWarm,
-  workspaceNavChildItemActive,
-  workspaceNavChildItemBase,
-  workspaceNavChildItemInactive,
   workspaceNavIconActive,
   workspaceNavIconInactive,
   workspaceNavItemActive,
   workspaceNavItemBase,
   workspaceNavItemInactive,
-  workspaceNavSectionTrigger,
-  workspaceNavSectionTriggerActive,
-  workspaceNavSectionTriggerInactive,
-  workspaceSidebarAccountSection,
-  workspaceSidebarAccountSignOutCluster,
-  workspaceSidebarAvatar,
-  workspaceSidebarRolePill,
-  workspaceSidebarSignOut,
   workspaceSidebarSurface,
-  workspaceSidebarUserDisplayName,
 } from "./_components/workspaceUi";
 
-const TOP_NAV_ITEMS: {
-  href: string;
-  label: string;
-  Icon: typeof HomeIcon;
-  match: (path: string) => boolean;
-}[] = [
-  {
-    href: "/admin",
-    label: "Home",
-    Icon: HomeIcon,
-    match: (p) => p === "/admin" || p === "/admin/dashboard",
-  },
-  {
-    href: "/admin/shows",
-    label: "Shows",
-    Icon: CalendarDaysIcon,
-    match: (p) => p.startsWith("/admin/shows"),
-  },
-];
+const NAV_ICONS = {
+  Dashboard: Squares2X2Icon,
+  Shows: CalendarDaysIcon,
+  Vendors: TruckIcon,
+  Purchases: BanknotesIcon,
+  "Business Health": UserCircleIcon,
+} as const;
 
-function TopNavLinks({
+function NavLinks({
   pathname,
   onNavigate,
 }: {
   pathname: string;
   onNavigate?: () => void;
 }) {
+  const path = pathname ?? "";
+
   return (
     <>
-      {TOP_NAV_ITEMS.map(({ href, label, Icon, match }) => {
-        const isActive = match(pathname ?? "");
+      {PRIMARY_NAV_ITEMS.map((item) => {
+        const Icon = NAV_ICONS[item.label as keyof typeof NAV_ICONS];
+        const isActive = isPrimaryNavItemActive(item, path);
         return (
           <Link
-            key={href}
-            href={href}
+            key={item.href}
+            href={item.href}
             onClick={onNavigate}
             className={`${workspaceNavItemBase} ${
               isActive ? workspaceNavItemActive : workspaceNavItemInactive
@@ -90,7 +65,7 @@ function TopNavLinks({
             >
               <Icon className={workspaceActionIconMd} />
             </span>
-            <span className="min-w-0 flex-1 leading-snug">{label}</span>
+            <span className="min-w-0 flex-1 leading-snug">{item.label}</span>
           </Link>
         );
       })}
@@ -98,168 +73,16 @@ function TopNavLinks({
   );
 }
 
-function FinancialsNavSection({
-  pathname,
-  onNavigate,
-}: {
-  pathname: string;
-  onNavigate?: () => void;
-}) {
-  const path = pathname ?? "";
-  const sectionActive = isFinancialsSectionActive(path);
-  const [expanded, setExpanded] = useState(sectionActive);
-
-  useEffect(() => {
-    if (sectionActive) {
-      setExpanded(true);
-    }
-  }, [sectionActive]);
-
-  const Chevron = expanded ? ChevronDownIcon : ChevronRightIcon;
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      <button
-        type="button"
-        onClick={() => setExpanded((open) => !open)}
-        className={`${workspaceNavSectionTrigger} ${
-          sectionActive
-            ? workspaceNavSectionTriggerActive
-            : workspaceNavSectionTriggerInactive
-        }`}
-        aria-expanded={expanded}
-        aria-controls="admin-nav-financials-children"
-      >
-        <span
-          className={
-            sectionActive ? workspaceNavIconActive : workspaceNavIconInactive
-          }
-          aria-hidden
-        >
-          <ScaleIcon className={workspaceActionIconMd} />
-        </span>
-        <span className="min-w-0 flex-1 leading-snug">
-          {FINANCIALS_WORKSPACE_LABEL}
-        </span>
-        <Chevron className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-      </button>
-      {expanded ? (
-        <div
-          id="admin-nav-financials-children"
-          className="flex flex-col gap-0.5"
-          role="group"
-          aria-label={`${FINANCIALS_WORKSPACE_LABEL} pages`}
-        >
-          {FINANCIALS_NAV_CHILDREN.map((item) => {
-            const isActive = isFinancialsChildActive(item, path);
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={onNavigate}
-                className={`${workspaceNavChildItemBase} ${
-                  isActive
-                    ? workspaceNavChildItemActive
-                    : workspaceNavChildItemInactive
-                }`}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function NavLinks({
-  pathname,
-  onNavigate,
-}: {
-  pathname: string;
-  onNavigate?: () => void;
-}) {
-  return (
-    <>
-      <TopNavLinks pathname={pathname} onNavigate={onNavigate} />
-      <FinancialsNavSection pathname={pathname} onNavigate={onNavigate} />
-    </>
-  );
-}
-
 export type AdminSidebarProps = {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
-  email: string | null;
-  roles: string[];
   envLabel: string;
   isProduction: boolean;
 };
 
-function sidebarAvatarInitial(email: string | null): string {
-  const s = email?.trim();
-  if (!s) return "?";
-  const alnum = s.match(/[a-zA-Z0-9]/);
-  return (alnum?.[0] ?? s[0]).toUpperCase();
-}
-
-function SidebarAccountBlock({
-  email,
-  roles,
-  onNavigate,
-}: {
-  email: string | null;
-  roles: string[];
-  onNavigate?: () => void;
-}) {
-  const displayLine = email?.trim() || "Signed in";
-
-  return (
-    <div className={workspaceSidebarAccountSection}>
-      <div className="flex min-w-0 items-start gap-2.5">
-        <span className={workspaceSidebarAvatar} aria-hidden>
-          {sidebarAvatarInitial(email)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className={workspaceSidebarUserDisplayName}>{displayLine}</p>
-          {roles.length > 0 ? (
-            <div
-              className="mt-1.5 flex flex-wrap gap-1"
-              aria-label="Your roles"
-            >
-              {roles.map((role) => (
-                <span key={role} className={workspaceSidebarRolePill}>
-                  {role}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className={workspaceSidebarAccountSignOutCluster}>
-        <LogoutForm
-          buttonClassName={workspaceSidebarSignOut}
-          onSubmit={() => onNavigate?.()}
-        >
-          <ArrowRightOnRectangleIcon
-            className={workspaceActionIconMd}
-            aria-hidden
-          />
-          <span>Sign out</span>
-        </LogoutForm>
-      </div>
-    </div>
-  );
-}
-
 export function AdminSidebar({
   mobileOpen = false,
   onMobileClose,
-  email,
-  roles,
   envLabel: _envLabel,
   isProduction: _isProduction,
 }: AdminSidebarProps) {
@@ -309,7 +132,6 @@ export function AdminSidebar({
 
   return (
     <>
-      {/* Desktop: fixed-width sidebar */}
       <aside
         className={`hidden w-[15.5rem] shrink-0 flex-col p-4 md:flex ${workspaceSidebarSurface}`}
         aria-label="Admin navigation"
@@ -321,10 +143,8 @@ export function AdminSidebar({
         >
           <NavLinks pathname={pathname ?? ""} />
         </nav>
-        <SidebarAccountBlock email={email} roles={roles} />
       </aside>
 
-      {/* Mobile: overlay drawer when open */}
       {mobileOpen && (
         <div
           className="fixed inset-0 z-50 md:hidden"
@@ -376,11 +196,6 @@ export function AdminSidebar({
             <nav className="flex min-h-0 flex-1 flex-col gap-1.5">
               <NavLinks pathname={pathname ?? ""} onNavigate={onMobileClose} />
             </nav>
-            <SidebarAccountBlock
-              email={email}
-              roles={roles}
-              onNavigate={onMobileClose}
-            />
           </div>
         </div>
       )}

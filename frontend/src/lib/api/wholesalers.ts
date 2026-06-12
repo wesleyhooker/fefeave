@@ -99,6 +99,30 @@ export async function fetchWholesalerBalances(): Promise<
   return backendGetJson<BackendWholesalerBalanceRow[]>('/wholesalers/balances');
 }
 
+/** Event-derived aggregate outstanding snapshots (`basis: occurred_at`). */
+export interface WholesalerBalanceSnapshotAggregate {
+  as_of: string;
+  total_outstanding: string;
+  vendors_owing_count: number;
+  owed_total: string;
+  paid_total: string;
+}
+
+export interface WholesalerBalanceSnapshotsResponse {
+  basis: 'occurred_at';
+  snapshots: WholesalerBalanceSnapshotAggregate[];
+}
+
+export async function fetchWholesalerBalanceSnapshots(
+  asOfDates: string[],
+): Promise<WholesalerBalanceSnapshotsResponse> {
+  const asOf = [...new Set(asOfDates.filter(Boolean))].join(',');
+  const params = new URLSearchParams({ as_of: asOf });
+  return backendGetJson<WholesalerBalanceSnapshotsResponse>(
+    `/wholesalers/balance-snapshots?${params.toString()}`,
+  );
+}
+
 export async function fetchWholesalerStatement(
   id: string,
 ): Promise<BackendWholesalerStatementRow[]> {

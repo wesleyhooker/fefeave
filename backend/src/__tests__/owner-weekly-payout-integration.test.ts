@@ -4,8 +4,29 @@
 import type { FastifyInstance } from 'fastify';
 import { getPool } from '../db';
 import { appendFinancialEvent } from '../services/financial-events';
+import { applyOwnerPayoutStrategy } from '../services/owner-payout-strategy';
 import { computeOwnerWeeklyPayout } from '../services/owner-weekly-payout';
 import { buildAppForTest, buildUniqueDevBypassIdentity, runTestSchemaMigrations } from './helpers';
+
+const balancedBps = { tax_reserve_bps: 3000, reinvestment_bps: 5000 };
+
+function profitBasedPayout(closedProfit: number): number {
+  return applyOwnerPayoutStrategy(closedProfit, balancedBps).profit_based_payout;
+}
+
+async function seedBalancedStrategy(pool: ReturnType<typeof getPool>): Promise<void> {
+  await pool.query(
+    `INSERT INTO financial_strategy_settings (
+       scope_key, strategy_type, tax_reserve_bps, reinvestment_bps, cash_buffer_amount
+     ) VALUES ('global', 'BALANCED', 3000, 5000, 2000)
+     ON CONFLICT (scope_key) DO UPDATE SET
+       strategy_type = EXCLUDED.strategy_type,
+       tax_reserve_bps = EXCLUDED.tax_reserve_bps,
+       reinvestment_bps = EXCLUDED.reinvestment_bps,
+       cash_buffer_amount = EXCLUDED.cash_buffer_amount,
+       updated_at = NOW()`
+  );
+}
 
 describe('Owner weekly payout event-derived integration', () => {
   let app: FastifyInstance;
@@ -39,6 +60,9 @@ describe('Owner weekly payout event-derived integration', () => {
     await pool.query('DELETE FROM owner_self_pay_transactions');
     await pool.query('DELETE FROM show_financials');
     await pool.query('DELETE FROM shows');
+    await pool.query('DELETE FROM cash_snapshots');
+    await pool.query('DELETE FROM financial_strategy_settings');
+    await seedBalancedStrategy(pool);
   });
 
   afterEach(async () => {
@@ -126,14 +150,172 @@ describe('Owner weekly payout event-derived integration', () => {
       weekEndDate: string;
       completedShowCount: number;
       amount: string;
+      closedShowProfit: string;
+      profitBasedPayout: string;
+      allowedPayoutForPeriod: string;
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+      strategyType: string;
+      calculationMode: string;
     };
     expect(body.weekStartDate).toBe('2026-08-31');
     expect(body.weekEndDate).toBe('2026-09-06');
     expect(body.completedShowCount).toBe(2);
-    expect(Number(body.amount)).toBe(1400);
+    expect(Number(body.closedShowProfit)).toBe(1400);
+    const allowed = profitBasedPayout(1400);
+    expect(Number(body.profitBasedPayout)).toBe(allowed);
+    expect(Number(body.allowedPayoutForPeriod)).toBe(allowed);
+    expect(Number(body.ownerPaidThisPeriod)).toBe(0);
+    expect(Number(body.remainingAvailablePayout)).toBe(allowed);
+    expect(Number(body.amount)).toBe(allowed);
+    expect(body.strategyType).toBe('BALANCED');
+    expect(body.calculationMode).toBe('PROFIT_ONLY');
 
     const computed = await computeOwnerWeeklyPayout(getPool(), '2026-08-31', '2026-09-06');
     expect(computed.amount).toBe(1400);
+  });
+
+  test('owner payout preview seed example: $1,200 closed profit → $420 available', async () => {
+    const wholesaler = await createWholesaler('Seed Settlement Co');
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2026-09-03',
+        platform: 'WHATNOT',
+        name: 'Settled seed show',
+      },
+    });
+    const show = JSON.parse(showRes.payload) as { id: string };
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 1500 },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: { wholesaler_id: wholesaler.id, method: 'MANUAL', amount: 300 },
+    });
+    await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}`,
+      payload: { status: 'COMPLETED' },
+    });
+
+    const preview = await app.inject({
+      method: 'GET',
+      url: `${prefix}/owner-self-pay/2026-09-01/payout`,
+    });
+    expect(preview.statusCode).toBe(200);
+    const body = JSON.parse(preview.payload) as {
+      closedShowProfit: string;
+      taxReserve: string;
+      reinvestmentReserve: string;
+      profitBasedPayout: string;
+      amount: string;
+      allowedPayoutForPeriod: string;
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+    };
+    expect(Number(body.closedShowProfit)).toBe(1200);
+    expect(Number(body.taxReserve)).toBe(360);
+    expect(Number(body.reinvestmentReserve)).toBe(420);
+    expect(Number(body.profitBasedPayout)).toBe(420);
+    expect(Number(body.allowedPayoutForPeriod)).toBe(420);
+    expect(Number(body.ownerPaidThisPeriod)).toBe(0);
+    expect(Number(body.remainingAvailablePayout)).toBe(420);
+    expect(Number(body.amount)).toBe(420);
+  });
+
+  test('remaining available subtracts owner already paid this period', async () => {
+    const wholesaler = await createWholesaler('Partial Payout Co');
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2026-09-03',
+        platform: 'WHATNOT',
+        name: 'Partial payout show',
+      },
+    });
+    const show = JSON.parse(showRes.payload) as { id: string };
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 1500 },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: { wholesaler_id: wholesaler.id, method: 'MANUAL', amount: 300 },
+    });
+    await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}`,
+      payload: { status: 'COMPLETED' },
+    });
+
+    const pool = getPool();
+    const ownerAccount = await pool.query(
+      `SELECT id FROM accounts WHERE type = 'OWNER' AND deleted_at IS NULL LIMIT 1`
+    );
+    const user = await pool.query(`SELECT id FROM users LIMIT 1`);
+    expect(ownerAccount.rows.length).toBeGreaterThan(0);
+    expect(user.rows.length).toBeGreaterThan(0);
+
+    await pool.query(
+      `INSERT INTO owner_self_pay_transactions (
+         account_id, account_type, amount, week_start_date, week_end_date,
+         paid_at, transaction_type, reference, note, created_by
+       ) VALUES ($1, 'OWNER', 250, '2026-09-01', '2026-09-07', NOW(), 'OWNER_DRAW', 'partial', 'partial', $2)`,
+      [ownerAccount.rows[0].id, user.rows[0].id]
+    );
+
+    const preview = await app.inject({
+      method: 'GET',
+      url: `${prefix}/owner-self-pay/2026-09-01/payout`,
+    });
+    expect(preview.statusCode).toBe(200);
+    const body = JSON.parse(preview.payload) as {
+      allowedPayoutForPeriod: string;
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+      amount: string;
+    };
+    expect(Number(body.allowedPayoutForPeriod)).toBe(420);
+    expect(Number(body.ownerPaidThisPeriod)).toBe(250);
+    expect(Number(body.remainingAvailablePayout)).toBe(170);
+    expect(Number(body.amount)).toBe(170);
+  });
+
+  test('voided payout does not reduce remaining available', async () => {
+    await createCompletedShow('2026-09-10', 1500, 'Void remaining show');
+
+    const pool = getPool();
+    const ownerAccount = await pool.query(
+      `SELECT id FROM accounts WHERE type = 'OWNER' AND deleted_at IS NULL LIMIT 1`
+    );
+    const user = await pool.query(`SELECT id FROM users LIMIT 1`);
+
+    await pool.query(
+      `INSERT INTO owner_self_pay_transactions (
+         account_id, account_type, amount, week_start_date, week_end_date,
+         paid_at, transaction_type, reference, note, created_by, voided_at
+       ) VALUES ($1, 'OWNER', 250, '2026-09-08', '2026-09-14', NOW(), 'OWNER_DRAW', 'voided', 'voided', $2, NOW())`,
+      [ownerAccount.rows[0].id, user.rows[0].id]
+    );
+
+    const preview = await app.inject({
+      method: 'GET',
+      url: `${prefix}/owner-self-pay/2026-09-08/payout`,
+    });
+    const body = JSON.parse(preview.payload) as {
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+    };
+    expect(Number(body.ownerPaidThisPeriod)).toBe(0);
+    expect(Number(body.remainingAvailablePayout)).toBe(profitBasedPayout(1500));
   });
 
   test('owner weekly payout ignores orphan table financials without events', async () => {
@@ -235,7 +417,17 @@ describe('Owner weekly payout event-derived integration', () => {
     };
     expect(body.weekStartDate).toBe('2026-09-15');
     expect(body.weekEndDate).toBe('2026-09-21');
-    expect(Number(body.transaction.amount)).toBe(750);
+    expect(Number(body.transaction.amount)).toBe(profitBasedPayout(750));
+    const recordPreview = await app.inject({
+      method: 'GET',
+      url: `${prefix}/owner-self-pay/2026-09-15/payout`,
+    });
+    const recorded = JSON.parse(recordPreview.payload) as {
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+    };
+    expect(Number(recorded.ownerPaidThisPeriod)).toBe(profitBasedPayout(750));
+    expect(Number(recorded.remainingAvailablePayout)).toBe(0);
   });
 
   test('owner activity closedProfitTotal uses event-derived profit', async () => {
@@ -291,7 +483,7 @@ describe('Owner weekly payout event-derived integration', () => {
         };
       }>;
     };
-    expect(body.summary.totalPaidAmount).toBe('700');
+    expect(body.summary.totalPaidAmount).toBe(String(profitBasedPayout(700)));
     expect(body.transactions[0].sourceContext.closedProfitTotal).toBe('700');
     expect(body.transactions[0].sourceContext.closedShowsCount).toBe(1);
     const included = body.transactions[0].sourceContext.shows.filter((s) => s.includedInPayout);
@@ -321,6 +513,15 @@ describe('Owner weekly payout event-derived integration', () => {
         weekEndDate: expect.any(String),
         completedShowCount: expect.any(Number),
         amount: expect.any(String),
+        closedShowProfit: expect.any(String),
+        taxReserve: expect.any(String),
+        reinvestmentReserve: expect.any(String),
+        profitBasedPayout: expect.any(String),
+        allowedPayoutForPeriod: expect.any(String),
+        ownerPaidThisPeriod: expect.any(String),
+        remainingAvailablePayout: expect.any(String),
+        strategyType: expect.any(String),
+        calculationMode: expect.any(String),
       })
     );
 
@@ -348,5 +549,60 @@ describe('Owner weekly payout event-derived integration', () => {
         }),
       })
     );
+  });
+
+  test('owner self-pay PUT records incremental payout when amount matches remaining', async () => {
+    await createCompletedShow('2026-09-03', 500, 'Incremental first show');
+
+    const firstPut = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-09-01`,
+      payload: {
+        week_end_date: '2026-09-07',
+        transaction_type: 'OWNER_DRAW',
+      },
+    });
+    expect(firstPut.statusCode).toBe(200);
+    const firstRecorded = profitBasedPayout(500);
+    expect(Number(JSON.parse(firstPut.payload).transaction.amount)).toBe(firstRecorded);
+
+    await createCompletedShow('2026-09-04', 700, 'Incremental second show');
+
+    const preview = await app.inject({
+      method: 'GET',
+      url: `${prefix}/owner-self-pay/2026-09-01/payout`,
+    });
+    expect(preview.statusCode).toBe(200);
+    const previewBody = JSON.parse(preview.payload) as {
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+    };
+    const weekTarget = profitBasedPayout(1200);
+    const remaining = Number(previewBody.remainingAvailablePayout);
+    expect(Number(previewBody.ownerPaidThisPeriod)).toBe(firstRecorded);
+    expect(remaining).toBe(Number((weekTarget - firstRecorded).toFixed(2)));
+
+    const secondPut = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-09-01`,
+      payload: {
+        week_end_date: '2026-09-07',
+        amount: remaining,
+        transaction_type: 'OWNER_DRAW',
+      },
+    });
+    expect(secondPut.statusCode).toBe(200);
+    expect(Number(JSON.parse(secondPut.payload).transaction.amount)).toBe(weekTarget);
+
+    const afterPreview = await app.inject({
+      method: 'GET',
+      url: `${prefix}/owner-self-pay/2026-09-01/payout`,
+    });
+    const afterBody = JSON.parse(afterPreview.payload) as {
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+    };
+    expect(Number(afterBody.ownerPaidThisPeriod)).toBe(weekTarget);
+    expect(Number(afterBody.remainingAvailablePayout)).toBe(0);
   });
 });

@@ -6,6 +6,10 @@ import {
   workspaceShowStatusPillOpen,
   workspaceShowStatusPillPlanned,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import {
+  WORKFLOW_SHOW_STATUS_COMPLETED_LABEL,
+  WORKFLOW_SHOW_STATUS_OPEN_LABEL,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 
 /**
  * Show lifecycle in lists/headers: **Planned** (`PLANNED`) / **Open** (`ACTIVE`) / **Closed** (`COMPLETED`).
@@ -17,9 +21,9 @@ export function ShowStatusPill({ status }: { status: string }) {
   const open = st === "ACTIVE";
   const planned = st === "PLANNED";
   const label = closed
-    ? "Closed"
+    ? WORKFLOW_SHOW_STATUS_COMPLETED_LABEL
     : open
-      ? "Open"
+      ? WORKFLOW_SHOW_STATUS_OPEN_LABEL
       : planned
         ? "Planned"
         : status?.trim() || "—";

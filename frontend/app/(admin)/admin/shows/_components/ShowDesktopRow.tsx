@@ -2,6 +2,7 @@
 
 import { formatCurrency, formatDate } from "@/lib/format";
 import { formatTimeAgo } from "@/app/(admin)/admin/_lib/timeAgo";
+import { showNavigateHref } from "@/app/(admin)/admin/_lib/showRoutes";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
   workspaceListPrimaryMoneyAmountClass,
@@ -14,7 +15,9 @@ import {
   WorkspaceTableNavRow,
   workspaceTableBodyCellPadding,
 } from "@/app/(admin)/admin/_components/WorkspaceTableRow";
+import { ShowCloseSuccessRowNote } from "./ShowCloseSuccessRowNote";
 import { ShowsTableStatus } from "./ShowsTableStatus";
+import { showCloseSuccessTableRowShell } from "../_lib/showCloseSuccessRowUi";
 
 function isToday(dateStr: string): boolean {
   if (!dateStr || dateStr.length < 10) return false;
@@ -22,7 +25,13 @@ function isToday(dateStr: string): boolean {
   return dateStr === today;
 }
 
-function rowNavigateAriaLabel(show: ShowViewModel): string {
+function rowNavigateAriaLabel(
+  show: ShowViewModel,
+  highlighted: boolean,
+): string {
+  if (highlighted) {
+    return `Show closed successfully. ${show.name} is completed and locked. Profit counts toward this week's totals.`;
+  }
   const st = (show.status ?? "").toUpperCase();
   if (st === "ACTIVE") {
     return `Open ${show.name} to continue close out`;
@@ -37,22 +46,25 @@ export function ShowDesktopRow({
   show,
   summary,
   payoutContext = false,
+  highlighted = false,
 }: {
   show: ShowViewModel;
   summary: ShowFinancialSummary | undefined;
   payoutContext?: boolean;
+  highlighted?: boolean;
 }) {
   const today = isToday(show.date);
-  const href = `/admin/shows/${show.id}`;
   const isClosed = (show.status ?? "").toUpperCase() === "COMPLETED";
+  const href = showNavigateHref(show.id, show.status);
 
   const rowHover = today
     ? "transition-colors duration-200 ease-out hover:bg-sky-100/80"
     : workspaceTableRowInteractive;
 
   const rowClass = [
-    today ? "border-l-4 border-l-sky-400 bg-sky-50/50" : "",
+    today && !highlighted ? "border-l-4 border-l-sky-400 bg-sky-50/50" : "",
     payoutContext ? "relative z-[2]" : "",
+    highlighted ? showCloseSuccessTableRowShell : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -60,7 +72,7 @@ export function ShowDesktopRow({
   return (
     <WorkspaceTableNavRow
       href={href}
-      ariaLabel={rowNavigateAriaLabel(show)}
+      ariaLabel={rowNavigateAriaLabel(show, highlighted)}
       rowInteractionClassName={rowHover}
       className={rowClass}
     >
@@ -91,7 +103,9 @@ export function ShowDesktopRow({
             </span>
           )}
         </span>
-        {(summary != null || show.updated_at) && (
+        {highlighted ? (
+          <ShowCloseSuccessRowNote className="mt-2" />
+        ) : summary != null || show.updated_at ? (
           <p className="mt-0.5 text-xs text-gray-500">
             {summary != null && summary.settlementCount >= 0 && (
               <span>
@@ -107,7 +121,7 @@ export function ShowDesktopRow({
               </span>
             )}
           </p>
-        )}
+        ) : null}
       </td>
       <td
         className={`whitespace-nowrap align-top text-sm tabular-nums text-gray-600 ${workspaceTableBodyCellPadding}`}

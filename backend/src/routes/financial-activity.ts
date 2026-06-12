@@ -17,6 +17,7 @@ import {
 import { ValidationError } from '../utils/errors';
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD');
+const uuidSchema = z.string().uuid();
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -25,6 +26,10 @@ const listQuerySchema = z.object({
   event_type: z.string().optional(),
   effective_date_from: dateSchema.optional(),
   effective_date_to: dateSchema.optional(),
+  /** Canonical vendor scope for Ledger (wholesaler UUID). */
+  vendor: uuidSchema.optional(),
+  /** Alias for `vendor` — same semantics. */
+  wholesalerId: uuidSchema.optional(),
 });
 
 export async function financialActivityRoutes(
@@ -49,6 +54,17 @@ export async function financialActivityRoutes(
             event_type: { type: 'string', enum: [...FINANCIAL_EVENT_TYPES] },
             effective_date_from: { type: 'string', format: 'date' },
             effective_date_to: { type: 'string', format: 'date' },
+            vendor: {
+              type: 'string',
+              format: 'uuid',
+              description:
+                'Scope ledger to one vendor (settlements, vendor charges, payments, OWE_VENDOR inventory)',
+            },
+            wholesalerId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'Alias for vendor',
+            },
           },
         },
       },
@@ -66,7 +82,13 @@ export async function financialActivityRoutes(
         event_type: eventTypeRaw,
         effective_date_from: effectiveDateFrom,
         effective_date_to: effectiveDateTo,
+        vendor,
+        wholesalerId,
       } = parsed.data;
+
+      if (vendor && wholesalerId && vendor !== wholesalerId) {
+        throw new ValidationError('vendor and wholesalerId must match when both are provided');
+      }
 
       if (eventCategoryRaw && !isFinancialEventCategory(eventCategoryRaw)) {
         throw new ValidationError(`Unknown event_category: ${eventCategoryRaw}`);
@@ -86,6 +108,7 @@ export async function financialActivityRoutes(
         eventType: eventTypeRaw as FinancialEventType | undefined,
         effectiveDateFrom,
         effectiveDateTo,
+        vendorId: vendor ?? wholesalerId,
       });
 
       return reply.send(result);

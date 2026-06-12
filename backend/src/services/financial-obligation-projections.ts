@@ -16,6 +16,14 @@ export const SETTLEMENT_OBLIGATION_EVENT_TYPES = [
 
 export const SETTLEMENT_VOIDED_EVENT_TYPE = 'SETTLEMENT_VOIDED';
 
+export const PAYMENT_OBLIGATION_EVENT_TYPES = [
+  'WHOLESALER_PAYMENT_RECORDED',
+  'WHOLESALER_PAYMENT_CORRECTED',
+  'WHOLESALER_PAYMENT_VOIDED',
+] as const;
+
+export const PAYMENT_VOIDED_EVENT_TYPE = 'WHOLESALER_PAYMENT_VOIDED';
+
 export type WholesalerObligationFilters = {
   wholesalerId?: string;
   accountId?: string;
@@ -77,7 +85,25 @@ function matchesAccountScope(
   return false;
 }
 
-async function loadActiveObligationEventRows(db: QueryableDb): Promise<ObligationEventRow[]> {
+/**
+ * Inclusive calendar-day cutoff on `occurred_at` (system record time).
+ * Events on `asOf` count; events on the next calendar day do not.
+ */
+export function balanceSnapshotOccurredAtCutoffSql(paramIndex: number): string {
+  return `AND occurred_at < ($${paramIndex}::date + 1)`;
+}
+
+async function loadActiveObligationEventRows(
+  db: QueryableDb,
+  asOf?: string
+): Promise<ObligationEventRow[]> {
+  const params: unknown[] = [SETTLEMENT_OBLIGATION_EVENT_TYPES, SETTLEMENT_VOIDED_EVENT_TYPE];
+  let asOfFilter = '';
+  if (asOf != null) {
+    params.push(asOf);
+    asOfFilter = ` ${balanceSnapshotOccurredAtCutoffSql(params.length)}`;
+  }
+
   const result = await db.query(
     `WITH latest_settlement AS (
        SELECT DISTINCT ON (source_id)
@@ -86,7 +112,7 @@ async function loadActiveObligationEventRows(db: QueryableDb): Promise<Obligatio
          payload
        FROM financial_events
        WHERE source_type = 'owed_line_item'
-         AND event_type = ANY($1::text[])
+         AND event_type = ANY($1::text[])${asOfFilter}
        ORDER BY source_id, occurred_at DESC, id DESC
      )
      SELECT
@@ -95,21 +121,41 @@ async function loadActiveObligationEventRows(db: QueryableDb): Promise<Obligatio
        amount::text AS amount
      FROM latest_settlement
      WHERE event_type <> $2`,
-    [SETTLEMENT_OBLIGATION_EVENT_TYPES, SETTLEMENT_VOIDED_EVENT_TYPE]
+    params
   );
   return result.rows as ObligationEventRow[];
 }
 
-async function loadPaymentEventRows(db: QueryableDb): Promise<PaymentEventRow[]> {
+async function loadPaymentEventRows(db: QueryableDb, asOf?: string): Promise<PaymentEventRow[]> {
+  const params: unknown[] = [PAYMENT_OBLIGATION_EVENT_TYPES, PAYMENT_VOIDED_EVENT_TYPE];
+  let asOfFilter = '';
+  if (asOf != null) {
+    params.push(asOf);
+    asOfFilter = ` ${balanceSnapshotOccurredAtCutoffSql(params.length)}`;
+  }
+
   const result = await db.query(
-    `SELECT
-       payload->>'wholesaler_id' AS wholesaler_id,
-       payload->>'account_id' AS account_id,
+    `WITH latest_payment AS (
+       SELECT DISTINCT ON (source_id)
+         payload->>'wholesaler_id' AS wholesaler_id,
+         payload->>'account_id' AS account_id,
+         amount::numeric AS amount,
+         effective_date,
+         event_type
+       FROM financial_events
+       WHERE source_type = 'payment'
+         AND event_type = ANY($1::text[])${asOfFilter}
+       ORDER BY source_id, occurred_at DESC, id DESC
+     )
+     SELECT
+       wholesaler_id,
+       account_id,
        amount::text AS amount,
        effective_date::text AS payment_date
-     FROM financial_events
-     WHERE event_type = 'WHOLESALER_PAYMENT_RECORDED'
-       AND amount IS NOT NULL`
+     FROM latest_payment
+     WHERE event_type <> $2
+       AND amount IS NOT NULL`,
+    params
   );
   return result.rows as PaymentEventRow[];
 }
@@ -238,6 +284,24 @@ function aggregateForAccount(
   return { owed, paid, lastPaymentDate };
 }
 
+function mapAccountsToObligationTotals(
+  accounts: WholesalerAccountRow[],
+  obligations: ObligationEventRow[],
+  payments: PaymentEventRow[]
+): WholesalerObligationTotals[] {
+  return accounts.map((account) => {
+    const { owed, paid, lastPaymentDate } = aggregateForAccount(account, obligations, payments);
+    return {
+      wholesaler_id: account.legacy_wholesaler_id,
+      account_id: account.id,
+      owed_total: formatObligationTotal(owed),
+      paid_total: formatObligationTotal(paid),
+      balance_owed: formatBalanceOwed(owed, paid),
+      last_payment_date: lastPaymentDate,
+    };
+  });
+}
+
 /**
  * Event-derived wholesaler obligation totals (one row per wholesaler account).
  */
@@ -251,17 +315,24 @@ export async function loadWholesalerObligationTotals(
   const obligations = await loadActiveObligationEventRows(db);
   const payments = await loadPaymentEventRows(db);
 
-  return accounts.map((account) => {
-    const { owed, paid, lastPaymentDate } = aggregateForAccount(account, obligations, payments);
-    return {
-      wholesaler_id: account.legacy_wholesaler_id,
-      account_id: account.id,
-      owed_total: formatObligationTotal(owed),
-      paid_total: formatObligationTotal(paid),
-      balance_owed: formatBalanceOwed(owed, paid),
-      last_payment_date: lastPaymentDate,
-    };
-  });
+  return mapAccountsToObligationTotals(accounts, obligations, payments);
+}
+
+/**
+ * Point-in-time obligation totals — latest event per source as of end of `asOf`
+ * (inclusive calendar day on `occurred_at`). Same void/correction rules as current balances.
+ */
+export async function loadWholesalerObligationTotalsAsOf(
+  db: QueryableDb,
+  input: { asOf: string } & WholesalerObligationFilters
+): Promise<WholesalerObligationTotals[]> {
+  const accounts = await loadWholesalerAccounts(db, input);
+  if (accounts.length === 0) return [];
+
+  const obligations = await loadActiveObligationEventRows(db, input.asOf);
+  const payments = await loadPaymentEventRows(db, input.asOf);
+
+  return mapAccountsToObligationTotals(accounts, obligations, payments);
 }
 
 async function loadOwnerSelfPayTotals(db: QueryableDb): Promise<{

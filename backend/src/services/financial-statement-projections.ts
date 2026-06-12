@@ -4,6 +4,8 @@
  * Financial amounts from `financial_events`; show/line metadata from operational tables.
  */
 import {
+  PAYMENT_OBLIGATION_EVENT_TYPES,
+  PAYMENT_VOIDED_EVENT_TYPE,
   SETTLEMENT_OBLIGATION_EVENT_TYPES,
   SETTLEMENT_VOIDED_EVENT_TYPE,
 } from './financial-obligation-projections';
@@ -130,13 +132,26 @@ export async function loadPaymentStatementRows(
 ): Promise<EventStatementPaymentRow[]> {
   const accountId = await resolveWholesalerAccountId(db, wholesalerId);
   const result = await db.query(
-    `SELECT
+    `WITH latest_payment AS (
+       SELECT DISTINCT ON (source_id)
+         source_id,
+         effective_date,
+         amount,
+         occurred_at,
+         event_type,
+         payload
+       FROM financial_events
+       WHERE source_type = 'payment'
+         AND event_type = ANY($3::text[])
+       ORDER BY source_id, occurred_at DESC, id DESC
+     )
+     SELECT
        source_id::text AS entry_id,
        effective_date,
        amount::text AS amount,
        occurred_at
-     FROM financial_events
-     WHERE event_type = 'WHOLESALER_PAYMENT_RECORDED'
+     FROM latest_payment
+     WHERE event_type <> $4
        AND (
          ($1::uuid IS NOT NULL AND payload->>'account_id' = $1::text)
          OR (
@@ -144,7 +159,7 @@ export async function loadPaymentStatementRows(
            AND payload->>'wholesaler_id' = $2
          )
        )`,
-    [accountId, wholesalerId]
+    [accountId, wholesalerId, PAYMENT_OBLIGATION_EVENT_TYPES, PAYMENT_VOIDED_EVENT_TYPE]
   );
 
   return (
@@ -315,21 +330,40 @@ export async function loadLedgerEntriesFromEvents(
   );
 
   const paymentResult = await db.query(
-    `SELECT
-       fe.effective_date AS ledger_date,
-       fe.source_id::text AS reference_id,
-       COALESCE(NULLIF(TRIM(fe.payload->>'reference'), ''), 'Payment') AS description,
-       fe.amount::numeric AS amount,
-       fe.payload->>'wholesaler_id' AS wholesaler_id
-     FROM financial_events fe
-     WHERE fe.event_type = 'WHOLESALER_PAYMENT_RECORDED'
+    `WITH latest_payment AS (
+       SELECT DISTINCT ON (fe.source_id)
+         fe.effective_date,
+         fe.source_id,
+         fe.amount,
+         fe.event_type,
+         fe.payload
+       FROM financial_events fe
+       WHERE fe.source_type = 'payment'
+         AND fe.event_type = ANY($5::text[])
+       ORDER BY fe.source_id, fe.occurred_at DESC, fe.id DESC
+     )
+     SELECT
+       lp.effective_date AS ledger_date,
+       lp.source_id::text AS reference_id,
+       COALESCE(NULLIF(TRIM(lp.payload->>'reference'), ''), 'Payment') AS description,
+       lp.amount::numeric AS amount,
+       lp.payload->>'wholesaler_id' AS wholesaler_id
+     FROM latest_payment lp
+     WHERE lp.event_type <> $6
        AND ($1::uuid IS NULL OR (
-         ($2::uuid IS NOT NULL AND fe.payload->>'account_id' = $2::text)
-         OR (fe.payload->>'account_id' IS NULL AND fe.payload->>'wholesaler_id' = $1::text)
+         ($2::uuid IS NOT NULL AND lp.payload->>'account_id' = $2::text)
+         OR (lp.payload->>'account_id' IS NULL AND lp.payload->>'wholesaler_id' = $1::text)
        ))
-       AND ($3::date IS NULL OR fe.effective_date >= $3::date)
-       AND ($4::date IS NULL OR fe.effective_date <= $4::date)`,
-    [wholesalerId, accountId, startDate, endDate]
+       AND ($3::date IS NULL OR lp.effective_date >= $3::date)
+       AND ($4::date IS NULL OR lp.effective_date <= $4::date)`,
+    [
+      wholesalerId,
+      accountId,
+      startDate,
+      endDate,
+      PAYMENT_OBLIGATION_EVENT_TYPES,
+      PAYMENT_VOIDED_EVENT_TYPE,
+    ]
   );
 
   const showIds = new Set<string>();

@@ -1,6 +1,9 @@
 import { formatWeekRangeCompact } from "@/lib/weekRange";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
-import { workspaceTableRowHover } from "@/app/(admin)/admin/_components/workspaceUi";
+import {
+  workspaceTableRowHover,
+  workspaceTableRowInteractive,
+} from "@/app/(admin)/admin/_components/workspaceUi";
 import type { PastWeekBlock } from "../weekStructure";
 import { ShowMobileCard } from "./ShowMobileCard";
 import { WeekDesktopTable } from "./WeekDesktopTable";
@@ -28,25 +31,33 @@ function PastWeekChevron({ className }: { className?: string }) {
 export function ShowsPastWeeksSection({
   pastBlocks,
   summaries,
+  highlightShowId = null,
 }: {
   pastBlocks: PastWeekBlock[];
   summaries: Record<string, ShowFinancialSummary>;
+  highlightShowId?: string | null;
 }) {
   if (pastBlocks.length === 0) return null;
 
   return (
     <section aria-labelledby="shows-past-weeks-heading">
-      <div className="overflow-hidden rounded-xl border border-admin-border/90 bg-admin-surfaceElevated shadow-workspace-surface-warm-sm">
-        <header className="border-b border-admin-border/80 bg-admin-surfaceElevated px-4 py-4 sm:px-5">
+      <details className="group overflow-hidden rounded-xl border border-admin-border/90 bg-admin-surfaceElevated shadow-workspace-surface-warm-sm">
+        <summary
+          className={`flex cursor-pointer list-none items-center gap-3 border-b border-transparent bg-admin-surfaceElevated px-4 py-4 outline-none sm:px-5 [&_*]:cursor-inherit ${workspaceTableRowInteractive} touch-manipulation focus-visible:ring-2 focus-visible:ring-admin-actionPrimary/30 focus-visible:ring-offset-2 group-open:border-admin-border/80 [&::-webkit-details-marker]:hidden`}
+        >
           <h2
             id="shows-past-weeks-heading"
-            className="text-lg font-semibold tracking-tight text-admin-ink"
+            className="min-w-0 flex-1 text-lg font-semibold tracking-tight text-admin-ink"
           >
             Past weeks
           </h2>
-        </header>
+          <span className="shrink-0 text-sm text-gray-600">
+            {pastBlocks.length} {pastBlocks.length === 1 ? "week" : "weeks"}
+          </span>
+          <PastWeekChevron className="h-5 w-5 shrink-0 text-gray-500 transition-transform duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none group-open:rotate-180" />
+        </summary>
 
-        <div className="space-y-3 p-2.5 sm:space-y-4 sm:p-4">
+        <div className="space-y-3 border-t border-admin-border/80 p-2.5 sm:space-y-4 sm:p-4">
           <ul className="flex flex-col gap-3 sm:gap-6">
             {pastBlocks.map((block) => (
               <li key={block.startStr}>
@@ -76,6 +87,7 @@ export function ShowsPastWeeksSection({
                               key={show.id}
                               show={show}
                               summary={summaries[show.id]}
+                              highlighted={highlightShowId === show.id}
                             />
                           ))}
                         </div>
@@ -85,6 +97,7 @@ export function ShowsPastWeeksSection({
                           shows={block.shows}
                           summaries={summaries}
                           showProfitHint={false}
+                          highlightShowId={highlightShowId}
                         />
                       </div>
                     </div>
@@ -94,7 +107,7 @@ export function ShowsPastWeeksSection({
             ))}
           </ul>
         </div>
-      </div>
+      </details>
     </section>
   );
 }

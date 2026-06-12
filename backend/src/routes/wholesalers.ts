@@ -5,6 +5,10 @@ import { getPool, withTx } from '../db';
 import { readUnpaidClosedShowsForWholesaler } from '../read-models/unpaid-closed-shows';
 import { getWholesalerBalancesView } from '../services/balancesView';
 import { getWholesalerStatement } from '../services/wholesaler-statement';
+import {
+  loadWholesalerBalanceSnapshots,
+  parseBalanceSnapshotDateList,
+} from '../services/wholesaler-balance-snapshots';
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
 
 const uuidSchema = z.string().uuid();
@@ -123,6 +127,55 @@ export async function wholesalerRoutes(
     }
   );
 
+  fastify.get<{ Querystring: { as_of: string } }>(
+    '/wholesalers/balance-snapshots',
+    {
+      preHandler: adminPre,
+      schema: {
+        description:
+          'Event-derived aggregate vendor outstanding snapshots by calendar date. Basis: occurred_at (inclusive through end of each as_of day).',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          required: ['as_of'],
+          properties: {
+            as_of: {
+              type: 'string',
+              description: 'Comma-separated YYYY-MM-DD dates (max 3, not in the future)',
+            },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              basis: { type: 'string', enum: ['occurred_at'] },
+              snapshots: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    as_of: { type: 'string' },
+                    total_outstanding: { type: 'string' },
+                    vendors_owing_count: { type: 'integer' },
+                    owed_total: { type: 'string' },
+                    paid_total: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const pool = getPool();
+      const dates = parseBalanceSnapshotDateList(request.query.as_of);
+      const result = await loadWholesalerBalanceSnapshots(pool, dates);
+      return reply.send(result);
+    }
+  );
+
   fastify.get(
     '/wholesalers/balances',
     {
@@ -138,6 +191,7 @@ export async function wholesalerRoutes(
               properties: {
                 wholesaler_id: { type: 'string' },
                 name: { type: 'string' },
+                status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
                 owed_total: { type: 'string' },
                 paid_total: { type: 'string' },
                 balance_owed: { type: 'string' },
@@ -160,6 +214,7 @@ export async function wholesalerRoutes(
           rows.map((r) => ({
             wholesaler_id: r.wholesaler_id,
             name: r.wholesaler_name,
+            status: r.account_status,
             owed_total: r.owed_total,
             paid_total: r.paid_total,
             balance_owed: r.balance_owed,

@@ -1,12 +1,12 @@
 "use client";
 
 import type { ComponentProps, ReactNode } from "react";
+import type { WorkspaceContainerTier } from "../_lib/workspacePageContentWidth";
 import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "./AdminPageContainer";
 import { AdminPageIntro } from "./AdminPageIntro";
-import { workspacePageContentWidth } from "./workspaceUi";
 
 /** Page intro with Dashboard-aligned defaults (no wave, no left accent rail). */
 export function AdminWorkspacePageIntro(
@@ -26,26 +26,26 @@ export function AdminWorkspacePageIntro(
 export function AdminWorkspacePageLayout({
   intro,
   children,
-  contentWidthClassName = workspacePageContentWidth,
+  containerTier = "standard",
   contentStackClassName,
   introVariant = "default",
 }: {
   intro: ReactNode;
   children: ReactNode;
-  contentWidthClassName?: string;
+  containerTier?: WorkspaceContainerTier;
   contentStackClassName?: string;
   introVariant?: "default" | "entity-detail";
 }) {
   return (
     <>
       <AdminPageIntroSection
-        contentWidthClassName={contentWidthClassName}
+        containerTier={containerTier}
         variant={introVariant}
       >
         {intro}
       </AdminPageIntroSection>
       <AdminPageContainer
-        contentWidthClassName={contentWidthClassName}
+        containerTier={containerTier}
         contentStackClassName={contentStackClassName}
       >
         {children}

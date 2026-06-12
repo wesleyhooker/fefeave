@@ -3,33 +3,19 @@
  * Layout-matching, one cohesive skeleton per page. Uses animate-pulse and neutral gray.
  */
 import {
-  workspaceBalancesPageStack,
-  workspacePagePrimarySecondaryGrid,
-  workspacePageSupportingStack,
-  workspacePageTopStack,
-} from "@/app/(admin)/admin/_lib/workspacePageRegions";
+  WorkspaceGrid,
+  WorkspaceGridItem,
+} from "@/app/(admin)/admin/_components/WorkspaceGrid";
 import {
-  dashboardAnalyticsBody,
-  dashboardAnalyticsCard,
-  dashboardAnalyticsHeader,
-  dashboardModulePanel,
-  dashboardModulePanelHeader,
   dashboardPadX,
-  dashboardPrimaryListShell,
-  dashboardRowList,
-  dashboardRowPad,
   dashboardWeeklyHeaderBand,
-  dashboardWeeklyHeroInsetWrapper,
-  dashboardWeeklyShowsToolbar,
   dashboardWeeklyStatusCard,
 } from "@/app/(admin)/admin/dashboard/_components/dashboardStructure";
 import {
   workspaceCard,
   workspaceCardHeader,
-  workspacePageContentWidthWide,
   workspaceSectionToolbar,
   workspaceShellBg,
-  workspaceStatTile,
   workspaceTheadSticky,
 } from "./workspaceUi";
 import {
@@ -97,122 +83,96 @@ export function TableSkeleton({
   );
 }
 
-/** Dashboard: mirrors live `page.tsx` composition (header → stats → This week + Notifications → supporting analytics). */
+/** Dashboard: This Week hero — four metric columns + status band. */
 export function DashboardSkeleton() {
   return (
     <>
-      <AdminPageIntroSection>
+      <AdminPageIntroSection containerTier="full">
         <header>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
             <div className="min-w-0 border-l-2 border-rose-400/45 pl-3.5 sm:pl-4">
               <SkeletonBar className="h-8 w-52 max-w-full" />
               <SkeletonBar className="mt-2 h-4 w-64 max-w-full" />
             </div>
-            <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-28" />
+            <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-36" />
           </div>
         </header>
       </AdminPageIntroSection>
 
-      <AdminPageContainer>
-        <div className={workspacePageTopStack}>
-          <section aria-hidden>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="flex min-h-[7.75rem] flex-col rounded-xl border border-stone-200/80 bg-white px-4 py-4 shadow-[0_1px_3px_rgba(120,113,108,0.06)] sm:min-h-[8rem] sm:px-5 sm:py-5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <SkeletonBar className="h-2.5 w-24" />
-                    <span className="h-9 w-9 shrink-0 rounded-full bg-stone-100" />
-                  </div>
-                  <SkeletonBar className="mt-4 h-7 w-28" />
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        <div className={workspacePagePrimarySecondaryGrid}>
-          <div className="min-w-0">
-            <section className={dashboardWeeklyStatusCard}>
+      <AdminPageContainer containerTier="full">
+        <WorkspaceGrid variant="stack">
+          <WorkspaceGridItem span="full">
+            <section className={dashboardWeeklyStatusCard} aria-hidden>
               <div className={dashboardWeeklyHeaderBand}>
                 <SkeletonBar className="h-5 w-32 max-w-full" />
+                <SkeletonBar className="mt-2 h-3 w-40 max-w-full" />
               </div>
-              <div
-                className={`${dashboardWeeklyHeroInsetWrapper} rounded-xl bg-stone-50/55 p-1 sm:p-1.5`}
-              >
-                <div className="overflow-hidden rounded-[0.65rem] border border-stone-200/90 bg-white p-6 shadow-sm sm:p-7">
-                  <SkeletonBar className="h-2.5 w-28" />
-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                    <SkeletonBar className="h-10 w-44 max-w-full sm:max-w-[75%]" />
-                    <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-36" />
-                  </div>
-                  <SkeletonBar className="mt-3 h-2.5 w-40 max-w-full" />
+              <div className={`${dashboardPadX} py-3 sm:py-4`}>
+                <div className="grid grid-cols-2 gap-px rounded-xl border border-stone-200/90 bg-stone-200/80 p-px lg:grid-cols-4">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className={`flex min-h-[7.5rem] flex-col bg-white px-5 py-6 sm:px-6 ${i === 0 ? "sm:py-8" : "sm:py-7"}`}
+                    >
+                      <SkeletonBar className="h-2.5 w-16" />
+                      <SkeletonBar
+                        className={`${i === 0 ? "mt-3 h-10 w-32" : "mt-2.5 h-7 w-20"} max-w-full`}
+                      />
+                      <SkeletonBar className="mt-3 h-3 w-full max-w-[8rem]" />
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className={dashboardWeeklyShowsToolbar}>
-                <SkeletonBar className="h-2 w-16" />
+              <div className="border-t border-stone-100/90 px-4 py-3 sm:px-5">
+                <SkeletonBar className="h-3 w-full max-w-md" />
               </div>
-              <ul
-                className={`${dashboardPrimaryListShell} ${dashboardRowList}`}
-              >
-                {[0, 1, 2].map((i) => (
-                  <li key={i}>
-                    <div
-                      className={`flex min-w-0 items-center gap-3 ${dashboardRowPad}`}
-                    >
-                      <span className="flex min-w-0 flex-1 items-center gap-2">
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-stone-200" />
-                        <SkeletonBar className="h-3 w-full max-w-[11rem]" />
-                      </span>
-                      <SkeletonBar className="h-2 w-12 shrink-0" />
-                      <SkeletonBar className="h-3 w-16 shrink-0" />
-                      <SkeletonBar className="h-3.5 w-3.5 shrink-0" />
-                    </div>
-                  </li>
-                ))}
-              </ul>
             </section>
-          </div>
-          <div className="min-w-0">
-            <aside className={dashboardModulePanel} aria-hidden>
-              <div className={dashboardModulePanelHeader}>
-                <SkeletonBar className="h-2 w-20" />
-              </div>
-              <ul className={dashboardRowList}>
-                {[0, 1].map((i) => (
-                  <li key={i}>
-                    <div
-                      className={`flex min-w-0 items-center gap-1.5 ${dashboardRowPad}`}
-                    >
-                      <SkeletonBar className="h-2 w-2 shrink-0 rounded-sm" />
-                      <SkeletonBar className="h-2.5 w-full max-w-[9rem]" />
-                      <SkeletonBar className="h-2.5 w-5 shrink-0" />
-                      <SkeletonBar className="h-3.5 w-3.5 shrink-0" />
+          </WorkspaceGridItem>
+          <WorkspaceGridItem span="full">
+            <div className="mt-1" aria-hidden>
+              <SkeletonBar className="h-3 w-36" />
+              <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-12 lg:gap-6">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="min-h-[15.5rem] rounded-2xl border border-stone-200/90 bg-white lg:col-span-6"
+                  >
+                    <div className="border-b border-stone-100/90 bg-stone-50/35 px-4 py-3">
+                      <SkeletonBar className="h-9 w-28" />
                     </div>
-                  </li>
+                    <div className="space-y-3 px-4 py-4">
+                      {[0, 1, 2].map((j) => (
+                        <div key={j} className="flex justify-between gap-3">
+                          <SkeletonBar className="h-3 w-24" />
+                          <SkeletonBar className="h-3 w-28" />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-stone-100/90 px-4 py-3">
+                      <SkeletonBar className="h-10 w-full" />
+                    </div>
+                  </div>
                 ))}
-              </ul>
-            </aside>
-          </div>
-        </div>
-
-        <div className={workspacePageSupportingStack}>
-          <section className={dashboardAnalyticsCard} aria-hidden>
-            <div className={dashboardAnalyticsHeader}>
-              <SkeletonBar className="h-3.5 w-28" />
-              <SkeletonBar className="mt-1.5 h-3 w-40 max-w-full" />
-            </div>
-            <div className={dashboardAnalyticsBody}>
-              <div className="h-12 w-full animate-pulse rounded-md bg-stone-200/60" />
-              <div className="mt-2 flex justify-between">
-                <SkeletonBar className="h-2 w-4" />
-                <SkeletonBar className="h-2 w-4" />
               </div>
             </div>
-          </section>
-        </div>
+          </WorkspaceGridItem>
+          <WorkspaceGridItem span="full">
+            <div
+              className="mt-1 rounded-2xl border border-stone-200/90 bg-stone-50/55 px-4 py-4 sm:px-5"
+              aria-hidden
+            >
+              <div className="grid grid-cols-1 gap-4 divide-y divide-stone-200/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="space-y-2 px-1 py-1 sm:px-3">
+                    <SkeletonBar className="h-3 w-28" />
+                    <SkeletonBar className="h-6 w-24" />
+                    <SkeletonBar className="h-3 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </WorkspaceGridItem>
+        </WorkspaceGrid>
       </AdminPageContainer>
     </>
   );
@@ -222,7 +182,7 @@ export function DashboardSkeleton() {
 export function BalancesPageSkeleton() {
   return (
     <>
-      <AdminPageIntroSection>
+      <AdminPageIntroSection containerTier="full">
         <header>
           <div className="min-w-0">
             <SkeletonBar className="h-8 w-36 max-w-full" />
@@ -230,38 +190,56 @@ export function BalancesPageSkeleton() {
           </div>
         </header>
       </AdminPageIntroSection>
-      <AdminPageContainer>
-        <div className={workspaceBalancesPageStack}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className={workspaceStatTile} aria-hidden>
-                <SkeletonBar className="h-3 w-28" />
-                <SkeletonBar className="mt-4 h-8 w-32 max-w-full" />
+      <AdminPageContainer containerTier="full">
+        <WorkspaceGrid variant="stack" className="gap-6 md:gap-8">
+          <WorkspaceGridItem span="full">
+            <div className={`overflow-hidden ${workspaceCard}`}>
+              <div className="flex flex-col gap-4 p-4 sm:p-5 md:flex-row md:items-center md:gap-0">
+                <div className="min-w-0 md:flex-1 md:pr-8">
+                  <SkeletonBar className="h-9 w-36 max-w-full sm:h-10 sm:w-44" />
+                  <SkeletonBar className="mt-1.5 h-3 w-20" />
+                </div>
+                <div className="grid grid-cols-3 gap-4 border-t border-stone-200/80 pt-5 sm:gap-6 md:flex-1 md:border-l md:border-t-0 md:pt-0 md:pl-8">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="min-w-0">
+                      <SkeletonBar className="h-5 w-16 max-w-full sm:h-6 sm:w-20" />
+                      <SkeletonBar className="mt-1.5 h-3 w-full max-w-[5.5rem]" />
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-          <div className={`overflow-hidden ${workspaceCard}`}>
-            <div className={workspaceSectionToolbar}>
+            </div>
+          </WorkspaceGridItem>
+          <WorkspaceGridItem span="full">
+            <div
+              className={`overflow-hidden rounded-lg border border-admin-border/90 ${workspaceSectionToolbar}`}
+            >
               <SkeletonBar className="h-10 w-full max-w-full rounded-lg sm:max-w-sm" />
-              <SkeletonBar className="h-10 w-full rounded-lg sm:w-44" />
             </div>
-            <div className="overflow-x-auto">
-              <TableSkeleton
-                cols={7}
-                rows={6}
-                headers={[
-                  "Status",
-                  "Vendor",
-                  "Balance owed",
-                  "Total owed",
-                  "Total paid",
-                  "Last payment",
-                  "",
-                ]}
-              />
+          </WorkspaceGridItem>
+          <WorkspaceGridItem span="full">
+            <SkeletonBar className="h-10 w-full max-w-md rounded-lg" />
+          </WorkspaceGridItem>
+          <WorkspaceGridItem span="full">
+            <div className={`overflow-hidden ${workspaceCard}`}>
+              <div className="overflow-x-auto">
+                <TableSkeleton
+                  cols={7}
+                  rows={6}
+                  headers={[
+                    "Status",
+                    "Vendor",
+                    "Balance owed",
+                    "Total owed",
+                    "Total paid",
+                    "Last payment",
+                    "",
+                  ]}
+                />
+              </div>
             </div>
-          </div>
-        </div>
+          </WorkspaceGridItem>
+        </WorkspaceGrid>
       </AdminPageContainer>
     </>
   );
@@ -362,90 +340,205 @@ export function PaymentsTableSkeleton() {
   );
 }
 
-/** Shows page: full page chrome + week-grouped skeleton (matches loaded layout). */
+/** Shows page: intro + main column sections + xl operational rail. */
 export function ShowsTableSkeleton() {
   return (
     <>
-      <AdminPageIntroSection
-        contentWidthClassName={workspacePageContentWidthWide}
-      >
+      <AdminPageIntroSection containerTier="full">
         <header>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-            <div className="min-w-0">
-              <SkeletonBar className="h-8 w-28 max-w-full" />
-            </div>
-            <SkeletonBar className="h-10 w-full shrink-0 rounded-lg sm:w-44" />
-          </div>
+          <SkeletonBar className="h-8 w-28 max-w-full" />
         </header>
       </AdminPageIntroSection>
-      <AdminPageContainer contentWidthClassName={workspacePageContentWidthWide}>
-        <div className="mb-5 overflow-hidden rounded-xl border border-emerald-200/60 border-l-[6px] border-l-emerald-500/50 bg-emerald-50/15 shadow-workspace-surface">
-          <div className="border-b border-emerald-100/90 bg-emerald-50/35 px-4 py-3 sm:px-5 sm:py-4">
-            <SkeletonBar className="w-32" />
-            <SkeletonBar className="mt-2 w-full max-w-md" />
-            <SkeletonBar className="mt-2 w-56" />
+      <AdminPageContainer containerTier="full">
+        <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-12 xl:gap-x-10 xl:gap-y-8">
+          <div className="min-w-0 space-y-5 md:space-y-6 xl:col-span-9">
+            <ShowsIndexThisWeekSkeleton />
+            <ShowsIndexMainTableSkeleton rows={2} />
+            <div className={`overflow-hidden ${workspaceCard}`}>
+              <div className="border-b border-admin-border/80 px-4 py-4 sm:px-5">
+                <SkeletonBar className="h-6 w-28" />
+              </div>
+              <div className="space-y-3 p-4">
+                <SkeletonBar className="h-12 w-full rounded-lg" />
+                <SkeletonBar className="h-12 w-full rounded-lg" />
+              </div>
+            </div>
           </div>
-          <div className="overflow-hidden bg-white">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead className={workspaceShellBg}>
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
-                  >
-                    Status
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
-                  >
-                    Show
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
-                  >
-                    Date
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
-                  >
-                    Profit
-                  </th>
-                  <th scope="col" className="px-2 py-3 sm:px-3">
-                    <span className="sr-only">Navigate</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
-                {Array.from({ length: 4 }, (_, i) => (
-                  <tr key={i}>
-                    <td className="px-3 py-2.5 sm:px-4">
-                      <SkeletonBar className="h-4 w-12" />
-                    </td>
-                    <td className="px-3 py-2.5 sm:px-4">
-                      <div className="min-w-0 space-y-1">
-                        <SkeletonBar className="w-36 max-w-full" />
-                        <SkeletonBar className="w-28" />
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                      <SkeletonBar className="w-24" />
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right sm:px-4">
-                      <SkeletonBar className="ml-auto w-20" />
-                    </td>
-                    <td className="px-2 py-2.5 text-right sm:px-3">
-                      <SkeletonBar className="ml-auto h-4 w-4 rounded" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="hidden flex-col gap-4 xl:col-span-3 xl:flex xl:gap-5">
+            <ShowsIndexRailSkeleton tall />
+            <ShowsIndexRailSkeleton />
           </div>
         </div>
       </AdminPageContainer>
     </>
+  );
+}
+
+function ShowsIndexRailSkeleton({ tall = false }: { tall?: boolean }) {
+  return (
+    <div className={`overflow-hidden ${workspaceCard}`}>
+      <div className={workspaceCardHeader}>
+        <SkeletonBar className="w-32" />
+        <SkeletonBar className="mt-2 w-full" />
+      </div>
+      <div className="space-y-3 p-4 sm:p-5">
+        <SkeletonBar className="h-4 w-full" />
+        <SkeletonBar className="h-4 w-3/4" />
+        {tall ? (
+          <>
+            <SkeletonBar className="mt-2 h-8 w-24" />
+            <SkeletonBar className="h-10 w-full rounded-lg" />
+            <SkeletonBar className="h-4 w-2/3" />
+          </>
+        ) : (
+          <SkeletonBar className="h-10 w-full rounded-lg" />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ShowsIndexMainTableSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-admin-border/90 bg-admin-surfaceElevated shadow-workspace-surface-warm-sm">
+      <div className="border-b border-admin-border/90 bg-admin-mutedStrip/55 px-4 py-3 sm:px-5 sm:py-4">
+        <SkeletonBar className="w-28" />
+        <SkeletonBar className="mt-2 w-full max-w-md" />
+      </div>
+      <div className="overflow-hidden bg-white">
+        <table className="min-w-full divide-y divide-gray-100">
+          <thead className={workspaceShellBg}>
+            <tr>
+              <th
+                scope="col"
+                className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              >
+                Status
+              </th>
+              <th
+                scope="col"
+                className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              >
+                Show
+              </th>
+              <th
+                scope="col"
+                className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              >
+                Date
+              </th>
+              <th
+                scope="col"
+                className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              >
+                Profit
+              </th>
+              <th scope="col" className="px-2 py-3 sm:px-3">
+                <span className="sr-only">Navigate</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {Array.from({ length: rows }, (_, i) => (
+              <tr key={i}>
+                <td className="px-3 py-2.5 sm:px-4">
+                  <SkeletonBar className="h-4 w-12" />
+                </td>
+                <td className="px-3 py-2.5 sm:px-4">
+                  <div className="min-w-0 space-y-1">
+                    <SkeletonBar className="w-36 max-w-full" />
+                    <SkeletonBar className="w-28" />
+                  </div>
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                  <SkeletonBar className="w-24" />
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-right sm:px-4">
+                  <SkeletonBar className="ml-auto w-20" />
+                </td>
+                <td className="px-2 py-2.5 text-right sm:px-3">
+                  <SkeletonBar className="ml-auto h-4 w-4 rounded" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ShowsIndexThisWeekSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-emerald-200/60 border-l-[6px] border-l-emerald-500/50 bg-emerald-50/15 shadow-workspace-surface">
+      <div className="border-b border-emerald-100/90 bg-emerald-50/35 px-4 py-3 sm:px-5 sm:py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <SkeletonBar className="w-32" />
+            <SkeletonBar className="mt-2 w-full max-w-md" />
+          </div>
+          <SkeletonBar className="h-10 w-32 shrink-0 rounded-lg" />
+        </div>
+      </div>
+      <div className="overflow-hidden bg-white">
+        <table className="min-w-full divide-y divide-gray-100">
+          <thead className={workspaceShellBg}>
+            <tr>
+              <th
+                scope="col"
+                className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              >
+                Status
+              </th>
+              <th
+                scope="col"
+                className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              >
+                Show
+              </th>
+              <th
+                scope="col"
+                className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              >
+                Date
+              </th>
+              <th
+                scope="col"
+                className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              >
+                Profit
+              </th>
+              <th scope="col" className="px-2 py-3 sm:px-3">
+                <span className="sr-only">Navigate</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {Array.from({ length: 4 }, (_, i) => (
+              <tr key={i}>
+                <td className="px-3 py-2.5 sm:px-4">
+                  <SkeletonBar className="h-4 w-12" />
+                </td>
+                <td className="px-3 py-2.5 sm:px-4">
+                  <div className="min-w-0 space-y-1">
+                    <SkeletonBar className="w-36 max-w-full" />
+                    <SkeletonBar className="w-28" />
+                  </div>
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                  <SkeletonBar className="w-24" />
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-right sm:px-4">
+                  <SkeletonBar className="ml-auto w-20" />
+                </td>
+                <td className="px-2 py-2.5 text-right sm:px-3">
+                  <SkeletonBar className="ml-auto h-4 w-4 rounded" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

@@ -1,3 +1,11 @@
+import {
+  WORKSPACE_CONTAINER_GUTTER,
+  WORKSPACE_CONTAINER_TIER,
+  type WorkspaceContainerTier,
+  workspaceContainerFrameClass,
+  workspaceContainerTierClass,
+} from '../_lib/workspacePageContentWidth';
+
 /**
  * Admin workspace — source of truth for neutral chrome + semantics.
  * **Interaction reference:** the dashboard (`/admin/dashboard`) — match its row hover, title links,
@@ -53,7 +61,9 @@
  * | Sidebar nav + panel surface + account zone | This file — `workspaceNavItemBase` / `workspaceNavItemActive` / `workspaceNavItemInactive` / `workspaceNavIconActive` / `workspaceNavIconInactive` / `workspaceSidebarSurface` / `workspaceSidebarAccountSection` / `workspaceSidebarAccountSignOutCluster` / `workspaceSidebarBrandTitleLink` / `workspaceSidebarAvatar` / `workspaceSidebarSignOut` / …; composition `AdminSidebar.tsx` |
  * | Header/menu hover (chrome) | This file — `workspaceChromeHover` (+ `workspaceChromeTransition` / `workspaceChromeHoverWarm`) |
  * | Loading skeletons shaped like admin pages | `AdminPageSkeletons.tsx` |
- * | Page region stacks/grids (intro-adjacent, primary/secondary columns) | `_lib/workspacePageRegions.ts` |
+ * | Page grid + column spans | `WorkspaceGrid.tsx` + `_lib/workspaceLayoutGrid.ts` |
+ * | Card / section shells (header, body, footer) | `WorkspaceCard.tsx` |
+ * | Page region stacks + entity grids (show detail, right panel host) | `_lib/workspacePageRegions.ts` |
  * | Summary stat tiles (unified KPI cards) | `AdminSummaryStatGrid.tsx` + `getWorkspaceSummaryStatSurfaceClass(surface)`; shells `workspaceStatTileSurface*` + legacy aliases; icon chips `workspaceDashboardStatIcon*` |
  * | Section toolbar (filters left, actions right) | `AdminWorkspaceToolbar.tsx` + `workspaceSectionToolbar` |
  * | Entity-detail breadcrumbs | `AdminEntityBreadcrumb.tsx` + `workspaceEntityDetailBreadcrumb*` |
@@ -131,26 +141,6 @@ export const workspaceNavItemActive =
  */
 export const workspaceNavItemInactive =
   'text-admin-sidebarTextMuted transition-[color,background-color] duration-200 ease-out hover:bg-black/[0.10] hover:text-white motion-reduce:transition-none';
-
-/** Nested Financials child — indented, no icon chip. */
-export const workspaceNavChildItemBase =
-  'group relative flex min-h-10 items-center rounded-lg py-1.5 pl-9 pr-3 text-[13px] leading-snug transition-[color,background-color] duration-200 ease-out motion-reduce:transition-none';
-
-export const workspaceNavChildItemActive =
-  'bg-black/[0.14] font-medium text-white';
-
-export const workspaceNavChildItemInactive =
-  'text-admin-sidebarTextMuted hover:bg-black/[0.10] hover:text-white';
-
-/** Financials section parent row (expand/collapse). */
-export const workspaceNavSectionTrigger =
-  'flex w-full min-h-[2.75rem] items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-[color,background-color] duration-200 ease-out motion-reduce:transition-none';
-
-export const workspaceNavSectionTriggerActive =
-  'bg-black/[0.10] font-medium text-white';
-
-export const workspaceNavSectionTriggerInactive =
-  'text-admin-sidebarTextMuted hover:bg-black/[0.10] hover:text-white';
 
 /**
  * Active icon chip — slightly deeper tone on clay (no bright white pill).
@@ -261,24 +251,36 @@ export const workspacePageMeta = 'mt-1 text-sm text-gray-600';
 
 // --- Page intro strip (soft boutique workspace) -------------------------------
 
-/** Shared page-content width for admin pages (aligns intro + cards). */
-export const workspacePageContentWidth = 'w-full max-w-5xl xl:max-w-6xl';
+export {
+  WORKSPACE_CONTAINER_GUTTER,
+  WORKSPACE_CONTAINER_TIER,
+  workspaceContainerFrameClass,
+  workspaceContainerTierClass,
+  type WorkspaceContainerTier,
+};
 
-/**
- * Wider main column for dense operational pages (e.g. Shows).
- * Keeps gutters; does not go full-bleed.
- */
-export const workspacePageContentWidthWide =
-  'w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[min(92rem,calc(100vw-3rem))]';
+/** @deprecated Prefer {@link WORKSPACE_CONTAINER_GUTTER}. */
+export const workspacePageGutter = WORKSPACE_CONTAINER_GUTTER;
 
-/** Standard page gutters inside the admin main area. */
-export const workspacePageGutter = 'px-4 md:px-6';
+/** @deprecated Prefer {@link WORKSPACE_CONTAINER_TIER.standard}. */
+export const workspacePageContentWidth = WORKSPACE_CONTAINER_TIER.standard;
 
-/**
- * Shared horizontal frame for workspace header + page intro/content so titles
- * and cards share the same left edge (gutter + max width).
- */
-export const workspaceMainContentInset = `${workspacePageGutter} ${workspacePageContentWidth}`;
+/** @deprecated Prefer {@link WORKSPACE_CONTAINER_TIER.wide}. */
+export const workspacePageContentWidthWide = WORKSPACE_CONTAINER_TIER.wide;
+
+/** @deprecated Prefer {@link WORKSPACE_CONTAINER_TIER.wide}. */
+export const workspacePageContentWidthDashboard = WORKSPACE_CONTAINER_TIER.wide;
+
+/** @deprecated Prefer {@link WORKSPACE_CONTAINER_TIER.full}. */
+export const workspacePageContentWidthExtraWide = WORKSPACE_CONTAINER_TIER.full;
+
+/** @deprecated Prefer {@link WORKSPACE_CONTAINER_TIER.compact}. */
+export const workspacePageContentWidthCompact =
+  WORKSPACE_CONTAINER_TIER.compact;
+
+/** @deprecated Prefer {@link workspaceContainerFrameClass}. */
+export const workspaceMainContentInset =
+  workspaceContainerFrameClass('standard');
 
 /** Shared admin page stack rhythm under intro zone. */
 export const workspacePageContentStack = 'flex flex-col gap-7 md:gap-8';

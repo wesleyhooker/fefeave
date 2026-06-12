@@ -62,6 +62,22 @@ describe('Shows API integration', () => {
     expect(body.updated_at).toBeDefined();
   });
 
+  test('POST /api/shows accepts TikTok platform', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: {
+        show_date: '2025-05-20',
+        platform: 'TIKTOK',
+        name: 'TikTok Live',
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.payload);
+    expect(body.platform).toBe('TIKTOK');
+    expect(body.name).toBe('TikTok Live');
+  });
+
   test('GET /api/shows includes created show', async () => {
     const postRes = await app.inject({
       method: 'POST',

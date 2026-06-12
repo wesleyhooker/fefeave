@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  WORKFLOW_SHOW_STATUS_COMPLETED_LABEL,
+  WORKFLOW_SHOW_STATUS_OPEN_LABEL,
+} from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import type { WorkspacePaymentStatus } from "@/app/(admin)/admin/_lib/workspacePaymentStatus";
 import {
   WORKSPACE_DETAIL_SETTLEMENT_STATUS_DOTS,
@@ -17,15 +21,15 @@ import {
 const listStatusRow = "inline-flex items-center gap-[5px] sm:gap-1.5";
 
 const listStatusLabel =
-  "max-w-[7rem] truncate text-[11px] font-medium leading-none sm:max-w-[9rem] sm:text-xs";
+  "max-w-[9rem] truncate text-[11px] font-medium leading-none sm:max-w-[11rem] sm:text-xs";
 
 function showStatusTableLabel(raw: string, st: string): string {
-  if (st === "COMPLETED") return "Closed";
-  if (st === "ACTIVE") return "Open";
+  if (st === "COMPLETED") return WORKFLOW_SHOW_STATUS_COMPLETED_LABEL;
+  if (st === "ACTIVE") return WORKFLOW_SHOW_STATUS_OPEN_LABEL;
   if (st === "PLANNED") return "Planned";
   const t = raw.trim();
   if (t.length === 0) return "—";
-  return t.length <= 12 ? t : `${t.slice(0, 11)}…`;
+  return t.length <= 24 ? t : `${t.slice(0, 23)}…`;
 }
 
 /**

@@ -24,6 +24,13 @@ import {
   WORKFLOW_LOG_SHOW_PLATFORM_FEE_HINT,
   WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import { showCloseOutHref } from "@/app/(admin)/admin/_lib/showRoutes";
+import {
+  DEFAULT_SHOW_PLATFORM,
+  SHOW_PLATFORM_OPTIONS,
+  type ShowPlatform,
+} from "@/app/(admin)/admin/shows/_lib/showPlatformOptions";
+import { validateShowCreateInput } from "@/app/(admin)/admin/shows/_lib/showCreateValidation";
 import {
   createShow,
   fetchShows,
@@ -50,15 +57,6 @@ function defaultShowNameForDate(
   if (maxSuffix === 0) return base;
   return `${base} #${maxSuffix + 1}`;
 }
-
-const PLATFORM_OPTIONS: {
-  value: "WHATNOT" | "INSTAGRAM" | "OTHER";
-  label: string;
-}[] = [
-  { value: "WHATNOT", label: "Whatnot" },
-  { value: "INSTAGRAM", label: "Instagram" },
-  { value: "OTHER", label: "Other" },
-];
 
 export type ShowCreateFormProps = {
   onSuccess?: (show: ShowDTO) => void;
@@ -101,11 +99,10 @@ export function ShowCreateForm({
   const [platformFee, setPlatformFee] = useState("");
   const [startedAt, setStartedAt] = useState("");
   const [endedAt, setEndedAt] = useState("");
-  const [platform, setPlatform] = useState<"WHATNOT" | "INSTAGRAM" | "OTHER">(
-    "WHATNOT",
-  );
+  const [platform, setPlatform] = useState<ShowPlatform>(DEFAULT_SHOW_PLATFORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,41 +133,20 @@ export function ShowCreateForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const payoutNum =
-      payoutAfterFees.trim() === ""
-        ? NaN
-        : Number(payoutAfterFees.replace(/,/g, ""));
-    if (
-      payoutAfterFees.trim() === "" ||
-      !Number.isFinite(payoutNum) ||
-      payoutNum < 0
-    ) {
-      setError("Enter a valid payout amount (0 or more).");
-      return;
-    }
+    setErrorTitle(null);
 
-    let platformFeeNum: number | undefined;
-    if (platformFee.trim() !== "") {
-      const parsed = Number(platformFee.replace(/,/g, ""));
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        setError("Enter a valid platform fee (0 or more), or leave it blank.");
-        return;
-      }
-      platformFeeNum = parsed;
-    }
+    const validation = validateShowCreateInput({
+      date,
+      name,
+      payoutAfterFees,
+      platformFee,
+      startedAt,
+      endedAt,
+    });
 
-    const startedIso = startedAt.trim()
-      ? new Date(startedAt).toISOString()
-      : undefined;
-    const endedIso = endedAt.trim()
-      ? new Date(endedAt).toISOString()
-      : undefined;
-    if (
-      startedIso != null &&
-      endedIso != null &&
-      new Date(endedIso).getTime() <= new Date(startedIso).getTime()
-    ) {
-      setError("Show end time must be after the start time.");
+    if (!validation.ok) {
+      setErrorTitle(validation.errorTitle);
+      setError(validation.error);
       return;
     }
 
@@ -180,21 +156,24 @@ export function ShowCreateForm({
         show_date: date.trim(),
         platform,
         name: name.trim() || undefined,
-        started_at: startedIso,
-        ended_at: endedIso,
+        started_at: validation.startedIso,
+        ended_at: validation.endedIso,
       });
 
-      await upsertShowFinancials(created.id, {
-        payout_after_fees_amount: payoutNum,
-        platform_fee_amount: platformFeeNum,
-      });
+      if (validation.payoutNum != null) {
+        await upsertShowFinancials(created.id, {
+          payout_after_fees_amount: validation.payoutNum,
+          platform_fee_amount: validation.platformFeeNum,
+        });
+      }
 
       if (onSuccess != null) {
         onSuccess(created);
       } else {
-        router.push(`/admin/shows/${created.id}`);
+        router.push(showCloseOutHref(created.id));
       }
     } catch (err) {
+      setErrorTitle("Could not create show");
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSubmitting(false);
@@ -227,13 +206,11 @@ export function ShowCreateForm({
           id="create-show-platform"
           required
           value={platform}
-          onChange={(e) =>
-            setPlatform(e.target.value as "WHATNOT" | "INSTAGRAM" | "OTHER")
-          }
+          onChange={(e) => setPlatform(e.target.value as ShowPlatform)}
           className="w-full min-w-0"
           aria-label="Platform"
         >
-          {PLATFORM_OPTIONS.map((o) => (
+          {SHOW_PLATFORM_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
@@ -269,7 +246,8 @@ export function ShowCreateForm({
   const payoutField = (
     <div className={payoutIntroMargin}>
       <label htmlFor="create-show-payout" className={workspaceFormLabel}>
-        Payout after fees ($) <span className="text-red-500">*</span>
+        Payout after fees ($){" "}
+        <span className="font-normal text-gray-500">(optional)</span>
       </label>
       <div
         className={`relative mt-1.5 ${dense ? "max-w-full sm:max-w-[10rem]" : "max-w-[10rem]"}`}
@@ -285,7 +263,6 @@ export function ShowCreateForm({
           type="text"
           inputMode="decimal"
           autoComplete="off"
-          required
           value={payoutAfterFees}
           onChange={(e) => {
             const v = e.target.value.replace(/[^0-9.]/g, "");
@@ -299,6 +276,11 @@ export function ShowCreateForm({
           aria-label="Payout after fees in dollars"
         />
       </div>
+      {!dense ? (
+        <p className="mt-1.5 max-w-md text-xs leading-snug text-gray-500">
+          Add now if known, or enter on the show page before close-out.
+        </p>
+      ) : null}
     </div>
   );
 
@@ -378,11 +360,7 @@ export function ShowCreateForm({
     >
       {error != null ? (
         <WorkspaceInlineError
-          title={
-            error.includes("Enter a valid payout")
-              ? "Check payout amount"
-              : "Could not create show"
-          }
+          title={errorTitle ?? "Could not create show"}
           message={error}
         />
       ) : null}
@@ -427,10 +405,14 @@ export function ShowCreateForm({
         {!dense ? (
           <div className={innerCardClass}>
             <div className={sectionToolbarClass}>
-              <h2 className={workspaceSectionTitle}>Financial setup</h2>
+              <h2 className={workspaceSectionTitle}>
+                Financial setup{" "}
+                <span className="text-sm font-normal text-gray-500">
+                  (optional)
+                </span>
+              </h2>
             </div>
             <div className={financialBlockClass}>
-              <p className={workspaceLabelEyebrow}>Starting payout</p>
               {payoutField}
               {platformFeeField}
             </div>

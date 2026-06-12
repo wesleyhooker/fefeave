@@ -57,12 +57,20 @@ export async function sumBusinessExpensesFromEvents(
   return sumOutflowEventsSince(db, ['BUSINESS_EXPENSE_RECORDED'], sinceDate);
 }
 
-/** Sum inventory purchase outflows on or after `sinceDate` (effective_date). */
+/** Sum inventory acquisitions on or after `sinceDate` (all payment statuses). */
 export async function sumInventoryInvestedFromEvents(
   db: Queryable,
   sinceDate: string
 ): Promise<number> {
-  return sumOutflowEventsSince(db, ['INVENTORY_PURCHASE_RECORDED'], sinceDate);
+  const result = await db.query(
+    `SELECT COALESCE(SUM(amount), 0)::numeric AS total
+     FROM financial_events
+     WHERE event_type = 'INVENTORY_PURCHASE_RECORDED'
+       AND effective_date >= $1::date
+       AND amount IS NOT NULL`,
+    [sinceDate]
+  );
+  return Number((result.rows[0] as { total: string }).total) || 0;
 }
 
 /**

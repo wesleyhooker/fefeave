@@ -175,8 +175,8 @@ try {
       await snap(page, i++, "wholesaler-expense-tab-missing");
     }
 
-    await gotoReady(page, `/admin/wholesalers/${wholesalerId}/batch-pay`);
-    await snap(page, i++, "balance-breakdown");
+    await gotoReady(page, `/admin/vendors/${wholesalerId}#balance-by-show`);
+    await snap(page, i++, "vendor-balance-by-show");
 
     await gotoReady(page, `/admin/wholesalers/${wholesalerId}`);
     const payTab = page.getByRole("button", { name: /^payment$/i });
@@ -189,7 +189,7 @@ try {
     await snap(page, i++, "wholesaler-detail-skipped");
     await snap(page, i++, "wholesaler-ledger-skipped");
     await snap(page, i++, "wholesaler-tabs-skipped");
-    await snap(page, i++, "balance-breakdown-skipped");
+    await snap(page, i++, "balance-by-show-skipped");
     await snap(page, i++, "wholesaler-payment-tab-skipped");
   }
 

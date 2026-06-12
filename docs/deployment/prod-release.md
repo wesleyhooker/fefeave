@@ -253,6 +253,8 @@ Dev workspace still creates **Cognito** (`cognito-dev.tf`) for local `make dev-c
 
 ## Production launch checklist (operator)
 
+See **[deploy-checklist.md](deploy-checklist.md)** for the full pre/post deploy sequence (migrations, readiness, smoke tests).
+
 - [ ] Terraform apply (serverless prod) + `make gh-sync-prod`
 - [ ] Neon `DATABASE_URL` secret + migrations
 - [ ] ACM + Cloudflare DNS cutover ([route53-acm-cutover.md](route53-acm-cutover.md))

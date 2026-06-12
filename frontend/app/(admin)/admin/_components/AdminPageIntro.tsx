@@ -13,6 +13,7 @@ export function AdminPageIntro({
   decoration = "none",
   variant = "default",
   breadcrumb,
+  belowTitle,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -23,6 +24,8 @@ export function AdminPageIntro({
   variant?: "default" | "entity-detail";
   /** Shown above the title (e.g. breadcrumb `Balances / Name`). */
   breadcrumb?: ReactNode;
+  /** Compact row directly under the title (e.g. Shows primary action). */
+  belowTitle?: ReactNode;
 }) {
   const effectiveDecoration = variant === "entity-detail" ? "none" : decoration;
   const effectiveUseAccent = variant === "entity-detail" ? false : useAccent;
@@ -75,6 +78,11 @@ export function AdminPageIntro({
             ) : null}
             <div className="space-y-2">
               <h1 className={titleClassName}>{title}</h1>
+              {belowTitle ? (
+                <div className="mt-0.5 flex flex-wrap items-center gap-2 pt-0.5">
+                  {belowTitle}
+                </div>
+              ) : null}
               {subtitle ? (
                 <SubtitleContainer className={subtitleClassName}>
                   {subtitle}

@@ -580,7 +580,7 @@ describe('Settlement and ledger integration', () => {
     expect(JSON.parse(bad.payload).message).toMatch(/exceed|payout/i);
   });
 
-  test('PATCH payment updates fields; DELETE soft-removes payment', async () => {
+  test('PATCH payment updates fields and emits correction; DELETE soft-removes and voids', async () => {
     const wholesalerRes = await app.inject({
       method: 'POST',
       url: `${prefix}/wholesalers`,
@@ -633,5 +633,23 @@ describe('Settlement and ledger integration', () => {
     expect(listRes.statusCode).toBe(200);
     const list = JSON.parse(listRes.payload);
     expect(list.some((p: { id: string }) => p.id === payment.id)).toBe(false);
+
+    const pool = (await import('../db')).getPool();
+    const events = await pool.query(
+      `SELECT event_type, amount::text AS amount
+       FROM financial_events
+       WHERE source_type = 'payment' AND source_id = $1
+       ORDER BY occurred_at ASC, id ASC`,
+      [payment.id]
+    );
+    const eventRows = events.rows as Array<{ event_type: string; amount: string }>;
+    expect(eventRows.map((e) => e.event_type)).toEqual([
+      'WHOLESALER_PAYMENT_RECORDED',
+      'WHOLESALER_PAYMENT_CORRECTED',
+      'WHOLESALER_PAYMENT_VOIDED',
+    ]);
+    expect(Number(eventRows[0].amount)).toBe(100);
+    expect(Number(eventRows[1].amount)).toBe(75.5);
+    expect(Number(eventRows[2].amount)).toBe(75.5);
   });
 });

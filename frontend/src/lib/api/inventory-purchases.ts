@@ -1,5 +1,7 @@
 import { backendGetJson } from './backend';
 
+export type InventoryPaymentStatus = 'PAID_NOW' | 'OWE_VENDOR';
+
 export interface InventoryPurchaseDTO {
   id: string;
   purchase_date: string;
@@ -8,6 +10,9 @@ export interface InventoryPurchaseDTO {
   supplier?: string;
   category?: string;
   purchase_type?: string;
+  payment_status?: InventoryPaymentStatus;
+  wholesaler_id?: string;
+  vendor_obligation_id?: string;
   created_at: string;
 }
 
@@ -29,6 +34,8 @@ export async function createInventoryPurchase(payload: {
   supplier?: string;
   category?: string;
   purchase_type?: string;
+  payment_status?: InventoryPaymentStatus;
+  wholesaler_id?: string;
 }): Promise<InventoryPurchaseDTO> {
   return backendGetJson<InventoryPurchaseDTO>('/inventory-purchases', {
     method: 'POST',

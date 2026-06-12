@@ -10,6 +10,8 @@ export type WeekBounds = {
   endStr: string;
   /** e.g. "Mon, Jan 6 – Sun, Jan 12, 2026" */
   labelLong: string;
+  /** Compact range for metric labels, e.g. "Jun 1–7" */
+  labelCompact: string;
 };
 
 function pad2(n: number): string {
@@ -56,7 +58,26 @@ export function getCurrentWeekBounds(now = new Date()): WeekBounds {
   const startStr = formatYMDLocal(monday);
   const endStr = formatYMDLocal(sunday);
   const labelLong = `Mon, ${SHORT_MONTH[monday.getMonth()]} ${monday.getDate()}, ${monday.getFullYear()} – Sun, ${SHORT_MONTH[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`;
-  return { startStr, endStr, labelLong };
+  const labelCompact = formatWeekLabelCompact(startStr, endStr);
+  return { startStr, endStr, labelLong, labelCompact };
+}
+
+/** e.g. "Jun 1–7" or "Dec 30–Jan 5" when the week spans months. */
+export function formatWeekLabelCompact(
+  startStr: string,
+  endStr: string,
+): string {
+  const start = parseYmdLocal(startStr);
+  const end = parseYmdLocal(endStr);
+  if (start.getMonth() === end.getMonth()) {
+    return `${SHORT_MONTH[start.getMonth()]} ${start.getDate()}–${end.getDate()}`;
+  }
+  return `${SHORT_MONTH[start.getMonth()]} ${start.getDate()}–${SHORT_MONTH[end.getMonth()]} ${end.getDate()}`;
+}
+
+function parseYmdLocal(ymd: string): Date {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
 
 /** Inclusive range: `dateStr` is YYYY-MM-DD. */
@@ -107,7 +128,8 @@ export function getWeekBoundsForShowDate(dateStr: string): WeekBounds | null {
   const startStr = formatYMDLocal(monday);
   const endStr = formatYMDLocal(sunday);
   const labelLong = `Mon, ${SHORT_MONTH[monday.getMonth()]} ${monday.getDate()}, ${monday.getFullYear()} – Sun, ${SHORT_MONTH[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`;
-  return { startStr, endStr, labelLong };
+  const labelCompact = formatWeekLabelCompact(startStr, endStr);
+  return { startStr, endStr, labelLong, labelCompact };
 }
 
 /** Monday `YYYY-MM-DD` for the week containing this show date, or null. */

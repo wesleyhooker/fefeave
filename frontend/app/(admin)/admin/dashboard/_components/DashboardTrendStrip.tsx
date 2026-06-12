@@ -1,0 +1,65 @@
+"use client";
+
+import { ChartBarIcon } from "@heroicons/react/24/outline";
+import { workspaceActionIconMd } from "@/app/(admin)/admin/_components/workspaceUi";
+import type { DashboardTrendStripModel } from "../_lib/dashboardTrendStrip";
+import { DashboardTrendItem } from "./DashboardTrendItem";
+import {
+  dashboardTrendItemsGrid,
+  dashboardTrendStripIconShell,
+  dashboardTrendStripShell,
+} from "./dashboardStructure";
+
+function TrendStripSkeleton() {
+  return (
+    <div className={`${dashboardTrendStripShell} animate-pulse`} aria-hidden>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
+        <div
+          className={`hidden h-10 w-10 shrink-0 rounded-full bg-stone-200/80 sm:block ${dashboardTrendStripIconShell}`}
+        />
+        <div className={`flex-1 ${dashboardTrendItemsGrid}`}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="space-y-2 px-1 py-1">
+              <div className="h-3 w-28 rounded bg-stone-200/80" />
+              <div className="h-6 w-24 rounded bg-stone-200/80" />
+              <div className="h-3 w-32 rounded bg-stone-200/70" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DashboardTrendStrip({
+  model,
+  loading = false,
+}: {
+  model: DashboardTrendStripModel | null;
+  loading?: boolean;
+}) {
+  if (loading || model == null) {
+    return <TrendStripSkeleton />;
+  }
+
+  return (
+    <section
+      className={dashboardTrendStripShell}
+      aria-label="Monthly business trends"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
+        <div
+          className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-full sm:flex ${dashboardTrendStripIconShell}`}
+          aria-hidden
+        >
+          <ChartBarIcon className={`${workspaceActionIconMd} text-stone-500`} />
+        </div>
+        <div className={`min-w-0 flex-1 ${dashboardTrendItemsGrid}`}>
+          {model.items.map((item) => (
+            <DashboardTrendItem key={item.id} item={item} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

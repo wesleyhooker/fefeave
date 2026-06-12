@@ -236,4 +236,69 @@ describe('Closed show freeze', () => {
     });
     expect(delRes.statusCode).toBe(200);
   });
+
+  test('PATCH COMPLETED without financials returns 400', async () => {
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: { show_date: '2025-10-03', platform: 'WHATNOT', name: 'No Payout Show' },
+    });
+    expect(showRes.statusCode).toBe(201);
+    const show = JSON.parse(showRes.payload);
+
+    const closeRes = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}`,
+      payload: { status: 'COMPLETED' },
+    });
+    expect(closeRes.statusCode).toBe(400);
+    const body = JSON.parse(closeRes.payload);
+    expect(body.message).toMatch(/payout after fees/i);
+  });
+
+  test('PATCH COMPLETED with zero payout returns 400', async () => {
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: { show_date: '2025-10-04', platform: 'WHATNOT', name: 'Zero Payout Show' },
+    });
+    expect(showRes.statusCode).toBe(201);
+    const show = JSON.parse(showRes.payload);
+
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 0 },
+    });
+
+    const closeRes = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}`,
+      payload: { status: 'COMPLETED' },
+    });
+    expect(closeRes.statusCode).toBe(400);
+  });
+
+  test('PATCH COMPLETED with payout and no settlements succeeds', async () => {
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: { show_date: '2025-10-05', platform: 'WHATNOT', name: 'Payout Only Show' },
+    });
+    expect(showRes.statusCode).toBe(201);
+    const show = JSON.parse(showRes.payload);
+
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 1200 },
+    });
+
+    const closeRes = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}`,
+      payload: { status: 'COMPLETED' },
+    });
+    expect(closeRes.statusCode).toBe(200);
+  });
 });

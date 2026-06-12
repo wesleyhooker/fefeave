@@ -2,14 +2,20 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth/guards';
 import { getPool, withTx } from '../db';
+import { ensureUser } from '../db/ensure-user';
+import {
+  DEFAULT_INVENTORY_PAYMENT_STATUS,
+  INVENTORY_PAYMENT_STATUSES,
+} from '../constants/inventory-acquisition';
 import { loadInventoryInvestedWindowTotal } from '../services/financial-event-summaries';
+import {
+  createInventoryAcquisition,
+  type InventoryAcquisitionRow,
+} from '../services/inventory-acquisition';
+import { resolveActorUserId } from '../services/financial-event-emission';
 import { ValidationError } from '../utils/errors';
 import { toYyyyMmDd } from '../utils/pg-date';
 import { INVENTORY_CATEGORIES, INVENTORY_PURCHASE_TYPES } from '../constants/inventory';
-import {
-  emitInventoryPurchaseRecorded,
-  resolveActorUserId,
-} from '../services/financial-event-emission';
 
 /** Blank/whitespace-only string -> undefined; otherwise pass through for enum validation. */
 const blankToUndefined = (v: unknown): unknown =>
@@ -22,34 +28,44 @@ const optionalTrimmedText = z.preprocess((v) => {
   return trimmed === '' ? undefined : trimmed;
 }, z.string().max(255).optional());
 
-const postInventoryPurchaseSchema = z.object({
-  purchase_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'purchase_date must be YYYY-MM-DD'),
-  amount: z.union([z.string(), z.number()]).transform((v) => {
-    const n = typeof v === 'string' ? parseFloat(v) : v;
-    if (Number.isNaN(n) || n <= 0) {
-      throw new Error('amount must be greater than 0');
+const postInventoryPurchaseSchema = z
+  .object({
+    purchase_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'purchase_date must be YYYY-MM-DD'),
+    amount: z.union([z.string(), z.number()]).transform((v) => {
+      const n = typeof v === 'string' ? parseFloat(v) : v;
+      if (Number.isNaN(n) || n <= 0) {
+        throw new Error('amount must be greater than 0');
+      }
+      return n;
+    }),
+    notes: z.string().optional(),
+    supplier: optionalTrimmedText,
+    category: z.preprocess(blankToUndefined, z.enum(INVENTORY_CATEGORIES).optional()),
+    purchase_type: z.preprocess(blankToUndefined, z.enum(INVENTORY_PURCHASE_TYPES).optional()),
+    payment_status: z
+      .enum(INVENTORY_PAYMENT_STATUSES)
+      .optional()
+      .default(DEFAULT_INVENTORY_PAYMENT_STATUS),
+    wholesaler_id: z.string().uuid().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.payment_status === 'OWE_VENDOR' && !data.wholesaler_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'wholesaler_id is required when payment_status is OWE_VENDOR',
+        path: ['wholesaler_id'],
+      });
     }
-    return n;
-  }),
-  notes: z.string().optional(),
-  // Enrichment fields — all optional and backward compatible (old clients omit them).
-  supplier: optionalTrimmedText,
-  category: z.preprocess(blankToUndefined, z.enum(INVENTORY_CATEGORIES).optional()),
-  purchase_type: z.preprocess(blankToUndefined, z.enum(INVENTORY_PURCHASE_TYPES).optional()),
-});
+    if (data.payment_status === 'PAID_NOW' && data.wholesaler_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'wholesaler_id must be omitted when payment_status is PAID_NOW',
+        path: ['wholesaler_id'],
+      });
+    }
+  });
 
-interface InventoryPurchaseRow {
-  id: string;
-  purchase_date: string;
-  amount: string;
-  notes: string | null;
-  supplier: string | null;
-  category: string | null;
-  purchase_type: string | null;
-  created_at: Date;
-}
-
-function serializeInventoryPurchase(row: InventoryPurchaseRow) {
+function serializeInventoryPurchase(row: InventoryAcquisitionRow) {
   return {
     id: row.id,
     purchase_date: toYyyyMmDd(row.purchase_date),
@@ -58,6 +74,9 @@ function serializeInventoryPurchase(row: InventoryPurchaseRow) {
     supplier: row.supplier ?? undefined,
     category: row.category ?? undefined,
     purchase_type: row.purchase_type ?? undefined,
+    payment_status: row.payment_status,
+    wholesaler_id: row.wholesaler_id ?? undefined,
+    vendor_obligation_id: row.vendor_obligation_id ?? undefined,
     created_at: row.created_at,
   };
 }
@@ -80,7 +99,8 @@ export async function inventoryPurchaseRoutes(
     {
       preHandler: adminPre,
       schema: {
-        description: 'Create an inventory purchase (cash-based, no SKU)',
+        description:
+          'Record inventory purchase (paid now = cash outflow; owe vendor = vendor obligation)',
         security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
@@ -90,9 +110,6 @@ export async function inventoryPurchaseRoutes(
             amount: { type: 'number' },
             notes: { type: 'string' },
             supplier: { type: 'string' },
-            // Allowed values are enforced in the zod layer (-> 400 ValidationError).
-            // Kept as plain strings here so invalid values are not rejected by
-            // Fastify's native validation path (which would surface as 500).
             category: {
               type: 'string',
               description: `One of: ${INVENTORY_CATEGORIES.join(', ')}`,
@@ -101,6 +118,11 @@ export async function inventoryPurchaseRoutes(
               type: 'string',
               description: `One of: ${INVENTORY_PURCHASE_TYPES.join(', ')}`,
             },
+            payment_status: {
+              type: 'string',
+              description: `One of: ${INVENTORY_PAYMENT_STATUSES.join(', ')}`,
+            },
+            wholesaler_id: { type: 'string', format: 'uuid' },
           },
         },
         response: {
@@ -114,6 +136,9 @@ export async function inventoryPurchaseRoutes(
               supplier: { type: 'string' },
               category: { type: 'string' },
               purchase_type: { type: 'string' },
+              payment_status: { type: 'string' },
+              wholesaler_id: { type: 'string' },
+              vendor_obligation_id: { type: 'string' },
               created_at: { type: 'string' },
             },
           },
@@ -125,29 +150,33 @@ export async function inventoryPurchaseRoutes(
       if (!parsed.success) {
         throw new ValidationError('Invalid request body', parsed.error.errors);
       }
-      const { purchase_date, amount, notes, supplier, category, purchase_type } = parsed.data;
+      const {
+        purchase_date,
+        amount,
+        notes,
+        supplier,
+        category,
+        purchase_type,
+        payment_status,
+        wholesaler_id,
+      } = parsed.data;
+
       const row = await withTx(async (client) => {
-        const result = await client.query(
-          `INSERT INTO inventory_purchases (purchase_date, amount, notes, supplier, category, purchase_type)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           RETURNING id, purchase_date, amount, notes, supplier, category, purchase_type, created_at`,
-          [
-            purchase_date,
-            amount,
-            notes ?? null,
-            supplier ?? null,
-            category ?? null,
-            purchase_type ?? null,
-          ]
-        );
-        const inserted = result.rows[0] as InventoryPurchaseRow;
-        await emitInventoryPurchaseRecorded(
-          client,
-          inserted,
-          resolveActorUserId(request.user?.cognitoSub)
-        );
-        return inserted;
+        const userId = await ensureUser(client, request);
+        return createInventoryAcquisition(client, {
+          purchase_date,
+          amount,
+          notes: notes ?? null,
+          supplier: supplier ?? null,
+          category: category ?? null,
+          purchase_type: purchase_type ?? null,
+          payment_status,
+          wholesaler_id: wholesaler_id ?? null,
+          created_by: userId,
+          actor_user_id: resolveActorUserId(request.user?.cognitoSub),
+        });
       });
+
       return reply.status(201).send(serializeInventoryPurchase(row));
     }
   );
@@ -176,6 +205,9 @@ export async function inventoryPurchaseRoutes(
                 supplier: { type: 'string' },
                 category: { type: 'string' },
                 purchase_type: { type: 'string' },
+                payment_status: { type: 'string' },
+                wholesaler_id: { type: 'string' },
+                vendor_obligation_id: { type: 'string' },
                 created_at: { type: 'string' },
               },
             },
@@ -187,7 +219,7 @@ export async function inventoryPurchaseRoutes(
       const days = parseDaysQuery(request.query.days);
       const pool = getPool();
       const selectCols =
-        'id, purchase_date, amount, notes, supplier, category, purchase_type, created_at';
+        'id, purchase_date, amount, notes, supplier, category, purchase_type, payment_status, wholesaler_id, vendor_obligation_id, created_at';
       let result;
       if (days != null) {
         const since = new Date();
@@ -207,7 +239,7 @@ export async function inventoryPurchaseRoutes(
            ORDER BY purchase_date DESC, created_at DESC`
         );
       }
-      const rows = result.rows as InventoryPurchaseRow[];
+      const rows = result.rows as InventoryAcquisitionRow[];
       return reply.send(rows.map(serializeInventoryPurchase));
     }
   );
@@ -218,7 +250,7 @@ export async function inventoryPurchaseRoutes(
       preHandler: adminPre,
       schema: {
         description:
-          'Sum of inventory purchase amounts over last N days from financial_events (Financials Overview)',
+          'Sum of inventory purchase amounts over last N days from financial_events (all payment statuses)',
         security: [{ bearerAuth: [] }],
         querystring: {
           type: 'object',

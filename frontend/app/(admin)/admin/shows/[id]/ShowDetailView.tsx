@@ -7,6 +7,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Fragment,
   useCallback,
@@ -19,15 +20,20 @@ import {
   WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING,
   WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY,
   WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST,
+  WORKFLOW_SHOW_LOCKED_BANNER,
   WORKFLOW_SHOW_PLATFORM_FEE_REPORTING_EYEBROW,
   WORKFLOW_SHOW_PLATFORM_FEE_REPORTING_NOTE,
   WORKFLOW_SHOW_SUMMARY_PAYOUT_LABEL,
+  WORKFLOW_SHOW_VENDOR_OBLIGATIONS_HEADING,
+  WORKFLOW_SHOW_VENDOR_OBLIGATIONS_HINT,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
+import { showClosedSuccessHref } from "@/app/(admin)/admin/_lib/showRoutes";
 import {
   AdminPageContainer,
   AdminPageIntroSection,
 } from "@/app/(admin)/admin/_components/AdminPageContainer";
 import { AdminEntityBreadcrumb } from "@/app/(admin)/admin/_components/AdminEntityBreadcrumb";
+import { vendorDetailHref } from "@/app/(admin)/admin/_lib/vendorRoutes";
 import { AdminPageIntro } from "@/app/(admin)/admin/_components/AdminPageIntro";
 import {
   SettlementFlatExpandedBody,
@@ -52,7 +58,6 @@ import {
   workspaceMoneyPositive,
   workspaceMoneyTabular,
   workspaceMutedStrip,
-  workspacePageContentWidthWide,
   workspaceSectionTitle,
   workspaceSectionToolbar,
   workspaceShowDetailOperatingShell,
@@ -76,17 +81,21 @@ import {
   settlementMethodPrimaryLabel,
 } from "@/app/(admin)/admin/_lib/settlementUi";
 import { workspacePageShowDetailGrid } from "@/app/(admin)/admin/_lib/workspacePageRegions";
-import {
-  getShowCloseOutBlock,
-  type CloseOutScrollTarget,
-} from "@/app/(admin)/admin/shows/_lib/showCloseOutReadiness";
+import { formatCurrency, formatCurrencyAbs, formatDate } from "@/lib/format";
 import {
   evaluateSettlementComposerFull,
   settlementComposerBlockMessage,
   settlementComposerFieldHints,
   SHOW_SETTLEMENT_TOTAL_EPS,
 } from "@/app/(admin)/admin/shows/_lib/showSettlementComposer";
-import { formatCurrency, formatCurrencyAbs, formatDate } from "@/lib/format";
+import {
+  getShowCloseOutBlock,
+  type CloseOutScrollTarget,
+} from "@/app/(admin)/admin/shows/_lib/showCloseOutReadiness";
+import {
+  formatShowPlatformLabel,
+  type ShowPlatform,
+} from "@/app/(admin)/admin/shows/_lib/showPlatformOptions";
 import {
   fetchShowAttachments,
   getAttachmentDownloadUrl,
@@ -121,7 +130,6 @@ type StructuredSettlement =
       type: "PERCENT";
       percent: number;
       wholesaler: string;
-      amountPaid: number;
     }
   | {
       id: string;
@@ -129,7 +137,6 @@ type StructuredSettlement =
       type: "FIXED";
       fixedAmount: number;
       wholesaler: string;
-      amountPaid: number;
     }
   | {
       id: string;
@@ -137,7 +144,6 @@ type StructuredSettlement =
       type: "ITEMIZED";
       fixedAmount: number;
       wholesaler: string;
-      amountPaid: number;
       lines?: SettlementLineDTO[];
     };
 
@@ -155,33 +161,18 @@ function amountOwedFor(
   return roundToCents(settlement.fixedAmount);
 }
 
-function deriveStatusFromTotals(
-  balanceRemaining: number,
-  isClosed: boolean,
-): string {
-  if (!isClosed) return "Open";
-  return balanceRemaining <= 0 ? "Paid" : "Unpaid";
-}
-
 function computeTotals(
   payoutAfterFees: number,
   settlements: StructuredSettlement[],
-  closedAt?: string,
 ) {
   const totalOwed = settlements.reduce(
     (sum, row) => sum + amountOwedFor(payoutAfterFees, row),
     0,
   );
-  const totalPaid = settlements.reduce((sum, row) => sum + row.amountPaid, 0);
-  const balanceRemaining = roundToCents(totalOwed - totalPaid);
   const profitEstimate = roundToCents(payoutAfterFees - totalOwed);
-  const status = deriveStatusFromTotals(balanceRemaining, Boolean(closedAt));
   return {
     totalOwed: roundToCents(totalOwed),
-    totalPaid: roundToCents(totalPaid),
-    balanceRemaining,
     profitEstimate,
-    status,
   };
 }
 
@@ -201,7 +192,6 @@ function mapSettlementRow(
       type: "PERCENT",
       percent: rateBps / 100,
       wholesaler,
-      amountPaid: 0,
     };
   }
 
@@ -212,7 +202,6 @@ function mapSettlementRow(
       type: "ITEMIZED",
       fixedAmount: parsedAmount,
       wholesaler,
-      amountPaid: 0,
       lines: row.lines,
     };
   }
@@ -223,7 +212,6 @@ function mapSettlementRow(
     type: "FIXED",
     fixedAmount: parsedAmount,
     wholesaler,
-    amountPaid: 0,
   };
 }
 
@@ -238,18 +226,6 @@ function sumPercentRatesFromSettlements(
     .reduce((sum, s) => sum + s.percent, 0);
 }
 
-function formatPlatformLabel(
-  platform: "WHATNOT" | "INSTAGRAM" | "OTHER" | "",
-): string {
-  if (!platform) return "";
-  const labels: Record<string, string> = {
-    WHATNOT: "Whatnot",
-    INSTAGRAM: "Instagram",
-    OTHER: "Other",
-  };
-  return labels[platform] ?? platform;
-}
-
 function showDetailBreadcrumb(showName: string) {
   return (
     <AdminEntityBreadcrumb
@@ -262,11 +238,10 @@ function showDetailBreadcrumb(showName: string) {
 }
 
 export function ShowDetailView({ id }: { id: string }) {
+  const router = useRouter();
   const [showName, setShowName] = useState("");
   const [showDate, setShowDate] = useState("");
-  const [platform, setPlatform] = useState<
-    "WHATNOT" | "INSTAGRAM" | "OTHER" | ""
-  >("");
+  const [platform, setPlatform] = useState<ShowPlatform | "">("");
   const [closedAt, setClosedAt] = useState<string | undefined>(undefined);
   const [eventProfit, setEventProfit] = useState<ShowFinancialProfitDTO | null>(
     null,
@@ -405,8 +380,8 @@ export function ShowDetailView({ id }: { id: string }) {
   }, [id, reloadToken]);
 
   const totals = useMemo(
-    () => computeTotals(payoutAfterFees, settlements, closedAt),
-    [payoutAfterFees, settlements, closedAt],
+    () => computeTotals(payoutAfterFees, settlements),
+    [payoutAfterFees, settlements],
   );
 
   const displayProfit = useMemo(() => {
@@ -421,9 +396,8 @@ export function ShowDetailView({ id }: { id: string }) {
     () =>
       getShowCloseOutBlock({
         payoutAfterFees,
-        settlementsCount: settlements.length,
       }),
-    [payoutAfterFees, settlements.length],
+    [payoutAfterFees],
   );
 
   const isPercentValueValid =
@@ -814,14 +788,14 @@ export function ShowDetailView({ id }: { id: string }) {
     setCloseError(null);
     try {
       await updateShowStatus(id, "COMPLETED");
-      setClosedAt(new Date().toISOString());
-      setReloadToken((v) => v + 1);
+      setCloseDialogOpen(false);
+      router.push(showClosedSuccessHref(id));
     } catch (err) {
       setCloseError(toInlineWriteError(err));
     } finally {
       setClosing(false);
     }
-  }, [id, toInlineWriteError]);
+  }, [id, router, toInlineWriteError]);
 
   const handleReopenShow = useCallback(async () => {
     setClosing(true);
@@ -837,17 +811,15 @@ export function ShowDetailView({ id }: { id: string }) {
     }
   }, [id, toInlineWriteError]);
 
-  const platformLabel = formatPlatformLabel(platform);
+  const platformLabel = formatShowPlatformLabel(platform);
 
   if (loading) {
     return (
       <>
-        <AdminPageIntroSection variant="entity-detail">
+        <AdminPageIntroSection variant="entity-detail" containerTier="full">
           <AdminPageIntro variant="entity-detail" title="Loading…" />
         </AdminPageIntroSection>
-        <AdminPageContainer
-          contentWidthClassName={workspacePageContentWidthWide}
-        >
+        <AdminPageContainer containerTier="full">
           <p className="text-sm text-stone-600">Loading show details…</p>
         </AdminPageContainer>
       </>
@@ -857,16 +829,14 @@ export function ShowDetailView({ id }: { id: string }) {
   if (error) {
     return (
       <>
-        <AdminPageIntroSection variant="entity-detail">
+        <AdminPageIntroSection variant="entity-detail" containerTier="full">
           <AdminPageIntro
             variant="entity-detail"
             breadcrumb={showDetailBreadcrumb("Show")}
             title="Unable to load show"
           />
         </AdminPageIntroSection>
-        <AdminPageContainer
-          contentWidthClassName={workspacePageContentWidthWide}
-        >
+        <AdminPageContainer containerTier="full">
           <WorkspaceInlineError
             title="Could not load show detail."
             message={error}
@@ -879,7 +849,7 @@ export function ShowDetailView({ id }: { id: string }) {
 
   return (
     <>
-      <AdminPageIntroSection variant="entity-detail">
+      <AdminPageIntroSection variant="entity-detail" containerTier="full">
         <AdminPageIntro
           variant="entity-detail"
           breadcrumb={showDetailBreadcrumb(showName || "Show")}
@@ -898,7 +868,7 @@ export function ShowDetailView({ id }: { id: string }) {
         />
       </AdminPageIntroSection>
 
-      <AdminPageContainer contentWidthClassName={workspacePageContentWidthWide}>
+      <AdminPageContainer containerTier="full">
         <div className="flex min-w-0 flex-col gap-5 md:gap-6">
           <div className={workspacePageShowDetailGrid}>
             {/* Main column: unified show finances (payout + settlements) */}
@@ -914,12 +884,12 @@ export function ShowDetailView({ id }: { id: string }) {
                   }`}
                 >
                   <h2 id="show-finances-heading" className="sr-only">
-                    Payout and settlements
+                    Payout and vendor obligations
                   </h2>
                   {isClosed ? (
                     <div className="border-b border-stone-200/80 bg-stone-50/50 px-4 py-2 sm:px-5">
                       <p className="text-xs text-gray-600">
-                        Locked — reopen below to edit payout or settlements.
+                        {WORKFLOW_SHOW_LOCKED_BANNER}
                       </p>
                     </div>
                   ) : null}
@@ -976,14 +946,17 @@ export function ShowDetailView({ id }: { id: string }) {
                           id="settlements-heading"
                           className={workspaceLabelEyebrow}
                         >
-                          Settlements
+                          {WORKFLOW_SHOW_VENDOR_OBLIGATIONS_HEADING}
                         </h3>
+                        <p className="mt-1 text-xs leading-snug text-gray-500">
+                          {WORKFLOW_SHOW_VENDOR_OBLIGATIONS_HINT}
+                        </p>
                         {showPercentOverCapBanner ? (
                           <p
                             className="mt-2 rounded-md border border-amber-200/90 bg-amber-50/70 px-2.5 py-1.5 text-xs font-medium text-amber-950/90"
                             role="status"
                           >
-                            Saved percent settlements total over 100% of payout
+                            Saved percent obligations total over 100% of payout
                             — adjust or remove a percent row before relying on
                             new percent lines.
                           </p>
@@ -993,9 +966,9 @@ export function ShowDetailView({ id }: { id: string }) {
                             className="mt-2 rounded-md border border-amber-200/90 bg-amber-50/70 px-2.5 py-1.5 text-xs font-medium text-amber-950/90"
                             role="status"
                           >
-                            Total owed from settlements is above payout after
-                            fees ({formatCurrency(payoutAfterFees)}). You can
-                            still review history; new settlements can&apos;t
+                            Total owed from vendor obligations is above payout
+                            after fees ({formatCurrency(payoutAfterFees)}). You
+                            can still review history; new obligations can&apos;t
                             increase total owed until this is resolved.
                           </p>
                         ) : null}
@@ -1005,7 +978,7 @@ export function ShowDetailView({ id }: { id: string }) {
                               <div
                                 className={`rounded-lg border border-gray-200/80 px-4 py-4 text-sm text-gray-600 ${workspaceMutedStrip}`}
                               >
-                                No settlements recorded.
+                                No vendor obligations recorded.
                               </div>
                             ) : (
                               <div
@@ -1013,10 +986,10 @@ export function ShowDetailView({ id }: { id: string }) {
                               >
                                 <div className="space-y-1">
                                   <p className="text-sm font-medium text-gray-800">
-                                    No settlements yet
+                                    No vendor obligations yet
                                   </p>
                                   <p className="text-sm leading-relaxed text-gray-600">
-                                    Add the first settlement to allocate payout
+                                    Add the first obligation to allocate payout
                                     before close-out.
                                   </p>
                                 </div>
@@ -1029,7 +1002,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                     className={workspaceActionIconMd}
                                     aria-hidden
                                   />
-                                  Add settlement
+                                  Add obligation
                                 </button>
                               </div>
                             )
@@ -1062,7 +1035,9 @@ export function ShowDetailView({ id }: { id: string }) {
                                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                                     <div className="min-w-0 flex-1">
                                       <Link
-                                        href={`/admin/wholesalers/${row.wholesalerId}`}
+                                        href={vendorDetailHref(
+                                          row.wholesalerId,
+                                        )}
                                         className="text-base font-semibold leading-snug text-gray-900 underline-offset-2 decoration-gray-300 hover:text-gray-800 hover:underline"
                                       >
                                         {row.wholesaler}
@@ -1084,14 +1059,6 @@ export function ShowDetailView({ id }: { id: string }) {
                                         className={`text-lg font-semibold tabular-nums text-gray-900 ${workspaceMoneyTabular}`}
                                       >
                                         {formatCurrency(owed)}
-                                      </p>
-                                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                                        Paid
-                                      </p>
-                                      <p
-                                        className={`text-sm font-medium tabular-nums text-gray-800 ${workspaceMoneyTabular}`}
-                                      >
-                                        {formatCurrency(row.amountPaid)}
                                       </p>
                                     </div>
                                   </div>
@@ -1221,7 +1188,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                       <div
                                         className={`rounded-md border border-gray-200/80 px-3 py-2.5 text-sm ${workspaceMutedStrip}`}
                                       >
-                                        No settlements recorded.
+                                        No vendor obligations recorded.
                                       </div>
                                     ) : (
                                       <div
@@ -1229,10 +1196,10 @@ export function ShowDetailView({ id }: { id: string }) {
                                       >
                                         <div className="space-y-0.5">
                                           <p className="text-sm font-medium text-gray-700">
-                                            No settlements yet
+                                            No vendor obligations yet
                                           </p>
                                           <p className="text-xs text-gray-500">
-                                            Add the first settlement to allocate
+                                            Add the first obligation to allocate
                                             payout before close-out.
                                           </p>
                                         </div>
@@ -1246,7 +1213,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                           <PlusIcon
                                             className={workspaceActionIconSm}
                                           />
-                                          Add settlement
+                                          Add obligation
                                         </button>
                                       </div>
                                     )}
@@ -1293,8 +1260,8 @@ export function ShowDetailView({ id }: { id: string }) {
                                             aria-controls={`settlement-detail-${row.id}`}
                                             aria-label={
                                               expanded
-                                                ? "Collapse settlement details"
-                                                : "Expand settlement details"
+                                                ? "Collapse obligation details"
+                                                : "Expand obligation details"
                                             }
                                             onClick={() =>
                                               toggleSettlementExpanded(row.id)
@@ -1309,7 +1276,9 @@ export function ShowDetailView({ id }: { id: string }) {
                                           className={`min-w-0 ${workspaceTableBodyCellPadding} !py-1.5 align-middle`}
                                         >
                                           <Link
-                                            href={`/admin/wholesalers/${row.wholesalerId}`}
+                                            href={vendorDetailHref(
+                                              row.wholesalerId,
+                                            )}
                                             className="block min-w-0 truncate text-sm font-semibold leading-snug text-gray-900 underline-offset-2 decoration-gray-300 transition-colors hover:text-gray-800 hover:underline"
                                           >
                                             {row.wholesaler}
@@ -1348,7 +1317,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                                 setDeleteConfirmId(row.id)
                                               }
                                               className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-rose-700/90 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:w-8"
-                                              aria-label="Remove settlement"
+                                              aria-label="Remove obligation"
                                             >
                                               <TrashIcon
                                                 className={`${workspaceActionIconMd} shrink-0`}
@@ -1405,13 +1374,13 @@ export function ShowDetailView({ id }: { id: string }) {
                               type="button"
                               onClick={() => focusSettlementComposer()}
                               className={`${workspaceActionSecondaryMd} w-full justify-center gap-2 sm:w-auto`}
-                              aria-label="Add settlement"
+                              aria-label="Add vendor obligation"
                             >
                               <PlusIcon
                                 className={workspaceActionIconMd}
                                 aria-hidden
                               />
-                              <span>Add settlement</span>
+                              <span>Add obligation</span>
                             </button>
                           </div>
                         ) : null}
@@ -1426,7 +1395,7 @@ export function ShowDetailView({ id }: { id: string }) {
                             }`}
                           >
                             <p className="text-sm font-semibold text-gray-900">
-                              Add settlement
+                              Add vendor obligation
                             </p>
                             <p className="mt-0.5 text-xs text-gray-500">
                               One primary save — fields below match the selected
@@ -1853,7 +1822,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                 >
                                   {creatingSettlement
                                     ? "Saving…"
-                                    : "Save settlement"}
+                                    : "Save obligation"}
                                 </button>
                                 <button
                                   type="button"
@@ -2031,7 +2000,8 @@ export function ShowDetailView({ id }: { id: string }) {
             {/* Supporting column: review → close out (one finalization surface) */}
             <div className="min-w-0 lg:flex lg:min-h-full lg:flex-col">
               <section
-                className={`flex min-h-full min-w-0 flex-col overflow-hidden ${workspaceShowDetailOutcomeShell}`}
+                id="show-close-out"
+                className={`flex min-h-full min-w-0 flex-col overflow-hidden scroll-mt-24 ${workspaceShowDetailOutcomeShell}`}
                 aria-labelledby="review-profit-heading"
               >
                 <div
@@ -2064,7 +2034,7 @@ export function ShowDetailView({ id }: { id: string }) {
                       </div>
                       {settlements.length === 0 ? (
                         <p className="py-2 text-sm leading-relaxed text-gray-500 sm:py-1.5 sm:text-xs">
-                          No settlements.
+                          No vendor obligations.
                         </p>
                       ) : (
                         <ul className="space-y-1 border-t border-gray-100/90 pt-3">
@@ -2076,7 +2046,7 @@ export function ShowDetailView({ id }: { id: string }) {
                                 className="flex items-baseline justify-between gap-2"
                               >
                                 <Link
-                                  href={`/admin/wholesalers/${s.wholesalerId}`}
+                                  href={vendorDetailHref(s.wholesalerId)}
                                   className="min-w-0 truncate text-[13px] font-medium text-gray-800 underline-offset-2 decoration-gray-300 transition-colors hover:text-gray-950 hover:underline"
                                 >
                                   {s.wholesaler}
@@ -2130,7 +2100,7 @@ export function ShowDetailView({ id }: { id: string }) {
                         </div>
                       ) : null}
 
-                      {totals.status === "Open" ? (
+                      {!isClosed ? (
                         <button
                           type="button"
                           onClick={handleCloseShowClick}
@@ -2171,8 +2141,8 @@ export function ShowDetailView({ id }: { id: string }) {
         onConfirm={async () => {
           if (deleteConfirmId) await executeDeleteSettlement(deleteConfirmId);
         }}
-        title="Delete this settlement?"
-        description="This removes the wholesaler obligation for this show. You can add it again while the show is open."
+        title="Delete this vendor obligation?"
+        description="This removes the vendor obligation for this show. You can add it again while the show is open."
         confirmLabel="Delete"
         tone="danger"
         icon="!"
@@ -2184,7 +2154,7 @@ export function ShowDetailView({ id }: { id: string }) {
           await handleCloseShow();
         }}
         title="Close this show?"
-        description="Payout and settlements will be locked until you reopen the show."
+        description="Payout and vendor obligations will be locked until you reopen the show."
         confirmLabel={closing ? "Closing…" : "Close show"}
         tone="rose"
         icon="✓"
@@ -2200,7 +2170,7 @@ export function ShowDetailView({ id }: { id: string }) {
         confirmLabel={
           closing
             ? "Reopening…"
-            : "Reopen show (unlocks payout and settlements)"
+            : "Reopen show (unlocks payout and vendor obligations)"
         }
         tone="stone"
         icon="↺"

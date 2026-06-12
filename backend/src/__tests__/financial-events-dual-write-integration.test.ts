@@ -6,7 +6,28 @@
 import type { FastifyInstance } from 'fastify';
 import { getPool } from '../db';
 import { appendFinancialEvent } from '../services/financial-events';
+import { applyOwnerPayoutStrategy } from '../services/owner-payout-strategy';
 import { buildAppForTest, buildUniqueDevBypassIdentity, runTestSchemaMigrations } from './helpers';
+
+const balancedBps = { tax_reserve_bps: 3000, reinvestment_bps: 5000 };
+
+function profitBasedPayout(closedProfit: number): number {
+  return applyOwnerPayoutStrategy(closedProfit, balancedBps).profit_based_payout;
+}
+
+async function seedBalancedStrategy(pool: ReturnType<typeof getPool>): Promise<void> {
+  await pool.query(
+    `INSERT INTO financial_strategy_settings (
+       scope_key, strategy_type, tax_reserve_bps, reinvestment_bps, cash_buffer_amount
+     ) VALUES ('global', 'BALANCED', 3000, 5000, 2000)
+     ON CONFLICT (scope_key) DO UPDATE SET
+       strategy_type = EXCLUDED.strategy_type,
+       tax_reserve_bps = EXCLUDED.tax_reserve_bps,
+       reinvestment_bps = EXCLUDED.reinvestment_bps,
+       cash_buffer_amount = EXCLUDED.cash_buffer_amount,
+       updated_at = NOW()`
+  );
+}
 
 function toYyyyMmDd(value: string | Date): string {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -63,6 +84,7 @@ describe('Financial event dual-write integration', () => {
     await pool.query('DELETE FROM inventory_purchases');
     await pool.query('DELETE FROM cash_snapshots');
     await pool.query('DELETE FROM financial_strategy_settings');
+    await seedBalancedStrategy(pool);
   });
 
   afterEach(async () => {
@@ -391,14 +413,15 @@ describe('Financial event dual-write integration', () => {
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.payload);
     const txId = body.transaction.id as string;
+    const recordedAmount = profitBasedPayout(800);
 
     const events = await eventsForSource('owner_self_pay', txId);
     expect(events).toHaveLength(1);
     expect(events[0].event_type).toBe('OWNER_DRAW_RECORDED');
     expect(events[0].direction).toBe('OUTFLOW');
-    expect(Number(events[0].amount)).toBe(800);
+    expect(Number(events[0].amount)).toBe(recordedAmount);
     expect(events[0].payload).toMatchObject({
-      amount: 800,
+      amount: recordedAmount,
       transaction_type: 'OWNER_DRAW',
       week_start_date: '2026-05-12',
       week_end_date: '2026-05-18',
@@ -429,6 +452,7 @@ describe('Financial event dual-write integration', () => {
     });
     expect(first.statusCode).toBe(200);
     const txId = JSON.parse(first.payload).transaction.id as string;
+    const recordedAmount = profitBasedPayout(500);
 
     const second = await app.inject({
       method: 'PUT',
@@ -446,8 +470,8 @@ describe('Financial event dual-write integration', () => {
     expect(events[1].event_type).toBe('OWNER_DRAW_CORRECTED');
     expect(events[1].direction).toBe('OUTFLOW');
     expect(events[1].payload).toMatchObject({
-      amount: 500,
-      previous_amount: 500,
+      amount: recordedAmount,
+      previous_amount: recordedAmount,
       transaction_type: 'OWNER_DRAW',
     });
   });
@@ -475,6 +499,7 @@ describe('Financial event dual-write integration', () => {
     });
     expect(record.statusCode).toBe(200);
     const txId = JSON.parse(record.payload).transaction.id as string;
+    const recordedAmount = profitBasedPayout(400);
 
     const voidRes = await app.inject({
       method: 'DELETE',
@@ -487,7 +512,7 @@ describe('Financial event dual-write integration', () => {
     expect(events[1].event_type).toBe('OWNER_DRAW_VOIDED');
     expect(events[1].direction).toBe('NEUTRAL');
     expect(events[1].payload).toMatchObject({
-      amount: 400,
+      amount: recordedAmount,
       transaction_type: 'OWNER_DRAW',
     });
     expect(events[1].payload.voided_at).toBeDefined();

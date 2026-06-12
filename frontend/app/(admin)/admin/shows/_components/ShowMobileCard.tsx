@@ -7,8 +7,11 @@ import {
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import { showNavigateHref } from "@/app/(admin)/admin/_lib/showRoutes";
 import type { ShowViewModel } from "@/src/lib/api/shows";
 import { WorkspaceRowChevron } from "@/app/(admin)/admin/_components/WorkspaceRowChevron";
+import { ShowCloseSuccessRowNote } from "./ShowCloseSuccessRowNote";
+import { showCloseSuccessCardShell } from "../_lib/showCloseSuccessRowUi";
 
 function isToday(dateStr: string): boolean {
   if (!dateStr || dateStr.length < 10) return false;
@@ -16,7 +19,10 @@ function isToday(dateStr: string): boolean {
   return dateStr === today;
 }
 
-function cardAriaLabel(show: ShowViewModel): string {
+function cardAriaLabel(show: ShowViewModel, highlighted: boolean): string {
+  if (highlighted) {
+    return `Show closed successfully. ${show.name} is completed and locked. Profit counts toward this week's totals.`;
+  }
   const st = (show.status ?? "").toUpperCase();
   if (st === "ACTIVE") {
     return `Open ${show.name} to continue close out`;
@@ -31,13 +37,15 @@ export function ShowMobileCard({
   show,
   summary,
   payoutContext = false,
+  highlighted = false,
 }: {
   show: ShowViewModel;
   summary: ShowFinancialSummary | undefined;
   payoutContext?: boolean;
+  highlighted?: boolean;
 }) {
   const today = isToday(show.date);
-  const href = `/admin/shows/${show.id}`;
+  const href = showNavigateHref(show.id, show.status);
   const isClosed = (show.status ?? "").toUpperCase() === "COMPLETED";
   const excludedLabel =
     payoutContext && !isClosed ? (
@@ -51,8 +59,10 @@ export function ShowMobileCard({
       href={href}
       className={`group/card block rounded-lg border border-gray-200 bg-white p-3.5 shadow-workspace-surface transition-[border-color,box-shadow] duration-200 ease-out hover:border-gray-300 hover:shadow-md [&_*]:cursor-inherit sm:p-4 ${
         payoutContext ? "relative z-[2]" : ""
-      } ${today ? "ring-1 ring-sky-300 hover:ring-sky-400/80" : ""}`}
-      aria-label={cardAriaLabel(show)}
+      } ${today && !highlighted ? "ring-1 ring-sky-300 hover:ring-sky-400/80" : ""} ${
+        highlighted ? showCloseSuccessCardShell : ""
+      }`}
+      aria-label={cardAriaLabel(show, highlighted)}
     >
       <div className="flex items-start justify-between gap-2">
         <ShowStatusPill status={show.status ?? ""} />
@@ -68,7 +78,9 @@ export function ShowMobileCard({
         {excludedLabel}
       </p>
 
-      {(summary != null || show.updated_at) && (
+      {highlighted ? (
+        <ShowCloseSuccessRowNote className="mt-2.5" />
+      ) : summary != null || show.updated_at ? (
         <p className="mt-1 hidden text-xs text-gray-500 sm:mt-0.5 sm:block">
           {summary != null && summary.settlementCount >= 0 && (
             <span>
@@ -84,7 +96,7 @@ export function ShowMobileCard({
             </span>
           )}
         </p>
-      )}
+      ) : null}
 
       <p className="mt-1.5 text-xs text-gray-600 sm:mt-1.5 sm:text-xs">
         {formatDate(show.date)}
