@@ -150,6 +150,13 @@ describe('Owner weekly payout event-derived integration', () => {
       weekEndDate: string;
       completedShowCount: number;
       amount: string;
+      closedShowProfit: string;
+      profitBasedPayout: string;
+      allowedPayoutForPeriod: string;
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+      strategyType: string;
+      calculationMode: string;
     };
     expect(body.weekStartDate).toBe('2026-08-31');
     expect(body.weekEndDate).toBe('2026-09-06');
@@ -207,6 +214,9 @@ describe('Owner weekly payout event-derived integration', () => {
       reinvestmentReserve: string;
       profitBasedPayout: string;
       amount: string;
+      allowedPayoutForPeriod: string;
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
     };
     expect(Number(body.closedShowProfit)).toBe(1200);
     expect(Number(body.taxReserve)).toBe(360);
@@ -539,5 +549,60 @@ describe('Owner weekly payout event-derived integration', () => {
         }),
       })
     );
+  });
+
+  test('owner self-pay PUT records incremental payout when amount matches remaining', async () => {
+    await createCompletedShow('2026-09-03', 500, 'Incremental first show');
+
+    const firstPut = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-09-01`,
+      payload: {
+        week_end_date: '2026-09-07',
+        transaction_type: 'OWNER_DRAW',
+      },
+    });
+    expect(firstPut.statusCode).toBe(200);
+    const firstRecorded = profitBasedPayout(500);
+    expect(Number(JSON.parse(firstPut.payload).transaction.amount)).toBe(firstRecorded);
+
+    await createCompletedShow('2026-09-04', 700, 'Incremental second show');
+
+    const preview = await app.inject({
+      method: 'GET',
+      url: `${prefix}/owner-self-pay/2026-09-01/payout`,
+    });
+    expect(preview.statusCode).toBe(200);
+    const previewBody = JSON.parse(preview.payload) as {
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+    };
+    const weekTarget = profitBasedPayout(1200);
+    const remaining = Number(previewBody.remainingAvailablePayout);
+    expect(Number(previewBody.ownerPaidThisPeriod)).toBe(firstRecorded);
+    expect(remaining).toBe(Number((weekTarget - firstRecorded).toFixed(2)));
+
+    const secondPut = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-09-01`,
+      payload: {
+        week_end_date: '2026-09-07',
+        amount: remaining,
+        transaction_type: 'OWNER_DRAW',
+      },
+    });
+    expect(secondPut.statusCode).toBe(200);
+    expect(Number(JSON.parse(secondPut.payload).transaction.amount)).toBe(weekTarget);
+
+    const afterPreview = await app.inject({
+      method: 'GET',
+      url: `${prefix}/owner-self-pay/2026-09-01/payout`,
+    });
+    const afterBody = JSON.parse(afterPreview.payload) as {
+      ownerPaidThisPeriod: string;
+      remainingAvailablePayout: string;
+    };
+    expect(Number(afterBody.ownerPaidThisPeriod)).toBe(weekTarget);
+    expect(Number(afterBody.remainingAvailablePayout)).toBe(0);
   });
 });

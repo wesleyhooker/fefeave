@@ -50,6 +50,10 @@ const upsertOwnerSelfPaySchema = z.object({
   note: z.string().trim().optional(),
 });
 
+function ownerPayoutAmountsMatch(a: number, b: number): boolean {
+  return Math.abs(a - b) <= 0.01;
+}
+
 function addDays(yyyyMmDd: string, days: number): string {
   const year = Number(yyyyMmDd.slice(0, 4));
   const month = Number(yyyyMmDd.slice(5, 7));
@@ -382,7 +386,8 @@ export async function ownerSelfPayRoutes(
         [ownerAccountId, weekStart]
       );
       const priorForGuard = existingResult.rows[0] as OwnerSelfPayRow | undefined;
-      const isWeekCorrection = priorForGuard != null && priorForGuard.voided_at == null;
+      const hasActivePrior = priorForGuard != null && priorForGuard.voided_at == null;
+      const priorRecordedAmount = hasActivePrior ? Number(priorForGuard!.amount) : 0;
 
       const computedPayout = await computeOwnerPayoutWithStrategy(
         pool,
@@ -390,38 +395,42 @@ export async function ownerSelfPayRoutes(
         week_end_date,
         ownerAccountId
       );
-      if (!isWeekCorrection && computedPayout.remainingAvailablePayout <= 0) {
-        throw new ValidationError(
-          `No remaining owner payout available for ${weekStart} to ${week_end_date}`
-        );
-      }
-      if (
-        amount !== undefined &&
-        !isWeekCorrection &&
-        Math.abs(amount - computedPayout.remainingAvailablePayout) > 0.01
-      ) {
-        throw new ValidationError(
-          `amount ${amount.toFixed(2)} does not match remaining available payout ${computedPayout.remainingAvailablePayout.toFixed(
-            2
-          )}`
-        );
-      }
-      if (
-        amount !== undefined &&
-        isWeekCorrection &&
-        Math.abs(amount - Number(priorForGuard!.amount)) > 0.01
-      ) {
-        throw new ValidationError(
-          `amount ${amount.toFixed(2)} does not match recorded payout ${Number(priorForGuard!.amount).toFixed(2)}`
-        );
-      }
+      const remainingAvailable = computedPayout.remainingAvailablePayout;
 
-      const storedPayoutAmount = isWeekCorrection
-        ? Number(priorForGuard!.amount)
-        : ownerPayoutAmountToRecord(
-            computedPayout.ownerPaidThisPeriod,
-            computedPayout.remainingAvailablePayout
+      let storedPayoutAmount: number;
+
+      if (!hasActivePrior) {
+        if (remainingAvailable <= 0) {
+          throw new ValidationError(
+            `No remaining owner payout available for ${weekStart} to ${week_end_date}`
           );
+        }
+        if (amount !== undefined && !ownerPayoutAmountsMatch(amount, remainingAvailable)) {
+          throw new ValidationError(
+            `amount ${amount.toFixed(2)} does not match remaining available payout ${remainingAvailable.toFixed(2)}`
+          );
+        }
+        storedPayoutAmount = ownerPayoutAmountToRecord(
+          computedPayout.ownerPaidThisPeriod,
+          remainingAvailable
+        );
+      } else if (
+        remainingAvailable > 0 &&
+        amount !== undefined &&
+        ownerPayoutAmountsMatch(amount, remainingAvailable)
+      ) {
+        storedPayoutAmount = ownerPayoutAmountToRecord(priorRecordedAmount, remainingAvailable);
+      } else if (amount === undefined || ownerPayoutAmountsMatch(amount, priorRecordedAmount)) {
+        storedPayoutAmount = priorRecordedAmount;
+      } else if (remainingAvailable > 0) {
+        throw new ValidationError(
+          `amount ${amount!.toFixed(2)} must match remaining available payout ${remainingAvailable.toFixed(2)} for an incremental owner payout, or recorded payout ${priorRecordedAmount.toFixed(2)} for metadata-only correction`
+        );
+      } else {
+        throw new ValidationError(
+          `amount ${amount!.toFixed(2)} does not match recorded payout ${priorRecordedAmount.toFixed(2)}`
+        );
+      }
       const row = await withTx(async (client) => {
         const userId = await ensureUser(client, request);
         const existingResult = await client.query(

@@ -5,7 +5,28 @@
 import type { FastifyInstance } from 'fastify';
 import { getPool } from '../db';
 import { resolveOwnerAccountId } from '../db/owner-account';
+import { applyOwnerPayoutStrategy } from '../services/owner-payout-strategy';
 import { buildAppForTest, buildUniqueDevBypassIdentity, runTestSchemaMigrations } from './helpers';
+
+const balancedBps = { tax_reserve_bps: 3000, reinvestment_bps: 5000 };
+
+function profitBasedPayout(closedProfit: number): number {
+  return applyOwnerPayoutStrategy(closedProfit, balancedBps).profit_based_payout;
+}
+
+async function seedBalancedStrategy(pool: ReturnType<typeof getPool>): Promise<void> {
+  await pool.query(
+    `INSERT INTO financial_strategy_settings (
+       scope_key, strategy_type, tax_reserve_bps, reinvestment_bps, cash_buffer_amount
+     ) VALUES ('global', 'BALANCED', 3000, 5000, 2000)
+     ON CONFLICT (scope_key) DO UPDATE SET
+       strategy_type = EXCLUDED.strategy_type,
+       tax_reserve_bps = EXCLUDED.tax_reserve_bps,
+       reinvestment_bps = EXCLUDED.reinvestment_bps,
+       cash_buffer_amount = EXCLUDED.cash_buffer_amount,
+       updated_at = NOW()`
+  );
+}
 
 describe('Owner self-pay activity integration', () => {
   let app: FastifyInstance;
@@ -38,6 +59,8 @@ describe('Owner self-pay activity integration', () => {
     await pool.query('DELETE FROM owner_self_pay_transactions');
     await pool.query('DELETE FROM show_financials');
     await pool.query('DELETE FROM shows');
+    await pool.query('DELETE FROM financial_strategy_settings');
+    await seedBalancedStrategy(pool);
   });
 
   afterEach(async () => {
@@ -92,7 +115,7 @@ describe('Owner self-pay activity integration', () => {
     });
     expect(record.statusCode).toBe(200);
 
-    expect(await getActivityTotalPaid()).toBeCloseTo(800, 2);
+    expect(await getActivityTotalPaid()).toBeCloseTo(profitBasedPayout(800), 2);
   });
 
   test('totalPaidAmount excludes voided owner payouts', async () => {
@@ -107,7 +130,7 @@ describe('Owner self-pay activity integration', () => {
       },
     });
     expect(record.statusCode).toBe(200);
-    expect(await getActivityTotalPaid()).toBeCloseTo(400, 2);
+    expect(await getActivityTotalPaid()).toBeCloseTo(profitBasedPayout(400), 2);
 
     const voidRes = await app.inject({
       method: 'DELETE',
@@ -117,7 +140,7 @@ describe('Owner self-pay activity integration', () => {
     expect(await getActivityTotalPaid()).toBe(0);
   });
 
-  test('totalPaidAmount uses corrected amount after weekly payout recomputation', async () => {
+  test('totalPaidAmount increases only on explicit incremental owner payout', async () => {
     await createCompletedShow('2026-05-21', 500);
 
     const first = await app.inject({
@@ -129,11 +152,12 @@ describe('Owner self-pay activity integration', () => {
       },
     });
     expect(first.statusCode).toBe(200);
-    expect(await getActivityTotalPaid()).toBeCloseTo(500, 2);
+    const firstPaid = profitBasedPayout(500);
+    expect(await getActivityTotalPaid()).toBeCloseTo(firstPaid, 2);
 
     await createCompletedShow('2026-05-22', 700);
 
-    const second = await app.inject({
+    const metadataOnly = await app.inject({
       method: 'PUT',
       url: `${prefix}/owner-self-pay/2026-05-19`,
       payload: {
@@ -142,9 +166,23 @@ describe('Owner self-pay activity integration', () => {
         paid_at: '2026-05-23T10:00:00.000Z',
       },
     });
-    expect(second.statusCode).toBe(200);
+    expect(metadataOnly.statusCode).toBe(200);
+    expect(await getActivityTotalPaid()).toBeCloseTo(firstPaid, 2);
 
-    expect(await getActivityTotalPaid()).toBeCloseTo(1200, 2);
+    const weekTarget = profitBasedPayout(1200);
+    const remaining = Number((weekTarget - firstPaid).toFixed(2));
+
+    const incremental = await app.inject({
+      method: 'PUT',
+      url: `${prefix}/owner-self-pay/2026-05-19`,
+      payload: {
+        week_end_date: '2026-05-25',
+        amount: remaining,
+        transaction_type: 'OWNER_DRAW',
+      },
+    });
+    expect(incremental.statusCode).toBe(200);
+    expect(await getActivityTotalPaid()).toBeCloseTo(weekTarget, 2);
   });
 
   test('totalPaidAmount ignores orphaned domain rows without ledger events', async () => {
@@ -169,6 +207,6 @@ describe('Owner self-pay activity integration', () => {
       },
     });
 
-    expect(await getActivityTotalPaid()).toBeCloseTo(120, 2);
+    expect(await getActivityTotalPaid()).toBeCloseTo(profitBasedPayout(120), 2);
   });
 });
