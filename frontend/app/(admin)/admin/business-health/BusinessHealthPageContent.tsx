@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { dispatchWorkspaceInvalidate } from "@/lib/workspaceInvalidate";
 import { getCurrentWeekBounds } from "@/lib/weekRange";
 import {
   AdminWorkspacePageIntro,
@@ -158,6 +159,7 @@ export default function BusinessHealthPageContent() {
           : "";
 
   const handleRecorded = useCallback(() => {
+    dispatchWorkspaceInvalidate();
     setPanel(null);
     bumpReload();
   }, [bumpReload]);

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { VENDOR_BALANCES_INVALIDATE_EVENT } from "@/lib/vendorBalancesInvalidate";
+import { WORKSPACE_INVALIDATE_EVENT } from "@/lib/workspaceInvalidate";
 import { fetchShows } from "@/src/lib/api/shows";
 import { fetchWholesalerBalances } from "@/src/lib/api/wholesalers";
 import {
@@ -14,11 +15,11 @@ import {
 import { useWorkspaceAttention } from "./WorkspaceAttentionContext";
 
 /**
- * Loads minimal workspace attention signals for the header bell badge.
+ * Loads workspace attention signals for the bell dropdown Needs attention section.
  * Mounted once in the admin shell — not tied to Dashboard page lifecycle.
  */
 export function WorkspaceAttentionSync() {
-  const { setAttentionCount } = useWorkspaceAttention();
+  const { setAttentionState } = useWorkspaceAttention();
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
@@ -65,7 +66,7 @@ export function WorkspaceAttentionSync() {
             totalOutstandingBalance,
           });
 
-          setAttentionCount(countAttentionItemsForBell(items));
+          setAttentionState(countAttentionItemsForBell(items), items);
         })
         .finally(() => {
           isFetchingRef.current = false;
@@ -80,6 +81,7 @@ export function WorkspaceAttentionSync() {
     };
 
     window.addEventListener(VENDOR_BALANCES_INVALIDATE_EVENT, onInvalidate);
+    window.addEventListener(WORKSPACE_INVALIDATE_EVENT, onInvalidate);
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
@@ -88,9 +90,10 @@ export function WorkspaceAttentionSync() {
         VENDOR_BALANCES_INVALIDATE_EVENT,
         onInvalidate,
       );
+      window.removeEventListener(WORKSPACE_INVALIDATE_EVENT, onInvalidate);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [setAttentionCount]);
+  }, [setAttentionState]);
 
   return null;
 }

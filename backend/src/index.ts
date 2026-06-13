@@ -29,6 +29,7 @@ import { financialStrategyRoutes } from './routes/financial-strategy';
 import { cashSnapshotRoutes } from './routes/cash-snapshots';
 import { financialRecommendationsRoutes } from './routes/financial-recommendations';
 import { financialActivityRoutes } from './routes/financial-activity';
+import { notificationRoutes } from './routes/notifications';
 import { portalRoutes } from './routes/portal';
 import { accountRoutes } from './routes/accounts';
 import { ownerSelfPayRoutes } from './routes/owner-self-pay';
@@ -142,6 +143,7 @@ async function buildApp() {
   await app.register(cashSnapshotRoutes, { prefix: env.API_PREFIX });
   await app.register(financialRecommendationsRoutes, { prefix: env.API_PREFIX });
   await app.register(financialActivityRoutes, { prefix: env.API_PREFIX });
+  await app.register(notificationRoutes, { prefix: env.API_PREFIX });
   await app.register(portalRoutes, { prefix: env.API_PREFIX });
   await app.register(accountRoutes, { prefix: env.API_PREFIX });
   await app.register(ownerSelfPayRoutes, { prefix: env.API_PREFIX });

@@ -2,14 +2,12 @@
 
 import {
   ArrowRightOnRectangleIcon,
-  BellIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LogoutForm } from "@/app/_components/auth/LogoutForm";
-import { useWorkspaceAttention } from "../WorkspaceAttentionContext";
-import { DASHBOARD_HREF, SETTINGS_HREF } from "../../_lib/adminSidebarNav";
+import { SETTINGS_HREF } from "../../_lib/adminSidebarNav";
 import {
   workspaceActionIconMd,
   workspaceChromeHover,
@@ -17,6 +15,7 @@ import {
   workspaceSidebarRolePill,
   workspaceSidebarSignOut,
 } from "../workspaceUi";
+import { WorkspaceNotificationsMenu } from "./WorkspaceNotificationsMenu";
 
 function headerAvatarInitial(email: string | null): string {
   const s = email?.trim();
@@ -25,39 +24,22 @@ function headerAvatarInitial(email: string | null): string {
   return (alnum?.[0] ?? s[0]).toUpperCase();
 }
 
-function ChromeIconButton({
+function ChromeIconLink({
   href,
   label,
   children,
-  badgeCount,
 }: {
   href: string;
   label: string;
   children: React.ReactNode;
-  badgeCount?: number;
 }) {
-  const badge =
-    badgeCount != null && badgeCount > 0 ? (
-      <span
-        className="absolute -right-0.5 -top-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-amber-600 px-1 text-[10px] font-semibold leading-none text-white"
-        aria-hidden
-      >
-        {badgeCount > 9 ? "9+" : badgeCount}
-      </span>
-    ) : null;
-
   return (
     <Link
       href={href}
       className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-admin-inkMuted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-actionPrimary/45 ${workspaceChromeHover}`}
-      aria-label={
-        badgeCount != null && badgeCount > 0
-          ? `${label}, ${badgeCount} items need attention`
-          : label
-      }
+      aria-label={label}
     >
       {children}
-      {badge}
     </Link>
   );
 }
@@ -155,23 +137,15 @@ export function WorkspaceHeaderChrome({
   email: string | null;
   roles: string[];
 }) {
-  const { count: attentionCount } = useWorkspaceAttention();
-
   return (
     <div
       className="flex shrink-0 items-center gap-0.5 sm:gap-1"
       aria-label="Workspace tools"
     >
-      <ChromeIconButton
-        href={`${DASHBOARD_HREF}#attention`}
-        label="Notifications"
-        badgeCount={attentionCount > 0 ? attentionCount : undefined}
-      >
-        <BellIcon className={workspaceActionIconMd} aria-hidden />
-      </ChromeIconButton>
-      <ChromeIconButton href={SETTINGS_HREF} label="Settings">
+      <WorkspaceNotificationsMenu />
+      <ChromeIconLink href={SETTINGS_HREF} label="Settings">
         <Cog6ToothIcon className={workspaceActionIconMd} aria-hidden />
-      </ChromeIconButton>
+      </ChromeIconLink>
       <WorkspaceProfileMenu email={email} roles={roles} />
     </div>
   );

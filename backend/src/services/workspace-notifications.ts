@@ -12,7 +12,26 @@ import {
   tryBuildNotificationFieldsFromFinancialEvent,
   type NotificationRuleContext,
 } from './notification-rules';
-import { ValidationError } from '../utils/errors';
+import { NotFoundError, ValidationError } from '../utils/errors';
+import { logger } from '../utils/logger';
+
+/** Expected skip reasons — do not log these as warnings. */
+const EXPECTED_NOTIFICATION_SKIP_REASONS = new Set([
+  'disabled',
+  'no_enabled_rule',
+  'backfill_or_reconcile',
+]);
+
+function logUnexpectedNotificationSkip(
+  source: 'notifyFromRule' | 'notifyFromFinancialEvent',
+  skipReason: string,
+  context?: Record<string, unknown>
+): void {
+  if (EXPECTED_NOTIFICATION_SKIP_REASONS.has(skipReason)) {
+    return;
+  }
+  logger.warn({ source, skipReason, ...context }, 'Workspace notification skipped unexpectedly');
+}
 
 /** When unset or empty, notifications writes are enabled (default true). */
 export function isNotificationsWriteEnabled(): boolean {
@@ -69,6 +88,44 @@ export type CreateWorkspaceNotificationResult = {
   skipped: boolean;
   skipReason?: string;
 };
+
+export type WorkspaceNotificationDto = {
+  id: string;
+  notification_type: string;
+  severity: string;
+  title: string;
+  body: string | null;
+  href: string;
+  source_type: string | null;
+  source_id: string | null;
+  occurred_at: string;
+  read: boolean;
+  /**
+   * Auth actor id at emit time (Cognito sub / dev-bypass subject text).
+   * Not `users.id` and not the read-state user — do not use for avatar lookup in V1.
+   */
+  actor_user_id: string | null;
+};
+
+export type ListWorkspaceNotificationsParams = {
+  userId: string;
+  page: number;
+  limit: number;
+  unreadOnly?: boolean;
+  since?: Date;
+  /** Future SaaS: scope list to one organization when org model is enforced. */
+  organizationId?: string | null;
+};
+
+export type ListWorkspaceNotificationsResult = {
+  items: WorkspaceNotificationDto[];
+  page: number;
+  limit: number;
+  total: number;
+  has_more: boolean;
+};
+
+type NotificationListRow = WorkspaceNotificationRow & { read: boolean };
 
 const INSERT_COLUMNS = `
   organization_id, notification_type, severity, title, body, href,
@@ -137,7 +194,8 @@ function normalizeCreateInput(input: CreateWorkspaceNotificationInput): {
 }
 
 /**
- * Insert a workspace notification. Idempotent when idempotencyKey duplicates an existing row.
+ * Insert a workspace notification. Idempotent when idempotencyKey duplicates an active row.
+ * Soft-deleted rows do not block reuse of the same idempotency key (partial unique index).
  */
 export async function createWorkspaceNotification(
   db: Queryable,
@@ -157,7 +215,9 @@ export async function createWorkspaceNotification(
   const insertSql = `
     INSERT INTO workspace_notifications (${INSERT_COLUMNS})
     VALUES (${placeholders.join(', ')})
-    ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
+    ON CONFLICT (idempotency_key)
+      WHERE idempotency_key IS NOT NULL AND deleted_at IS NULL
+      DO NOTHING
     RETURNING ${RETURNING_COLUMNS}
   `;
 
@@ -179,7 +239,7 @@ export async function createWorkspaceNotification(
 
   if (existing.rows.length === 0) {
     throw new Error(
-      'createWorkspaceNotification: idempotent insert returned no row and none found'
+      'createWorkspaceNotification: conflict on idempotency key but no active row found'
     );
   }
 
@@ -201,7 +261,7 @@ export async function notifyFromRule(
 ): Promise<CreateWorkspaceNotificationResult> {
   try {
     const fields = buildNotificationFieldsFromRule(type, context);
-    return await createWorkspaceNotification(db, {
+    const result = await createWorkspaceNotification(db, {
       notificationType: fields.notificationType,
       severity: fields.severity,
       title: fields.title,
@@ -216,12 +276,20 @@ export async function notifyFromRule(
       idempotencyKey: fields.idempotencyKey,
       metadata: fields.metadata,
     });
+    if (result.skipped && result.skipReason) {
+      logUnexpectedNotificationSkip('notifyFromRule', result.skipReason, {
+        notificationType: type,
+      });
+    }
+    return result;
   } catch (err) {
+    const skipReason = err instanceof Error ? err.message : 'notifyFromRule failed';
+    logUnexpectedNotificationSkip('notifyFromRule', skipReason, { notificationType: type });
     return {
       notification: null,
       created: false,
       skipped: true,
-      skipReason: err instanceof Error ? err.message : 'notifyFromRule failed',
+      skipReason,
     };
   }
 }
@@ -256,7 +324,7 @@ export async function notifyFromFinancialEvent(
       };
     }
 
-    return await createWorkspaceNotification(db, {
+    const result = await createWorkspaceNotification(db, {
       notificationType: fields.notificationType,
       severity: fields.severity,
       title: fields.title,
@@ -271,14 +339,167 @@ export async function notifyFromFinancialEvent(
       idempotencyKey: fields.idempotencyKey,
       metadata: fields.metadata,
     });
+    if (result.skipped && result.skipReason) {
+      logUnexpectedNotificationSkip('notifyFromFinancialEvent', result.skipReason, {
+        financialEventId: event.id,
+        eventType: event.event_type,
+      });
+    }
+    return result;
   } catch (err) {
+    const skipReason = err instanceof Error ? err.message : 'notifyFromFinancialEvent failed';
+    logUnexpectedNotificationSkip('notifyFromFinancialEvent', skipReason, {
+      financialEventId: event.id,
+      eventType: event.event_type,
+    });
     return {
       notification: null,
       created: false,
       skipped: true,
-      skipReason: err instanceof Error ? err.message : 'notifyFromFinancialEvent failed',
+      skipReason,
     };
   }
+}
+
+function toNotificationDto(row: NotificationListRow): WorkspaceNotificationDto {
+  return {
+    id: row.id,
+    notification_type: row.notification_type,
+    severity: row.severity,
+    title: row.title,
+    body: row.body,
+    href: row.href,
+    source_type: row.source_type,
+    source_id: row.source_id,
+    occurred_at: row.occurred_at.toISOString(),
+    read: row.read,
+    actor_user_id: row.actor_user_id,
+  };
+}
+
+function buildListFilters(params: ListWorkspaceNotificationsParams): {
+  conditions: string[];
+  values: unknown[];
+} {
+  const conditions = ['wn.deleted_at IS NULL'];
+  const values: unknown[] = [params.userId];
+
+  if (params.organizationId) {
+    values.push(params.organizationId);
+    conditions.push(`wn.organization_id = $${values.length}`);
+  }
+
+  if (params.unreadOnly) {
+    conditions.push(`nr.id IS NULL`);
+  }
+
+  if (params.since) {
+    values.push(params.since);
+    conditions.push(`wn.occurred_at >= $${values.length}`);
+  }
+
+  return { conditions, values };
+}
+
+const LIST_SELECT = `
+  wn.id, wn.organization_id, wn.notification_type, wn.severity, wn.title, wn.body, wn.href,
+  wn.source_type, wn.source_id, wn.financial_event_id, wn.actor_user_id, wn.occurred_at,
+  wn.idempotency_key, wn.metadata, wn.created_at, wn.deleted_at,
+  (nr.id IS NOT NULL) AS read
+`;
+
+/**
+ * Paginated workspace notifications for a user with per-user read state.
+ * V1: no organization_id filter unless explicitly passed (org model not live yet).
+ */
+export async function listWorkspaceNotificationsForUser(
+  db: Queryable,
+  params: ListWorkspaceNotificationsParams
+): Promise<ListWorkspaceNotificationsResult> {
+  const { conditions, values } = buildListFilters(params);
+  const whereSql = `WHERE ${conditions.join(' AND ')}`;
+  const joinSql = `LEFT JOIN notification_reads nr
+    ON nr.notification_id = wn.id AND nr.user_id = $1`;
+
+  const countResult = await db.query(
+    `SELECT COUNT(*)::int AS total
+     FROM workspace_notifications wn
+     ${joinSql}
+     ${whereSql}`,
+    values
+  );
+  const total = (countResult.rows[0] as { total: number }).total;
+  const offset = (params.page - 1) * params.limit;
+  const listValues = [...values, params.limit, offset];
+  const limitParam = values.length + 1;
+  const offsetParam = values.length + 2;
+
+  const listResult = await db.query(
+    `SELECT ${LIST_SELECT}
+     FROM workspace_notifications wn
+     ${joinSql}
+     ${whereSql}
+     ORDER BY wn.occurred_at DESC, wn.id DESC
+     LIMIT $${limitParam} OFFSET $${offsetParam}`,
+    listValues
+  );
+
+  const items = (listResult.rows as NotificationListRow[]).map(toNotificationDto);
+
+  return {
+    items,
+    page: params.page,
+    limit: params.limit,
+    total,
+    has_more: params.page * params.limit < total,
+  };
+}
+
+/** Count unread notifications for badge (client-derived attention is excluded). */
+export async function countUnreadWorkspaceNotificationsForUser(
+  db: Queryable,
+  userId: string,
+  organizationId?: string | null
+): Promise<number> {
+  const values: unknown[] = [userId];
+  const conditions = ['wn.deleted_at IS NULL', 'nr.id IS NULL'];
+
+  if (organizationId) {
+    values.push(organizationId);
+    conditions.push(`wn.organization_id = $${values.length}`);
+  }
+
+  const result = await db.query(
+    `SELECT COUNT(*)::int AS count
+     FROM workspace_notifications wn
+     LEFT JOIN notification_reads nr
+       ON nr.notification_id = wn.id AND nr.user_id = $1
+     WHERE ${conditions.join(' AND ')}`,
+    values
+  );
+
+  return (result.rows[0] as { count: number }).count;
+}
+
+export async function getWorkspaceNotificationForUser(
+  db: Queryable,
+  notificationId: string,
+  userId: string
+): Promise<WorkspaceNotificationDto> {
+  const result = await db.query(
+    `SELECT ${LIST_SELECT}
+     FROM workspace_notifications wn
+     LEFT JOIN notification_reads nr
+       ON nr.notification_id = wn.id AND nr.user_id = $2
+     WHERE wn.id = $1 AND wn.deleted_at IS NULL`,
+    [notificationId, userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new NotFoundError('Notification', notificationId);
+  }
+
+  return toNotificationDto(result.rows[0] as NotificationListRow);
 }
 
 /**
@@ -289,6 +510,14 @@ export async function markNotificationRead(
   notificationId: string,
   userId: string
 ): Promise<NotificationReadRow> {
+  const exists = await db.query(
+    `SELECT id FROM workspace_notifications WHERE id = $1 AND deleted_at IS NULL`,
+    [notificationId]
+  );
+  if (exists.rows.length === 0) {
+    throw new NotFoundError('Notification', notificationId);
+  }
+
   const result = await db.query(
     `INSERT INTO notification_reads (notification_id, user_id)
      VALUES ($1, $2)
@@ -303,4 +532,54 @@ export async function markNotificationRead(
   }
 
   return result.rows[0] as NotificationReadRow;
+}
+
+/** Mark one notification read and return the updated DTO for the current user. */
+export async function markNotificationReadForUser(
+  db: Queryable,
+  notificationId: string,
+  userId: string
+): Promise<WorkspaceNotificationDto> {
+  await markNotificationRead(db, notificationId, userId);
+  return getWorkspaceNotificationForUser(db, notificationId, userId);
+}
+
+/**
+ * Mark all unread notifications read for a user.
+ * Optional `before` limits to notifications with occurred_at <= before.
+ */
+export async function markAllNotificationsRead(
+  db: Queryable,
+  userId: string,
+  options?: { before?: Date; organizationId?: string | null }
+): Promise<number> {
+  const values: unknown[] = [userId];
+  const conditions = ['wn.deleted_at IS NULL', 'nr.id IS NULL'];
+
+  if (options?.organizationId) {
+    values.push(options.organizationId);
+    conditions.push(`wn.organization_id = $${values.length}`);
+  }
+
+  if (options?.before) {
+    values.push(options.before);
+    conditions.push(`wn.occurred_at <= $${values.length}`);
+  }
+
+  const result = await db.query(
+    `WITH unread AS (
+       SELECT wn.id
+       FROM workspace_notifications wn
+       LEFT JOIN notification_reads nr
+         ON nr.notification_id = wn.id AND nr.user_id = $1
+       WHERE ${conditions.join(' AND ')}
+     )
+     INSERT INTO notification_reads (notification_id, user_id)
+     SELECT id, $1 FROM unread
+     ON CONFLICT (notification_id, user_id) DO NOTHING
+     RETURNING notification_id`,
+    values
+  );
+
+  return result.rows.length;
 }

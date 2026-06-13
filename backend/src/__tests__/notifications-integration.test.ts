@@ -4,6 +4,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { getPool } from '../db';
+import { createWorkspaceNotification } from '../services/workspace-notifications';
 import { buildAppForTest, buildUniqueDevBypassIdentity, runTestSchemaMigrations } from './helpers';
 
 type WorkspaceNotificationRow = {
@@ -507,5 +508,69 @@ describe('Workspace notification hooks integration', () => {
 
     expect(await notificationsByType('reinvestment.recorded')).toHaveLength(1);
     expect(await notificationsByType('owner_payout.voided')).toHaveLength(0);
+  });
+
+  test('duplicate active idempotency key creates one row', async () => {
+    const pool = getPool();
+    const key = 'notification:test:idempotent:active';
+    const input = {
+      notificationType: 'business_expense.recorded',
+      severity: 'info',
+      title: 'Expense',
+      href: '/admin/purchases?tab=expenses',
+      idempotencyKey: key,
+    };
+
+    const first = await createWorkspaceNotification(pool, input);
+    const second = await createWorkspaceNotification(pool, input);
+
+    expect(first.created).toBe(true);
+    expect(second.created).toBe(false);
+    expect(second.notification?.id).toBe(first.notification?.id);
+
+    const count = await pool.query(
+      `SELECT COUNT(*)::int AS n
+       FROM workspace_notifications
+       WHERE idempotency_key = $1 AND deleted_at IS NULL`,
+      [key]
+    );
+    expect((count.rows[0] as { n: number }).n).toBe(1);
+  });
+
+  test('soft-deleted prior notification allows new row with same idempotency key', async () => {
+    const pool = getPool();
+    const key = 'notification:test:idempotent:soft-deleted';
+    const input = {
+      notificationType: 'business_expense.recorded',
+      severity: 'info',
+      title: 'Original',
+      href: '/admin/purchases?tab=expenses',
+      idempotencyKey: key,
+    };
+
+    const first = await createWorkspaceNotification(pool, input);
+    expect(first.created).toBe(true);
+    const firstId = first.notification!.id;
+
+    await pool.query(`UPDATE workspace_notifications SET deleted_at = NOW() WHERE id = $1`, [
+      firstId,
+    ]);
+
+    const replay = await createWorkspaceNotification(pool, {
+      ...input,
+      title: 'Replacement',
+    });
+
+    expect(replay.created).toBe(true);
+    expect(replay.notification?.id).not.toBe(firstId);
+    expect(replay.notification?.title).toBe('Replacement');
+
+    const active = await pool.query(
+      `SELECT COUNT(*)::int AS n
+       FROM workspace_notifications
+       WHERE idempotency_key = $1 AND deleted_at IS NULL`,
+      [key]
+    );
+    expect((active.rows[0] as { n: number }).n).toBe(1);
   });
 });

@@ -28,6 +28,7 @@ import {
   WORKFLOW_SHOW_VENDOR_OBLIGATIONS_HINT,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import { showClosedSuccessHref } from "@/app/(admin)/admin/_lib/showRoutes";
+import { dispatchWorkspaceInvalidate } from "@/lib/workspaceInvalidate";
 import {
   AdminPageContainer,
   AdminPageIntroSection,
@@ -788,6 +789,7 @@ export function ShowDetailView({ id }: { id: string }) {
     setCloseError(null);
     try {
       await updateShowStatus(id, "COMPLETED");
+      dispatchWorkspaceInvalidate();
       setCloseDialogOpen(false);
       router.push(showClosedSuccessHref(id));
     } catch (err) {
@@ -802,6 +804,7 @@ export function ShowDetailView({ id }: { id: string }) {
     setCloseError(null);
     try {
       await updateShowStatus(id, "ACTIVE");
+      dispatchWorkspaceInvalidate();
       setClosedAt(undefined);
       setReloadToken((v) => v + 1);
     } catch (err) {

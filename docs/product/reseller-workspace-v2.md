@@ -1,7 +1,7 @@
 # Reseller Workspace v2 — Product Architecture Decision
 
 **Status:** Approved  
-**Last updated:** 2026-06-01  
+**Last updated:** 2026-06-12  
 **Audience:** Product, design, frontend, and implementation  
 **Scope:** Reseller/operator workspace information architecture (`/admin/*`), navigation, routes, and phased migration
 
@@ -10,6 +10,7 @@
 - [`financial-decision-center-plan.md`](./financial-decision-center-plan.md) — recommendation math and event-backed cash (backend behavior unchanged by this doc)
 - [`financials-vision-v2.md`](./financials-vision-v2.md) — financial product vision
 - [`../architecture/financial-event-sourcing.md`](../architecture/financial-event-sourcing.md) — event ledger (not navigation)
+- [`../architecture/notifications-attention.md`](../architecture/notifications-attention.md) — bell dropdown, attention vs notifications vs ledger (V1)
 
 ---
 
@@ -118,12 +119,12 @@ Flat list only — **no expandable Financials section**, no nested sidebar group
 
 Persistent on all reseller workspace routes.
 
-| Control           | Purpose                                  | v2 behavior                                                                                    |
-| ----------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| **Search**        | Find shows, vendors, and records quickly | Placeholder in header until command/search is implemented; desktop-first acceptable in Phase 1 |
-| **Notifications** | Attention queue                          | Bell icon; may deep-link to Dashboard attention summary until a notification center exists     |
-| **Settings**      | Workspace configuration                  | Gear icon; not a workflow                                                                      |
-| **Profile**       | Identity and session                     | Avatar/menu: email, roles (read-only), sign out                                                |
+| Control           | Purpose                                  | v2 behavior                                                                                                      |
+| ----------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Search**        | Find shows, vendors, and records quickly | Placeholder in header until command/search is implemented; desktop-first acceptable in Phase 1                   |
+| **Notifications** | Attention + recent business updates      | Bell dropdown: **Needs attention** (derived) + **Recent updates** (persisted); badge = unread notifications only |
+| **Settings**      | Workspace configuration                  | Gear icon; not a workflow                                                                                        |
+| **Profile**       | Identity and session                     | Avatar/menu: email, roles (read-only), sign out                                                                  |
 
 **Page-level actions** (e.g. “Log show,” “New vendor”) may continue to register in the header action area **after** chrome icons, via existing header slot patterns.
 
@@ -268,16 +269,21 @@ Inventory and Expenses are **sections under Purchases**, not separate primary na
 
 **Future sections (not v2 commitment):** Integrations, notification preferences, workspace preferences.
 
-### Notifications
+### Notifications and attention
 
-**Purpose:** Surface items that need attention across workflows.
+Three related surfaces — do not conflate them:
 
-**Access:**
+| Surface           | Meaning                                                              | V1 access                                            |
+| ----------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Attention**     | Derived current-state queue (open shows, vendors owed, fetch errors) | Bell dropdown → Needs attention                      |
+| **Notifications** | Persisted read/unread business updates (payments, show closed, etc.) | Bell dropdown → Recent updates                       |
+| **Ledger**        | Financial audit history (`financial_events`)                         | Bell footer → View ledger; Dashboard recent activity |
 
-- Bell in header (workspace chrome)
-- Summarized on Dashboard (e.g. open shows, vendors owed)
+**Bell (V1):** Header button opens a dropdown (not a Dashboard deep link). Numeric badge counts **unread notifications only**. When unread is zero but attention items exist, a subtle dot may appear on the bell — attention does not add to the numeric badge.
 
-A full notification center may follow in Phase 3; until then, the bell may route to Dashboard attention anchors.
+Dashboard may still summarize workflow state; it does not replace the bell dropdown for notifications.
+
+See [`../architecture/notifications-attention.md`](../architecture/notifications-attention.md).
 
 ### Ledger
 
@@ -307,7 +313,7 @@ Ledger replaces the old **Activity** label in navigation; it is the same concept
 | Profile relocation  | Move sign-out and identity from sidebar footer to header            |
 | Settings relocation | Routes under `/admin/settings/*`; gear entry point                  |
 | Redirects           | Legacy paths → canonical paths (see table above)                    |
-| Dashboard anchor    | Notifications may link to Dashboard attention section               |
+| Dashboard anchor    | Notifications bell opens dropdown (not `#attention` deep link)      |
 
 **Out of scope for Phase 1:** Merging Expenses + Inventory UI, moving wholesaler detail file tree, Ledger rename implementation beyond redirect alias, removing all `FinancialsCrossLinks`.
 
@@ -327,12 +333,12 @@ Ledger replaces the old **Activity** label in navigation; it is the same concept
 
 **Goal:** Dashboard as the single home; Ledger integrated as secondary.
 
-| Deliverable         | Description                                                               |
-| ------------------- | ------------------------------------------------------------------------- |
-| Dashboard           | Absorb allocation/plan UX from retired Financials overview; refine alerts |
-| Ledger              | First-class page at `/admin/ledger`; linked from Dashboard                |
-| Notification center | Optional panel or inbox behind bell                                       |
-| Search              | Wire command palette or search API                                        |
+| Deliverable       | Description                                                                |
+| ----------------- | -------------------------------------------------------------------------- |
+| Dashboard         | Absorb allocation/plan UX from retired Financials overview; refine alerts  |
+| Ledger            | First-class page at `/admin/ledger`; linked from Dashboard                 |
+| Notification bell | Dropdown: Needs attention + Recent updates; unread-only badge (V1 shipped) |
+| Search            | Wire command palette or search API                                         |
 
 ---
 
@@ -367,18 +373,18 @@ These are **not** approved for v2 but may be revisited with usage data:
 
 ## Decision Log
 
-| Date       | Decision                                                       | Rationale                                                |
-| ---------- | -------------------------------------------------------------- | -------------------------------------------------------- |
-| 2026-06-01 | Reseller workspace framing replaces “admin dashboard” language | Matches operator (Felicia) mental model and go-to-market |
-| 2026-06-01 | Sidebar: Dashboard, Shows, Vendors, Purchases, Business Health | Five workflows; no Financials parent                     |
-| 2026-06-01 | Header: Search, Notifications, Settings, Profile               | Chrome vs. work separation; settings not in sidebar      |
-| 2026-06-01 | Single Dashboard; no Financials overview page                  | Avoid duplicate command centers                          |
-| 2026-06-01 | Vendors independent of Shows in IA                             | Consignment and wholesale buys are not show children     |
-| 2026-06-01 | Purchases consolidates Expenses + Inventory                    | One “money out” workflow                                 |
-| 2026-06-01 | Business Health remains primary nav with execution + history   | Transaction history must not live in Settings            |
-| 2026-06-01 | Settings: People & Accounts, Financial Preferences             | Configuration only in header                             |
-| 2026-06-01 | Ledger secondary; not sidebar                                  | Reduce nav count; history via Dashboard/notifications    |
-| 2026-06-01 | Phased migration: shell → workflows → dashboard/ledger         | Ship wayfinding before large page merges                 |
+| Date       | Decision                                                       | Rationale                                                   |
+| ---------- | -------------------------------------------------------------- | ----------------------------------------------------------- |
+| 2026-06-01 | Reseller workspace framing replaces “admin dashboard” language | Matches operator (Felicia) mental model and go-to-market    |
+| 2026-06-01 | Sidebar: Dashboard, Shows, Vendors, Purchases, Business Health | Five workflows; no Financials parent                        |
+| 2026-06-01 | Header: Search, Notifications, Settings, Profile               | Chrome vs. work separation; settings not in sidebar         |
+| 2026-06-01 | Single Dashboard; no Financials overview page                  | Avoid duplicate command centers                             |
+| 2026-06-01 | Vendors independent of Shows in IA                             | Consignment and wholesale buys are not show children        |
+| 2026-06-01 | Purchases consolidates Expenses + Inventory                    | One “money out” workflow                                    |
+| 2026-06-01 | Business Health remains primary nav with execution + history   | Transaction history must not live in Settings               |
+| 2026-06-01 | Settings: People & Accounts, Financial Preferences             | Configuration only in header                                |
+| 2026-06-01 | Ledger secondary; not sidebar                                  | Reduce nav count; history via Dashboard/notifications       |
+| 2026-06-12 | Notifications V1: bell dropdown + unread badge                 | Attention derived; notifications persisted; ledger separate |
 
 ---
 

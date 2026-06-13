@@ -22,7 +22,7 @@ import {
   notifyFromFinancialEvent,
   notifyFromRule,
 } from '../services/workspace-notifications';
-import { ValidationError } from '../utils/errors';
+import { NotFoundError, ValidationError } from '../utils/errors';
 
 type QueryCall = { sql: string; values: unknown[] };
 
@@ -256,6 +256,7 @@ describe('createWorkspaceNotification', () => {
     expect(result.notification?.id).toBe(existing.id);
     expect(calls).toHaveLength(2);
     expect(calls[0]?.sql).toContain('ON CONFLICT');
+    expect(calls[0]?.sql).toContain('deleted_at IS NULL');
     expect(calls[1]?.sql).toContain('WHERE idempotency_key');
   });
 
@@ -374,11 +375,25 @@ describe('markNotificationRead', () => {
       user_id: '00000000-0000-0000-0000-000000000088',
       read_at: new Date(),
     };
-    const { db, calls } = makeMockDb([{ rows: [readRow] }]);
+    const { db, calls } = makeMockDb([
+      { rows: [{ id: readRow.notification_id }] },
+      { rows: [readRow] },
+    ]);
 
     const result = await markNotificationRead(db, readRow.notification_id, readRow.user_id);
     expect(result.notification_id).toBe(readRow.notification_id);
     expect(result.user_id).toBe(readRow.user_id);
-    expect(calls[0]?.sql).toContain('ON CONFLICT (notification_id, user_id)');
+    expect(calls[1]?.sql).toContain('ON CONFLICT (notification_id, user_id)');
+  });
+
+  test('throws NotFoundError when notification is missing or deleted', async () => {
+    const { db } = makeMockDb([{ rows: [] }]);
+    await expect(
+      markNotificationRead(
+        db,
+        '00000000-0000-0000-0000-000000000099',
+        '00000000-0000-0000-0000-000000000088'
+      )
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });
