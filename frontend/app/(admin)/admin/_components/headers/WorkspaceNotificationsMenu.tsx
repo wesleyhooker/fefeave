@@ -216,7 +216,7 @@ export function WorkspaceNotificationsMenu() {
           id={MENU_ID}
           role="menu"
           aria-labelledby={TRIGGER_ID}
-          className="absolute right-0 top-full z-50 mt-1.5 flex w-[min(22rem,calc(100vw-2rem))] max-h-[min(28rem,calc(100dvh-6rem))] flex-col overflow-hidden rounded-lg border border-stone-200/90 bg-white shadow-lg"
+          className="absolute right-0 top-full z-50 mt-1.5 flex max-h-[min(28rem,calc(100dvh-6rem))] flex-col overflow-hidden rounded-lg border border-stone-200/90 bg-white shadow-lg max-sm:fixed max-sm:left-4 max-sm:right-4 max-sm:top-[4.25rem] max-sm:mt-0 max-sm:w-auto sm:w-[min(22rem,calc(100vw-2rem))] sm:max-w-[calc(100vw-2rem)]"
         >
           <div className="overflow-y-auto py-2">
             {showAllCaughtUp ? (
