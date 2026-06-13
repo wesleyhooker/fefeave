@@ -1,5 +1,5 @@
 /**
- * Shared workspace attention model — Dashboard "Needs attention", header bell, future inbox.
+ * Shared workspace attention model — Dashboard summaries and bell "Needs attention" section.
  */
 
 import {
@@ -24,7 +24,7 @@ export type AttentionItem =
       description: string;
       source: AttentionItemSource;
       severity: 'danger';
-      /** When true, increments the header bell badge. */
+      /** When true, shown in bell Needs attention section (not the numeric badge). */
       countsTowardBell: true;
     }
   | {
@@ -126,7 +126,14 @@ export function buildWorkspaceAttentionItems(
   return items;
 }
 
-/** Header bell badge — one increment per attention category that needs action. */
+/** Header attention section — actionable categories only (not numeric badge). */
+export function attentionItemsForDropdown(
+  items: readonly AttentionItem[],
+): AttentionItem[] {
+  return items.filter((item) => item.countsTowardBell);
+}
+
+/** Count actionable attention categories for bell dot / aria-label (not numeric badge). */
 export function countAttentionItemsForBell(
   items: readonly AttentionItem[],
 ): number {

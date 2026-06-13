@@ -66,6 +66,7 @@ export type TestEnvOverrides = Partial<{
   DB_PASSWORD: string;
   PGOPTIONS: string;
   FINANCIAL_RECOMMENDATIONS_SOURCE: string;
+  NOTIFICATIONS_WRITE_ENABLED: string;
   S3_ATTACHMENTS_BUCKET: string;
   AWS_REGION: string;
 }>;

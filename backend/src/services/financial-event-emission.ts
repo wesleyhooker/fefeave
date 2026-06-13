@@ -10,7 +10,8 @@ import type { FinancialEventType } from '../constants/financial-events';
 import type { StrategyAllocationType } from '../constants/strategy-allocation';
 import { STRATEGY_ALLOCATION_SOURCE_TYPE } from '../constants/strategy-allocation';
 import { todayIsoDateUtc } from './financial-recommendations';
-import { appendFinancialEvent, type Queryable } from './financial-events';
+import type { Queryable } from './financial-events';
+import { appendFinancialEventWithNotification } from './notification-emission';
 import { toYyyyMmDd } from '../utils/pg-date';
 
 /** Deterministic idempotency key: `<source_type>:<source_id>:<event_type>[:suffix]`. */
@@ -42,7 +43,7 @@ export async function emitBusinessExpenseRecorded(
   actorUserId: string | null
 ): Promise<void> {
   const effectiveDate = toYyyyMmDd(row.expense_date);
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'BUSINESS_EXPENSE_RECORDED',
     effectiveDate,
     amount: Number(row.amount),
@@ -83,7 +84,7 @@ export async function emitInventoryPurchaseRecorded(
   const paymentStatus = row.payment_status ?? 'PAID_NOW';
   const direction = paymentStatus === 'OWE_VENDOR' ? 'NEUTRAL' : 'OUTFLOW';
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'INVENTORY_PURCHASE_RECORDED',
     effectiveDate: purchaseDate,
     amount: Number(row.amount),
@@ -138,7 +139,7 @@ export async function emitWholesalerPaymentRecorded(
   actorUserId: string | null
 ): Promise<void> {
   const paymentDate = toYyyyMmDd(row.payment_date);
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'WHOLESALER_PAYMENT_RECORDED',
     effectiveDate: paymentDate,
     amount: Number(row.amount),
@@ -172,7 +173,7 @@ export async function emitWholesalerPaymentCorrected(
     'WHOLESALER_PAYMENT_RECORDED'
   );
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'WHOLESALER_PAYMENT_CORRECTED',
     effectiveDate: paymentDate,
     amount: Number(row.amount),
@@ -215,7 +216,7 @@ export async function emitWholesalerPaymentVoided(
     'WHOLESALER_PAYMENT_RECORDED'
   );
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'WHOLESALER_PAYMENT_VOIDED',
     effectiveDate: paymentDate,
     amount: Number(row.amount),
@@ -260,7 +261,7 @@ export async function emitOwnerSelfPayRecorded(
     row.transaction_type === 'OWNER_DRAW' ? 'OWNER_DRAW_RECORDED' : 'OWNER_SELF_PAY_RECORDED';
   const paidAt = row.paid_at instanceof Date ? row.paid_at : new Date(row.paid_at);
   const effectiveDate = toYyyyMmDd(paidAt);
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType,
     effectiveDate,
     amount: Number(row.amount),
@@ -361,7 +362,7 @@ export async function emitOwnerSelfPayCorrected(
   const effectiveDate = toYyyyMmDd(paidAt);
   const causationId = await findFirstFinancialEventId(db, 'owner_self_pay', row.id, recordedType);
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType,
     effectiveDate,
     amount: Number(row.amount),
@@ -411,7 +412,7 @@ export async function emitOwnerSelfPayVoided(
   const effectiveDate = toYyyyMmDd(paidAt);
   const causationId = await findFirstFinancialEventId(db, 'owner_self_pay', row.id, recordedType);
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType,
     effectiveDate,
     amount: Number(row.amount),
@@ -450,7 +451,7 @@ export async function emitCashSnapshotRecorded(
   actorUserId: string | null
 ): Promise<void> {
   const snapshotDate = toYyyyMmDd(row.snapshot_date);
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'CASH_SNAPSHOT_RECORDED',
     effectiveDate: snapshotDate,
     amount: Number(row.amount),
@@ -480,7 +481,7 @@ export async function emitFinancialStrategyChanged(
   actorUserId: string | null
 ): Promise<void> {
   const updatedAt = row.updated_at.toISOString();
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'FINANCIAL_STRATEGY_CHANGED',
     effectiveDate: todayIsoDateUtc(),
     amount: null,
@@ -536,7 +537,7 @@ export async function emitShowPayoutRecorded(
     payload.previous_payout_after_fees_amount = Number(params.previousPayoutAfterFeesAmount);
   }
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType,
     effectiveDate,
     amount: payout,
@@ -664,7 +665,7 @@ export async function emitSettlementCreated(
   actorUserId: string | null,
   payloadExtra?: Record<string, unknown>
 ): Promise<void> {
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'SETTLEMENT_CREATED',
     effectiveDate: toYyyyMmDd(effectiveDate),
     amount: Number(row.amount),
@@ -696,7 +697,7 @@ export async function emitSettlementAdjusted(
     'SETTLEMENT_CREATED'
   );
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'SETTLEMENT_ADJUSTED',
     effectiveDate: effective,
     amount: Number(row.amount),
@@ -734,7 +735,7 @@ export async function emitSettlementVoided(
     'SETTLEMENT_CREATED'
   );
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType: 'SETTLEMENT_VOIDED',
     effectiveDate: effective,
     amount: Number(row.amount),
@@ -788,7 +789,7 @@ export async function emitStrategyAllocationRecorded(
   const recordedAt = row.recorded_at instanceof Date ? row.recorded_at : new Date(row.recorded_at);
   const effectiveDate = toYyyyMmDd(recordedAt);
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType,
     effectiveDate,
     amount: Number(row.amount),
@@ -837,7 +838,7 @@ export async function emitStrategyAllocationVoided(
     recordedType
   );
 
-  await appendFinancialEvent(db, {
+  await appendFinancialEventWithNotification(db, {
     eventType,
     effectiveDate,
     amount: Number(row.amount),

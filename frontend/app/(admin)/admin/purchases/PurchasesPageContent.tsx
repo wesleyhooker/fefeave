@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { dispatchWorkspaceInvalidate } from "@/lib/workspaceInvalidate";
 import {
   AdminWorkspacePageIntro,
   AdminWorkspacePageLayout,
@@ -69,6 +70,7 @@ export default function PurchasesPageContent() {
   }, [resetRecordType]);
 
   const handleRecorded = useCallback(() => {
+    dispatchWorkspaceInvalidate();
     setReloadToken((t) => t + 1);
     setPanelOpen(false);
     resetRecordType();

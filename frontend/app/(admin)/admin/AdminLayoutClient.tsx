@@ -11,6 +11,7 @@ import {
 import { AdminWorkspaceProvider } from "./AdminWorkspaceContext";
 import { WorkspaceAttentionProvider } from "./_components/WorkspaceAttentionContext";
 import { WorkspaceAttentionSync } from "./_components/WorkspaceAttentionSync";
+import { WorkspaceNotificationsProvider } from "./_components/WorkspaceNotificationsContext";
 
 export type AdminLayoutClientProps = {
   title: string;
@@ -42,20 +43,22 @@ export function AdminLayoutClient({
       <div className={workspaceShellColumn}>
         <WorkspaceHeaderSlotsProvider>
           <WorkspaceAttentionProvider>
-            <WorkspaceAttentionSync />
-            <WorkspaceHeader
-              title={title}
-              email={email}
-              roles={roles}
-              onMenuClick={() => setMobileSidebarOpen(true)}
-            />
-            <main
-              className={`flex min-h-0 flex-1 flex-col ${workspaceShellBg}`}
-            >
-              <AdminWorkspaceProvider email={email}>
-                {children}
-              </AdminWorkspaceProvider>
-            </main>
+            <WorkspaceNotificationsProvider>
+              <WorkspaceAttentionSync />
+              <WorkspaceHeader
+                title={title}
+                email={email}
+                roles={roles}
+                onMenuClick={() => setMobileSidebarOpen(true)}
+              />
+              <main
+                className={`flex min-h-0 flex-1 flex-col ${workspaceShellBg}`}
+              >
+                <AdminWorkspaceProvider email={email}>
+                  {children}
+                </AdminWorkspaceProvider>
+              </main>
+            </WorkspaceNotificationsProvider>
           </WorkspaceAttentionProvider>
         </WorkspaceHeaderSlotsProvider>
       </div>
