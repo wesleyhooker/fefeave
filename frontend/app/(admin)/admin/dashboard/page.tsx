@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { DashboardSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
+import { DashboardContentSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
 import {
   fetchWholesalerBalanceSnapshots,
   fetchWholesalerBalances,
@@ -36,7 +36,7 @@ import {
 import { getOwnerSelfPayWeeklyPayout } from "@/src/lib/api/ownerSelfPay";
 import { getPeriodAllocations } from "@/src/lib/api/strategyAllocations";
 import { WorkspaceGrid, WorkspaceGridItem } from "../_components/WorkspaceGrid";
-import { DashboardPageHeader } from "./_components/DashboardPageHeader";
+import { useDashboardPageHeaderProps } from "./_components/DashboardPageHeader";
 import { DashboardWeekHero } from "./_components/DashboardWeekHero";
 import { DashboardWorkspaceOverview } from "./_components/DashboardWorkspaceOverview";
 import { DashboardTrendStrip } from "./_components/DashboardTrendStrip";
@@ -64,6 +64,7 @@ function parseAmount(value: string): number {
 }
 
 export default function AdminDashboardPage() {
+  const pageHeader = useDashboardPageHeaderProps();
   const weekBounds = useMemo(() => getCurrentWeekBounds(), []);
 
   const [balances, setBalances] = useState<
@@ -411,6 +412,7 @@ export default function AdminDashboardPage() {
   const heroSummary = useMemo(() => {
     return buildDashboardHeroSummary(
       {
+        shows: shows ?? [],
         weekProfit,
         weekProfitError,
         totalVendorBalance:
@@ -510,19 +512,15 @@ export default function AdminDashboardPage() {
   ]);
 
   if (loading) {
-    return <DashboardSkeleton />;
+    return (
+      <AdminWorkspacePageLayout containerTier="hub" pageHeader={pageHeader}>
+        <DashboardContentSkeleton />
+      </AdminWorkspacePageLayout>
+    );
   }
 
   return (
-    <AdminWorkspacePageLayout
-      containerTier="full"
-      intro={
-        <DashboardPageHeader
-          weekRangeLabel={formatWeekRangeCompact(weekBounds)}
-          weekStartYmd={weekBounds.startStr}
-        />
-      }
-    >
+    <AdminWorkspacePageLayout containerTier="hub" pageHeader={pageHeader}>
       <WorkspaceGrid variant="stack">
         <WorkspaceGridItem span="full">
           <DashboardWeekHero

@@ -1,15 +1,17 @@
 /**
- * Trailing affordance for navigational admin table/card rows (Shows, Balances, dashboard).
- * Pair with a parent `group/workspace-row` (`WorkspaceTableNavRow`) or `group/card` for hover motion.
+ * Trailing affordance for navigational admin table/card rows.
+ * Pair with a parent `group` for hover motion.
  */
 export function WorkspaceRowChevron({
   className = "",
 }: {
   className?: string;
 }) {
+  const base =
+    "h-3.5 w-3.5 shrink-0 translate-x-0 text-admin-inkMuted transition-all duration-200 ease-out group-hover:translate-x-1 group-hover:text-admin-actionPrimary";
   return (
     <svg
-      className={`h-3.5 w-3.5 shrink-0 ${className}`}
+      className={className ? `${base} ${className}` : base}
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden

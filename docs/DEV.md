@@ -37,6 +37,22 @@ Recommended daily setup is local-only: frontend + backend on your machine, plus 
 
 Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). In local development, Next rewrites `/api/*` to `http://localhost:3000/api/*`, so no browser CORS flow is needed.
 
+### Do not run multiple Next dev servers
+
+**Never run two local Next dev servers for the same frontend at the same time.** They share `frontend/.next` and can corrupt the cache (HTTP 500, missing webpack packs, `/_app` errors).
+
+| Entrypoint                    | Port     | Notes                                                           |
+| ----------------------------- | -------- | --------------------------------------------------------------- |
+| `make dev-ui` / `make dev`    | **3001** | Standard local UI (recommended)                                 |
+| `npm run dev` / `make ui-aws` | **3000** | Direct Next dev; conflicts with `make dev-api` on the same port |
+
+Starting a second server is **blocked** by `frontend/scripts/dev/check-next-dev-singleton.mjs` (wired into `npm run dev`, `make dev-ui`, and `make ui-aws`). Recovery:
+
+```bash
+make dev-down
+make dev-reset-frontend
+```
+
 ## Common commands
 
 - `make dev-db-up` — start local Postgres (`docker compose`)
@@ -52,6 +68,8 @@ Frontend API calls use same-origin `/api/*` (`NEXT_PUBLIC_BACKEND_URL=/api`). In
 - `make dev-ui` — run frontend locally on `:3001` (bind `0.0.0.0`)
 - `make dev-cognito` — same as `make dev` but backend `AUTH_MODE=cognito` (see [frontend/AUTH_SETUP.md](../frontend/AUTH_SETUP.md))
 - `make dev-status` — check local backend endpoint HTTP status codes
+- `make dev-down` — kill dev processes on `:3000`/`:3001` and tmux session
+- `make dev-reset-frontend` — kill UI only, clear `frontend/.next`, restart UI (fixes stale Next dev cache; backend/DB stay up)
 - `make test` — run backend tests, then frontend build
 
 ## Local UI screenshots (Playwright, dev-only)
@@ -85,6 +103,22 @@ cd frontend && npm run playwright:screenshot -- /admin/shows my-screen.png
 
 The script loads `.env.local`, hits dev-bootstrap, then opens the target route. Output: timestamped PNG under **`frontend/.playwright-dev/screenshots/`** (gitignored).
 
+If the page returns **HTTP 500** or **Internal Server Error**, the script **exits with an error** and does not save a misleading screenshot. Fix the dev cache first:
+
+```bash
+make dev-reset-frontend
+# or: make dev-down && rm -rf frontend/.next && make dev
+```
+
+Diagnose cache health:
+
+```bash
+cd frontend && npm run dev:diagnose-cache
+# optional: DEBUG_RUN_ID=post-fix npm run dev:diagnose-cache
+```
+
+**Never run `npm run build` while the frontend dev server (`make dev-ui` / `make dev`) is still running.** The build script now blocks if port `:3001` is listening. Stop the UI first (`make dev-reset-frontend` or kill `:3001`) to avoid mixed prod/dev `.next` state.
+
 **Admin chrome regression check (semantic tokens):** After changing workspace colors, capture desktop `dash.png` / `shows.png` / `balances.png` plus mobile harness (`npm run playwright:screenshot:mobile`). Confirm sidebar near-white text on deep clay, KPI peach/gold readability, warm-but-not-dark shell. Remaining debt is usually stray legacy `admin-brand` references outside the hot path and intentional gray table chrome.
 
 **Flags:** `--full` (default) or `--viewport`; `--storage` to force the older **saved Cognito session** file (`playwright:save-auth`) instead of bootstrap.
@@ -99,6 +133,13 @@ The script loads `.env.local`, hits dev-bootstrap, then opens the target route. 
 
 ## Troubleshooting
 
+- **Two Next dev servers / mixed `.next` cache**
+  - Do not run `make dev-ui` (`:3001`) and `npm run dev` / `make ui-aws` (`:3000`) at the same time.
+  - The singleton guard blocks the second start; if you bypass it, run `make dev-reset-frontend`.
+- **Frontend 500 / `Cannot read properties of undefined (reading '/_app')` / webpack `ENOENT ... pack.gz`**
+  - Stale Next dev cache — usually after `npm run build` or `rm -rf frontend/.next` while `make dev` UI was still running.
+  - Fix: `make dev-reset-frontend` (keeps backend/DB) or full `make dev-down && rm -rf frontend/.next && make dev`.
+  - Check: `cd frontend && npm run dev:diagnose-cache`
 - **Port already in use**
   - Backend: clear process on port `3000`, then rerun `make dev-api`.
   - Frontend: clear process on port `3001`, then rerun `make dev-ui`.
@@ -136,7 +177,7 @@ This is usually **not a routes problem** — a previous `next dev` (or `make dev
 1. Stop stale listeners: `make dev-down` (frees **3000** and **3001** and the `fefeave-dev` tmux session).
 2. Start again: `make dev-ui` (or `make dev`).
 
-`make dev-ui` and `make dev-api` now run a **reclaim** step first: if the port is held only by a stale Node/Next process, it is stopped automatically; if another app owns the port, you get a clear error instead of a silent exit.
+If the port is still held by a stale Node/Next process after `make dev-down`, run `make dev-reset-frontend` or check `ss -tlnp 'sport = :3001'`.
 
 ### TypeScript errors about missing `.next/types/*.ts`
 
@@ -155,7 +196,7 @@ After pulling this fix, run **`make dev-down`** once, then **`make dev`** again 
 
 1. Keep the repo in the **Linux filesystem** (`~/dev/...`), not `/mnt/c/...`.
 2. Hard-refresh the browser (Ctrl+Shift+R) — the dev server may have recompiled but the tab is stale.
-3. Clear a bad Next cache: `rm -rf frontend/.next`, then `make dev-ui`.
+3. Clear a bad Next cache: `make dev-reset-frontend` (or `make dev-down && rm -rf frontend/.next && make dev`).
 4. Force polling in `frontend/.env.local`: `WATCHPACK_POLLING=true` (disable with `WATCHPACK_POLLING=false`).
 5. Backend API-only edits: confirm the backend tmux pane shows `Restarting...` after you save; if not, the backend pane may need `dev:poll` (WSL) or a manual restart.
 

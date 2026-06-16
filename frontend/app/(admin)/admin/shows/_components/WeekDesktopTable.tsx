@@ -1,6 +1,7 @@
 import { HelpTooltip } from "@/app/(admin)/admin/_components/HelpTooltip";
 import { WORKFLOW_SHOWS_PROFIT_LABEL } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
+import { WORKSPACE_TYPE_TABLE_HEAD } from "@/app/(admin)/admin/_lib/workspaceDesignTokens";
 import { workspaceTheadSticky } from "@/app/(admin)/admin/_components/workspaceUi";
 import type { ShowViewModel } from "@/src/lib/api/shows";
 import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
@@ -43,25 +44,25 @@ export function WeekDesktopTable({
           <tr>
             <th
               scope="col"
-              className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              className={`px-3 py-3 text-left sm:px-4 ${WORKSPACE_TYPE_TABLE_HEAD}`}
             >
               Status
             </th>
             <th
               scope="col"
-              className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              className={`px-3 py-3 text-left sm:px-4 ${WORKSPACE_TYPE_TABLE_HEAD}`}
             >
               Show
             </th>
             <th
               scope="col"
-              className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              className={`px-3 py-3 text-left sm:px-4 ${WORKSPACE_TYPE_TABLE_HEAD}`}
             >
               Date
             </th>
             <th
               scope="col"
-              className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
+              className={`px-3 py-3 text-right sm:px-4 ${WORKSPACE_TYPE_TABLE_HEAD}`}
             >
               <span className="inline-flex items-center justify-end gap-1.5">
                 {WORKFLOW_SHOWS_PROFIT_LABEL}

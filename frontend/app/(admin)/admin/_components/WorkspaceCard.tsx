@@ -2,10 +2,12 @@
 
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import {
-  dashboardModulePanel,
-  dashboardModulePanelHeader,
-  dashboardPadX,
-} from "@/app/(admin)/admin/dashboard/_components/dashboardStructure";
+  WORKSPACE_HUB_CARD_FOOTER,
+  WORKSPACE_HUB_CARD_HEADER,
+  WORKSPACE_HUB_CARD_SHELL,
+  WORKSPACE_PAD_X,
+  WORKSPACE_SUMMARY_ROWS,
+} from "@/app/(admin)/admin/_lib/workspaceDesignTokens";
 import {
   workspaceCard,
   workspaceCardHeader,
@@ -14,23 +16,25 @@ import {
   workspaceSectionToolbar,
 } from "./workspaceUi";
 
-export type WorkspaceCardSurface = "card" | "panel" | "dashboard";
+export type WorkspaceCardSurface = "card" | "panel" | "hub" | "dashboard";
 
 const SURFACE_CLASS: Record<WorkspaceCardSurface, string> = {
   card: `${workspaceCard} min-w-0 overflow-hidden`,
   panel: `${workspacePanel} min-w-0 overflow-hidden`,
-  dashboard: dashboardModulePanel,
+  hub: WORKSPACE_HUB_CARD_SHELL,
+  /** @deprecated Prefer `hub`. */
+  dashboard: WORKSPACE_HUB_CARD_SHELL,
 };
 
 function headerShellClass(surface: WorkspaceCardSurface): string {
-  if (surface === "dashboard") {
-    return dashboardModulePanelHeader;
+  if (surface === "hub" || surface === "dashboard") {
+    return WORKSPACE_HUB_CARD_HEADER;
   }
   return workspaceCardHeader;
 }
 
 /**
- * Bordered work-surface shell — uses existing `workspaceCard` / `workspacePanel` / dashboard module tokens.
+ * Bordered work-surface shell — `card` | `panel` | `hub` (overview / trend modules).
  */
 export function WorkspaceCard({
   surface = "card",
@@ -65,7 +69,6 @@ export function WorkspaceCardHeader({
   title?: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
-  /** Use `workspaceSectionToolbar` layout (title left, actions right). */
   toolbar?: boolean;
   surface?: WorkspaceCardSurface;
   titleClassName?: string;
@@ -84,7 +87,9 @@ export function WorkspaceCardHeader({
       <div className="min-w-0 flex-1">
         {title != null ? <h2 className={titleCls}>{title}</h2> : null}
         {subtitle != null ? (
-          <p className="mt-0.5 text-xs text-stone-600 sm:text-sm">{subtitle}</p>
+          <p className="mt-0.5 text-xs text-admin-inkMuted sm:text-sm">
+            {subtitle}
+          </p>
         ) : null}
       </div>
       {actions != null ? (
@@ -102,7 +107,6 @@ export function WorkspaceCardBody({
   children,
   ...rest
 }: {
-  /** Default `p-4 sm:p-5`; set false for table/list bodies that manage their own padding. */
   padding?: boolean;
   className?: string;
   children: ReactNode;
@@ -116,24 +120,28 @@ export function WorkspaceCardBody({
 }
 
 export function WorkspaceCardFooter({
+  surface,
   className = "",
   children,
   ...rest
 }: {
+  surface?: WorkspaceCardSurface;
   className?: string;
   children: ReactNode;
 } & Omit<ComponentPropsWithoutRef<"div">, "className" | "children">) {
+  const shell =
+    surface === "hub" || surface === "dashboard"
+      ? WORKSPACE_HUB_CARD_FOOTER
+      : "border-t border-admin-border/90 px-4 py-3 sm:px-5";
+
   return (
-    <div
-      className={`border-t border-admin-border/90 px-4 py-3 sm:px-5 ${className}`.trim()}
-      {...rest}
-    >
+    <div className={`${shell} ${className}`.trim()} {...rest}>
       {children}
     </div>
   );
 }
 
-/** Dashboard module footer note band (reuses dashboard padding token). */
+/** Hub module footer note band. */
 export function WorkspaceCardFooterNote({
   className = "",
   children,
@@ -143,9 +151,12 @@ export function WorkspaceCardFooterNote({
 }) {
   return (
     <div
-      className={`${dashboardPadX} border-t border-stone-100/90 py-3 text-center text-xs text-stone-500 sm:py-2.5 ${className}`.trim()}
+      className={`${WORKSPACE_PAD_X} border-t border-admin-border/88 py-3 text-center text-xs text-admin-inkMuted sm:py-2.5 ${className}`.trim()}
     >
       {children}
     </div>
   );
 }
+
+/** Re-export for overview card row lists. */
+export { WORKSPACE_SUMMARY_ROWS as workspaceSummaryRows };

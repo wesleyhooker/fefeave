@@ -44,18 +44,22 @@ Neutral warm palette with restrained accents. Most of the UI stays neutral; acce
 
 ## Admin workspace (internal)
 
-Admin uses **additive semantic CSS variables** in [`frontend/system/tokens.css`](../frontend/system/tokens.css) (Tailwind `admin.*`). Legacy rose/blush tokens (`admin-brand`, `surfaceActive`, …) remain for compatibility; **new chrome** prefers:
+Admin uses **A1 Warm Clay** semantic CSS variables in [`frontend/system/tokens.css`](../frontend/system/tokens.css) (Tailwind `admin.*`). Full foundation docs: [`docs/design/a1-workspace-design-system.md`](../docs/design/a1-workspace-design-system.md).
 
-| Role                           | Token direction                                 | Notes                                                                                        |
-| ------------------------------ | ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Page canvas                    | `--admin-canvas`                                | Warm off-white shell                                                                         |
-| Sidebar                        | `--admin-sidebar-surface`                       | **Deeper clay** than CTAs                                                                    |
-| Primary buttons / accent rails | `--admin-action-primary`                        | **Brighter terracotta** (same family as sidebar, not identical)                              |
-| Content cards                  | `--admin-surface-elevated` + `--admin-border`   | Clean white with warm border                                                                 |
-| KPI tiles                      | `--admin-kpi-soft` / `accent` / `gold` / `sage` | Peach default; stronger peach for liability; gold completed; sage reserved for ops/attention |
-| Muted strips                   | `--admin-muted-strip`                           | Inset chrome bands                                                                           |
+Legacy rose/blush tokens (`admin-brand`, `surfaceActive`, …) remain for compatibility; **new chrome** prefers:
 
-Dense ledgers and tables stay **neutral** (gray/stone utilities); semantic greens/reds for money and status are unchanged.
+| Role                           | Token direction                                 | Notes                                                                  |
+| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------- |
+| Page canvas                    | `--admin-canvas` `#FAF9F6`                      | Warm off-white shell                                                   |
+| Sidebar                        | `--admin-sidebar-surface` `#A35F4D`             | Deep warm clay — nav only                                              |
+| Primary buttons / accent rails | `--admin-action-primary` `#9C3023`              | Deep terracotta CTA                                                    |
+| Content cards                  | `--admin-surface-elevated` + `--admin-border`   | White cards, 12px radius                                               |
+| KPI tiles                      | `--admin-kpi-soft` / `accent` / `gold` / `sage` | Peach default; emphasis for liability; gold milestones; sage attention |
+| Status success                 | `--admin-status-success` `#2D5A27`              | Profit, paid, closed                                                   |
+| Status warning                 | `--admin-status-warning`                        | Open/active, attention                                                 |
+| Muted strips                   | `--admin-muted-strip`                           | Inset chrome bands                                                     |
+
+Dense ledgers and tables stay **neutral** (`admin-ink`); semantic colors for money and status use the tokens above.
 
 ---
 

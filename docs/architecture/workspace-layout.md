@@ -36,7 +36,12 @@ Operator pages under `/admin/*` share one layout system: a **left-anchored page 
 ```
 
 - **Sidebar:** `w-[15.5rem]` (248px), `md+` fixed; mobile drawer `17rem`.
+- **Shell row:** `workspaceShellRow` — `min-h-dvh`, `items-stretch`, `bg-admin-sidebarSurfaceDeep` underlay, `WORKSPACE_SHELL_PANEL_GAP` (`gap-px`) between panels.
+- **Sidebar panel:** `WORKSPACE_SHELL_SIDEBAR_PANEL` on `<aside>` via `workspaceSidebarPanel` — clay gradient + `md:rounded-r-xl` + `overflow-hidden`. The `<aside>` paints the clay; radius must live here.
+- **Content canvas panel:** `WORKSPACE_SHELL_CONTENT_PANEL` on `workspaceShellColumn` — `bg-admin-canvas` + `md:rounded-l-xl` + `overflow-hidden`. Intro zone (`workspacePageIntroZone`) does **not** repaint canvas bg.
+- **Page chrome inset:** `WORKSPACE_PAGE_CHROME_INSET_X` (`pl-1.5 md:pl-2`) on `workspacePageIntroZoneInner` (titles/subtitles) and `WORKSPACE_PAGE_SECTION_EYEBROW` (section labels). Cards align to gutter only.
 - **Page frame:** `w-full` + tier `max-w-*` + `px-4 md:px-6` gutters via `workspaceContainerFrameClass(tier)` — left-aligned in the canvas (no `mx-auto`).
+- **Hub card interiors** use `WORKSPACE_PAD_X` (same rhythm as the shell gutter) inside bordered surfaces on the page frame.
 - **No** `calc(100vw - …)` or viewport-subtraction sizing on the page frame.
 
 ## Container tiers

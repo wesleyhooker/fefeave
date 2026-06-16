@@ -60,9 +60,14 @@ test('Dashboard renders Week hero before Workspace Overview', () => {
   assert.match(hero, /WORKFLOW_DASHBOARD_HERO_COMPLETED_LABEL/);
   assert.match(hero, /WORKFLOW_DASHBOARD_HERO_OPEN_LABEL/);
   assert.match(hero, /DashboardHeroStatusBand/);
+  assert.match(hero, /attentionHref/);
   assert.match(hero, /lead/);
+  assert.doesNotMatch(hero, /linkLabel/);
+  assert.doesNotMatch(hero, /WORKFLOW_DASHBOARD_VIEW_SHOWS/);
+  assert.doesNotMatch(hero, /WORKFLOW_DASHBOARD_VIEW_VENDORS/);
 
   assert.match(overview, /WORKFLOW_DASHBOARD_WORKSPACE_OVERVIEW_HEADING/);
+  assert.match(overview, /WORKSPACE_PAGE_SECTION_EYEBROW/);
   assert.match(overview, /DashboardWorkspaceSummaryCard/);
   assert.match(overview, /span="half"/);
 });
@@ -111,10 +116,12 @@ test('Workspace overview cards link to canonical routes without workflow CTAs', 
   assert.match(cards, /WORKFLOW_DASHBOARD_PURCHASES_EXPENSES_30D/);
   assert.match(cards, /WORKFLOW_DASHBOARD_BH_UNAVAILABLE/);
 
+  assert.match(summaryCard, /WorkspaceIllustratedCard/);
+  assert.match(summaryCard, /footerAction/);
   assert.doesNotMatch(summaryCard, /Record purchase/);
   assert.doesNotMatch(summaryCard, /Log show/);
   assert.doesNotMatch(summaryCard, /Record payment/);
-  assert.match(summaryCard, /href=\{card\.href\}/);
+  assert.match(summaryCard, /href: card\.href/);
 });
 
 test('Dashboard hero status band uses calm and attention paths', () => {
@@ -130,6 +137,7 @@ test('Dashboard hero status band uses calm and attention paths', () => {
   assert.match(statusBand, /calm/);
   assert.match(statusBand, /attention/);
   assert.match(summary, /deriveDashboardHeroStatusBand/);
+  assert.match(statusBand, /attentionHref/);
   assert.match(summary, /buildDashboardAttentionHint/);
   assert.match(summary, /WORKFLOW_DASHBOARD_PERFECT_WEEK_CALM/);
 });

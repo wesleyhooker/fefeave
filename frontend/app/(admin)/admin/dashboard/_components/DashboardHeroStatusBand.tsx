@@ -1,35 +1,37 @@
 "use client";
 
-import {
-  dashboardHeroStatusBandAttention,
-  dashboardHeroStatusBandCalm,
-} from "./dashboardStructure";
+import { WorkspaceAlertBand } from "@/app/(admin)/admin/_components/workspace/WorkspaceAlertBand";
 import type { DashboardHeroStatusBandKind } from "../_lib/dashboardSummary";
 
+/** Dashboard adapter — maps summary status band to {@link WorkspaceAlertBand}. */
 export function DashboardHeroStatusBand({
   kind,
   calmMessage,
   attentionHint,
+  attentionHref,
 }: {
   kind: DashboardHeroStatusBandKind;
   calmMessage: string | null;
   attentionHint: string | null;
+  attentionHref: string | null;
 }) {
   if (kind === "none") return null;
 
   if (kind === "calm" && calmMessage != null) {
     return (
-      <div className={dashboardHeroStatusBandCalm} role="status">
-        {calmMessage}
-      </div>
+      <WorkspaceAlertBand variant="calm">{calmMessage}</WorkspaceAlertBand>
     );
   }
 
   if (kind === "attention" && attentionHint != null) {
     return (
-      <div className={dashboardHeroStatusBandAttention} role="status">
+      <WorkspaceAlertBand
+        variant="attention"
+        href={attentionHref ?? undefined}
+        ariaLabel={attentionHint}
+      >
         {attentionHint}
-      </div>
+      </WorkspaceAlertBand>
     );
   }
 

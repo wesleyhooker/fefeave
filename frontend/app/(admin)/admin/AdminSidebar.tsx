@@ -14,6 +14,7 @@ import {
   PRIMARY_NAV_ITEMS,
   isPrimaryNavItemActive,
 } from "./_lib/adminSidebarNav";
+import { WORKFLOW_SIDEBAR_RESELLER_WORKSPACE } from "./_lib/adminWorkflowCopy";
 import {
   workspaceActionIconMd,
   workspaceChromeHoverWarm,
@@ -22,7 +23,16 @@ import {
   workspaceNavItemActive,
   workspaceNavItemBase,
   workspaceNavItemInactive,
-  workspaceSidebarSurface,
+  workspaceNavItemLabel,
+  workspaceSidebarBrandBlock,
+  workspaceSidebarBrandTitle,
+  workspaceSidebarBrandWordmark,
+  workspaceSidebarContentColumn,
+  workspaceSidebarMobilePanel,
+  workspaceSidebarNavList,
+  workspaceSidebarPanel,
+  workspaceSidebarPanelPadding,
+  workspaceSidebarWidth,
 } from "./_components/workspaceUi";
 
 const NAV_ICONS = {
@@ -65,7 +75,7 @@ function NavLinks({
             >
               <Icon className={workspaceActionIconMd} />
             </span>
-            <span className="min-w-0 flex-1 leading-snug">{item.label}</span>
+            <span className={workspaceNavItemLabel}>{item.label}</span>
           </Link>
         );
       })}
@@ -117,15 +127,10 @@ export function AdminSidebar({
   }, [mobileOpen, onMobileClose]);
 
   const brandBlock = (
-    <div className="mb-5 border-b border-admin-sidebarDivider/35 pb-4">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-admin-sidebarText">
-        Fefe Ave
-      </p>
-      <p className="mt-1 text-sm font-semibold tracking-tight text-admin-sidebarText">
-        Workspace
-      </p>
-      <p className="mt-1 text-xs leading-snug text-admin-sidebarTextMuted">
-        Boutique operations
+    <div className={workspaceSidebarBrandBlock}>
+      <p className={workspaceSidebarBrandWordmark}>fefe ave</p>
+      <p className={workspaceSidebarBrandTitle}>
+        {WORKFLOW_SIDEBAR_RESELLER_WORKSPACE}
       </p>
     </div>
   );
@@ -133,16 +138,18 @@ export function AdminSidebar({
   return (
     <>
       <aside
-        className={`hidden w-[15.5rem] shrink-0 flex-col p-4 md:flex ${workspaceSidebarSurface}`}
+        className={`hidden ${workspaceSidebarWidth} md:flex ${workspaceSidebarPanel} ${workspaceSidebarPanelPadding}`}
         aria-label="Admin navigation"
       >
-        {brandBlock}
-        <nav
-          className="flex min-h-0 flex-1 flex-col gap-1.5"
-          aria-label="Admin navigation"
-        >
-          <NavLinks pathname={pathname ?? ""} />
-        </nav>
+        <div className={workspaceSidebarContentColumn}>
+          {brandBlock}
+          <nav
+            className={workspaceSidebarNavList}
+            aria-label="Admin navigation"
+          >
+            <NavLinks pathname={pathname ?? ""} />
+          </nav>
+        </div>
       </aside>
 
       {mobileOpen && (
@@ -161,7 +168,7 @@ export function AdminSidebar({
             aria-label="Close menu"
           />
           <div
-            className={`absolute left-0 top-0 z-10 flex h-full w-[17rem] flex-col p-4 shadow-xl transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${workspaceSidebarSurface} ${
+            className={`absolute left-0 top-0 z-10 ${workspaceSidebarWidth} ${workspaceSidebarMobilePanel} ${workspaceSidebarPanelPadding} transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
               mobileEntered
                 ? "translate-x-0 opacity-100"
                 : "-translate-x-3 opacity-0"
@@ -192,10 +199,15 @@ export function AdminSidebar({
                 </svg>
               </button>
             </div>
-            {brandBlock}
-            <nav className="flex min-h-0 flex-1 flex-col gap-1.5">
-              <NavLinks pathname={pathname ?? ""} onNavigate={onMobileClose} />
-            </nav>
+            <div className={`${workspaceSidebarContentColumn} flex-1`}>
+              {brandBlock}
+              <nav className={workspaceSidebarNavList}>
+                <NavLinks
+                  pathname={pathname ?? ""}
+                  onNavigate={onMobileClose}
+                />
+              </nav>
+            </div>
           </div>
         </div>
       )}

@@ -1,10 +1,55 @@
 import {
   WORKSPACE_CONTAINER_GUTTER,
+  WORKSPACE_CONTAINER_INSET_X,
   WORKSPACE_CONTAINER_TIER,
+  WORKSPACE_PAGE_CHROME_INSET_X,
   type WorkspaceContainerTier,
   workspaceContainerFrameClass,
   workspaceContainerTierClass,
 } from '../_lib/workspacePageContentWidth';
+import {
+  getWorkspaceIconWellClass,
+  type WorkspaceIconWellVariant,
+} from './workspace/WorkspaceIconWell';
+import {
+  WORKSPACE_CARD_TITLE,
+  WORKSPACE_FOCUS_RING,
+  WORKSPACE_CARD_SHELL,
+  WORKSPACE_LABEL,
+  WORKSPACE_LABEL_CAPTION,
+  WORKSPACE_LABEL_FIELD,
+  WORKSPACE_PAGE_SUBTITLE,
+  WORKSPACE_PAGE_TITLE,
+  WORKSPACE_PAGE_SECTION_EYEBROW,
+  WORKSPACE_PANEL_SHELL,
+  WORKSPACE_SHELL_CONTENT_PANEL,
+  WORKSPACE_SHELL_PANEL_GAP,
+  WORKSPACE_SHELL_SIDEBAR_PANEL,
+  WORKSPACE_VALUE_KPI,
+} from '../_lib/workspaceDesignTokens';
+
+export {
+  WORKSPACE_CARD_TITLE,
+  WORKSPACE_FOCUS_RING,
+  WORKSPACE_LABEL,
+  WORKSPACE_LABEL_CAPTION,
+  WORKSPACE_LABEL_FIELD,
+  WORKSPACE_PAGE_SUBTITLE,
+  WORKSPACE_PAGE_TITLE,
+  WORKSPACE_SECTION_EYEBROW,
+  WORKSPACE_PAGE_SECTION_EYEBROW,
+  WORKSPACE_PAGE_CHROME_INSET_X,
+  WORKSPACE_SHELL_CONTENT_PANEL,
+  WORKSPACE_SHELL_PANEL_GAP,
+  WORKSPACE_SHELL_SIDEBAR_PANEL,
+  WORKSPACE_VALUE,
+  WORKSPACE_VALUE_KPI,
+  WORKSPACE_VALUE_KPI_HERO,
+  WORKSPACE_VALUE_MONEY,
+  WORKSPACE_VALUE_MUTED,
+  WORKSPACE_VALUE_STRIP,
+  WORKSPACE_WEEK_SECTION_TITLE,
+} from '../_lib/workspaceDesignTokens';
 
 /**
  * Admin workspace — source of truth for neutral chrome + semantics.
@@ -15,8 +60,8 @@ import {
  *
  * | Layer | Role | Tokens / components |
  * |-------|------|---------------------|
- * | 1 — Global chrome | Workspace top bar (logo, env, profile) — structured, warm-tinted band | `workspaceGlobalHeaderBar` + `WorkspaceHeader` |
- * | 2 — Page context | Barely-warm intro band (title, subtitle, page actions) — clean bottom border, no gradient/blob | `workspacePageIntroZone` / `workspacePageEntityIntroZone` + `AdminPageIntroSection` + `AdminPageIntro` |
+ * | 1 — Global chrome | Legacy workspace top bar (Fefe Ave • Workspace + utilities) — hidden when a page registers {@link WorkspacePageHeader} | `workspaceGlobalHeaderBar` + `WorkspaceHeader` |
+ * | 2 — Page context | Page-aware header (title + utilities row, subtitle) or legacy intro band | `WorkspacePageHeader` + `workspacePageIntroZone` / `AdminPageIntroSection` |
  * | 3 — Work surface | Cards, tables, forms on warm shell | `workspaceShellBg` + `AdminPageContainer` + `workspaceCard` / `workspacePanel` |
  *
  * ## Brand color usage (admin-only)
@@ -91,16 +136,31 @@ import {
 export const workspaceShellBg = 'bg-admin-canvas';
 
 /**
- * Main column (header + content): single left rule on md+ so the seam with the
- * sidebar is one deliberate edge (pairs with header border-b at the junction).
+ * Admin app shell row — sidebar + content panels with underlay visible in {@link WORKSPACE_SHELL_PANEL_GAP}.
  */
-export const workspaceShellColumn = 'flex min-w-0 flex-1 flex-col';
+export const workspaceShellRow = [
+  'flex min-h-dvh items-stretch',
+  WORKSPACE_SHELL_PANEL_GAP,
+  'bg-admin-sidebarSurfaceDeep',
+].join(' ');
+
+/**
+ * @deprecated Shell inset removed — sidebar spans flush to viewport left/top/bottom.
+ * Page content gutters use {@link WORKSPACE_CONTAINER_GUTTER} on intro/content frames.
+ * Hub card interiors use {@link WORKSPACE_PAD_X} (same rhythm) inside bordered surfaces.
+ */
+export const workspaceAppShellInset = '';
+
+/**
+ * Main column beside sidebar — owns the visible canvas panel (bg + seam radius).
+ */
+export const workspaceShellColumn = `flex min-h-0 min-w-0 flex-1 flex-col ${WORKSPACE_SHELL_CONTENT_PANEL}`;
 
 /**
  * Layer 1 — workspace top header only (`WorkspaceHeader`).
  * Warm tinted band (pairs with sidebar + shell); no gradient.
  */
-export const workspaceGlobalHeaderBar = 'relative z-20 bg-admin-canvas';
+export const workspaceGlobalHeaderBar = 'relative z-20';
 
 /** Workspace selector cluster — sits flush on canvas (no lifted white chip). */
 export const workspaceHeaderBrandCluster =
@@ -123,44 +183,93 @@ export const workspaceChromeHoverWarm = `${workspaceChromeTransition} hover:bg-s
 // --- Sidebar nav (active + inactive item, icon glyph) -----------------------
 
 /**
- * Shared shape, padding, and motion for sidebar nav items. Pair with one of
- * `workspaceNavItemActive` or `workspaceNavItemInactive` for state.
+ * Shared inset width for brand + nav — clay margin on the right; one vertical grid.
+ */
+export const workspaceSidebarInsetWidth = 'w-[90%] max-w-full';
+
+/**
+ * Inner content column — full panel width; inset applied per block via {@link workspaceSidebarInsetWidth}.
+ */
+export const workspaceSidebarContentColumn =
+  'flex w-full min-h-0 flex-1 flex-col';
+
+/** Nav list — equal-width pills inside inset column. */
+export const workspaceSidebarNavList = `mt-1 ${workspaceSidebarInsetWidth} flex min-h-0 flex-1 flex-col gap-0.5`;
+
+/** Vertical + horizontal shell padding (pairs with {@link workspaceSidebarInsetWidth}). */
+export const workspaceSidebarPanelPadding = 'px-3.5 py-5 md:px-4 md:py-6';
+
+/** Desktop sidebar width — fits longest primary label (“Business Health”) without clipping. */
+export const workspaceSidebarWidth = 'w-[15.5rem]';
+
+/**
+ * Shared shape for sidebar nav links — equal-width pill in the content column.
+ * Pair with {@link workspaceNavItemActive} or {@link workspaceNavItemInactive}.
  */
 export const workspaceNavItemBase =
-  'group relative flex min-h-[2.75rem] items-center gap-3 rounded-xl px-3 py-2 text-sm transition-[color,background-color] duration-200 ease-out motion-reduce:transition-none';
+  'group relative flex w-full min-h-[2.625rem] items-center gap-2 rounded-[10px] py-2 pl-0 pr-2 text-sm transition-[color,background-color,box-shadow] duration-200 ease-out motion-reduce:transition-none';
 
 /**
- * Active nav item — peach-cream pill on clay: slightly warmer fill vs sidebar,
- * single soft lift shadow + inset gleam + thin warm ring (spacing from `workspaceNavItemBase`).
+ * Active nav — calm filled pill on clay; same width as siblings; clay visible around it.
  */
 export const workspaceNavItemActive =
-  'bg-black/[0.14] font-medium text-white shadow-none ring-0 transition-[color,background-color] duration-200 ease-out motion-reduce:transition-none';
+  'bg-white/[0.14] font-medium text-admin-sidebarText shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] ring-1 ring-inset ring-white/[0.06]';
 
 /**
- * Inactive nav — warm light text on clay; hover is a visible tonal lift (darker wash).
+ * Inactive nav — muted on clay; subtle hover wash (full pill width).
  */
 export const workspaceNavItemInactive =
-  'text-admin-sidebarTextMuted transition-[color,background-color] duration-200 ease-out hover:bg-black/[0.10] hover:text-white motion-reduce:transition-none';
+  'text-admin-sidebarTextMuted transition-[color,background-color] duration-200 ease-out hover:bg-white/[0.07] hover:text-admin-sidebarText motion-reduce:transition-none';
 
-/**
- * Active icon chip — slightly deeper tone on clay (no bright white pill).
- */
+/** Nav label — full label visible (longest item: Business Health). */
+export const workspaceNavItemLabel =
+  'whitespace-nowrap text-sm font-medium leading-snug';
+
+/** Active nav icon — inline with label inside the pill. */
 export const workspaceNavIconActive =
-  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/[0.12] text-white ring-0 shadow-none transition-[color,background-color] duration-200 ease-out motion-reduce:transition-none';
+  'inline-flex h-7 w-7 shrink-0 items-center justify-center text-admin-sidebarText';
 
-/**
- * Inactive icon chip — soft clay tone; deepens on row hover.
- */
+/** Inactive nav icon — muted; brightens on row hover. */
 export const workspaceNavIconInactive =
-  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/[0.08] text-admin-sidebarText transition-[color,background-color] duration-200 ease-out motion-reduce:transition-none group-hover:bg-black/[0.14] group-hover:text-white';
+  'inline-flex h-7 w-7 shrink-0 items-center justify-center text-admin-sidebarTextMuted transition-colors duration-200 ease-out group-hover:text-admin-sidebarText';
 
-/** Sidebar — warm clay wash (deeper than page canvas + primary CTA). */
+/** Sidebar clay panel — `<aside>` paints gradient + right-edge seam radius. */
+export const workspaceSidebarPanel = [
+  'flex min-h-0 shrink-0 flex-col self-stretch',
+  WORKSPACE_SHELL_SIDEBAR_PANEL,
+  'bg-gradient-to-b from-admin-sidebarSurface from-0% via-[rgb(var(--admin-sidebar-surface)_/_1)] via-[38%] to-admin-sidebarSurfaceDeep to-100%',
+].join(' ');
+
+/** Mobile drawer panel — fixed overlay; full viewport height. */
+export const workspaceSidebarMobilePanel = [
+  'flex h-dvh min-h-dvh flex-col',
+  WORKSPACE_SHELL_SIDEBAR_PANEL,
+  'bg-gradient-to-b from-admin-sidebarSurface from-0% via-[rgb(var(--admin-sidebar-surface)_/_1)] via-[38%] to-admin-sidebarSurfaceDeep to-100%',
+  'shadow-[4px_0_24px_-8px_rgba(58,32,24,0.28)]',
+].join(' ');
+
+/** @deprecated Prefer {@link workspaceSidebarPanel} for the inset clay shell. */
 export const workspaceSidebarSurface =
-  'border-r border-admin-sidebarDivider/40 bg-gradient-to-b from-admin-sidebarSurface to-admin-sidebarSurfaceDeep';
+  'bg-gradient-to-b from-admin-sidebarSurface to-admin-sidebarSurfaceDeep';
 
-/** Bottom account region — divider from nav, identity cluster + separated sign-out (`mt-auto` in flex column). */
+/** Sidebar brand block — wordmark + workspace label + tagline (inset column). */
+export const workspaceSidebarBrandBlock = `mb-6 ${workspaceSidebarInsetWidth} border-b border-admin-sidebarDivider/30 pb-5`;
+
+/** Playfair wordmark on clay sidebar. */
+export const workspaceSidebarBrandWordmark =
+  'font-fefe-heading text-[1.3125rem] font-semibold leading-[1.05] tracking-[-0.01em] text-admin-sidebarText';
+
+/** Identity line under wordmark (e.g. Reseller Workspace). */
+export const workspaceSidebarBrandTitle =
+  'mt-2 text-sm font-medium leading-snug tracking-tight text-admin-sidebarTextMuted';
+
+/** @deprecated Single identity line under wordmark — do not stack extra labels. */
+export const workspaceSidebarBrandTagline =
+  'mt-0.5 text-[11px] font-normal leading-relaxed text-admin-sidebarTextMuted/95';
+
+/** Bottom account region — same content column width; divider from nav. */
 export const workspaceSidebarAccountSection =
-  'mt-auto flex flex-col gap-3 border-t border-admin-sidebarDivider/72 pt-3.5';
+  'mt-auto flex w-full flex-col gap-3 border-t border-admin-sidebarDivider/72 pt-3.5';
 
 /** Divider + cushion above sidebar sign-out so it reads as account actions vs identity meta. */
 export const workspaceSidebarAccountSignOutCluster =
@@ -192,9 +301,11 @@ export const workspaceSidebarSignOut =
  */
 export const workspaceMutedStrip = 'bg-admin-mutedStrip';
 
-/** Content card / panel — clean white on warm canvas */
-export const workspaceCard =
-  'rounded-lg border border-admin-border/95 bg-admin-surfaceElevated shadow-workspace-surface-warm';
+/** Content card / panel — clean white on warm canvas (A1: 12px radius). */
+export const workspaceCard = WORKSPACE_CARD_SHELL;
+
+/** Bordered white surface with a lighter lift (nested blocks) */
+export const workspacePanel = WORKSPACE_PANEL_SHELL;
 
 /**
  * Show detail — **left**: build payout + settlements (neutral operating rail).
@@ -206,13 +317,13 @@ export const workspaceShowDetailOperatingShell = `${workspaceCard} shadow-[inset
  * no rose accent rail); reads as "outcome" via placement + content, not via tint.
  */
 export const workspaceShowDetailOutcomeShell =
-  'rounded-lg border border-admin-border/90 bg-admin-mutedStrip/85 shadow-workspace-surface-warm-sm';
+  'rounded-workspace-lg border border-admin-border/90 bg-admin-mutedStrip/85 shadow-workspace-surface-warm-sm';
 
 /**
  * Balances index — primary liability table (importance without dense styling).
  */
 export const workspaceBalancesPrimaryTableShell =
-  'min-w-0 overflow-hidden rounded-xl border border-admin-border/95 bg-white shadow-[0_4px_28px_-14px_rgba(120,113,108,0.16)]';
+  'min-w-0 overflow-hidden rounded-workspace-lg border border-admin-border/95 bg-white shadow-[0_4px_28px_-14px_rgba(120,113,108,0.16)]';
 
 /** Sticky head for financial index tables (Balances). */
 export const workspaceTableTheadFinancial =
@@ -222,11 +333,7 @@ export const workspaceTableTheadFinancial =
  * Wholesaler detail — **left** money / payment control stack.
  */
 export const workspaceBalanceDetailControlShell =
-  'overflow-hidden rounded-xl border border-admin-border/95 bg-white shadow-[0_4px_24px_-12px_rgba(120,113,108,0.14)]';
-
-/** Bordered white surface with a lighter lift (nested blocks) */
-export const workspacePanel =
-  'rounded-lg border border-admin-border/95 bg-admin-surfaceElevated shadow-workspace-surface-warm-sm';
+  'overflow-hidden rounded-workspace-lg border border-admin-border/95 bg-white shadow-[0_4px_24px_-12px_rgba(120,113,108,0.14)]';
 
 /**
  * Wholesaler detail — **right** ledger (flat, trustworthy record; not decorative).
@@ -244,15 +351,17 @@ export const workspaceSectionToolbar =
   'flex flex-wrap items-center justify-between gap-2 border-b border-admin-border/90 bg-admin-mutedStrip/45 px-4 py-3';
 
 /** Page-level H1 */
-export const workspacePageTitle = 'text-2xl font-semibold text-gray-900';
+export const workspacePageTitle =
+  'text-2xl font-semibold tracking-tight text-admin-ink';
 
 /** Subtitle / context under page title (e.g. week range) */
-export const workspacePageMeta = 'mt-1 text-sm text-gray-600';
+export const workspacePageMeta = 'mt-1 text-sm text-admin-inkMuted';
 
 // --- Page intro strip (soft boutique workspace) -------------------------------
 
 export {
   WORKSPACE_CONTAINER_GUTTER,
+  WORKSPACE_CONTAINER_INSET_X,
   WORKSPACE_CONTAINER_TIER,
   workspaceContainerFrameClass,
   workspaceContainerTierClass,
@@ -298,7 +407,8 @@ export const workspacePageIntroToContentGap = 'pt-2 md:pt-2.5';
  * decorative hairlines, no wave/blob — warmth comes from the surface tint and
  * the small accent rail (`workspacePageIntroAccent`) only.
  */
-export const workspacePageIntroZone = 'relative z-10 bg-admin-canvas';
+/** Page intro band — canvas bg comes from {@link workspaceShellColumn}; do not repaint here. */
+export const workspacePageIntroZone = 'relative z-10';
 
 /**
  * Flatter intro strip for nested entity pages (e.g. wholesaler under Balances).
@@ -307,8 +417,30 @@ export const workspacePageIntroZone = 'relative z-10 bg-admin-canvas';
 export const workspacePageEntityIntroZone =
   'relative z-10 bg-white border-b border-stone-200/80';
 
-/** Vertical rhythm inside intro zone; horizontal rhythm comes from main layout padding. */
-export const workspacePageIntroZoneInner = 'relative';
+/** Horizontal inset for page titles, subtitles, and section eyebrows. */
+export const workspacePageChromeInset = WORKSPACE_PAGE_CHROME_INSET_X;
+
+/** Vertical rhythm inside intro zone; horizontal rhythm from container gutter + chrome inset. */
+export const workspacePageIntroZoneInner = `relative ${WORKSPACE_PAGE_CHROME_INSET_X}`;
+
+/** A1 page-aware header — title row + subtitle rhythm (see `WorkspacePageHeader`). */
+export const workspacePageHeaderPadding = 'py-4 md:py-5';
+
+export const workspacePageHeaderTitle = WORKSPACE_PAGE_TITLE;
+
+export const workspacePageHeaderTitleDecorationGap = 'gap-2';
+
+export const workspacePageHeaderSubtitle = WORKSPACE_PAGE_SUBTITLE;
+
+/** Page-level section eyebrow outside bordered cards (WORKSPACE OVERVIEW, etc.). */
+export const workspacePageSectionEyebrow = WORKSPACE_PAGE_SECTION_EYEBROW;
+
+/** Title + utilities share one row on sm+; stacks cleanly on narrow viewports. */
+export const workspacePageHeaderTitleRow =
+  'flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between sm:gap-4';
+
+export const workspacePageHeaderUtilitiesCluster =
+  'flex w-full min-w-0 items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-end';
 
 /**
  * Optional left accent rail for intro text block — primary action terracotta (brighter than sidebar clay).
@@ -365,13 +497,11 @@ export const workspacePageIntroMetaDatePillRange =
 export const workspacePageIntroMetaDatePillSingle =
   'text-xs font-semibold tabular-nums leading-snug text-admin-ink';
 
-/** In-card section H2 */
-export const workspaceSectionTitle =
-  'text-base font-semibold tracking-tight text-admin-ink';
+/** In-card section H2 — prefer {@link WORKSPACE_CARD_TITLE}. */
+export const workspaceSectionTitle = WORKSPACE_CARD_TITLE;
 
-/** Uppercase label above a metric or block */
-export const workspaceLabelEyebrow =
-  'text-[11px] font-semibold uppercase tracking-wider text-admin-inkMuted';
+/** Uppercase label above a metric or block — prefer {@link WORKSPACE_LABEL}. */
+export const workspaceLabelEyebrow = WORKSPACE_LABEL;
 
 /**
  * Ledger index tables — softer row separators than generic `divide-gray-100`
@@ -409,13 +539,12 @@ export const workspaceStatTileValueSlot =
   'mt-3 flex min-h-[2.75rem] flex-1 flex-col gap-1.5 sm:mt-3.5';
 
 /** Typography baseline for the main KPI figure (consumers add semantic color classes). */
-export const workspaceStatTileValue =
-  'text-xl font-bold tabular-nums tracking-tight sm:text-[1.625rem] sm:leading-snug';
+export const workspaceStatTileValue = WORKSPACE_VALUE_KPI;
 
 /**
  * Optional secondary line — render only when real supporting copy exists (never placeholder metrics).
  */
-export const workspaceStatTileMeta = 'text-xs leading-snug text-admin-inkMuted';
+export const workspaceStatTileMeta = WORKSPACE_LABEL_CAPTION;
 
 /**
  * Canonical stat-card surfaces (`AdminSummaryStatGrid` — one vocabulary app-wide).
@@ -495,69 +624,62 @@ export function getWorkspaceSummaryStatSurfaceClass(
 }
 
 /**
- * Icon chip shell paired with {@link WorkspaceStatCardSurface} for dashboards + skeletons.
+ * Icon chip shell paired with {@link WorkspaceStatCardSurface} — uses {@link getWorkspaceIconWellClass}.
  */
+const STAT_SURFACE_TO_ICON_WELL: Record<
+  WorkspaceStatCardSurface,
+  WorkspaceIconWellVariant
+> = {
+  profit: 'success',
+  owed: 'liability',
+  completed: 'milestone',
+  positive: 'success',
+  negative: 'liability',
+  neutral: 'neutral',
+  warning: 'liability',
+  attention: 'attention',
+};
+
+const STAT_ICON_WELL_SIZE = '!h-9 !w-9 sm:!h-10 sm:!w-10';
+const STAT_ICON_SVG_SIZE =
+  '[&_svg]:h-[1.125rem] [&_svg]:w-[1.125rem] sm:[&_svg]:h-[1.35rem] sm:[&_svg]:w-[1.35rem]';
+
 export function getWorkspaceSummaryStatIconChipClass(
   surface: WorkspaceStatCardSurface,
 ): string {
-  switch (surface) {
-    case 'profit':
-      return workspaceDashboardStatIconProfit;
-    case 'owed':
-      return workspaceDashboardStatIconOwed;
-    case 'completed':
-      return workspaceDashboardStatIconCompleted;
-    case 'positive':
-      return workspaceDashboardStatIconPositive;
-    case 'negative':
-      return workspaceDashboardStatIconNegative;
-    case 'neutral':
-      return workspaceDashboardStatIconNeutral;
-    case 'warning':
-      return workspaceDashboardStatIconWarning;
-    case 'attention':
-      return workspaceDashboardStatIconAttention;
+  const well = `${getWorkspaceIconWellClass(STAT_SURFACE_TO_ICON_WELL[surface])} ${STAT_ICON_WELL_SIZE}`;
+  if (surface === 'profit') {
+    return `${well} text-[15px] font-bold leading-none sm:text-base`;
   }
-  return workspaceDashboardStatIconProfit;
+  return `${well} ${STAT_ICON_SVG_SIZE}`;
 }
 
-/**
- * KPI figure color on neutral-wash summary tiles — pair with `variant: 'neutral'`.
- */
-export const workspaceStatTileValueToneNeutral = 'text-admin-ink';
+/** @deprecated Use {@link getWorkspaceSummaryStatIconChipClass} — profit lane. */
+export const workspaceDashboardStatIconProfit =
+  getWorkspaceSummaryStatIconChipClass('profit');
 
-/**
- * KPI figure on warning-wash (clay) tiles — pair with `variant: 'warning'`.
- */
-export const workspaceStatTileValueToneWarning = 'text-admin-ink';
+/** @deprecated Use {@link getWorkspaceSummaryStatIconChipClass} — owed lane. */
+export const workspaceDashboardStatIconOwed =
+  getWorkspaceSummaryStatIconChipClass('owed');
 
-/** Shared round icon chip — soft neutral lift; pair with profit / owed / completed tone classes. */
-const workspaceDashboardStatIconShell =
-  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-admin-border/40 sm:h-10 sm:w-10';
-
-/** Dashboard KPI — YTD profit ($ glyph); muted terracotta on cream chip. */
-export const workspaceDashboardStatIconProfit = `${workspaceDashboardStatIconShell} text-[15px] font-bold leading-none text-admin-actionPrimary/72 sm:text-base`;
-
-/** Dashboard KPI — vendors owed; clay/peach glyph on cream chip (`--admin-kpi-accent-deep`). */
-export const workspaceDashboardStatIconOwed = `${workspaceDashboardStatIconShell} text-orange-900/72 [&_svg]:h-[1.125rem] [&_svg]:w-[1.125rem] sm:[&_svg]:h-[1.35rem] sm:[&_svg]:w-[1.35rem]`;
-
-/** Dashboard KPI — completed; muted warm gold glyph. */
-export const workspaceDashboardStatIconCompleted = `${workspaceDashboardStatIconShell} text-amber-900/70 [&_svg]:h-[1.125rem] [&_svg]:w-[1.125rem] sm:[&_svg]:h-[1.35rem] sm:[&_svg]:w-[1.35rem]`;
+/** @deprecated Use {@link getWorkspaceSummaryStatIconChipClass} — completed lane. */
+export const workspaceDashboardStatIconCompleted =
+  getWorkspaceSummaryStatIconChipClass('completed');
 
 /** Semantic aliases for balances / attention tiles (same chip family as dashboard KPIs). */
 export const workspaceDashboardStatIconPositive =
-  workspaceDashboardStatIconProfit;
+  getWorkspaceSummaryStatIconChipClass('positive');
 export const workspaceDashboardStatIconNegative =
-  workspaceDashboardStatIconOwed;
+  getWorkspaceSummaryStatIconChipClass('negative');
 export const workspaceDashboardStatIconNeutral =
-  workspaceDashboardStatIconCompleted;
-export const workspaceDashboardStatIconWarning = workspaceDashboardStatIconOwed;
+  getWorkspaceSummaryStatIconChipClass('neutral');
+export const workspaceDashboardStatIconWarning =
+  getWorkspaceSummaryStatIconChipClass('warning');
 export const workspaceDashboardStatIconAttention =
-  workspaceDashboardStatIconCompleted;
+  getWorkspaceSummaryStatIconChipClass('attention');
 
-/** Eyebrow label inside summary stat tiles */
-export const workspaceStatEyebrow =
-  'text-[11px] font-semibold uppercase tracking-wider text-admin-inkMuted';
+/** Eyebrow label inside summary stat tiles — prefer {@link WORKSPACE_LABEL}. */
+export const workspaceStatEyebrow = WORKSPACE_LABEL;
 
 /**
  * Eyebrow immediately below the KPI icon row — spacing only; omitted when there is no icon row above.
@@ -641,7 +763,8 @@ export const workspaceFormLabelSecondary = 'text-sm font-medium text-gray-600';
 export const workspaceTableCellSecondary = 'text-sm tabular-nums text-gray-600';
 
 /** Secondary text (non-numeric) in admin table cells */
-export const workspaceTableCellMeta = 'text-sm text-gray-600';
+/** Table / summary row label column — prefer {@link WORKSPACE_LABEL_FIELD}. */
+export const workspaceTableCellMeta = WORKSPACE_LABEL_FIELD;
 
 /**
  * **Panel:** `workspaceCard` / `workspacePanel` — bordered, lifted surface for grouped content.
@@ -792,23 +915,26 @@ export const workspaceMoneyTabular = 'tabular-nums';
 /**
  * Profit / positive signed amounts — muted emerald (not bright success green).
  */
-export const workspaceMoneyPositive = 'text-emerald-800';
+export const workspaceMoneyPositive = 'text-admin-statusSuccess';
+
+export const workspaceMoneyLiability =
+  'text-admin-semanticLiability font-medium';
+
+/**
+ * Signed economic loss (negative profit) — semantic warning, not action CTA.
+ */
+export const workspaceMoneyNegative = 'text-admin-semanticLiability';
 
 /**
  * KPI figure on positive-wash summary tiles — pair with `variant: 'positive'` (same tone as {@link workspaceMoneyPositive}).
  */
 export const workspaceStatTileValueTonePositive = workspaceMoneyPositive;
 
-/**
- * Loss, negative signed amounts, liability emphasis — muted rose.
- */
-export const workspaceMoneyNegative = 'text-rose-800/90';
-
 /** Zero or ordinary amount in a neutral context */
-export const workspaceMoneyNeutral = 'text-gray-900';
+export const workspaceMoneyNeutral = 'text-admin-ink';
 
 /** Placeholder / unknown */
-export const workspaceMoneyMuted = 'text-gray-400';
+export const workspaceMoneyMuted = 'text-admin-inkMuted/70';
 
 /**
  * Signed economic value (e.g. profit). Null/NaN → muted.
@@ -824,8 +950,8 @@ export function workspaceMoneyClassForSigned(value: number | null): string {
  * Outstanding liability (owed / balance): >0 → muted danger; else subdued gray.
  */
 export function workspaceMoneyClassForLiability(value: number): string {
-  if (value > 0) return `${workspaceMoneyNegative} font-medium`;
-  return 'text-gray-500';
+  if (value > 0) return workspaceMoneyLiability;
+  return 'text-admin-inkMuted';
 }
 
 /**
@@ -901,6 +1027,12 @@ export const workspaceSidePanelTriggerOpenPrimary = `bg-admin-actionPrimaryHover
  * Secondary page/section action — Record payment in header, supporting flows (outline).
  */
 export const workspaceActionSecondaryMd = `inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-admin-border/90 bg-white px-3.5 py-2.5 text-sm font-medium text-gray-800 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out hover:border-admin-border hover:bg-admin-mutedStrip/75 hover:shadow-[0_4px_14px_-10px_rgba(62,48,42,0.2)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none sm:min-h-10 sm:py-2 ${focusRingSoft}`;
+
+/**
+ * Hub destination outline CTA — terracotta border/text; pairs with clay sidebar family.
+ * Use on dashboard overview cards (Shows, Vendors, Purchases).
+ */
+export const workspaceActionOutlinePrimaryMd = `inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-admin-actionPrimary/35 bg-white px-3.5 py-2.5 text-sm font-medium text-admin-actionPrimary shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out hover:border-admin-actionPrimary/55 hover:bg-admin-kpiSoft/35 hover:shadow-[0_4px_14px_-10px_rgba(156,48,35,0.18)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none sm:min-h-10 sm:py-2 ${focusRingSoft}`;
 
 /**
  * Completion workflow — Close out, Mark done (row / compact).
@@ -989,16 +1121,16 @@ export const workspaceBtnSecondary = workspaceActionSecondaryMd;
 // --- Show list status (Open / Closed) ----------------------------------------
 
 export const workspaceShowStatusPillClosed =
-  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-emerald-200/80 sm:gap-1.5 sm:px-2 sm:py-0.5 sm:text-xs bg-emerald-50/90 text-emerald-800';
+  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-admin-statusSuccess/25 sm:gap-1.5 sm:px-2 sm:py-0.5 sm:text-xs bg-admin-statusSuccessSoft text-admin-statusSuccess';
 
 export const workspaceShowStatusPillOpen =
-  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-blue-200/80 sm:gap-1.5 sm:px-2 sm:py-0.5 sm:text-xs bg-blue-50/90 text-blue-800';
+  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-admin-statusWarning/25 sm:gap-1.5 sm:px-2 sm:py-0.5 sm:text-xs bg-admin-statusWarningSoft text-admin-statusWarning';
 
 export const workspaceShowStatusDotClosed =
-  'h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600/80';
+  'h-1.5 w-1.5 shrink-0 rounded-full bg-admin-statusSuccess';
 
 export const workspaceShowStatusDotOpen =
-  'h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600/80';
+  'h-1.5 w-1.5 shrink-0 rounded-full bg-admin-statusWarning';
 
 export const workspaceShowStatusPillPlanned =
   'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-violet-200/85 sm:gap-1.5 sm:px-2 sm:py-0.5 sm:text-xs bg-violet-50/90 text-violet-900';

@@ -79,50 +79,83 @@
   --admin-border-warm: 232 212 215;
 
   /*
-   * Semantic admin workspace tokens — warm boutique operations chrome (additive).
-   * Hex equivalents (reference — tune visually against mocks):
-   *   --admin-canvas                    #faf7f2
-   *   --admin-sidebar-surface           #a67c74 (pastel clay; target mock)
-   *   --admin-sidebar-nav-active-surface #fdece4 (light peach pill)
-   *   --admin-sidebar-text              #fffaf7 (warm near-white)
-   *   --admin-sidebar-text-muted        #ffe8de (readable muted on clay)
-   *   --admin-sidebar-divider           #d67a66 @ ~opacity via Tailwind
-   *   --admin-header-surface            #faf7f2 (matches canvas)
-   *   --admin-header-border             #e5d8ce
-   *   --admin-surface-elevated          #ffffff (content cards)
-   *   --admin-border                    #d9cfc4 (warm structural)
-   *   --admin-muted-strip               #f6f1eb
+   * A1 Warm Clay — reseller workspace semantic tokens.
+   * Reference mock: WARM CLAY (Refined Current + Warmth).
+   * Hex equivalents:
+   *   --admin-canvas                    #fcfbfa (warm off-white)
+   *   --admin-sidebar-surface           #a35f4d (deep warm clay)
+   *   --admin-sidebar-surface-deep      #8f4a3a
+   *   --admin-sidebar-text              #fffaf7
+   *   --admin-sidebar-text-muted        #f5ddd4
+   *   --admin-sidebar-divider           #c46b55
+   *   --admin-header-surface            #faf9f6
+   *   --admin-header-border             #e5ddd4
+   *   --admin-surface-elevated          #ffffff
+   *   --admin-border                    #e0d6cc
+   *   --admin-muted-strip               #f5f1eb
    *   --admin-ink                       #2d2926
-   *   --admin-ink-muted                 #706b67
-   *   --admin-kpi-soft                  #fde2d2 (profit / default KPI)
-   *   --admin-kpi-accent                #fcd5c1 (vendors owed)
-   *   --admin-kpi-gold                  #fee8c1 (completed / milestones)
-   *   --admin-kpi-sage                  #a8b296 (attention / future ops)
-   *   --admin-action-primary            #d05844 (brighter terracotta CTA)
-   *   --admin-action-primary-hover      #bc4736
+   *   --admin-ink-muted                 #6b6560
+   *   --admin-kpi-soft                  #fce8dc
+   *   --admin-kpi-accent                #f9d5c8
+   *   --admin-kpi-gold                  #fdf0d4
+   *   --admin-kpi-sage                  #d4dfc8
+   *   --admin-action-primary            #9c3023 (deep terracotta CTA)
+   *   --admin-action-primary-hover      #8a2a1f
+   *   --admin-status-success            #2d5a27
+   *   --admin-status-success-soft       #e8f0e4
+   *   --admin-status-warning            #b45309
+   *   --admin-status-warning-soft       #fef3e2
+   *   --admin-status-info               #1d4ed8
+   *   --admin-status-info-soft          #eff6ff
    */
-  --admin-canvas: 250 247 242;
-  /* Pastel clay sidebar — sampled from target mock (~#a67c74) */
-  --admin-sidebar-surface: 166 124 116;
-  --admin-sidebar-surface-deep: 152 110 103;
-  --admin-sidebar-nav-hover-surface: 178 138 131;
-  --admin-sidebar-nav-active-surface: 190 148 140;
+  --admin-canvas: 252 251 250;
+  --admin-sidebar-surface: 163 95 77;
+  --admin-sidebar-surface-deep: 143 74 58;
+  --admin-sidebar-nav-hover-surface: 176 108 90;
+  --admin-sidebar-nav-active-surface: 255 255 255;
   --admin-sidebar-text: 255 250 247;
-  --admin-sidebar-text-muted: 255 232 222;
-  --admin-sidebar-divider: 214 122 102;
-  --admin-header-surface: 250 247 242;
-  --admin-header-border: 229 216 206;
+  --admin-sidebar-text-muted: 245 221 212;
+  --admin-sidebar-divider: 196 107 85;
+  --admin-header-surface: 252 251 250;
+  --admin-header-border: 229 221 212;
   --admin-surface-elevated: 255 255 255;
-  --admin-border: 217 207 196;
-  --admin-muted-strip: 246 241 235;
+  --admin-border: 224 214 204;
+  --admin-muted-strip: 245 241 235;
   --admin-ink: 45 41 38;
-  --admin-ink-muted: 112 107 103;
-  --admin-kpi-soft: 253 226 210;
-  --admin-kpi-accent: 252 213 193;
-  --admin-kpi-gold: 254 232 193;
-  --admin-kpi-sage: 168 178 150;
-  --admin-action-primary: 208 88 68;
-  --admin-action-primary-hover: 188 71 54;
+  --admin-ink-muted: 107 101 96;
+  --admin-kpi-soft: 252 232 220;
+  --admin-kpi-accent: 249 213 200;
+  --admin-kpi-gold: 253 240 212;
+  --admin-kpi-sage: 212 223 200;
+  --admin-action-primary: 156 48 35;
+  --admin-action-primary-hover: 138 42 31;
+  /*
+   * Semantic money / trend (distinct from action CTAs).
+   * Liability + negative trends share warning hue; action-primary is commit-only.
+   */
+  --admin-semantic-liability: 180 83 9;
+  --admin-status-success: 45 90 39;
+  --admin-status-success-soft: 232 240 228;
+  --admin-status-warning: 180 83 9;
+  --admin-status-warning-soft: 254 243 226;
+  --admin-status-info: 29 78 216;
+  --admin-status-info-soft: 239 246 255;
+  /*
+   * Semantic icon-well surfaces (~20% stronger than *-soft washes).
+   * Green = money/profit · Amber = obligations · Blue = workflow attention · Clay = neutral/historical
+   */
+  --admin-semantic-green-surface: 195 210 190;
+  --admin-semantic-amber-surface: 239 211 183;
+  --admin-semantic-blue-surface: 197 212 246;
+  --admin-semantic-clay-surface: 235 228 218;
+
+  /*
+   * Workspace radius tokens (A1) — use via Tailwind arbitrary or design token helpers.
+   */
+  --workspace-radius-sm: 6px;
+  --workspace-radius-md: 8px;
+  --workspace-radius-lg: 12px;
+  --workspace-radius-xl: 16px;
 }
 
 /**

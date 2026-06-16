@@ -3,10 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BalancesPageSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
-import {
-  AdminWorkspacePageIntro,
-  AdminWorkspacePageLayout,
-} from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { AdminWorkspacePageLayout } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { WORKSPACE_TOP_LEVEL_PAGE_HEADERS } from "@/app/(admin)/admin/_lib/workspaceTopLevelPageHeaders";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
 import { WorkspaceSegmentedControl } from "@/app/(admin)/admin/_components/WorkspaceSegmentedControl";
@@ -17,7 +15,6 @@ import { VENDOR_BALANCES_INVALIDATE_EVENT } from "@/lib/vendorBalancesInvalidate
 import {
   WORKFLOW_NEW_VENDOR_PANEL_SUBTITLE,
   WORKFLOW_NEW_VENDOR_PANEL_TITLE,
-  WORKFLOW_VENDORS_PAGE_SUBTITLE,
   WORKFLOW_VENDORS_VIEW_ALL_VENDORS,
   WORKFLOW_VENDORS_VIEW_NEEDS_PAYMENT,
   WORKFLOW_VENDORS_VIEW_PARTIALLY_PAID,
@@ -190,12 +187,7 @@ export default function AdminBalancesPage() {
     return (
       <AdminWorkspacePageLayout
         containerTier="full"
-        intro={
-          <AdminWorkspacePageIntro
-            title="Vendors"
-            subtitle={WORKFLOW_VENDORS_PAGE_SUBTITLE}
-          />
-        }
+        pageHeader={WORKSPACE_TOP_LEVEL_PAGE_HEADERS.vendors}
       >
         <WorkspaceInlineError
           title="Could not load vendors"
@@ -235,12 +227,7 @@ export default function AdminBalancesPage() {
     >
       <AdminWorkspacePageLayout
         containerTier="full"
-        intro={
-          <AdminWorkspacePageIntro
-            title="Vendors"
-            subtitle={WORKFLOW_VENDORS_PAGE_SUBTITLE}
-          />
-        }
+        pageHeader={WORKSPACE_TOP_LEVEL_PAGE_HEADERS.vendors}
       >
         {refreshError != null ? (
           <WorkspaceInlineError

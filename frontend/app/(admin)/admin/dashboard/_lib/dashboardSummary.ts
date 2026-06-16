@@ -1,6 +1,10 @@
 import { isDateInWeek } from '@/lib/weekRange';
 import { WORKFLOW_DASHBOARD_PERFECT_WEEK_CALM } from '@/app/(admin)/admin/_lib/adminWorkflowCopy';
 import {
+  resolveDashboardAttentionHref,
+  type ShowCloseOutCandidate,
+} from '@/app/(admin)/admin/_lib/showRoutes';
+import {
   countActiveShows,
   parseBalanceAmount,
 } from '@/app/(admin)/admin/_lib/workspaceAttentionItems';
@@ -8,6 +12,7 @@ import {
 export type DashboardHeroStatusBandKind = 'calm' | 'attention' | 'none';
 
 export type BuildDashboardHeroSummaryInput = {
+  shows: readonly ShowCloseOutCandidate[];
   weekProfit: number | null;
   weekProfitError: string | null;
   totalVendorBalance: number | null;
@@ -29,6 +34,7 @@ export type DashboardHeroSummary = {
   statusBand: DashboardHeroStatusBandKind;
   calmMessage: string | null;
   attentionHint: string | null;
+  attentionHref: string | null;
   fetchErrorTitle: string | null;
   fetchErrorMessage: string | null;
 };
@@ -134,6 +140,14 @@ export function buildDashboardHeroSummary(
             openShowsCount: input.openShowsCount,
             totalVendorBalance: vendorBalanceAmount,
             formatCurrency,
+          })
+        : null,
+    attentionHref:
+      statusBand === 'attention'
+        ? resolveDashboardAttentionHref({
+            shows: input.shows,
+            openShowsCount: input.openShowsCount,
+            totalVendorBalance: vendorBalanceAmount,
           })
         : null,
     fetchErrorTitle: fetchError?.title ?? null,

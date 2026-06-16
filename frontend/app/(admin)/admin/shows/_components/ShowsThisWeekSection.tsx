@@ -15,6 +15,7 @@ import {
   workspaceThisWeekSectionRoot,
   workspaceThisWeekSubtitle,
 } from "@/app/(admin)/admin/_lib/workspaceThisWeekSurface";
+import { WORKSPACE_WEEK_SECTION_TITLE } from "@/app/(admin)/admin/_lib/workspaceDesignTokens";
 import type { WeekBounds } from "@/lib/weekRange";
 import type { ShowViewModel } from "@/src/lib/api/shows";
 import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
@@ -48,7 +49,7 @@ export function ShowsThisWeekSection({
           <div className="min-w-0">
             <h2
               id="shows-this-week-heading"
-              className="text-lg font-semibold tracking-tight text-admin-ink sm:text-xl"
+              className={WORKSPACE_WEEK_SECTION_TITLE}
             >
               {WORKFLOW_THIS_WEEK_HEADING}
             </h2>

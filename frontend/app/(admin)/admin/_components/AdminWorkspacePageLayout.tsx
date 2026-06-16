@@ -7,6 +7,10 @@ import {
   AdminPageIntroSection,
 } from "./AdminPageContainer";
 import { AdminPageIntro } from "./AdminPageIntro";
+import {
+  WorkspacePageHeader,
+  type WorkspacePageHeaderProps,
+} from "./workspace/WorkspacePageHeader";
 
 /** Page intro with Dashboard-aligned defaults (no wave, no left accent rail). */
 export function AdminWorkspacePageIntro(
@@ -18,31 +22,57 @@ export function AdminWorkspacePageIntro(
   return <AdminPageIntro decoration="none" useAccent={false} {...props} />;
 }
 
-/**
- * Standard admin page shell — intro band + content column aligned to Dashboard.
- * Use on index pages (Balances, Shows, Owner activity, etc.). Safe inside
- * `WorkspacePageWithRightPanel` (pass `intro` + `children` only; panel stays outside).
- */
-export function AdminWorkspacePageLayout({
-  intro,
-  children,
-  containerTier = "standard",
-  contentStackClassName,
-  introVariant = "default",
-}: {
-  intro: ReactNode;
+type AdminWorkspacePageLayoutBase = {
   children: ReactNode;
   containerTier?: WorkspaceContainerTier;
   contentStackClassName?: string;
   introVariant?: "default" | "entity-detail";
-}) {
+};
+
+export type AdminWorkspacePageLayoutProps = AdminWorkspacePageLayoutBase &
+  (
+    | {
+        /** A1 page-aware header — title row + utilities; hides legacy global bar. */
+        pageHeader: WorkspacePageHeaderProps;
+        intro?: never;
+      }
+    | {
+        /** Legacy intro node (settings, detail pages, unmigrated screens). */
+        intro: ReactNode;
+        pageHeader?: never;
+      }
+  );
+
+/**
+ * Standard admin page shell — intro band + content column.
+ *
+ * **Top-level index pages:** pass `pageHeader` with title/subtitle (see
+ * {@link WORKSPACE_TOP_LEVEL_PAGE_HEADERS}). One prop registers page-aware mode,
+ * renders utilities, and keeps loading/error/success states consistent.
+ *
+ * **Detail / settings pages:** pass `intro` with `AdminPageIntro` until migrated.
+ */
+export function AdminWorkspacePageLayout({
+  intro,
+  pageHeader,
+  children,
+  containerTier = "standard",
+  contentStackClassName,
+  introVariant = "default",
+}: AdminWorkspacePageLayoutProps) {
+  const introNode = pageHeader ? (
+    <WorkspacePageHeader {...pageHeader} />
+  ) : (
+    intro
+  );
+
   return (
     <>
       <AdminPageIntroSection
         containerTier={containerTier}
         variant={introVariant}
       >
-        {intro}
+        {introNode}
       </AdminPageIntroSection>
       <AdminPageContainer
         containerTier={containerTier}

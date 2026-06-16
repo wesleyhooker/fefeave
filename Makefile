@@ -24,7 +24,7 @@ DEV_POLL_ENV := WATCHPACK_POLLING=true CHOKIDAR_USEPOLLING=true WATCHPACK_POLLIN
 .PHONY: help format format-check lint test build check doctor
 .PHONY: backend-lint backend-test backend-build backend-check
 .PHONY: frontend-lint frontend-build frontend-check
-.PHONY: dev dev-up dev-down dev-status dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-cognito
+.PHONY: dev dev-up dev-down dev-status dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-cognito dev-reset-frontend
 .PHONY: dev-db-up dev-db-down dev-db-reset dev-migrate dev-seed dev-seed-verify dev-reset dev-backfill-financial-events check-cognito-env
 .PHONY: init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-backend-health dev-backend-wholesalers
 
@@ -67,6 +67,7 @@ help:
 	@echo "    make dev-cognito        DB + migrate + tmux with Cognito"
 	@echo "    make dev-status         Hit local backend endpoints"
 	@echo "    make dev-down           Kill dev processes on 3000/3001 and tmux session"
+	@echo "    make dev-reset-frontend Stop UI, clear frontend/.next, restart UI (fixes stale Next cache)"
 	@echo ""
 	@echo "  Database / migrations:"
 	@echo "    make dev-db-up          Start local Postgres (docker compose)"
@@ -389,7 +390,7 @@ dev-ui:
 	@if grep -qi microsoft /proc/version 2>/dev/null; then \
 	  echo "WSL detected — frontend file polling enabled (webpack watchOptions.poll)"; \
 	fi
-	@$(DEV_POLL_ENV) NEXT_PUBLIC_BACKEND_URL=/api npm --prefix frontend run dev -- -H 0.0.0.0 -p 3001
+	@$(DEV_POLL_ENV) NEXT_DEV_PORT=3001 NEXT_PUBLIC_BACKEND_URL=/api npm --prefix frontend run dev -- -H 0.0.0.0 -p 3001
 
 dev-tmux:
 	@if ! test -t 1 || ! command -v tmux >/dev/null 2>&1; then \
@@ -432,10 +433,18 @@ dev-status:
 	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/payments
 
 dev-down:
-	@kill -9 $$(lsof -t -iTCP:3000 -sTCP:LISTEN) 2>/dev/null || true
-	@kill -9 $$(lsof -t -iTCP:3001 -sTCP:LISTEN) 2>/dev/null || true
+	@node frontend/scripts/dev/kill-dev-listeners.mjs
 	@if command -v tmux >/dev/null 2>&1; then tmux kill-session -t fefeave-dev 2>/dev/null || true; fi
 	@echo "Dev cleanup done."
+
+# Clears corrupted Next dev cache after `npm run build` while dev-ui was still running.
+# Keeps backend (:3000) and DB intact — only resets the Next UI process + `.next`.
+dev-reset-frontend:
+	@KILL_DEV_PORTS=3001 node frontend/scripts/dev/kill-dev-listeners.mjs
+	@rm -rf frontend/.next
+	@echo "Cleared frontend/.next (backend/DB untouched)."
+	@echo "Starting UI on :3001 — wait for Next 'Ready' before screenshots."
+	@$(MAKE) dev-ui
 
 ui-aws:
 	@echo "Preparing frontend/.env.local with NEXT_PUBLIC_BACKEND_URL=/api"
@@ -452,7 +461,7 @@ ui-aws:
 	DEV_BACKEND_ORIGIN="$${backend_url%/}" \
 	  && echo "Using DEV_BACKEND_ORIGIN=$$DEV_BACKEND_ORIGIN" \
 	  && cd frontend \
-	  && DEV_BACKEND_ORIGIN="$$DEV_BACKEND_ORIGIN" npm run dev -- -H 0.0.0.0 -p 3000
+	  && NEXT_DEV_PORT=3000 DEV_BACKEND_ORIGIN="$$DEV_BACKEND_ORIGIN" npm run dev -- -H 0.0.0.0 -p 3000
 
 dev-backend-health:
 	@echo "Checking dev backend health endpoint"

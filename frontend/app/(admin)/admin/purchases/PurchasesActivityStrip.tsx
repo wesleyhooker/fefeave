@@ -5,6 +5,11 @@ import { useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { workflowPurchasesInventorySummaryLabel } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
+  WORKSPACE_LABEL_CAPTION,
+  WORKSPACE_VALUE_KPI_HERO,
+  WORKSPACE_VALUE_STRIP,
+} from "@/app/(admin)/admin/_lib/workspaceDesignTokens";
+import {
   WorkspaceCard,
   WorkspaceCardBody,
 } from "@/app/(admin)/admin/_components/WorkspaceCard";
@@ -27,8 +32,6 @@ import {
 
 const LOOKBACK_DAYS = 30;
 
-const stripMetricValueBase = "font-semibold tabular-nums tracking-tight";
-
 function parseAmount(value: string): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -47,15 +50,12 @@ function StripMetric({
     <div className="flex min-w-0 flex-col justify-center">
       <p
         className={
-          valueClassName ??
-          `text-base ${stripMetricValueBase} text-stone-900 sm:text-lg`
+          valueClassName ?? `${WORKSPACE_VALUE_STRIP} ${workspaceMoneyTabular}`
         }
       >
         {children}
       </p>
-      <p className="mt-0.5 text-xs font-medium leading-snug text-stone-600">
-        {label}
-      </p>
+      <p className={`mt-0.5 ${WORKSPACE_LABEL_CAPTION}`}>{label}</p>
     </div>
   );
 }
@@ -157,7 +157,7 @@ export function PurchasesActivityStrip({
           <div className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-x-6 lg:gap-x-8">
             <StripMetric
               label={workflowPurchasesInventorySummaryLabel(LOOKBACK_DAYS)}
-              valueClassName={`text-2xl ${stripMetricValueBase} text-stone-900 sm:text-3xl ${workspaceMoneyTabular}`}
+              valueClassName={`${WORKSPACE_VALUE_KPI_HERO} text-stone-900 ${workspaceMoneyTabular}`}
             >
               {formatCurrency(inventoryTotal ?? 0)}
             </StripMetric>
@@ -183,7 +183,7 @@ export function PurchasesActivityStrip({
           <div className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-x-6 lg:gap-x-8">
             <StripMetric
               label={`Expenses (${LOOKBACK_DAYS}d)`}
-              valueClassName={`text-2xl ${stripMetricValueBase} text-stone-900 sm:text-3xl ${workspaceMoneyTabular}`}
+              valueClassName={`${WORKSPACE_VALUE_KPI_HERO} text-stone-900 ${workspaceMoneyTabular}`}
             >
               {formatCurrency(expensesTotal ?? 0)}
             </StripMetric>

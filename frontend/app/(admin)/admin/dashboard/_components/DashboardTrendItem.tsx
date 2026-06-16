@@ -1,19 +1,22 @@
 "use client";
 
 import {
+  WORKSPACE_LABEL_CAPTION,
+  WORKSPACE_TREND_ITEM_VALUE,
+  WORKSPACE_TREND_NEGATIVE,
+  WORKSPACE_TREND_NEUTRAL,
+  WORKSPACE_TREND_POSITIVE,
+} from "@/app/(admin)/admin/_lib/workspaceDesignTokens";
+import {
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
   workspaceMoneyMuted,
 } from "@/app/(admin)/admin/_components/workspaceUi";
 import type { DashboardTrendItemModel } from "../_lib/dashboardTrendStrip";
 import {
-  dashboardTrendDeltaDown,
-  dashboardTrendDeltaNeutral,
-  dashboardTrendDeltaUp,
   dashboardTrendItemCell,
   dashboardTrendItemHelper,
   dashboardTrendItemLabel,
-  dashboardTrendItemValue,
 } from "./dashboardStructure";
 
 function deltaClassForDirection(
@@ -21,14 +24,16 @@ function deltaClassForDirection(
   itemId: DashboardTrendItemModel["id"],
 ): string {
   if (direction === "neutral" || direction === "none") {
-    return dashboardTrendDeltaNeutral;
+    return WORKSPACE_TREND_NEUTRAL;
   }
   if (itemId === "vendorOutstanding") {
     return direction === "down"
-      ? dashboardTrendDeltaUp
-      : dashboardTrendDeltaDown;
+      ? WORKSPACE_TREND_POSITIVE
+      : WORKSPACE_TREND_NEGATIVE;
   }
-  return direction === "up" ? dashboardTrendDeltaUp : dashboardTrendDeltaDown;
+  return direction === "up"
+    ? WORKSPACE_TREND_POSITIVE
+    : WORKSPACE_TREND_NEGATIVE;
 }
 
 function valueClassForItem(item: DashboardTrendItemModel): string {
@@ -36,12 +41,12 @@ function valueClassForItem(item: DashboardTrendItemModel): string {
     return `text-base font-semibold ${workspaceMoneyMuted}`;
   }
   if (item.valueTone === "profit" && item.numericValue != null) {
-    return `text-lg font-semibold tabular-nums tracking-tight sm:text-xl ${workspaceListPrimaryMoneyAmountClass(item.numericValue)}`;
+    return `${WORKSPACE_TREND_ITEM_VALUE} ${workspaceListPrimaryMoneyAmountClass(item.numericValue)}`;
   }
   if (item.valueTone === "liability" && item.numericValue != null) {
-    return `text-lg font-semibold tabular-nums tracking-tight sm:text-xl ${workspaceMoneyClassForLiability(item.numericValue)}`;
+    return `${WORKSPACE_TREND_ITEM_VALUE} ${workspaceMoneyClassForLiability(item.numericValue)}`;
   }
-  return dashboardTrendItemValue;
+  return WORKSPACE_TREND_ITEM_VALUE;
 }
 
 export function DashboardTrendItem({
@@ -55,7 +60,7 @@ export function DashboardTrendItem({
       <p className={`mt-1 ${valueClassForItem(item)}`}>{item.value}</p>
       {item.delta != null ? (
         <p
-          className={`mt-1 text-xs font-medium leading-snug ${deltaClassForDirection(item.delta.direction, item.id)}`}
+          className={`mt-1 ${WORKSPACE_LABEL_CAPTION} ${deltaClassForDirection(item.delta.direction, item.id)}`}
           title={item.delta.ariaLabel}
         >
           {item.delta.text}

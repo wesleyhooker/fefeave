@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { dispatchWorkspaceInvalidate } from "@/lib/workspaceInvalidate";
-import {
-  AdminWorkspacePageIntro,
-  AdminWorkspacePageLayout,
-} from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { AdminWorkspacePageLayout } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { WORKSPACE_TOP_LEVEL_PAGE_HEADERS } from "@/app/(admin)/admin/_lib/workspaceTopLevelPageHeaders";
 import {
   WorkspaceGrid,
   WorkspaceGridItem,
@@ -14,7 +12,6 @@ import {
 import { WorkspacePageWithRightPanel } from "@/app/(admin)/admin/_components/WorkspacePageWithRightPanel";
 import { WorkspaceSegmentedControl } from "@/app/(admin)/admin/_components/WorkspaceSegmentedControl";
 import {
-  WORKFLOW_PURCHASES_PAGE_SUBTITLE,
   WORKFLOW_PURCHASES_RECORD_PURCHASE_PANEL_TITLE,
   WORKFLOW_PURCHASES_TAB_EXPENSES_HELPER,
   WORKFLOW_PURCHASES_TAB_INVENTORY_HELPER,
@@ -112,12 +109,7 @@ export default function PurchasesPageContent() {
     >
       <AdminWorkspacePageLayout
         containerTier="full"
-        intro={
-          <AdminWorkspacePageIntro
-            title="Purchases"
-            subtitle={WORKFLOW_PURCHASES_PAGE_SUBTITLE}
-          />
-        }
+        pageHeader={WORKSPACE_TOP_LEVEL_PAGE_HEADERS.purchases}
       >
         <WorkspaceGrid variant="stack" className="gap-6 md:gap-7">
           <WorkspaceGridItem span="full">

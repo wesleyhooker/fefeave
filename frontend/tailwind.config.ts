@@ -65,6 +65,24 @@ const config: Config = {
           actionPrimary: 'rgb(var(--admin-action-primary) / <alpha-value>)',
           actionPrimaryHover:
             'rgb(var(--admin-action-primary-hover) / <alpha-value>)',
+          semanticLiability:
+            'rgb(var(--admin-semantic-liability) / <alpha-value>)',
+          statusSuccess: 'rgb(var(--admin-status-success) / <alpha-value>)',
+          statusSuccessSoft:
+            'rgb(var(--admin-status-success-soft) / <alpha-value>)',
+          statusWarning: 'rgb(var(--admin-status-warning) / <alpha-value>)',
+          statusWarningSoft:
+            'rgb(var(--admin-status-warning-soft) / <alpha-value>)',
+          statusInfo: 'rgb(var(--admin-status-info) / <alpha-value>)',
+          statusInfoSoft: 'rgb(var(--admin-status-info-soft) / <alpha-value>)',
+          semanticGreenSurface:
+            'rgb(var(--admin-semantic-green-surface) / <alpha-value>)',
+          semanticAmberSurface:
+            'rgb(var(--admin-semantic-amber-surface) / <alpha-value>)',
+          semanticBlueSurface:
+            'rgb(var(--admin-semantic-blue-surface) / <alpha-value>)',
+          semanticClaySurface:
+            'rgb(var(--admin-semantic-clay-surface) / <alpha-value>)',
         },
       },
       spacing: {
@@ -90,6 +108,10 @@ const config: Config = {
       borderRadius: {
         'fefe-card': 'var(--fefe-card-radius)',
         'fefe-button': 'var(--fefe-button-radius)',
+        'workspace-sm': 'var(--workspace-radius-sm)',
+        'workspace-md': 'var(--workspace-radius-md)',
+        'workspace-lg': 'var(--workspace-radius-lg)',
+        'workspace-xl': 'var(--workspace-radius-xl)',
       },
       maxWidth: {
         'fefe-container': 'var(--fefe-container-max)',

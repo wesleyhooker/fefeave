@@ -3,6 +3,11 @@
 import type { ReactNode } from "react";
 import { formatCurrency } from "@/lib/format";
 import {
+  WORKSPACE_LABEL_CAPTION,
+  WORKSPACE_VALUE_KPI_HERO,
+  WORKSPACE_VALUE_STRIP,
+} from "@/app/(admin)/admin/_lib/workspaceDesignTokens";
+import {
   WorkspaceCard,
   WorkspaceCardBody,
 } from "@/app/(admin)/admin/_components/WorkspaceCard";
@@ -24,8 +29,6 @@ export type VendorsObligationSummary = {
   vendorsWithBalance: number;
 };
 
-const stripMetricValueBase = "font-semibold tabular-nums tracking-tight";
-
 /** Shared label/value stack — candidate for a future `OperationalMetricStrip` cell primitive. */
 function StripMetric({
   label,
@@ -40,15 +43,12 @@ function StripMetric({
     <div className="flex min-w-0 flex-col justify-center">
       <p
         className={
-          valueClassName ??
-          `text-base ${stripMetricValueBase} text-stone-900 sm:text-lg`
+          valueClassName ?? `${WORKSPACE_VALUE_STRIP} ${workspaceMoneyTabular}`
         }
       >
         {children}
       </p>
-      <p className="mt-0.5 text-xs font-medium leading-snug text-stone-600">
-        {label}
-      </p>
+      <p className={`mt-0.5 ${WORKSPACE_LABEL_CAPTION}`}>{label}</p>
     </div>
   );
 }
@@ -68,16 +68,12 @@ export function VendorsObligationStrip({
         <div className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-x-6 lg:gap-x-8">
           <StripMetric
             label={WORKFLOW_VENDORS_OUTSTANDING_LABEL}
-            valueClassName={`text-2xl ${stripMetricValueBase} sm:text-3xl ${workspaceMoneyClassForLiability(summary.totalOutstanding)}`}
+            valueClassName={`${WORKSPACE_VALUE_KPI_HERO} ${workspaceMoneyTabular} ${workspaceMoneyClassForLiability(summary.totalOutstanding)}`}
           >
             {formatCurrency(summary.totalOutstanding)}
           </StripMetric>
 
-          <div
-            className="grid min-w-0 grid-cols-3 gap-3 sm:gap-4 md:contents"
-            role="group"
-            aria-label="Supporting obligation metrics"
-          >
+          <div className="grid min-w-0 grid-cols-3 gap-3 sm:gap-4 md:contents">
             <StripMetric
               label={WORKFLOW_VENDORS_OBLIGATION_VENDORS_OWING_LABEL}
             >

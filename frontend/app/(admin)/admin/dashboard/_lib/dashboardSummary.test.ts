@@ -89,6 +89,7 @@ test('buildDashboardAttentionHint composes open shows and vendor balance', () =>
 test('buildDashboardHeroSummary shows calm band when caught up', () => {
   const summary = buildDashboardHeroSummary(
     {
+      shows: [],
       weekProfit: 1100,
       weekProfitError: null,
       totalVendorBalance: 0,
@@ -107,6 +108,13 @@ test('buildDashboardHeroSummary shows calm band when caught up', () => {
 test('buildDashboardHeroSummary shows attention hint when work remains', () => {
   const summary = buildDashboardHeroSummary(
     {
+      shows: [
+        {
+          id: 'show-1',
+          status: 'ACTIVE',
+          show_date: '2026-06-12',
+        },
+      ],
       weekProfit: 1100,
       weekProfitError: null,
       totalVendorBalance: 595,
@@ -121,11 +129,30 @@ test('buildDashboardHeroSummary shows attention hint when work remains', () => {
   assert.equal(summary.calmMessage, null);
   assert.match(summary.attentionHint ?? '', /close-out/);
   assert.match(summary.attentionHint ?? '', /\$595\.00/);
+  assert.equal(summary.attentionHref, '/admin/shows/show-1#show-close-out');
+});
+
+test('buildDashboardHeroSummary attention href falls back to vendors when only balance owed', () => {
+  const summary = buildDashboardHeroSummary(
+    {
+      shows: [],
+      weekProfit: 1100,
+      weekProfitError: null,
+      totalVendorBalance: 595,
+      balancesError: null,
+      showsError: null,
+      completedThisWeekCount: 2,
+      openShowsCount: 0,
+    },
+    formatCurrency,
+  );
+  assert.equal(summary.attentionHref, '/admin/vendors');
 });
 
 test('buildDashboardHeroSummary suppresses status band on fetch errors', () => {
   const summary = buildDashboardHeroSummary(
     {
+      shows: [],
       weekProfit: null,
       weekProfitError: null,
       totalVendorBalance: 0,

@@ -9,9 +9,7 @@ import {
   workspaceHeaderBrandCluster,
   workspaceHeaderBrandLink,
 } from "../workspaceUi";
-import { WorkspaceHeaderChrome } from "./WorkspaceHeaderChrome";
-import { WorkspaceHeaderSearch } from "./WorkspaceHeaderSearch";
-import { useWorkspaceHeaderSlots } from "./WorkspaceHeaderSlots";
+import { WorkspaceHeaderUtilities } from "./WorkspaceHeaderUtilities";
 
 export type WorkspaceHeaderProps = {
   /** Label for the workspace context (e.g. "Workspace"). Shown next to logo. */
@@ -22,21 +20,19 @@ export type WorkspaceHeaderProps = {
   roles?: string[];
 };
 
+/**
+ * Legacy global workspace bar — Fefe Ave • Workspace + utilities.
+ * Hidden on pages that mount {@link WorkspacePageHeader} (sidebar owns brand).
+ */
 export function WorkspaceHeader({
   title = "Workspace",
   onMenuClick,
   email = null,
   roles = [],
 }: WorkspaceHeaderProps) {
-  const { centerSlot, actionsSlot } = useWorkspaceHeaderSlots();
-
   return (
     <header className={`${workspaceGlobalHeaderBar} py-3.5 md:py-4`}>
       <div className={workspaceHeaderCanvasFrameClass()}>
-        {/*
-          Mobile (< md): search hidden — hamburger + brand; actions `ml-auto`.
-          md+: flex row — brand (left) | `ml-auto` cluster: search/slot + actions, right-aligned as one unit.
-        */}
         <div className="flex w-full flex-nowrap items-center gap-x-2 md:gap-x-3">
           <div className="flex min-w-0 shrink items-center gap-2 md:gap-3">
             {onMenuClick && (
@@ -87,12 +83,8 @@ export function WorkspaceHeader({
             </div>
           </div>
 
-          <div className="ml-auto flex min-w-0 shrink items-center justify-end gap-2 md:gap-2.5">
-            <div className="hidden min-w-0 md:flex md:max-w-full md:items-center md:px-0">
-              {centerSlot ?? <WorkspaceHeaderSearch />}
-            </div>
-            <WorkspaceHeaderChrome email={email} roles={roles} />
-            {actionsSlot}
+          <div className="ml-auto flex min-w-0 shrink items-center justify-end">
+            <WorkspaceHeaderUtilities email={email} roles={roles} />
           </div>
         </div>
       </div>

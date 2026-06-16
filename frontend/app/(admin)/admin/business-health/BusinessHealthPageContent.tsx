@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { dispatchWorkspaceInvalidate } from "@/lib/workspaceInvalidate";
 import { getCurrentWeekBounds } from "@/lib/weekRange";
-import {
-  AdminWorkspacePageIntro,
-  AdminWorkspacePageLayout,
-} from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { AdminWorkspacePageLayout } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { WORKSPACE_TOP_LEVEL_PAGE_HEADERS } from "@/app/(admin)/admin/_lib/workspaceTopLevelPageHeaders";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
   WorkspaceGrid,
@@ -17,8 +15,6 @@ import {
   WORKFLOW_BH_RECORD_OWNER_PAYOUT_PANEL_TITLE,
   WORKFLOW_BH_RECORD_REINVEST_PANEL_TITLE,
   WORKFLOW_BH_RECORD_TAX_PANEL_TITLE,
-  WORKFLOW_BUSINESS_HEALTH_SUBTITLE,
-  WORKFLOW_BUSINESS_HEALTH_TITLE,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
   getOwnerActivityPage,
@@ -168,12 +164,7 @@ export default function BusinessHealthPageContent() {
     return (
       <AdminWorkspacePageLayout
         containerTier="full"
-        intro={
-          <AdminWorkspacePageIntro
-            title={WORKFLOW_BUSINESS_HEALTH_TITLE}
-            subtitle={WORKFLOW_BUSINESS_HEALTH_SUBTITLE}
-          />
-        }
+        pageHeader={WORKSPACE_TOP_LEVEL_PAGE_HEADERS.businessHealth}
       >
         <BusinessHealthPageSkeleton />
       </AdminWorkspacePageLayout>
@@ -184,12 +175,7 @@ export default function BusinessHealthPageContent() {
     return (
       <AdminWorkspacePageLayout
         containerTier="full"
-        intro={
-          <AdminWorkspacePageIntro
-            title={WORKFLOW_BUSINESS_HEALTH_TITLE}
-            subtitle={WORKFLOW_BUSINESS_HEALTH_SUBTITLE}
-          />
-        }
+        pageHeader={WORKSPACE_TOP_LEVEL_PAGE_HEADERS.businessHealth}
       >
         <WorkspaceInlineError
           title="Could not load business health"
@@ -235,12 +221,7 @@ export default function BusinessHealthPageContent() {
     >
       <AdminWorkspacePageLayout
         containerTier="full"
-        intro={
-          <AdminWorkspacePageIntro
-            title={WORKFLOW_BUSINESS_HEALTH_TITLE}
-            subtitle={WORKFLOW_BUSINESS_HEALTH_SUBTITLE}
-          />
-        }
+        pageHeader={WORKSPACE_TOP_LEVEL_PAGE_HEADERS.businessHealth}
       >
         <WorkspaceGrid variant="twelve" className="gap-6 md:gap-7">
           <WorkspaceGridItem span="primary">

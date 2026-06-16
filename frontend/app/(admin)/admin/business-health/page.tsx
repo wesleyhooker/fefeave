@@ -1,12 +1,12 @@
 "use client";
 
 import { Suspense } from "react";
-import { BalancesPageSkeleton } from "../_components/AdminPageSkeletons";
+import { BusinessHealthTopLevelSkeleton } from "../_components/AdminPageSkeletons";
 import BusinessHealthPageContent from "./BusinessHealthPageContent";
 
 export default function BusinessHealthPage() {
   return (
-    <Suspense fallback={<BalancesPageSkeleton />}>
+    <Suspense fallback={<BusinessHealthTopLevelSkeleton />}>
       <BusinessHealthPageContent />
     </Suspense>
   );

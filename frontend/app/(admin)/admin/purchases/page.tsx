@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { BalancesPageSkeleton } from "../_components/AdminPageSkeletons";
+import { PurchasesPageSkeleton } from "../_components/AdminPageSkeletons";
 import PurchasesPageContent from "./PurchasesPageContent";
 import { purchasesLegacyTabRedirectHref } from "./purchasesTabs";
 
@@ -16,7 +16,7 @@ export default async function AdminPurchasesPage({
   }
 
   return (
-    <Suspense fallback={<BalancesPageSkeleton />}>
+    <Suspense fallback={<PurchasesPageSkeleton />}>
       <PurchasesPageContent />
     </Suspense>
   );

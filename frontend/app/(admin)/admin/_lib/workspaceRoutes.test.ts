@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   SHOW_CLOSE_OUT_HASH,
+  resolveDashboardAttentionHref,
   showCloseOutHref,
   showClosedSuccessHref,
   showDetailHref,
@@ -26,6 +27,28 @@ describe('showRoutes', () => {
     );
     assert.equal(showNavigateHref('abc', 'ACTIVE'), showCloseOutHref('abc'));
     assert.equal(showNavigateHref('abc', 'COMPLETED'), showDetailHref('abc'));
+  });
+
+  it('resolveDashboardAttentionHref prefers first active show close-out', () => {
+    assert.equal(
+      resolveDashboardAttentionHref({
+        shows: [
+          { id: 'b', status: 'ACTIVE', show_date: '2026-06-14' },
+          { id: 'a', status: 'ACTIVE', show_date: '2026-06-10' },
+        ],
+        openShowsCount: 2,
+        totalVendorBalance: 100,
+      }),
+      `/admin/shows/a${SHOW_CLOSE_OUT_HASH}`,
+    );
+    assert.equal(
+      resolveDashboardAttentionHref({
+        shows: [],
+        openShowsCount: 0,
+        totalVendorBalance: 50,
+      }),
+      '/admin/vendors',
+    );
   });
 
   it('builds post-close success redirect with highlight', () => {

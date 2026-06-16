@@ -2,7 +2,12 @@
 
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { workspacePageIntroAccent } from "./workspaceUi";
+import {
+  workspacePageHeaderPadding,
+  workspacePageHeaderSubtitle,
+  workspacePageHeaderTitle,
+  workspacePageIntroAccent,
+} from "./workspaceUi";
 
 export function AdminPageIntro({
   title,
@@ -30,17 +35,11 @@ export function AdminPageIntro({
   const effectiveDecoration = variant === "entity-detail" ? "none" : decoration;
   const effectiveUseAccent = variant === "entity-detail" ? false : useAccent;
 
-  const innerPadding = "py-4 md:py-5";
+  const innerPadding = workspacePageHeaderPadding;
 
-  const titleClassName =
-    variant === "entity-detail"
-      ? "text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl"
-      : "text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl";
+  const titleClassName = workspacePageHeaderTitle;
 
-  const subtitleClassName =
-    variant === "entity-detail"
-      ? "max-w-prose text-sm leading-snug text-stone-500"
-      : "max-w-prose text-sm font-medium leading-relaxed text-stone-600";
+  const subtitleClassName = workspacePageHeaderSubtitle;
 
   const SubtitleContainer = variant === "entity-detail" ? "div" : "p";
 

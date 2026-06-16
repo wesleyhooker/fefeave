@@ -4,6 +4,7 @@ import {
   workspaceTableRowHover,
   workspaceTableRowInteractive,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import { WORKSPACE_WEEK_SECTION_TITLE } from "@/app/(admin)/admin/_lib/workspaceDesignTokens";
 import type { PastWeekBlock } from "../weekStructure";
 import { ShowMobileCard } from "./ShowMobileCard";
 import { WeekDesktopTable } from "./WeekDesktopTable";
@@ -47,7 +48,7 @@ export function ShowsPastWeeksSection({
         >
           <h2
             id="shows-past-weeks-heading"
-            className="min-w-0 flex-1 text-lg font-semibold tracking-tight text-admin-ink"
+            className={`min-w-0 flex-1 ${WORKSPACE_WEEK_SECTION_TITLE}`}
           >
             Past weeks
           </h2>

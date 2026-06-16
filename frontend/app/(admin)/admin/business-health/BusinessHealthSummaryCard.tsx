@@ -10,9 +10,11 @@ import {
 } from "@/app/(admin)/admin/_components/WorkspaceCard";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
-  workspaceMoneyTabular,
-  workspaceTableCellMeta,
-} from "@/app/(admin)/admin/_components/workspaceUi";
+  WORKSPACE_CARD_TITLE,
+  WORKSPACE_LABEL_FIELD,
+  WORKSPACE_VALUE_KPI,
+} from "@/app/(admin)/admin/_lib/workspaceDesignTokens";
+import { workspaceMoneyTabular } from "@/app/(admin)/admin/_components/workspaceUi";
 import { BUSINESS_HEALTH_HREF } from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import {
   WORKFLOW_BH_SUMMARY_HEADING,
@@ -30,11 +32,11 @@ function SummaryMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-md border border-stone-200/80 bg-stone-50/40 px-3 py-2.5">
       <p
-        className={`text-lg font-semibold text-stone-900 ${workspaceMoneyTabular}`}
+        className={`${WORKSPACE_VALUE_KPI} text-stone-900 ${workspaceMoneyTabular}`}
       >
         {value}
       </p>
-      <p className={`mt-0.5 ${workspaceTableCellMeta}`}>{label}</p>
+      <p className={`mt-0.5 ${WORKSPACE_LABEL_FIELD}`}>{label}</p>
     </div>
   );
 }
@@ -103,7 +105,7 @@ export function BusinessHealthSummaryCard({
       <WorkspaceCardHeader
         title={WORKFLOW_BH_SUMMARY_HEADING}
         subtitle={weekBounds.labelLong}
-        titleClassName="text-lg font-semibold text-stone-900"
+        titleClassName={WORKSPACE_CARD_TITLE}
       />
       <WorkspaceCardBody className="space-y-3">
         {loading ? (

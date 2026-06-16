@@ -275,6 +275,9 @@ export const WORKFLOW_DASHBOARD_HERO_OPEN_HELPER = 'Needs close-out';
 export const WORKFLOW_DASHBOARD_VIEW_VENDORS = 'View vendors';
 export const WORKFLOW_DASHBOARD_VIEW_SHOWS = 'View shows';
 
+/** Sidebar identity — single line under wordmark (reseller workspace shell). */
+export const WORKFLOW_SIDEBAR_RESELLER_WORKSPACE = 'Reseller Workspace';
+
 export const WORKFLOW_DASHBOARD_PERFECT_WEEK_CALM =
   'All caught up for now — nothing needs your attention.';
 
@@ -287,7 +290,10 @@ export const WORKFLOW_DASHBOARD_CARD_PURCHASES = 'Purchases';
 export const WORKFLOW_DASHBOARD_CARD_BUSINESS_HEALTH = 'Business Health';
 
 export const WORKFLOW_DASHBOARD_VIEW_PURCHASES = 'View purchases';
-export const WORKFLOW_DASHBOARD_OPEN_BUSINESS_HEALTH = 'Open business health';
+export const WORKFLOW_DASHBOARD_VIEW_BUSINESS_HEALTH = 'View business health';
+/** @deprecated Prefer {@link WORKFLOW_DASHBOARD_VIEW_BUSINESS_HEALTH}. */
+export const WORKFLOW_DASHBOARD_OPEN_BUSINESS_HEALTH =
+  WORKFLOW_DASHBOARD_VIEW_BUSINESS_HEALTH;
 
 export const WORKFLOW_DASHBOARD_SHOWS_NEXT_LABEL = 'Next show';
 export const WORKFLOW_DASHBOARD_SHOWS_LAST_COMPLETED_LABEL =

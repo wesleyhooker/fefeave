@@ -355,8 +355,22 @@ try {
     const cap = captures[i];
     const targetUrl = `${baseUrl}${cap.route}`;
     const navRes = await gotoAndSettleForScreenshot(page, targetUrl);
+    const status = navRes ? navRes.status() : 0;
+    const bodyText = await page
+      .locator("body")
+      .innerText()
+      .catch(() => "");
+    const isServerError =
+      status === 500 || /internal server error/i.test(bodyText);
+
+    if (isServerError) {
+      console.error(
+        "Page returned HTTP 500. This is likely a stale Next dev cache. Run: make dev-reset-frontend",
+      );
+      process.exit(1);
+    }
+
     if (!navRes || !navRes.ok()) {
-      const status = navRes ? navRes.status() : "no response";
       console.warn(`Warning: HTTP ${status} for ${targetUrl}`);
     }
 

@@ -4,10 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrentWeekBounds } from "@/lib/weekRange";
 import { ShowsTableSkeleton } from "@/app/(admin)/admin/_components/AdminPageSkeletons";
-import {
-  AdminWorkspacePageIntro,
-  AdminWorkspacePageLayout,
-} from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { AdminWorkspacePageLayout } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
+import { WORKSPACE_TOP_LEVEL_PAGE_HEADERS } from "@/app/(admin)/admin/_lib/workspaceTopLevelPageHeaders";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
 import {
   fetchShowFinancialSummariesByShowIds,
@@ -36,7 +34,6 @@ import { showCloseOutHref } from "@/app/(admin)/admin/_lib/showRoutes";
 import {
   WORKFLOW_LOG_SHOW_PANEL_SUBTITLE,
   WORKFLOW_LOG_SHOW_PANEL_TITLE,
-  WORKFLOW_SHOWS_PAGE_SUBTITLE,
 } from "../_lib/adminWorkflowCopy";
 
 /** How long the closed-show row keeps its temporary success treatment. */
@@ -185,12 +182,7 @@ export default function AdminShowsPage() {
     >
       <AdminWorkspacePageLayout
         containerTier="full"
-        intro={
-          <AdminWorkspacePageIntro
-            title="Shows"
-            subtitle={WORKFLOW_SHOWS_PAGE_SUBTITLE}
-          />
-        }
+        pageHeader={WORKSPACE_TOP_LEVEL_PAGE_HEADERS.shows}
       >
         {error != null ? (
           <WorkspaceInlineError
