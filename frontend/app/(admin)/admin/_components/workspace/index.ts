@@ -18,6 +18,7 @@ export {
 export {
   WorkspaceIllustrationImage,
   type WorkspaceIllustrationImageProps,
+  type WorkspaceIllustrationSize,
 } from './WorkspaceIllustrationImage';
 export {
   WorkspaceKpiTile,

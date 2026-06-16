@@ -34,7 +34,7 @@ import {
  * | Primary action | `--admin-action-primary` | `bg-admin-actionPrimary` | Page CTAs, intro accent, focus rings |
  * | Liability | `--admin-semantic-liability` | `text-admin-semanticLiability` | Owed / outstanding money |
  * | Success | `--admin-status-success` | `text-admin-statusSuccess` | Profit, paid, positive trend |
- * | Success soft | `--admin-status-success-soft` | `bg-admin-statusSuccessSoft` | KPI icon wells, calm bands |
+ * | Success soft | `--admin-status-success-soft` | `bg-admin-statusSuccessSoft` | Legacy badges / chips |
  * | Warning | `--admin-status-warning` | `text-admin-statusWarning` | Attention, owed emphasis |
  * | Warning soft | `--admin-status-warning-soft` | `bg-admin-statusWarningSoft` | Alert banners |
  * | Info | `--admin-status-info` | `text-admin-statusInfo` | Informational status |
@@ -432,6 +432,20 @@ export const WORKSPACE_ILLUSTRATED_CARD_RASTER_IMAGE_FRAME = [
 export const WORKSPACE_ILLUSTRATED_CARD_RASTER_IMAGE =
   'h-auto w-auto max-h-full max-w-full object-contain object-center';
 
+/**
+ * Empty-state raster slot — page-level sections (centered, larger than hub cards).
+ * Pair with {@link WorkspaceIllustrationImage} `size="empty"`.
+ */
+export const WORKSPACE_EMPTY_STATE_RASTER_IMAGE_FRAME = [
+  'pointer-events-none relative mx-auto shrink-0',
+  'flex h-40 w-44 items-center justify-center',
+  'sm:h-48 sm:w-52 md:h-52 md:w-56',
+].join(' ');
+
+/** Empty-state raster image — same contain rules as hub cards. */
+export const WORKSPACE_EMPTY_STATE_RASTER_IMAGE =
+  WORKSPACE_ILLUSTRATED_CARD_RASTER_IMAGE;
+
 // ---------------------------------------------------------------------------
 // Embedded KPI grid (unified cells inside one card — not tinted tiles)
 // ---------------------------------------------------------------------------
@@ -455,32 +469,32 @@ export const WORKSPACE_KPI_EMBEDDED_CELL_LEAD = [
 // Semantic icon wells (circular chips on cards / KPI cells / alert bands)
 // ---------------------------------------------------------------------------
 
-/** Shared geometry — pair with a semantic surface token below. */
+/** Shared geometry — filled circular chip; no outline ring (color carries semantics). */
 export const WORKSPACE_ICON_WELL_SHELL =
   'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full sm:h-11 sm:w-11';
 
 /** Green — money, profit, cash-positive outcomes. */
 export const WORKSPACE_ICON_WELL_GREEN = [
   WORKSPACE_ICON_WELL_SHELL,
-  'bg-admin-semanticGreenSurface text-admin-statusSuccess ring-1 ring-admin-statusSuccess/22',
+  'bg-admin-semanticGreenSurface text-admin-statusSuccess',
 ].join(' ');
 
 /** Amber — obligations, vendors, purchases, balances owed. */
 export const WORKSPACE_ICON_WELL_AMBER = [
   WORKSPACE_ICON_WELL_SHELL,
-  'bg-admin-semanticAmberSurface text-admin-semanticLiability ring-1 ring-admin-semanticLiability/20',
+  'bg-admin-semanticAmberSurface text-admin-semanticLiability',
 ].join(' ');
 
 /** Blue — active, open, in-progress, workflow attention. */
 export const WORKSPACE_ICON_WELL_BLUE = [
   WORKSPACE_ICON_WELL_SHELL,
-  'bg-admin-semanticBlueSurface text-admin-statusInfo ring-1 ring-admin-statusInfo/20',
+  'bg-admin-semanticBlueSurface text-admin-statusInfo',
 ].join(' ');
 
 /** Clay — neutral, completed, archived, historical. */
 export const WORKSPACE_ICON_WELL_CLAY = [
   WORKSPACE_ICON_WELL_SHELL,
-  'bg-admin-semanticClaySurface text-admin-inkMuted ring-1 ring-admin-border/55',
+  'bg-admin-semanticClaySurface text-admin-inkMuted',
 ].join(' ');
 
 /**
@@ -499,23 +513,40 @@ export const WORKSPACE_ICON_WELL_BY_VARIANT = {
 // Alert bands (calm / attention status under KPI blocks)
 // ---------------------------------------------------------------------------
 
+/**
+ * Neutral inset shell — warm clay wash distinct from canvas/cards; semantics
+ * live in the icon well and key values only (shared across workspace pages).
+ */
+const WORKSPACE_ALERT_BAND_NEUTRAL_SHELL = [
+  `${WORKSPACE_CONTAINER_INSET_X} mb-4 rounded-workspace-lg border border-admin-border/85 bg-admin-alertBandSurface`,
+].join(' ');
+
+/** Body copy inside alert bands — workspace neutral, not semantic wash. */
+export const WORKSPACE_ALERT_BAND_TEXT = 'text-sm leading-snug text-admin-ink';
+
+/** Outstanding monetary amounts inside attention bands (owed / liability). */
+export const WORKSPACE_ALERT_BAND_ATTENTION_VALUE = [
+  WORKSPACE_SEMANTIC_LIABILITY,
+  'tabular-nums font-medium',
+].join(' ');
+
 export const WORKSPACE_ALERT_BAND_CALM = [
-  `${WORKSPACE_CONTAINER_INSET_X} mb-4 rounded-workspace-lg border border-admin-statusSuccess/14 bg-admin-semanticGreenSurface`,
-  `${WORKSPACE_PAD_X} py-3.5 text-sm leading-snug text-admin-statusSuccess sm:mb-5`,
+  WORKSPACE_ALERT_BAND_NEUTRAL_SHELL,
+  `${WORKSPACE_PAD_X} py-3.5 ${WORKSPACE_ALERT_BAND_TEXT} sm:mb-5`,
 ].join(' ');
 
 /**
- * Outstanding operational / financial work (e.g. needs close-out) — soft clay wash
- * with subtle amber border; not workflow-blue and not error styling.
+ * Outstanding operational / financial work (e.g. needs close-out) — neutral
+ * clay surface; amber icon well + highlighted owed amounts carry semantics.
  */
 export const WORKSPACE_ALERT_BAND_ATTENTION = [
-  `${WORKSPACE_CONTAINER_INSET_X} mb-4 flex items-center gap-2.5 rounded-workspace-lg border border-admin-semanticLiability/12 bg-admin-semanticClaySurface`,
-  `${WORKSPACE_PAD_X} py-3.5 text-sm leading-snug text-admin-ink sm:mb-5`,
+  `${WORKSPACE_ALERT_BAND_NEUTRAL_SHELL} flex items-center gap-2.5`,
+  `${WORKSPACE_PAD_X} py-3.5 ${WORKSPACE_ALERT_BAND_TEXT} sm:mb-5`,
 ].join(' ');
 
 /** Actionable alert band — full-row link; pairs with {@link WORKSPACE_ALERT_BAND_ATTENTION}. */
 export const WORKSPACE_ALERT_BAND_LINK =
-  'cursor-pointer text-inherit no-underline outline-none transition-colors hover:bg-admin-semanticAmberSurface/45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-actionPrimary/40';
+  'cursor-pointer text-inherit no-underline outline-none transition-colors hover:bg-admin-surfaceHover/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-actionPrimary/40';
 
 // ---------------------------------------------------------------------------
 // Metric trend strip (MTD / comparison row)

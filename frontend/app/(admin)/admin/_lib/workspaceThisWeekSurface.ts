@@ -44,8 +44,20 @@ export const workspaceThisWeekSupportingMeta = WORKSPACE_LABEL_CAPTION;
 export const workspaceThisWeekListZone =
   'bg-admin-surfaceElevated ' + workspaceThisWeekListZonePaddingTop;
 
-/** “Shows (n)” strip above the week list — same surface as the card (no gray wash band). */
+/** @deprecated Shows index no longer uses a count strip — kept for reference. */
 export const workspaceThisWeekShowsListHeader = `${WORKSPACE_CONTAINER_GUTTER} border-b border-admin-border/88 bg-admin-surfaceElevated py-3 ${WORKSPACE_SECTION_EYEBROW}`;
+
+/** Empty week body — centered illustration + copy inside the list zone. */
+export const workspaceThisWeekEmptyStateShell = [
+  WORKSPACE_CONTAINER_GUTTER,
+  'flex flex-col items-center pb-8 pt-2 text-center sm:pb-10 sm:pt-3',
+].join(' ');
+
+/** Stacked show cards inside the week list zone. */
+export const workspaceThisWeekShowListStack = [
+  WORKSPACE_CONTAINER_GUTTER,
+  'list-none space-y-3 pb-6 m-0 p-0 sm:space-y-3.5 sm:pb-7',
+].join(' ');
 
 /** Footer strip (self-pay workflow) — ties to the same calm family. */
 export const workspaceThisWeekWorkflowFooter =

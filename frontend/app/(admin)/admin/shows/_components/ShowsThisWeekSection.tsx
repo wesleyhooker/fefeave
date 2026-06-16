@@ -2,7 +2,6 @@
 
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
-  WORKFLOW_EMPTY_WEEK_SCHEDULE,
   WORKFLOW_LOG_SHOW_TRIGGER_LABEL,
   WORKFLOW_THIS_WEEK_HEADING,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
@@ -11,16 +10,15 @@ import {
   workspaceThisWeekHeaderBand,
   workspaceThisWeekHeaderPadding,
   workspaceThisWeekListZone,
-  workspaceThisWeekShowsListHeader,
   workspaceThisWeekSectionRoot,
+  workspaceThisWeekShowListStack,
   workspaceThisWeekSubtitle,
 } from "@/app/(admin)/admin/_lib/workspaceThisWeekSurface";
 import { WORKSPACE_WEEK_SECTION_TITLE } from "@/app/(admin)/admin/_lib/workspaceDesignTokens";
 import type { WeekBounds } from "@/lib/weekRange";
 import type { ShowViewModel } from "@/src/lib/api/shows";
-import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
 import { ShowMobileCard } from "./ShowMobileCard";
-import { WeekDesktopTable } from "./WeekDesktopTable";
+import { ShowsThisWeekEmptyState } from "./ShowsThisWeekEmptyState";
 
 export function ShowsThisWeekSection({
   currentWeek,
@@ -65,38 +63,22 @@ export function ShowsThisWeekSection({
         </div>
       </div>
       <div className={workspaceThisWeekListZone}>
-        <div className={workspaceThisWeekShowsListHeader}>
-          Shows ({currentShows.length})
-        </div>
-        <div className="md:hidden">
-          <div className="space-y-3 px-4 pb-4 pt-0 sm:p-5 sm:pb-5 sm:pt-1">
-            {currentShows.length === 0 ? (
-              <WorkspaceEmptyState variant="inset">
-                {WORKFLOW_EMPTY_WEEK_SCHEDULE}
-              </WorkspaceEmptyState>
-            ) : (
-              currentShows.map((show) => (
+        {currentShows.length === 0 ? (
+          <ShowsThisWeekEmptyState />
+        ) : (
+          <ul className={workspaceThisWeekShowListStack}>
+            {currentShows.map((show) => (
+              <li key={show.id}>
                 <ShowMobileCard
-                  key={show.id}
                   show={show}
                   summary={summaries[show.id]}
                   payoutContext
                   highlighted={highlightShowId === show.id}
                 />
-              ))
-            )}
-          </div>
-        </div>
-        <div className="hidden md:block">
-          <WeekDesktopTable
-            shows={currentShows}
-            summaries={summaries}
-            showProfitHint={false}
-            emptyLabel={WORKFLOW_EMPTY_WEEK_SCHEDULE}
-            payoutContext
-            highlightShowId={highlightShowId}
-          />
-        </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );

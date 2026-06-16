@@ -6,6 +6,7 @@ import {
   CheckCircleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { WorkspaceAlertAttentionMessage } from "@/app/(admin)/admin/_lib/workspaceAlertAttentionMessage";
 import {
   WORKSPACE_ALERT_BAND_ATTENTION,
   WORKSPACE_ALERT_BAND_CALM,
@@ -47,7 +48,13 @@ export function WorkspaceAlertBand({
             aria-hidden
           />
         </WorkspaceIconWell>
-        <span className="min-w-0 flex-1">{children}</span>
+        <span className="min-w-0 flex-1">
+          {typeof children === "string" ? (
+            <WorkspaceAlertAttentionMessage message={children} />
+          ) : (
+            children
+          )}
+        </span>
         <WorkspaceRowChevron className="shrink-0 translate-x-0 text-admin-inkMuted transition-all duration-200 ease-out group-hover:translate-x-1 group-hover:text-admin-actionPrimary" />
       </>
     );

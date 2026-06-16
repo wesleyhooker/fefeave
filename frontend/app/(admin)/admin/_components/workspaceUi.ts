@@ -275,7 +275,7 @@ export const workspaceSidebarAccountSection =
 export const workspaceSidebarAccountSignOutCluster =
   'border-t border-admin-sidebarDivider/65 pt-3.5';
 
-/** Circular initial glyph on clay (session email / display line). */
+/** Circular initial glyph on clay — border kept for edge on dark sidebar only. */
 export const workspaceSidebarAvatar =
   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-fefe-warm-sand/70 bg-fefe-warm-sand font-fefe-heading text-sm font-semibold leading-none text-fefe-gold';
 
@@ -1032,7 +1032,7 @@ export const workspaceActionSecondaryMd = `inline-flex min-h-11 items-center jus
  * Hub destination outline CTA — terracotta border/text; pairs with clay sidebar family.
  * Use on dashboard overview cards (Shows, Vendors, Purchases).
  */
-export const workspaceActionOutlinePrimaryMd = `inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-admin-actionPrimary/35 bg-white px-3.5 py-2.5 text-sm font-medium text-admin-actionPrimary shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out hover:border-admin-actionPrimary/55 hover:bg-admin-kpiSoft/35 hover:shadow-[0_4px_14px_-10px_rgba(156,48,35,0.18)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none sm:min-h-10 sm:py-2 ${focusRingSoft}`;
+export const workspaceActionOutlinePrimaryMd = `inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-admin-actionPrimary/35 bg-white px-3.5 py-2.5 text-sm font-medium text-admin-actionPrimary shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out hover:border-admin-actionPrimary/55 hover:bg-admin-kpiSoft/35 hover:shadow-[0_4px_14px_-10px_rgb(var(--admin-action-primary)_/_0.18)] active:translate-y-px motion-reduce:transition-none motion-reduce:transform-none sm:min-h-10 sm:py-2 ${focusRingSoft}`;
 
 /**
  * Completion workflow — Close out, Mark done (row / compact).

@@ -26,6 +26,12 @@ import {
 } from "./AdminPageContainer";
 import { TopLevelPageSkeletonShell } from "./TopLevelPageSkeletonShell";
 import { WORKSPACE_TOP_LEVEL_PAGE_HEADERS } from "../_lib/workspaceTopLevelPageHeaders";
+import {
+  workspaceThisWeekHeaderBand,
+  workspaceThisWeekHeaderPadding,
+  workspaceThisWeekListZone,
+  workspaceThisWeekSectionRoot,
+} from "../_lib/workspaceThisWeekSurface";
 
 const bar = "h-4 rounded bg-gray-200 animate-pulse";
 
@@ -522,74 +528,24 @@ function ShowsIndexMainTableSkeleton({ rows }: { rows: number }) {
 
 function ShowsIndexThisWeekSkeleton() {
   return (
-    <div className="overflow-hidden rounded-xl border border-emerald-200/60 border-l-[6px] border-l-emerald-500/50 bg-emerald-50/15 shadow-workspace-surface">
-      <div className="border-b border-emerald-100/90 bg-emerald-50/35 px-4 py-3 sm:px-5 sm:py-4">
+    <div className={workspaceThisWeekSectionRoot}>
+      <div
+        className={`${workspaceThisWeekHeaderPadding} ${workspaceThisWeekHeaderBand}`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <SkeletonBar className="w-32" />
+            <SkeletonBar className="h-7 w-32" />
             <SkeletonBar className="mt-2 w-full max-w-md" />
           </div>
           <SkeletonBar className="h-10 w-32 shrink-0 rounded-lg" />
         </div>
       </div>
-      <div className="overflow-hidden bg-white">
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className={workspaceShellBg}>
-            <tr>
-              <th
-                scope="col"
-                className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
-              >
-                Status
-              </th>
-              <th
-                scope="col"
-                className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
-              >
-                Show
-              </th>
-              <th
-                scope="col"
-                className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
-              >
-                Date
-              </th>
-              <th
-                scope="col"
-                className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4"
-              >
-                Profit
-              </th>
-              <th scope="col" className="px-2 py-3 sm:px-3">
-                <span className="sr-only">Navigate</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
-            {Array.from({ length: 4 }, (_, i) => (
-              <tr key={i}>
-                <td className="px-3 py-2.5 sm:px-4">
-                  <SkeletonBar className="h-4 w-12" />
-                </td>
-                <td className="px-3 py-2.5 sm:px-4">
-                  <div className="min-w-0 space-y-1">
-                    <SkeletonBar className="w-36 max-w-full" />
-                    <SkeletonBar className="w-28" />
-                  </div>
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                  <SkeletonBar className="w-24" />
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-right sm:px-4">
-                  <SkeletonBar className="ml-auto w-20" />
-                </td>
-                <td className="px-2 py-2.5 text-right sm:px-3">
-                  <SkeletonBar className="ml-auto h-4 w-4 rounded" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className={workspaceThisWeekListZone}>
+        <div className="mx-auto flex max-w-md flex-col items-center px-4 pb-8 pt-2 sm:px-6 sm:pb-10 sm:pt-3">
+          <SkeletonBar className="h-40 w-44 rounded-workspace-md sm:h-48 sm:w-52 md:h-52 md:w-56" />
+          <SkeletonBar className="mt-6 h-5 w-56" />
+          <SkeletonBar className="mt-2 h-4 w-full max-w-md" />
+        </div>
       </div>
     </div>
   );

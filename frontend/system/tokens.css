@@ -99,8 +99,8 @@
    *   --admin-kpi-accent                #f9d5c8
    *   --admin-kpi-gold                  #fdf0d4
    *   --admin-kpi-sage                  #d4dfc8
-   *   --admin-action-primary            #9c3023 (deep terracotta CTA)
-   *   --admin-action-primary-hover      #8a2a1f
+   *   --admin-action-primary            #96513f (constructive clay CTA)
+   *   --admin-action-primary-hover      #854735
    *   --admin-status-success            #2d5a27
    *   --admin-status-success-soft       #e8f0e4
    *   --admin-status-warning            #b45309
@@ -121,14 +121,16 @@
   --admin-surface-elevated: 255 255 255;
   --admin-border: 224 214 204;
   --admin-muted-strip: 245 241 235;
+  /** Status/alert bands — warm clay inset (~6% stronger than surface-subtle; not semantic). */
+  --admin-alert-band-surface: 248 245 240;
   --admin-ink: 45 41 38;
   --admin-ink-muted: 107 101 96;
   --admin-kpi-soft: 252 232 220;
   --admin-kpi-accent: 249 213 200;
   --admin-kpi-gold: 253 240 212;
   --admin-kpi-sage: 212 223 200;
-  --admin-action-primary: 156 48 35;
-  --admin-action-primary-hover: 138 42 31;
+  --admin-action-primary: 150 81 63;
+  --admin-action-primary-hover: 133 71 53;
   /*
    * Semantic money / trend (distinct from action CTAs).
    * Liability + negative trends share warning hue; action-primary is commit-only.

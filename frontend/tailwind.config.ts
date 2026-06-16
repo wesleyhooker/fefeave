@@ -56,6 +56,8 @@ const config: Config = {
           surfaceElevated: 'rgb(var(--admin-surface-elevated) / <alpha-value>)',
           border: 'rgb(var(--admin-border) / <alpha-value>)',
           mutedStrip: 'rgb(var(--admin-muted-strip) / <alpha-value>)',
+          alertBandSurface:
+            'rgb(var(--admin-alert-band-surface) / <alpha-value>)',
           ink: 'rgb(var(--admin-ink) / <alpha-value>)',
           inkMuted: 'rgb(var(--admin-ink-muted) / <alpha-value>)',
           kpiSoft: 'rgb(var(--admin-kpi-soft) / <alpha-value>)',

@@ -17,6 +17,20 @@ test('semantic icon well surfaces use shared color families', () => {
   assert.match(WORKSPACE_ICON_WELL_CLAY, /bg-admin-semanticClaySurface/);
 });
 
+test('icon wells are filled circles without outline rings', () => {
+  for (const well of [
+    WORKSPACE_ICON_WELL_GREEN,
+    WORKSPACE_ICON_WELL_AMBER,
+    WORKSPACE_ICON_WELL_BLUE,
+    WORKSPACE_ICON_WELL_CLAY,
+  ]) {
+    assert.match(well, /rounded-full/);
+    assert.doesNotMatch(well, /\bring-/);
+    assert.doesNotMatch(well, /\bborder\b/);
+    assert.doesNotMatch(well, /\bshadow\b/);
+  }
+});
+
 test('icon well variants map to semantic families', () => {
   assert.equal(
     WORKSPACE_ICON_WELL_BY_VARIANT.success,
@@ -40,14 +54,21 @@ test('icon well variants map to semantic families', () => {
   );
 });
 
-test('alert bands align with workflow semantics', () => {
-  assert.match(WORKSPACE_ALERT_BAND_CALM, /bg-admin-semanticGreenSurface/);
-  assert.match(WORKSPACE_ALERT_BAND_ATTENTION, /bg-admin-semanticClaySurface/);
-  assert.match(
+test('alert bands use neutral shells — semantics live in icon wells and values', () => {
+  for (const token of [
+    WORKSPACE_ALERT_BAND_CALM,
     WORKSPACE_ALERT_BAND_ATTENTION,
-    /border-admin-semanticLiability/,
-  );
-  assert.doesNotMatch(WORKSPACE_ALERT_BAND_ATTENTION, /semanticBlueSurface/);
-  assert.doesNotMatch(WORKSPACE_ALERT_BAND_ATTENTION, /statusInfo/);
-  assert.doesNotMatch(WORKSPACE_ALERT_BAND_ATTENTION, /kpiSoft/);
+  ]) {
+    assert.match(token, /bg-admin-alertBandSurface/);
+    assert.match(token, /border-admin-border/);
+    assert.match(token, /text-admin-ink/);
+    assert.doesNotMatch(token, /semanticGreenSurface/);
+    assert.doesNotMatch(token, /semanticAmberSurface/);
+    assert.doesNotMatch(token, /semanticBlueSurface/);
+    assert.doesNotMatch(token, /semanticClaySurface/);
+    assert.doesNotMatch(token, /semanticLiability/);
+    assert.doesNotMatch(token, /statusSuccess/);
+    assert.doesNotMatch(token, /statusInfo/);
+    assert.doesNotMatch(token, /kpiSoft/);
+  }
 });

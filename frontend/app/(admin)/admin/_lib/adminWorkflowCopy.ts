@@ -46,6 +46,12 @@ export const WORKFLOW_SHOWS_THIS_WEEK_SUPPORT_HEADING = 'This week summary';
 
 export const WORKFLOW_EMPTY_WEEK_SCHEDULE = 'None scheduled this week.';
 
+/** Shows index — This week empty state (illustrated). */
+export const WORKFLOW_SHOWS_THIS_WEEK_EMPTY_TITLE =
+  'No shows recorded this week';
+export const WORKFLOW_SHOWS_THIS_WEEK_EMPTY_BODY =
+  'Log your first show to begin tracking payouts, vendor obligations, and profit.';
+
 export const WORKFLOW_SHOW_FINANCES_PAYOUT_HINT =
   "Set payout after fees first — percent uses that amount, and totals can't exceed it.";
 

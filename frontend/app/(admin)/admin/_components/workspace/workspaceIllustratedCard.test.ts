@@ -7,6 +7,7 @@ import {
   WORKSPACE_ILLUSTRATED_CARD_RASTER_BODY_GRID,
   WORKSPACE_ILLUSTRATED_CARD_RASTER_IMAGE,
   WORKSPACE_ILLUSTRATED_CARD_RASTER_IMAGE_FRAME,
+  WORKSPACE_EMPTY_STATE_RASTER_IMAGE_FRAME,
   WORKSPACE_ILLUSTRATION_VIEWBOX,
 } from '../../_lib/workspaceDesignTokens';
 
@@ -24,6 +25,13 @@ test('WorkspaceIllustratedCard layout tokens define locked geometry', () => {
   assert.match(WORKSPACE_ILLUSTRATED_CARD_RASTER_IMAGE, /object-contain/);
   assert.match(WORKSPACE_ILLUSTRATED_CARD_RASTER_IMAGE, /max-h-full/);
   assert.equal(WORKSPACE_ILLUSTRATION_VIEWBOX, '0 0 88 72');
+});
+
+test('empty-state illustration slot is larger and centered than hub cards', () => {
+  assert.match(WORKSPACE_EMPTY_STATE_RASTER_IMAGE_FRAME, /mx-auto/);
+  assert.match(WORKSPACE_EMPTY_STATE_RASTER_IMAGE_FRAME, /h-40/);
+  assert.match(WORKSPACE_EMPTY_STATE_RASTER_IMAGE_FRAME, /md:h-52/);
+  assert.doesNotMatch(WORKSPACE_ILLUSTRATED_CARD_RASTER_IMAGE_FRAME, /h-40/);
 });
 
 test('dashboard overview uses WorkspaceIllustratedCard without local illustration layout', () => {
