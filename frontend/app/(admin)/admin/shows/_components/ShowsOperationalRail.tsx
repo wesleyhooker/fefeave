@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
 import {
@@ -15,37 +15,21 @@ import {
   workspaceListPrimaryMoneyAmountClass,
   workspaceMoneyClassForLiability,
 } from "@/app/(admin)/admin/_components/workspaceUi";
-import { BUSINESS_HEALTH_HREF } from "@/app/(admin)/admin/_lib/adminSidebarNav";
 import {
-  WORKFLOW_COMPLETED_THIS_WEEK_LABEL,
-  WORKFLOW_SHOWS_OPEN_BUSINESS_HEALTH,
-  WORKFLOW_SHOWS_PROFIT_LABEL,
   WORKFLOW_SHOWS_RAIL_CLOSE_OUT_HEADING,
   WORKFLOW_SHOWS_RAIL_VIEW_ALL_OPEN,
-  WORKFLOW_SHOWS_RAIL_WEEK_SNAPSHOT_HEADING,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import type { WeekBounds } from "@/lib/weekRange";
 import type { ShowViewModel } from "@/src/lib/api/shows";
 import { showCloseOutHref } from "@/app/(admin)/admin/_lib/showRoutes";
 import { SHOWS_INDEX_LAYOUT_RAIL } from "../showsIndexLayout";
-import { computeThisWeekShowStats } from "../_lib/showsThisWeekStats";
 import {
   ShowsAllTimeClosedSummary,
   type ShowsClosedAnalytics,
 } from "./ShowsAllTimeClosedSummary";
+import { ShowsPeriodPlanRailCard } from "./ShowsPeriodPlanRailCard";
 
 const OPEN_SHOWS_RAIL_PREVIEW = 3;
-
-function RailStat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 text-sm">
-      <span className="text-stone-600">{label}</span>
-      <span className="shrink-0 font-semibold tabular-nums text-stone-900">
-        {value}
-      </span>
-    </div>
-  );
-}
 
 function OpenShowRailRow({
   show,
@@ -101,28 +85,19 @@ function OpenShowRailRow({
 }
 
 export function ShowsOperationalRail({
-  currentWeek,
+  periodBounds,
   openShows,
-  currentShows,
   summaries,
   analytics,
 }: {
-  currentWeek: WeekBounds;
+  /** ISO week bounds today; period plan API keys use startStr. */
+  periodBounds: WeekBounds;
+  /** ACTIVE shows — actionable close-out queue (hidden when empty). */
   openShows: ShowViewModel[];
-  currentShows: ShowViewModel[];
   summaries: Record<string, ShowFinancialSummary>;
   analytics: ShowsClosedAnalytics;
 }) {
   const [showAllOpen, setShowAllOpen] = useState(false);
-
-  const stats = useMemo(
-    () => computeThisWeekShowStats(currentShows, summaries),
-    [currentShows, summaries],
-  );
-
-  const profitDisplay = stats.hasWeekProfit
-    ? formatCurrency(stats.weekProfit)
-    : "—";
 
   const visibleOpenShows =
     showAllOpen || openShows.length <= OPEN_SHOWS_RAIL_PREVIEW
@@ -131,7 +106,7 @@ export function ShowsOperationalRail({
 
   return (
     <aside
-      aria-label="Shows workflow support"
+      aria-label="Shows period workflow"
       className={SHOWS_INDEX_LAYOUT_RAIL}
     >
       {openShows.length > 0 ? (
@@ -160,38 +135,7 @@ export function ShowsOperationalRail({
         </WorkspaceCard>
       ) : null}
 
-      <WorkspaceCard aria-label={WORKFLOW_SHOWS_RAIL_WEEK_SNAPSHOT_HEADING}>
-        <WorkspaceCardHeader
-          title={WORKFLOW_SHOWS_RAIL_WEEK_SNAPSHOT_HEADING}
-          subtitle={currentWeek.labelLong}
-        />
-        <WorkspaceCardBody className="space-y-2.5">
-          <div>
-            <p className="text-xs font-medium text-stone-600">
-              {WORKFLOW_SHOWS_PROFIT_LABEL}
-            </p>
-            <p
-              className={`mt-0.5 text-lg font-semibold tabular-nums tracking-tight ${stats.hasWeekProfit ? workspaceListPrimaryMoneyAmountClass(stats.weekProfit) : "text-stone-500"}`}
-            >
-              {profitDisplay}
-            </p>
-          </div>
-          <RailStat
-            label={WORKFLOW_COMPLETED_THIS_WEEK_LABEL}
-            value={stats.closedCount}
-          />
-          <RailStat label="Open this week" value={stats.openInWeekCount} />
-          <RailStat label="Scheduled" value={stats.showCount} />
-          <div className="border-t border-admin-border/80 pt-3">
-            <Link
-              href={BUSINESS_HEALTH_HREF}
-              className={`${workspaceActionTertiaryLink} text-sm`}
-            >
-              {WORKFLOW_SHOWS_OPEN_BUSINESS_HEALTH}
-            </Link>
-          </div>
-        </WorkspaceCardBody>
-      </WorkspaceCard>
+      <ShowsPeriodPlanRailCard periodBounds={periodBounds} />
 
       {analytics.closedCount > 0 ? (
         <ShowsAllTimeClosedSummary analytics={analytics} variant="compact" />

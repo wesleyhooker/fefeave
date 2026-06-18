@@ -447,6 +447,75 @@ export const WORKSPACE_EMPTY_STATE_RASTER_IMAGE =
   WORKSPACE_ILLUSTRATED_CARD_RASTER_IMAGE;
 
 // ---------------------------------------------------------------------------
+// Illustrated page hero (full-width top module — not hub overview cards)
+// ---------------------------------------------------------------------------
+
+/**
+ * Page-level illustrated hero — banner composition (Shows index today).
+ *
+ * Copy sits upper-left; artwork is an absolute decorative layer anchored
+ * bottom-right. Distinct from hub overview cards and Shows rail cards.
+ */
+
+/** Banner band — relative shell so artwork can anchor without a side-by-side grid gap. */
+export const WORKSPACE_ILLUSTRATED_HERO_MAIN = [
+  WORKSPACE_PAD_X,
+  'relative overflow-hidden border-b border-admin-border/80',
+  'pb-4 pt-6 sm:pb-5 sm:pt-7',
+  'min-h-[14.5rem] sm:min-h-[15.5rem] md:min-h-[11rem] lg:min-h-[12rem]',
+].join(' ');
+
+/** Copy column — stays above the artwork layer. */
+export const WORKSPACE_ILLUSTRATED_HERO_CONTENT = [
+  'relative z-10 min-w-0',
+  'max-w-[18rem] sm:max-w-md md:max-w-[46%] lg:max-w-[42%]',
+].join(' ');
+
+/** Decorative artwork layer — fills the band, anchored end/bottom. */
+export const WORKSPACE_ILLUSTRATED_HERO_ART_LAYER = [
+  'pointer-events-none absolute inset-x-0 bottom-0 top-6 sm:top-7',
+  'flex items-end justify-center px-4 sm:px-5 md:justify-end',
+].join(' ');
+
+/** Artwork footprint inside the banner — width-led, height fills the layer. */
+export const WORKSPACE_ILLUSTRATED_HERO_ART_FRAME = [
+  'relative flex h-full w-full max-w-[16rem] items-end justify-center',
+  'sm:max-w-[18rem]',
+  'md:max-w-[min(54%,26rem)] md:justify-end',
+  'lg:max-w-[min(50%,30rem)]',
+].join(' ');
+
+/** Banner raster — bottom-anchored, never cropped. */
+export const WORKSPACE_ILLUSTRATED_HERO_ART_IMAGE = [
+  'h-auto max-h-full w-full max-w-full',
+  'object-contain object-bottom object-center md:object-bottom-right',
+].join(' ');
+
+/** @deprecated Banner hero uses {@link WORKSPACE_ILLUSTRATED_HERO_ART_LAYER}. */
+export const WORKSPACE_ILLUSTRATED_HERO_BODY_GRID =
+  WORKSPACE_ILLUSTRATED_HERO_CONTENT;
+
+/** @deprecated Banner hero uses {@link WORKSPACE_ILLUSTRATED_HERO_ART_FRAME}. */
+export const WORKSPACE_ILLUSTRATED_HERO_RASTER_IMAGE_FRAME =
+  WORKSPACE_ILLUSTRATED_HERO_ART_FRAME;
+
+/** @deprecated Banner hero uses {@link WORKSPACE_ILLUSTRATED_HERO_ART_IMAGE}. */
+export const WORKSPACE_ILLUSTRATED_HERO_RASTER_IMAGE =
+  WORKSPACE_ILLUSTRATED_HERO_ART_IMAGE;
+
+/** Serif page-hero heading — workflow pages only (not hub card titles). */
+export const WORKSPACE_ILLUSTRATED_HERO_HEADING = [
+  'mt-3 max-w-lg font-serif text-2xl font-semibold leading-snug tracking-tight text-admin-ink',
+  'sm:mt-4 sm:text-[1.75rem]',
+].join(' ');
+
+/** Optional KPI / stat footer band inside the hero shell. */
+export const WORKSPACE_ILLUSTRATED_HERO_FOOTER = [
+  WORKSPACE_PAD_X,
+  'pb-1 pt-1 sm:pb-2',
+].join(' ');
+
+// ---------------------------------------------------------------------------
 // Embedded KPI grid (unified cells inside one card — not tinted tiles)
 // ---------------------------------------------------------------------------
 

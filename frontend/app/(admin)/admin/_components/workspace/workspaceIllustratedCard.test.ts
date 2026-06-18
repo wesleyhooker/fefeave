@@ -80,3 +80,15 @@ test('dashboard PNG illustration paths are under public illustrations', () => {
   assert.match(ui, /\/illustrations\/dashboard\/purchases\.png/);
   assert.match(ui, /\/illustrations\/dashboard\/business-health\.png/);
 });
+
+test('illustrated page hero tokens are not used by hub overview cards', () => {
+  const summaryCard = readFileSync(
+    new URL(
+      '../../dashboard/_components/DashboardWorkspaceSummaryCard.tsx',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  assert.doesNotMatch(summaryCard, /WORKSPACE_ILLUSTRATED_HERO_/);
+  assert.doesNotMatch(summaryCard, /WorkspaceIllustratedHero/);
+});

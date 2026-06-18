@@ -44,7 +44,7 @@ test('top-level pages use shared typography tokens', () => {
     '../dashboard/_components/DashboardWeekHero.tsx',
     '../dashboard/_components/DashboardWorkspaceOverview.tsx',
     '../dashboard/_components/DashboardWorkspaceSummaryCard.tsx',
-    '../shows/_components/ShowsThisWeekSection.tsx',
+    '../shows/_components/ShowsCurrentPeriodSection.tsx',
     '../shows/_components/ShowsPastWeeksSection.tsx',
     '../balances/VendorsObligationStrip.tsx',
     '../purchases/PurchasesActivityStrip.tsx',
@@ -68,7 +68,10 @@ test('top-level pages use shared typography tokens', () => {
   assert.match(dashboardHero, /WORKSPACE_SECTION_EYEBROW/);
 
   const showsWeek = readFileSync(
-    new URL('../shows/_components/ShowsThisWeekSection.tsx', import.meta.url),
+    new URL(
+      '../shows/_components/ShowsCurrentPeriodSection.tsx',
+      import.meta.url,
+    ),
     'utf8',
   );
   assert.match(showsWeek, /WORKSPACE_WEEK_SECTION_TITLE/);

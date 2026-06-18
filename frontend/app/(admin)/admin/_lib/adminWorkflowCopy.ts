@@ -6,6 +6,19 @@
 
 export const WORKFLOW_THIS_WEEK_HEADING = 'This week';
 
+/** Shows index — current operating period (today: ISO week bounds). */
+export const WORKFLOW_CURRENT_PERIOD_HEADING = 'Current period';
+
+/** Shows index — scheduled periods after the current ISO week. */
+export const WORKFLOW_UPCOMING_PERIODS_HEADING = 'Upcoming periods';
+
+/** @deprecated Use {@link WORKFLOW_UPCOMING_PERIODS_HEADING}. */
+export const WORKFLOW_UPCOMING_WEEKS_HEADING =
+  WORKFLOW_UPCOMING_PERIODS_HEADING;
+
+/** Shows index — prior ISO week buckets. */
+export const WORKFLOW_PAST_PERIODS_HEADING = 'Past periods';
+
 /** Ties the dashboard greeting to the same week anchor used on Shows. */
 export function workflowDashboardWeekSubtitle(
   weekRangeCompact: string,
@@ -18,7 +31,7 @@ export const WORKFLOW_SHOWS_PROFIT_LABEL = 'Profit';
 
 /** Shows index — page intro subtitle. */
 export const WORKFLOW_SHOWS_PAGE_SUBTITLE =
-  'Run this week’s shows, close them out, and find history when you need it.';
+  'Run this period’s shows, close them out, and browse past periods when you need history.';
 
 /** Shows index — exception state (ACTIVE across all weeks). */
 export const WORKFLOW_OPEN_SHOWS_HEADING = 'Open shows';
@@ -30,6 +43,11 @@ export const WORKFLOW_EMPTY_OPEN_SHOWS = 'No open shows.';
 /** Shows index — operational rail */
 export const WORKFLOW_SHOWS_RAIL_CLOSE_OUT_HEADING = 'Needs close-out';
 export const WORKFLOW_SHOWS_RAIL_VIEW_ALL_OPEN = 'View all open shows';
+/** Shows index rail — period execution (Business Health). */
+export const WORKFLOW_SHOWS_RAIL_PERIOD_PLAN_HEADING = 'Period plan';
+export const WORKFLOW_SHOWS_RAIL_PERIOD_PLAN_UNAVAILABLE =
+  'Close a show this period to unlock period plan.';
+/** @deprecated Removed from Shows rail — use {@link WORKFLOW_SHOWS_RAIL_PERIOD_PLAN_HEADING}. */
 export const WORKFLOW_SHOWS_RAIL_WEEK_SNAPSHOT_HEADING = 'Current week';
 export const WORKFLOW_SHOWS_ARCHIVE_HEADING = 'Archive';
 /** Log show lives in the page intro primary action. */
@@ -46,11 +64,22 @@ export const WORKFLOW_SHOWS_THIS_WEEK_SUPPORT_HEADING = 'This week summary';
 
 export const WORKFLOW_EMPTY_WEEK_SCHEDULE = 'None scheduled this week.';
 
-/** Shows index — This week empty state (illustrated). */
+/** Shows index — current period empty state (illustrated). */
+export const WORKFLOW_SHOWS_CURRENT_PERIOD_EMPTY_TITLE =
+  'No shows recorded this period';
+export const WORKFLOW_SHOWS_CURRENT_PERIOD_EMPTY_BODY =
+  'Log your first show for this period to track payouts, vendor obligations, and profit.';
+
+/** @deprecated Filter removed from Shows index. */
+export const WORKFLOW_SHOWS_PERIOD_FILTER_EMPTY =
+  'No shows match this filter in the current period.';
+
+/** @deprecated Use period empty-state copy on Shows index. */
 export const WORKFLOW_SHOWS_THIS_WEEK_EMPTY_TITLE =
-  'No shows recorded this week';
+  WORKFLOW_SHOWS_CURRENT_PERIOD_EMPTY_TITLE;
+/** @deprecated Use period empty-state copy on Shows index. */
 export const WORKFLOW_SHOWS_THIS_WEEK_EMPTY_BODY =
-  'Log your first show to begin tracking payouts, vendor obligations, and profit.';
+  WORKFLOW_SHOWS_CURRENT_PERIOD_EMPTY_BODY;
 
 export const WORKFLOW_SHOW_FINANCES_PAYOUT_HINT =
   "Set payout after fees first — percent uses that amount, and totals can't exceed it.";
@@ -82,6 +111,21 @@ export const WORKFLOW_LOG_SHOW_PLATFORM_FEE_HINT =
   'Optional. Record what the platform charged for future analysis. Your payout-after-fees amount already accounts for this.';
 
 export const WORKFLOW_LOG_SHOW_TRIGGER_LABEL = 'Log show';
+/** Shows index hero — primary create action (same handler as {@link WORKFLOW_LOG_SHOW_TRIGGER_LABEL}). */
+export const WORKFLOW_SHOWS_HERO_LOG_LABEL = 'Log New Show';
+export const WORKFLOW_SHOWS_HERO_HEADING = "Let's log another great show.";
+export const WORKFLOW_SHOWS_RAIL_UPCOMING_HEADING = 'Upcoming';
+export const WORKFLOW_SHOWS_RAIL_VIEW_ALL_UPCOMING = 'View all upcoming';
+export const WORKFLOW_SHOWS_RAIL_VIEW_ARCHIVE = 'View archive';
+export const WORKFLOW_SHOWS_RAIL_MOTIVATION_LINE_1 = 'Keep showing up.';
+export const WORKFLOW_SHOWS_RAIL_MOTIVATION_LINE_2 =
+  'The next sales take care of themselves.';
+export const WORKFLOW_SHOWS_INDEX_SEARCH_PLACEHOLDER = 'Search shows…';
+export const WORKFLOW_SHOWS_INDEX_STATUS_ALL = 'All statuses';
+export const WORKFLOW_SHOWS_INDEX_EXPORT_LABEL = 'Export';
+export const WORKFLOW_SHOWS_INDEX_EXPORT_CSV = 'Download shows CSV';
+export const WORKFLOW_SHOWS_INDEX_OWED_LABEL = 'Owed';
+export const WORKFLOW_SHOWS_INDEX_SHOWS_COUNT_LABEL = 'Shows';
 export const WORKFLOW_LOG_SHOW_PANEL_TITLE = 'Log a show';
 export const WORKFLOW_LOG_SHOW_PANEL_SUBTITLE =
   'Date, platform, and name — add payout on the show page when ready.';
@@ -112,6 +156,24 @@ export const WORKFLOW_SHOW_CLOSED_ROW_SUCCESS_DETAIL =
 export const WORKFLOW_SHOW_STATUS_OPEN_LABEL = 'Open — needs close-out';
 
 export const WORKFLOW_SHOW_STATUS_COMPLETED_LABEL = 'Completed — locked';
+
+/** Show detail rail — contextual status (not financial summary). */
+export const WORKFLOW_SHOW_DETAIL_STATUS_HEADING = 'Show status';
+
+export const WORKFLOW_SHOW_DETAIL_STATUS_COMPLETED_TITLE = 'Completed';
+
+export const WORKFLOW_SHOW_DETAIL_STATUS_LOCKED_LABEL = 'Locked';
+
+export const WORKFLOW_SHOW_DETAIL_STATUS_FINALIZED_BODY =
+  'This show has been finalized.';
+
+export const WORKFLOW_SHOW_DETAIL_STATUS_OPEN_TITLE = 'Open';
+
+export const WORKFLOW_SHOW_DETAIL_STATUS_OPEN_BODY =
+  'This show still needs close-out.';
+
+export const WORKFLOW_SHOW_DETAIL_REOPEN_HINT =
+  'Reopening will unlock payout and vendor obligations for editing.';
 
 export const WORKFLOW_NEEDS_ATTENTION_HEADING = 'Needs attention';
 

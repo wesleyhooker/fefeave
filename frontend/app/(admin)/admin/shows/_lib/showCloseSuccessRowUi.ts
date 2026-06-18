@@ -10,3 +10,7 @@ export const showCloseSuccessTableRowShell =
 /** Mobile card — same language as table row. */
 export const showCloseSuccessCardShell =
   'border-emerald-300/90 bg-emerald-100/80 shadow-[inset_4px_0_0_0_rgb(5,150,105)] ring-2 ring-emerald-500/50 ring-offset-2 ring-offset-white';
+
+/** Current-period entry row — inset accent without card chrome. */
+export const showCloseSuccessPeriodEntryShell =
+  'border-y border-emerald-300/70 bg-emerald-100/80 shadow-[inset_4px_0_0_0_rgb(5,150,105)] ring-2 ring-emerald-500/40 ring-inset';

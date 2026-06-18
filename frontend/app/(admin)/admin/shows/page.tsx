@@ -17,18 +17,17 @@ import {
   mapShowToViewModel,
   type ShowViewModel,
 } from "@/src/lib/api/shows";
-import {
-  ShowsAllTimeClosedSummary,
-  type ShowsClosedAnalytics,
-} from "./_components/ShowsAllTimeClosedSummary";
-import { ShowsOperationalRail } from "./_components/ShowsOperationalRail";
+import { ShowsBrandRail } from "./_components/ShowsBrandRail";
 import { ShowsPastWeeksSection } from "./_components/ShowsPastWeeksSection";
-import { ShowsThisWeekSection } from "./_components/ShowsThisWeekSection";
+import { ShowsCurrentPeriodSection } from "./_components/ShowsCurrentPeriodSection";
+import { ShowsUnscheduledSection } from "./_components/ShowsUnscheduledSection";
+import { ShowsUpcomingWeeksSection } from "./_components/ShowsUpcomingWeeksSection";
 import {
   SHOWS_INDEX_LAYOUT_MAIN,
   SHOWS_INDEX_LAYOUT_ROW,
 } from "./showsIndexLayout";
-import { buildWeekStructure, collectOpenShows } from "./weekStructure";
+import { buildWeekStructure } from "./weekStructure";
+import { findNextUpcomingShow } from "./_lib/findNextUpcomingShow";
 import { ShowCreateForm } from "./new/ShowCreateForm";
 import { showCloseOutHref } from "@/app/(admin)/admin/_lib/showRoutes";
 import {
@@ -117,47 +116,12 @@ export default function AdminShowsPage() {
 
   const rows = useMemo(() => shows ?? [], [shows]);
 
-  const { currentShows, pastBlocks } = useMemo(
+  const { currentShows, pastBlocks, futureBlocks, unscheduled } = useMemo(
     () => buildWeekStructure(rows, currentWeek.startStr),
     [rows, currentWeek.startStr],
   );
 
-  const openShows = useMemo(() => collectOpenShows(rows), [rows]);
-
-  const analytics = useMemo((): ShowsClosedAnalytics => {
-    const closed = rows.filter(
-      (s) => (s.status ?? "").toUpperCase() === "COMPLETED",
-    );
-    if (closed.length === 0)
-      return {
-        closedCount: 0,
-        totalPayout: 0,
-        avgProfit: 0,
-        bestShow: null,
-        worstShow: null,
-      };
-    let totalPayout = 0;
-    let totalProfit = 0;
-    let best: { name: string; profit: number } | null = null;
-    let worst: { name: string; profit: number } | null = null;
-    for (const show of closed) {
-      const s = summaries[show.id];
-      if (s == null) continue;
-      totalPayout += s.payoutAfterFees;
-      totalProfit += s.estimatedShowProfit;
-      if (best === null || s.estimatedShowProfit > best.profit)
-        best = { name: show.name, profit: s.estimatedShowProfit };
-      if (worst === null || s.estimatedShowProfit < worst.profit)
-        worst = { name: show.name, profit: s.estimatedShowProfit };
-    }
-    return {
-      closedCount: closed.length,
-      totalPayout,
-      avgProfit: totalProfit / closed.length,
-      bestShow: best,
-      worstShow: worst,
-    };
-  }, [rows, summaries]);
+  const upcomingShow = useMemo(() => findNextUpcomingShow(rows), [rows]);
 
   if (loading) {
     return <ShowsTableSkeleton />;
@@ -196,14 +160,21 @@ export default function AdminShowsPage() {
         {error == null ? (
           <div className={SHOWS_INDEX_LAYOUT_ROW}>
             <div className={SHOWS_INDEX_LAYOUT_MAIN}>
-              <ShowsThisWeekSection
-                currentWeek={currentWeek}
+              <ShowsCurrentPeriodSection
+                periodBounds={currentWeek}
                 currentShows={currentShows}
                 summaries={summaries}
                 isCreateOpen={isCreateOpen}
                 onLogShow={openLogShowPanel}
                 highlightShowId={highlightShowId}
               />
+              {futureBlocks.length > 0 ? (
+                <ShowsUpcomingWeeksSection
+                  futureBlocks={futureBlocks}
+                  summaries={summaries}
+                  highlightShowId={highlightShowId}
+                />
+              ) : null}
               {pastBlocks.length > 0 ? (
                 <ShowsPastWeeksSection
                   pastBlocks={pastBlocks}
@@ -211,19 +182,18 @@ export default function AdminShowsPage() {
                   highlightShowId={highlightShowId}
                 />
               ) : null}
-              {analytics.closedCount > 0 ? (
-                <div className="xl:hidden">
-                  <ShowsAllTimeClosedSummary analytics={analytics} />
-                </div>
+              {unscheduled.length > 0 ? (
+                <ShowsUnscheduledSection
+                  unscheduled={unscheduled}
+                  summaries={summaries}
+                />
               ) : null}
             </div>
 
-            <ShowsOperationalRail
-              currentWeek={currentWeek}
-              openShows={openShows}
-              currentShows={currentShows}
-              summaries={summaries}
-              analytics={analytics}
+            <ShowsBrandRail
+              upcomingShow={upcomingShow}
+              closedPeriodCount={pastBlocks.length}
+              hasUpcomingPeriods={futureBlocks.length > 0}
             />
           </div>
         ) : null}

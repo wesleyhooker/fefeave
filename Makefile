@@ -26,6 +26,7 @@ DEV_POLL_ENV := WATCHPACK_POLLING=true CHOKIDAR_USEPOLLING=true WATCHPACK_POLLIN
 .PHONY: frontend-lint frontend-build frontend-check
 .PHONY: dev dev-up dev-down dev-status dev-api dev-api-cognito dev-ui dev-tmux dev-tmux-cognito dev-cognito dev-reset-frontend
 .PHONY: dev-db-up dev-db-down dev-db-reset dev-migrate dev-seed dev-seed-verify dev-reset dev-backfill-financial-events check-cognito-env
+.PHONY: dev-scenario dev-scenario-list dev-scenario-reset
 .PHONY: init ws-dev ws-prod plan-dev apply-dev plan-prod apply-prod output-dev output-prod gh-sync-dev gh-sync-prod deploy-dev deploy-prod dev-plan dev-apply ui-aws dev-backend-health dev-backend-wholesalers
 
 # ------------------------------------------------------------------------------
@@ -77,6 +78,9 @@ help:
 	@echo "    make dev-seed           Seed dev data + financial_events backfill (after dev-migrate)"
 	@echo "    make dev-seed-verify    Print Financials mock-data health metrics (DB + API if up)"
 	@echo "    make dev-reset          Reset local DB schema, migrate, seed (clean Financials mock)"
+	@echo "    make dev-scenario SCENARIO=<id>  Load dev-only workspace scenario (DB-backed UI states)"
+	@echo "    make dev-scenario-list  List workspace scenarios"
+	@echo "    make dev-scenario-reset Clear workspace scenario data only"
 	@echo "    make dev-backfill-financial-events  Backfill financial_events only (local dev DB)"
 	@echo ""
 	@echo "  Outer-loop / AWS (low-cost hosting; use plan-dev/plan-prod to preview cost-related changes):"
@@ -313,6 +317,20 @@ dev-reset:
 dev-backfill-financial-events:
 	@echo "Backfilling financial_events from domain tables (local dev only)"
 	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run backfill:financial-events
+
+dev-scenario:
+ifndef SCENARIO
+	$(error SCENARIO is required, e.g. make dev-scenario SCENARIO=shows-typical-week)
+endif
+	@echo "Loading workspace scenario: $(SCENARIO)"
+	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run scenario:run -- $(SCENARIO)
+
+dev-scenario-list:
+	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run scenario:list
+
+dev-scenario-reset:
+	@echo "Clearing workspace scenario namespace (dev only)"
+	@DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DB_URL)}" npm --prefix backend run scenario:reset
 
 # ------------------------------------------------------------------------------
 # Local dev / app run

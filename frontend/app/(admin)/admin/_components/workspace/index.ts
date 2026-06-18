@@ -16,6 +16,10 @@ export {
   type WorkspaceIllustratedCardSummaryRow,
 } from './WorkspaceIllustratedCard';
 export {
+  WorkspaceIllustratedHero,
+  type WorkspaceIllustratedHeroProps,
+} from './WorkspaceIllustratedHero';
+export {
   WorkspaceIllustrationImage,
   type WorkspaceIllustrationImageProps,
   type WorkspaceIllustrationSize,
@@ -92,6 +96,29 @@ export {
   WorkspacePageHeader,
   type WorkspacePageHeaderProps,
 } from './WorkspacePageHeader';
+
+export {
+  WorkspaceEntityHeader,
+  type WorkspaceEntityHeaderMetric,
+  type WorkspaceEntityHeaderProps,
+  type WorkspaceEntityIllustration,
+} from './WorkspaceEntityHeader';
+
+export {
+  WorkspaceMetadataRow,
+  type WorkspaceMetadataRowProps,
+} from './WorkspaceMetadataRow';
+
+export {
+  WorkspaceStatusCard,
+  type WorkspaceStatusCardDetailItem,
+  type WorkspaceStatusCardProps,
+} from './WorkspaceStatusCard';
+
+export {
+  WorkspaceSectionCard,
+  type WorkspaceSectionCardProps,
+} from './WorkspaceSectionCard';
 
 export {
   WorkspaceCard,

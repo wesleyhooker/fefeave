@@ -1,6 +1,6 @@
 /**
- * Shared visual system for the **operating week** — Dashboard "This week" card and
- * Shows "This week" section use the same shell so the week reads as one core surface.
+ * Shared visual system for the **operating week** — Dashboard "This week" card uses
+ * the warm shell; Shows "Current period" is a flat section (see `workspaceShowsCurrentPeriod*`).
  *
  * Keep calm: neutral card shell with restrained accents only in typography/row interactions,
  * never a heavy structural rail or decorative gradient.
@@ -57,6 +57,45 @@ export const workspaceThisWeekEmptyStateShell = [
 export const workspaceThisWeekShowListStack = [
   WORKSPACE_CONTAINER_GUTTER,
   'list-none space-y-3 pb-6 m-0 p-0 sm:space-y-3.5 sm:pb-7',
+].join(' ');
+
+/** @deprecated Shows index — use {@link workspaceShowsCurrentPeriodActionBar}. */
+export const workspaceThisWeekPeriodToolbar = [
+  WORKSPACE_CONTAINER_GUTTER,
+  'border-b border-admin-border/88 bg-admin-surfaceElevated py-3 sm:py-3.5',
+].join(' ');
+
+/** @deprecated Shows index — flat section has no inner list zone. */
+export const workspaceThisWeekPeriodListZone = 'bg-admin-surfaceElevated';
+
+/** Desktop grid columns: status · title/date · money · chevron */
+export const workspaceThisWeekPeriodEntryDesktopGrid =
+  'sm:grid sm:min-h-[3.25rem] sm:grid-cols-[7.5rem_minmax(0,1fr)_7rem_1.25rem] sm:items-center sm:gap-x-4 sm:gap-y-0';
+
+/** Horizontal padding for a period entry row — matches section gutter. */
+export const workspaceThisWeekPeriodEntryRowPadding = `${WORKSPACE_CONTAINER_GUTTER} py-3.5 sm:py-3`;
+
+/** Shows index — flat current period section (no card shell). */
+export const workspaceShowsCurrentPeriodSection = 'min-w-0';
+
+/** Shows index — Log show action bar above the entry list. */
+export const workspaceShowsCurrentPeriodActionBar = 'flex justify-end';
+
+/**
+ * Shows index — contained list/empty surface (Vendors/Purchases table rhythm).
+ * Wraps entry rows only — not the period summary header.
+ */
+export const workspaceShowsCurrentPeriodListSurface =
+  'min-w-0 overflow-hidden rounded-lg border border-admin-border/90 bg-admin-surfaceElevated shadow-workspace-surface-warm-sm';
+
+/** Divided entry rows inside the Shows current period list surface. */
+export const workspaceThisWeekPeriodEntryList =
+  'm-0 list-none divide-y divide-admin-border/85 p-0';
+
+/** Shows index — empty period body inside the list surface. */
+export const workspaceShowsCurrentPeriodEmptyStateShell = [
+  WORKSPACE_CONTAINER_GUTTER,
+  'flex flex-col items-center py-8 text-center sm:py-10',
 ].join(' ');
 
 /** Footer strip (self-pay workflow) — ties to the same calm family. */

@@ -1,5 +1,6 @@
 import { formatWeekRangeCompact } from "@/lib/weekRange";
 import type { ShowFinancialSummary } from "@/app/(admin)/admin/_lib/showFinancialSummary";
+import { WORKFLOW_PAST_PERIODS_HEADING } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
 import {
   workspaceTableRowHover,
   workspaceTableRowInteractive,
@@ -50,10 +51,10 @@ export function ShowsPastWeeksSection({
             id="shows-past-weeks-heading"
             className={`min-w-0 flex-1 ${WORKSPACE_WEEK_SECTION_TITLE}`}
           >
-            Past weeks
+            {WORKFLOW_PAST_PERIODS_HEADING}
           </h2>
           <span className="shrink-0 text-sm text-gray-600">
-            {pastBlocks.length} {pastBlocks.length === 1 ? "week" : "weeks"}
+            {pastBlocks.length} {pastBlocks.length === 1 ? "period" : "periods"}
           </span>
           <PastWeekChevron className="h-5 w-5 shrink-0 text-gray-500 transition-transform duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none group-open:rotate-180" />
         </summary>

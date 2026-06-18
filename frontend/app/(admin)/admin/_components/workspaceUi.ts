@@ -439,6 +439,13 @@ export const workspacePageSectionEyebrow = WORKSPACE_PAGE_SECTION_EYEBROW;
 export const workspacePageHeaderTitleRow =
   'flex flex-col gap-2.5 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between sm:gap-4';
 
+/** Left cluster inside the title row — mobile menu, back nav, page title. */
+export const workspacePageHeaderTitleRowLeft =
+  'flex min-w-0 flex-1 items-center gap-2 sm:gap-3';
+
+/** Back link / parent nav beside the page title (entity detail pages). */
+export const workspacePageHeaderLeading = 'min-w-0 shrink-0';
+
 export const workspacePageHeaderUtilitiesCluster =
   'flex w-full min-w-0 items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-end';
 

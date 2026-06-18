@@ -14,6 +14,18 @@ describe('workspace page header', () => {
     assert.match(source, /useRegisterWorkspacePageHeader/);
     assert.match(source, /WorkspaceHeaderUtilities/);
     assert.doesNotMatch(source, /workspaceHeaderBrandCluster/);
+    assert.match(source, /workspacePageHeaderTitleRowLeft/);
+    assert.match(source, /leadingContent/);
+    assert.doesNotMatch(
+      source,
+      /breadcrumb \? <div className="min-w-0">\{breadcrumb\}/,
+    );
+  });
+
+  it('workspaceEntityPageHeader builds detail page header props', () => {
+    const helper = read('_lib/workspaceEntityPageHeader.ts');
+    assert.match(helper, /leading/);
+    assert.match(helper, /WorkspacePageHeaderProps/);
   });
 
   it('AdminLayoutClient hides legacy WorkspaceHeader when page header is active', () => {
@@ -63,9 +75,9 @@ describe('workspace page header', () => {
     );
   });
 
-  it('legacy WorkspaceHeader keeps Fefe Ave brand for unmigrated pages', () => {
+  it('legacy WorkspaceHeader is utilities-only when page header is inactive', () => {
     const legacy = read('_components/headers/WorkspaceHeader.tsx');
-    assert.match(legacy, /Fefe Ave/);
+    assert.doesNotMatch(legacy, /Fefe Ave/);
     assert.match(legacy, /WorkspaceHeaderUtilities/);
   });
 });

@@ -4,11 +4,13 @@ import type { ReactNode } from "react";
 import { useAdminWorkspace } from "@/app/(admin)/admin/AdminWorkspaceContext";
 import {
   workspaceChromeHover,
+  workspacePageHeaderLeading,
   workspacePageHeaderPadding,
   workspacePageHeaderSubtitle,
   workspacePageHeaderTitle,
   workspacePageHeaderTitleDecorationGap,
   workspacePageHeaderTitleRow,
+  workspacePageHeaderTitleRowLeft,
   workspacePageHeaderUtilitiesCluster,
 } from "../workspaceUi";
 import { useRegisterWorkspacePageHeader } from "../headers/WorkspacePageHeaderContext";
@@ -21,7 +23,14 @@ export type WorkspacePageHeaderProps = {
   titleDecoration?: ReactNode;
   /** Page-level primary actions — sits after utilities on desktop. */
   actions?: ReactNode;
-  /** Shown above the title (detail pages — breadcrumbs). */
+  /**
+   * Left slot before the title in the utilities row — back links, parent nav.
+   * Shares the same horizontal band as the page title and workspace utilities.
+   */
+  leading?: ReactNode;
+  /**
+   * @deprecated Use {@link leading} — kept for migration; renders in the title row.
+   */
   breadcrumb?: ReactNode;
   /** Compact row directly under the title (e.g. Shows primary action). */
   belowTitle?: ReactNode;
@@ -33,14 +42,15 @@ export type WorkspacePageHeaderProps = {
 };
 
 /**
- * A1 page-aware workspace header — title row shares a line with search and account chrome.
- * Sidebar owns brand identity; top-level pages do not repeat “Fefe Ave • Workspace”.
+ * Page-aware workspace header — one row: [leading + title] | utilities.
+ * Sidebar owns brand identity; pages do not repeat “Fefe Ave • Workspace”.
  */
 export function WorkspacePageHeader({
   title,
   subtitle,
   titleDecoration,
   actions,
+  leading,
   breadcrumb,
   belowTitle,
   showUtilities = true,
@@ -48,14 +58,13 @@ export function WorkspacePageHeader({
   useRegisterWorkspacePageHeader(showUtilities);
 
   const { email, roles, openMobileSidebar } = useAdminWorkspace();
+  const leadingContent = leading ?? breadcrumb;
 
   return (
     <header className={`relative ${workspacePageHeaderPadding}`}>
       <div className="flex flex-col gap-2.5 sm:gap-3">
-        {breadcrumb ? <div className="min-w-0">{breadcrumb}</div> : null}
-
         <div className={workspacePageHeaderTitleRow}>
-          <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className={workspacePageHeaderTitleRowLeft}>
             {openMobileSidebar ? (
               <button
                 type="button"
@@ -80,7 +89,11 @@ export function WorkspacePageHeader({
               </button>
             ) : null}
 
-            <h1 className={workspacePageHeaderTitle}>
+            {leadingContent != null ? (
+              <div className={workspacePageHeaderLeading}>{leadingContent}</div>
+            ) : null}
+
+            <h1 className={`min-w-0 ${workspacePageHeaderTitle}`}>
               {titleDecoration ? (
                 <span
                   className={`inline-flex min-w-0 items-center ${workspacePageHeaderTitleDecorationGap}`}

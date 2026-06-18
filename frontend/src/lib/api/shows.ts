@@ -1,4 +1,5 @@
 import { backendGetJson } from './backend';
+import { formatShowDisplayName } from '@/app/(admin)/admin/shows/_lib/showDisplayName';
 
 export interface ShowDTO {
   id: string;
@@ -18,6 +19,7 @@ export interface ShowViewModel {
   id: string;
   name: string;
   date: string;
+  platform: ShowDTO['platform'];
   status: string;
   updated_at?: string;
 }
@@ -183,8 +185,9 @@ export async function upsertShowFinancials(
 export function mapShowToViewModel(show: ShowDTO): ShowViewModel {
   return {
     id: show.id,
-    name: show.name,
+    name: formatShowDisplayName(show.name),
     date: show.show_date,
+    platform: show.platform,
     status: show.status ?? 'PLANNED',
     updated_at: show.updated_at,
   };

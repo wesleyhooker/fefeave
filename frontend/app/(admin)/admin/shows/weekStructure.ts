@@ -7,11 +7,14 @@ import type { ShowViewModel } from '@/src/lib/api/shows';
 
 export const UNSCHEDULED_KEY = '__unscheduled__';
 
-export type PastWeekBlock = {
+export type WeekBlock = {
   startStr: string;
   bounds: WeekBounds;
   shows: ShowViewModel[];
 };
+
+/** @deprecated Use {@link WeekBlock} */
+export type PastWeekBlock = WeekBlock;
 
 export function sortShowsByDateAsc(shows: ShowViewModel[]): ShowViewModel[] {
   return [...shows].sort(
@@ -26,15 +29,35 @@ export function collectOpenShows(rows: ShowViewModel[]): ShowViewModel[] {
   );
 }
 
+function buildWeekBlocks(
+  byWeek: Map<string, ShowViewModel[]>,
+  weekKeys: string[],
+): WeekBlock[] {
+  const blocks: WeekBlock[] = [];
+  for (const k of weekKeys) {
+    const bounds = getWeekBoundsForShowDate(k);
+    if (bounds) {
+      blocks.push({
+        startStr: k,
+        bounds,
+        shows: byWeek.get(k) ?? [],
+      });
+    }
+  }
+  return blocks;
+}
+
 /**
- * Partition shows into the current ISO week, prior weeks (newest first), and unscheduled rows.
+ * Partition shows into current ISO week, prior weeks (newest first),
+ * upcoming weeks (nearest first), and unscheduled rows.
  */
 export function buildWeekStructure(
   rows: ShowViewModel[],
   currentMonday: string,
 ): {
   currentShows: ShowViewModel[];
-  pastBlocks: PastWeekBlock[];
+  pastBlocks: WeekBlock[];
+  futureBlocks: WeekBlock[];
   unscheduled: ShowViewModel[];
 } {
   const byWeek = new Map<string, ShowViewModel[]>();
@@ -51,23 +74,21 @@ export function buildWeekStructure(
 
   const currentShows = sortShowsByDateAsc(byWeek.get(currentMonday) ?? []);
 
-  const pastKeys = [...byWeek.keys()]
-    .filter((k) => k !== currentMonday && k !== UNSCHEDULED_KEY)
+  const weekKeys = [...byWeek.keys()].filter(
+    (k) => k !== currentMonday && k !== UNSCHEDULED_KEY,
+  );
+
+  const pastKeys = weekKeys
+    .filter((k) => k < currentMonday)
     .sort((a, b) => b.localeCompare(a));
 
-  const pastBlocks: PastWeekBlock[] = [];
-  for (const k of pastKeys) {
-    const bounds = getWeekBoundsForShowDate(k);
-    if (bounds) {
-      pastBlocks.push({
-        startStr: k,
-        bounds,
-        shows: byWeek.get(k) ?? [],
-      });
-    }
-  }
+  const futureKeys = weekKeys
+    .filter((k) => k > currentMonday)
+    .sort((a, b) => a.localeCompare(b));
 
+  const pastBlocks = buildWeekBlocks(byWeek, pastKeys);
+  const futureBlocks = buildWeekBlocks(byWeek, futureKeys);
   const unscheduled = sortShowsByDateAsc(byWeek.get(UNSCHEDULED_KEY) ?? []);
 
-  return { currentShows, pastBlocks, unscheduled };
+  return { currentShows, pastBlocks, futureBlocks, unscheduled };
 }

@@ -50,7 +50,8 @@ export type AdminWorkspacePageLayoutProps = AdminWorkspacePageLayoutBase &
  * {@link WORKSPACE_TOP_LEVEL_PAGE_HEADERS}). One prop registers page-aware mode,
  * renders utilities, and keeps loading/error/success states consistent.
  *
- * **Detail / settings pages:** pass `intro` with `AdminPageIntro` until migrated.
+ * **Detail / settings pages:** pass `pageHeader` with `leading` + title (see
+ * {@link workspaceEntityPageHeader}), or legacy `intro` with `AdminPageIntro`.
  */
 export function AdminWorkspacePageLayout({
   intro,
