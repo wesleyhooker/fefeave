@@ -1,0 +1,42 @@
+---
+description: "Product surfaces — public site, operator workspace, portal"
+globs:
+  - "frontend/**"
+  - "design/**"
+  - "docs/design/**"
+alwaysApply: false
+---
+
+# Product surfaces & design
+
+## Surfaces
+
+FefeAve is not only the operator workspace. It includes:
+
+- **Public website** — marketing and brand presence (unauthenticated).
+- **Operator workspace** — authenticated product for running the live-resale business (shows, obligations, payments, financial operations).
+- **Portal** — wholesaler or stakeholder access (read-only or limited; e.g. statements).
+
+Surfaces are distinct in routing, permissions, and presentation. Do not cross boundaries without explicit intent.
+
+## Operator experience
+
+- Navigation and information architecture should follow **operator workflows**, not internal database or API resource names.
+- One primary landing for daily work; deep audit and history views are secondary to action-oriented surfaces.
+
+## Design systems
+
+- Public and operator UIs use **separate design systems** — do not mix components or tokens across surfaces unintentionally.
+- Financial and obligation data should stay easy to scan; prefer structured lists and tables over decorative layout.
+
+## New UI
+
+- Substantial new UI should follow an agreed design direction (spec or design tool) before broad implementation.
+
+## Canonical docs
+
+- [docs/product/reseller-workspace-v2.md](../../docs/product/reseller-workspace-v2.md) (operator IA — evolves)
+- [docs/ux-direction-felicia-first.md](../../docs/ux-direction-felicia-first.md)
+- [docs/design/a1-workspace-design-system.md](../../docs/design/a1-workspace-design-system.md) (operator; evolves)
+- [design/](../../design/) (public; evolves)
+- [frontend/app/(admin)/admin/README.md](../../frontend/app/(admin)/admin/README.md) (operator implementation patterns)

@@ -1,0 +1,30 @@
+---
+description: "FefeAve core principles — scope, trust, security"
+alwaysApply: true
+---
+
+# FefeAve — Core
+
+FefeAve supports a live-resale business across **multiple product surfaces**: a public marketing website, an authenticated **operator workspace** for day-to-day operations, and a wholesaler or stakeholder portal for limited access (e.g. statements). These surfaces share a backend but serve different audiences.
+
+The **server is authoritative** for permissions and money. The UI reflects and submits data; it does not define financial truth or access control.
+
+## Scope
+
+- Stay within the task's agreed scope. Avoid scope creep.
+- Prefer small, reviewable diffs. Refactor only when it improves correctness or consistency.
+- Unrequested ideas belong in a clearly labeled **OPTIONAL** section — do not implement them unless asked.
+
+## Security
+
+- Never public S3 buckets. Least-privilege IAM.
+- No secrets, tokens, or presigned URLs in logs.
+- Attachments stay private; access via presigned URLs only.
+
+## Under uncertainty
+
+- Choose the safest reasonable assumption, state it explicitly, and proceed with a minimal diff.
+
+## Canonical docs
+
+See [docs/internal/cursor-rules-index.md](../../docs/internal/cursor-rules-index.md) for principle → documentation mapping.

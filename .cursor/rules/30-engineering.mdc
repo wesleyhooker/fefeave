@@ -1,0 +1,30 @@
+---
+description: "Engineering guardrails — layers, contracts, verification"
+globs:
+  - "backend/**"
+  - "frontend/**"
+  - "infra/**"
+alwaysApply: false
+---
+
+# Engineering
+
+## Structure
+
+- HTTP handlers orchestrate; domain rules live in services; aggregations in read-models or projections — not duplicated in the UI or route handlers.
+- Do not break API contracts unless explicitly requested.
+
+## When you touch…
+
+- **API endpoints:** keep validation, auth guards, OpenAPI/Swagger, and tests aligned — see [docs/internal/agent-spec.md](../../docs/internal/agent-spec.md).
+- **Database:** migration required; follow existing soft-delete and indexing patterns.
+- **Infrastructure:** follow [docs/infra/README.md](../../infra/README.md); consider blast radius for production-affecting changes.
+
+## Quality
+
+- Run relevant checks before finishing (`make check` or targeted tests). If tests were skipped, state why explicitly.
+- Ledger- or migration-affecting work: integration tests per [docs/testing.md](../../docs/testing.md).
+
+## Stack reference
+
+Next.js (App Router) frontend, Fastify API, PostgreSQL. Details in [docs/architecture.md](../../docs/architecture.md).

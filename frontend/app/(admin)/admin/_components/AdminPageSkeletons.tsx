@@ -227,9 +227,6 @@ function BalancesContentSkeleton() {
         </div>
       </WorkspaceGridItem>
       <WorkspaceGridItem span="full">
-        <SkeletonBar className="h-10 w-full max-w-md rounded-lg" />
-      </WorkspaceGridItem>
-      <WorkspaceGridItem span="full">
         <div className={`overflow-hidden ${workspaceCard}`}>
           <div className="overflow-x-auto">
             <TableSkeleton

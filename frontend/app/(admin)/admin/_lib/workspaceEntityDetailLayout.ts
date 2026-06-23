@@ -17,19 +17,17 @@ export const WORKSPACE_ENTITY_HEADER_SHELL = [
 ].join(' ');
 
 /**
- * Entity header banner — mobile stack; desktop content + illustration.
+ * Entity header banner — mobile stack; desktop record summary + illustration.
  *
- * | Zone | md | lg | xl |
- * | content (identity + KPIs) | 76% | 78% | 74% |
- * | illustration | 24% | 20% | 22% |
+ * Desktop: `[ identity + KPIs ] …… [ illustration ]` via flex — not a wide
+ * percentage grid that isolates KPIs in the middle of the hero.
  */
 export const WORKSPACE_ENTITY_HEADER_BANNER = [
   WORKSPACE_PAD_X,
-  'grid grid-cols-1 gap-2.5 py-3.5',
+  'flex flex-col gap-2.5 py-3.5',
   'sm:gap-3 sm:py-4',
-  'md:grid-cols-[minmax(0,76%)_minmax(0,24%)] md:items-center md:gap-x-4 md:py-4',
-  'lg:grid-cols-[minmax(0,78%)_minmax(0,20%)] lg:gap-x-5',
-  'xl:grid-cols-[minmax(0,74%)_minmax(0,22%)]',
+  'md:flex-row md:items-center md:justify-between md:gap-x-4 md:py-4',
+  'lg:gap-x-5',
 ].join(' ');
 
 /** Content-only banner (no illustration column). */
@@ -43,10 +41,11 @@ export const WORKSPACE_ENTITY_HEADER_BANNER_CONTENT_ONLY = [
 export const WORKSPACE_ENTITY_HEADER_BANNER_TWO_COL =
   WORKSPACE_ENTITY_HEADER_BANNER_CONTENT_ONLY;
 
-/** Main zone — title, metadata, and KPI strip grouped as one record summary. */
+/** Record summary — identity and KPIs stay grouped; illustration is separate. */
 export const WORKSPACE_ENTITY_HEADER_CONTENT = [
   'relative z-10 flex min-w-0 flex-col gap-2.5',
   'sm:gap-3',
+  'md:flex-row md:items-center md:gap-5 lg:gap-6 xl:gap-7',
 ].join(' ');
 
 /** Title + metadata block within the content zone. */
@@ -73,7 +72,7 @@ export const WORKSPACE_ENTITY_METADATA_SEP =
  * @see SHOWS_HERO_CARD_STATS_GRID
  */
 export const WORKSPACE_ENTITY_HEADER_KPI_ROW = [
-  'grid w-fit max-w-full grid-cols-1 divide-y divide-admin-border/30',
+  'grid w-fit max-w-full shrink-0 grid-cols-1 divide-y divide-admin-border/30',
   'sm:grid-cols-3 sm:divide-x sm:divide-y-0',
 ].join(' ');
 
@@ -82,17 +81,19 @@ export const WORKSPACE_ENTITY_HEADER_KPI_CELL = [
   'px-0 py-1.5 sm:px-4 sm:py-0',
 ].join(' ');
 
-/** Right zone — decorative art anchored in-column, not at page edge. */
+/** Right zone — compact decorative art; auto width, not a reserved grid column. */
 export const WORKSPACE_ENTITY_HEADER_ART_CELL = [
   'relative flex min-h-[4.5rem] w-full min-w-0 items-end justify-center',
   'sm:min-h-[5rem]',
-  'md:min-h-0 md:items-center md:justify-end md:pl-1',
+  'md:min-h-0 md:w-auto md:max-w-[8rem] md:shrink-0 md:items-center md:justify-end md:pl-1',
+  'lg:max-w-[8.5rem]',
 ].join(' ');
 
 export const WORKSPACE_ENTITY_HEADER_ART_IMAGE = [
   'block h-auto w-full max-w-full',
   'max-h-[4.5rem] sm:max-h-[5.5rem]',
-  'md:max-h-[7rem] lg:max-h-[7.5rem]',
+  'md:h-auto md:w-auto md:max-h-[7rem] md:max-w-[7rem]',
+  'lg:max-h-[7.5rem] lg:max-w-[7.5rem]',
   SHOWS_HERO_ILLUSTRATION_OBJECT,
   SHOWS_HERO_ILLUSTRATION_IMAGE_NUDGE,
 ].join(' ');

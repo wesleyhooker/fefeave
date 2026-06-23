@@ -31,10 +31,6 @@ import {
   type VendorsAccountStatusFilter,
 } from "./vendorsAccountStatusFilter";
 import { exportVendorBalancesCsv } from "./exportVendorBalancesCsv";
-import {
-  VENDORS_PAYMENT_VIEW_ALL,
-  type VendorsPaymentView,
-} from "./vendorsPaymentView";
 
 type SortKey =
   | "name"
@@ -46,7 +42,6 @@ type SortKey =
 export function VendorsResourceToolbar({
   search,
   onSearchChange,
-  paymentView,
   accountStatusFilter,
   onAccountStatusFilterChange,
   sortKey,
@@ -55,7 +50,6 @@ export function VendorsResourceToolbar({
 }: {
   search: string;
   onSearchChange: (value: string) => void;
-  paymentView: VendorsPaymentView;
   accountStatusFilter: VendorsAccountStatusFilter;
   onAccountStatusFilterChange: (value: VendorsAccountStatusFilter) => void;
   sortKey: SortKey;
@@ -68,7 +62,7 @@ export function VendorsResourceToolbar({
     try {
       await exportVendorBalancesCsv({
         search: search.trim(),
-        owingOnly: paymentView !== VENDORS_PAYMENT_VIEW_ALL,
+        owingOnly: false,
         sortKey,
         sortDir,
       });

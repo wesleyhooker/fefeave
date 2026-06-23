@@ -9,10 +9,12 @@ import {
   assertPercentBpsHeadroom,
   computePercentSettlementAmount,
   loadShowSettlementAggregates,
+  showSettlementMateriallyChanged,
 } from '../services/show-settlement-create-validation';
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors';
 import {
   emitSettlementCreated,
+  emitSettlementAdjusted,
   emitSettlementVoided,
   loadShowDate,
   resolveActorUserId,
@@ -781,6 +783,430 @@ export async function owedLineItemRoutes(
             : {}),
         }))
       );
+    }
+  );
+
+  fastify.patch<{
+    Params: { showId: string; settlementId: string };
+    Body: z.infer<typeof postSettlementSchema>;
+  }>(
+    '/shows/:showId/settlements/:settlementId',
+    {
+      preHandler: adminPre,
+      schema: {
+        description:
+          'Replace a show settlement obligation. Same body shape as create. Enforces one settlement per wholesaler per show (excluding this row), percent cap, and payout cap. Blocked when show is completed.',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['showId', 'settlementId'],
+          properties: {
+            showId: { type: 'string', format: 'uuid' },
+            settlementId: { type: 'string', format: 'uuid' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['wholesaler_id', 'method'],
+          properties: {
+            wholesaler_id: { type: 'string', format: 'uuid' },
+            method: { type: 'string', enum: SETTLEMENT_METHODS },
+            rate_percent: { type: 'number' },
+            amount: { type: 'number' },
+            lines: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['itemName', 'quantity', 'unitPrice'],
+                properties: {
+                  itemName: { type: 'string' },
+                  quantity: { type: 'integer' },
+                  unitPrice: { type: 'integer' },
+                },
+              },
+            },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              show_id: { type: 'string' },
+              wholesaler_id: { type: 'string' },
+              amount: { type: 'string' },
+              currency: { type: 'string' },
+              calculation_method: { type: 'string' },
+              rate_bps: { type: 'number' },
+              base_amount: { type: 'string' },
+              status: { type: 'string' },
+              created_at: { type: 'string' },
+              updated_at: { type: 'string' },
+              lines: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    settlement_id: { type: 'string' },
+                    item_name: { type: 'string' },
+                    quantity: { type: 'integer' },
+                    unit_price_cents: { type: 'integer' },
+                    line_total_cents: { type: 'integer' },
+                    created_at: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const showIdParsed = uuidSchema.safeParse(request.params.showId);
+      if (!showIdParsed.success) {
+        throw new ValidationError('Invalid showId', showIdParsed.error.errors);
+      }
+      const settlementIdParsed = uuidSchema.safeParse(request.params.settlementId);
+      if (!settlementIdParsed.success) {
+        throw new ValidationError('Invalid settlementId', settlementIdParsed.error.errors);
+      }
+      const showId = showIdParsed.data;
+      const settlementId = settlementIdParsed.data;
+
+      const bodyParsed = postSettlementSchema.safeParse(request.body);
+      if (!bodyParsed.success) {
+        throw new ValidationError('Invalid request body', bodyParsed.error.errors);
+      }
+      const {
+        wholesaler_id,
+        method,
+        rate_percent,
+        amount: amountRaw,
+        lines: linesRaw,
+      } = bodyParsed.data;
+
+      const row = await withTx(async (client) => {
+        await ensureUser(client, request);
+
+        const showCheck = await client.query(
+          `SELECT id, status FROM shows WHERE id = $1 AND deleted_at IS NULL`,
+          [showId]
+        );
+        if (showCheck.rows.length === 0) {
+          throw new NotFoundError('Show', showId);
+        }
+        const showStatus = (showCheck.rows[0] as { status: string }).status;
+        if (showStatus === 'COMPLETED') {
+          throw new ConflictError('Show is closed; reopen before editing.');
+        }
+
+        const existingResult = await client.query(
+          `SELECT id, show_id, wholesaler_id, account_id, amount, description, due_date,
+                  obligation_kind, calculation_method, rate_bps, deleted_at
+           FROM owed_line_items
+           WHERE id = $1`,
+          [settlementId]
+        );
+        if (existingResult.rows.length === 0) {
+          throw new NotFoundError('Settlement', settlementId);
+        }
+        const prior = existingResult.rows[0] as {
+          id: string;
+          show_id: string | null;
+          wholesaler_id: string;
+          account_id: string;
+          amount: string;
+          description: string;
+          due_date: string | null;
+          obligation_kind: string;
+          calculation_method: string;
+          rate_bps: number | null;
+          deleted_at: Date | null;
+        };
+        if (
+          prior.deleted_at ||
+          prior.show_id !== showId ||
+          prior.obligation_kind !== 'SHOW_LINKED' ||
+          prior.calculation_method == null
+        ) {
+          throw new NotFoundError('Settlement', settlementId);
+        }
+
+        const wholesalerCheck = await client.query(
+          `SELECT id FROM wholesalers WHERE id = $1 AND deleted_at IS NULL`,
+          [wholesaler_id]
+        );
+        if (wholesalerCheck.rows.length === 0) {
+          throw new NotFoundError('Wholesaler', wholesaler_id);
+        }
+        const accountResult = await client.query(
+          `SELECT id
+           FROM accounts
+           WHERE type = 'WHOLESALER'
+             AND legacy_wholesaler_id = $1
+             AND deleted_at IS NULL
+           LIMIT 1`,
+          [wholesaler_id]
+        );
+        if (accountResult.rows.length === 0) {
+          throw new NotFoundError('Account', `mapped from wholesaler ${wholesaler_id}`);
+        }
+        const accountId = (accountResult.rows[0] as { id: string }).id;
+
+        await assertNoDuplicateSettlementForWholesaler(client, showId, wholesaler_id, settlementId);
+        const settlementAgg = await loadShowSettlementAggregates(client, showId, settlementId);
+
+        const rate_bps = method === 'PERCENT_PAYOUT' ? Math.round((rate_percent ?? 0) * 100) : null;
+        const description =
+          method === 'PERCENT_PAYOUT'
+            ? 'Settlement (percent)'
+            : method === 'ITEMIZED'
+              ? 'Settlement (itemized)'
+              : 'Settlement (manual)';
+
+        const actorUserId = resolveActorUserId(request.user?.cognitoSub);
+        let settlementRow: {
+          id: string;
+          show_id: string;
+          wholesaler_id: string;
+          amount: string;
+          currency: string;
+          calculation_method: string;
+          rate_bps: number | null;
+          base_amount: string | null;
+          status: string;
+          created_at: Date;
+          updated_at: Date;
+        };
+
+        if (method === 'PERCENT_PAYOUT') {
+          if (settlementAgg.payoutAfterFees == null) {
+            throw new ConflictError(
+              'Show financials not found for this show. Add financials before creating a percent-based settlement.'
+            );
+          }
+          assertPercentBpsHeadroom(settlementAgg.existingPercentBps, rate_bps ?? 0);
+          const newAmountPercent = await computePercentSettlementAmount(
+            client,
+            Number(settlementAgg.payoutAfterFees),
+            rate_bps ?? 0
+          );
+          assertNewSettlementAmountAllowed(
+            settlementAgg.existingTotalOwed,
+            newAmountPercent,
+            settlementAgg.payoutAfterFees
+          );
+          const result = await client.query(
+            `UPDATE owed_line_items oli
+             SET wholesaler_id = $2,
+                 account_id = $3,
+                 amount = ROUND(sf.payout_after_fees_amount * $4 / 10000, 4),
+                 description = $5,
+                 calculation_method = 'PERCENT_PAYOUT',
+                 rate_bps = $4,
+                 base_amount = sf.payout_after_fees_amount,
+                 updated_at = NOW()
+             FROM show_financials sf
+             WHERE oli.id = $1
+               AND oli.show_id = $6
+               AND sf.show_id = $6
+               AND oli.deleted_at IS NULL
+             RETURNING oli.id, oli.show_id, oli.wholesaler_id, oli.amount, oli.currency,
+                       oli.calculation_method, oli.rate_bps, oli.base_amount, oli.status,
+                       oli.created_at, oli.updated_at`,
+            [settlementId, wholesaler_id, accountId, rate_bps, description, showId]
+          );
+          if (result.rows.length === 0) {
+            throw new NotFoundError('Settlement', settlementId);
+          }
+          settlementRow = result.rows[0] as typeof settlementRow;
+          await client.query(`DELETE FROM settlement_lines WHERE settlement_id = $1`, [
+            settlementId,
+          ]);
+        } else if (method === 'ITEMIZED') {
+          const lines = linesRaw ?? [];
+          const computed = lines.map((line) => {
+            const lineTotalCents = line.quantity * line.unitPrice;
+            return {
+              item_name: line.itemName.trim(),
+              quantity: line.quantity,
+              unit_price_cents: line.unitPrice,
+              line_total_cents: lineTotalCents,
+            };
+          });
+          const totalCents = computed.reduce((sum, l) => sum + l.line_total_cents, 0);
+          if (totalCents <= 0) {
+            throw new ValidationError('ITEMIZED settlement total must be greater than 0');
+          }
+          const amountDollars = Math.round(totalCents) / 100;
+          assertNewSettlementAmountAllowed(
+            settlementAgg.existingTotalOwed,
+            amountDollars,
+            settlementAgg.payoutAfterFees
+          );
+          const result = await client.query(
+            `UPDATE owed_line_items
+             SET wholesaler_id = $2,
+                 account_id = $3,
+                 amount = $4,
+                 description = $5,
+                 calculation_method = 'ITEMIZED',
+                 rate_bps = NULL,
+                 base_amount = NULL,
+                 updated_at = NOW()
+             WHERE id = $1 AND show_id = $6 AND deleted_at IS NULL
+             RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps,
+                       base_amount, status, created_at, updated_at`,
+            [settlementId, wholesaler_id, accountId, amountDollars, description, showId]
+          );
+          if (result.rows.length === 0) {
+            throw new NotFoundError('Settlement', settlementId);
+          }
+          settlementRow = result.rows[0] as typeof settlementRow;
+          await client.query(`DELETE FROM settlement_lines WHERE settlement_id = $1`, [
+            settlementId,
+          ]);
+          for (const line of computed) {
+            await client.query(
+              `INSERT INTO settlement_lines (settlement_id, item_name, quantity, unit_price_cents, line_total_cents)
+               VALUES ($1, $2, $3, $4, $5)`,
+              [
+                settlementId,
+                line.item_name,
+                line.quantity,
+                line.unit_price_cents,
+                line.line_total_cents,
+              ]
+            );
+          }
+        } else {
+          const amount =
+            (typeof amountRaw === 'string' ? parseFloat(amountRaw) : (amountRaw as number)) ?? 0;
+          if (Number.isNaN(amount) || amount <= 0) {
+            throw new ValidationError('MANUAL settlement requires amount > 0');
+          }
+          assertNewSettlementAmountAllowed(
+            settlementAgg.existingTotalOwed,
+            amount,
+            settlementAgg.payoutAfterFees
+          );
+          const result = await client.query(
+            `UPDATE owed_line_items
+             SET wholesaler_id = $2,
+                 account_id = $3,
+                 amount = $4,
+                 description = $5,
+                 calculation_method = 'MANUAL',
+                 rate_bps = NULL,
+                 base_amount = NULL,
+                 updated_at = NOW()
+             WHERE id = $1 AND show_id = $6 AND deleted_at IS NULL
+             RETURNING id, show_id, wholesaler_id, amount, currency, calculation_method, rate_bps,
+                       base_amount, status, created_at, updated_at`,
+            [settlementId, wholesaler_id, accountId, amount, description, showId]
+          );
+          if (result.rows.length === 0) {
+            throw new NotFoundError('Settlement', settlementId);
+          }
+          settlementRow = result.rows[0] as typeof settlementRow;
+          await client.query(`DELETE FROM settlement_lines WHERE settlement_id = $1`, [
+            settlementId,
+          ]);
+        }
+
+        if (
+          showSettlementMateriallyChanged(
+            {
+              amount: prior.amount,
+              description: prior.description,
+              wholesaler_id: prior.wholesaler_id,
+              calculation_method: prior.calculation_method,
+              rate_bps: prior.rate_bps,
+            },
+            {
+              amount: settlementRow.amount,
+              description,
+              wholesaler_id: settlementRow.wholesaler_id,
+              calculation_method: settlementRow.calculation_method,
+              rate_bps: settlementRow.rate_bps,
+            }
+          )
+        ) {
+          const showDate = await loadShowDate(client, showId);
+          await emitSettlementAdjusted(
+            client,
+            {
+              id: settlementRow.id,
+              show_id: settlementRow.show_id,
+              wholesaler_id: settlementRow.wholesaler_id,
+              account_id: accountId,
+              amount: settlementRow.amount,
+              description,
+              obligation_kind: 'SHOW_LINKED',
+              due_date: prior.due_date,
+            },
+            showDate,
+            {
+              amount: prior.amount,
+              description: prior.description,
+              due_date: prior.due_date,
+            },
+            actorUserId,
+            settlementRow.updated_at
+          );
+        }
+
+        return settlementRow;
+      });
+
+      const r = row as {
+        id: string;
+        show_id: string;
+        wholesaler_id: string;
+        amount: string;
+        currency: string;
+        calculation_method: string;
+        rate_bps: number | null;
+        base_amount: string | null;
+        status: string;
+        created_at: Date;
+        updated_at: Date;
+      };
+
+      const payload: Record<string, unknown> = {
+        id: r.id,
+        show_id: r.show_id,
+        wholesaler_id: r.wholesaler_id,
+        amount: r.amount,
+        currency: r.currency,
+        calculation_method: r.calculation_method,
+        rate_bps: r.rate_bps ?? undefined,
+        base_amount: r.base_amount ?? undefined,
+        status: r.status,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      };
+
+      if (method === 'ITEMIZED') {
+        const pool = getPool();
+        const linesResult = await pool.query(
+          `SELECT id, settlement_id, item_name, quantity, unit_price_cents, line_total_cents, created_at
+           FROM settlement_lines WHERE settlement_id = $1 ORDER BY created_at ASC`,
+          [r.id]
+        );
+        payload.lines = linesResult.rows.map((line) => ({
+          id: line.id,
+          settlement_id: line.settlement_id,
+          item_name: line.item_name,
+          quantity: line.quantity,
+          unit_price_cents: line.unit_price_cents,
+          line_total_cents: line.line_total_cents,
+          created_at: line.created_at,
+        }));
+      }
+
+      return reply.send(payload);
     }
   );
 

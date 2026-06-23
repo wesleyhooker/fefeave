@@ -13,8 +13,11 @@ export type ShowSettlementAggregates = {
 
 export async function loadShowSettlementAggregates(
   client: PoolClient,
-  showId: string
+  showId: string,
+  excludeSettlementId?: string
 ): Promise<ShowSettlementAggregates> {
+  const excludeClause = excludeSettlementId ? 'AND oli.id != $2' : '';
+  const totalParams = excludeSettlementId ? [showId, excludeSettlementId] : [showId];
   const [totalRes, pctRes, finRes] = await Promise.all([
     client.query(
       `SELECT COALESCE(SUM(oli.amount::numeric), 0)::text AS t
@@ -22,16 +25,18 @@ export async function loadShowSettlementAggregates(
        WHERE oli.show_id = $1
          AND oli.deleted_at IS NULL
          AND oli.obligation_kind = 'SHOW_LINKED'
-         AND oli.calculation_method IN ('PERCENT_PAYOUT','MANUAL','ITEMIZED')`,
-      [showId]
+         AND oli.calculation_method IN ('PERCENT_PAYOUT','MANUAL','ITEMIZED')
+         ${excludeClause}`,
+      totalParams
     ),
     client.query(
       `SELECT COALESCE(SUM(oli.rate_bps), 0)::int AS s
        FROM owed_line_items oli
        WHERE oli.show_id = $1
          AND oli.deleted_at IS NULL
-         AND oli.calculation_method = 'PERCENT_PAYOUT'`,
-      [showId]
+         AND oli.calculation_method = 'PERCENT_PAYOUT'
+         ${excludeClause}`,
+      totalParams
     ),
     client.query(
       `SELECT payout_after_fees_amount::numeric AS p FROM show_financials WHERE show_id = $1`,
@@ -48,15 +53,21 @@ export async function loadShowSettlementAggregates(
 export async function assertNoDuplicateSettlementForWholesaler(
   client: PoolClient,
   showId: string,
-  wholesalerId: string
+  wholesalerId: string,
+  excludeSettlementId?: string
 ): Promise<void> {
+  const excludeClause = excludeSettlementId ? 'AND id != $3' : '';
+  const params = excludeSettlementId
+    ? [showId, wholesalerId, excludeSettlementId]
+    : [showId, wholesalerId];
   const r = await client.query(
     `SELECT 1 FROM owed_line_items
      WHERE show_id = $1 AND wholesaler_id = $2 AND deleted_at IS NULL
        AND obligation_kind = 'SHOW_LINKED'
        AND calculation_method IN ('PERCENT_PAYOUT','MANUAL','ITEMIZED')
+       ${excludeClause}
      LIMIT 1`,
-    [showId, wholesalerId]
+    params
   );
   if (r.rows.length > 0) {
     throw new ConflictError('This wholesaler already has a settlement for this show.');
@@ -113,4 +124,29 @@ export async function computePercentSettlementAmount(
     rateBps,
   ]);
   return parseFloat(r.rows[0].a);
+}
+
+export function showSettlementMateriallyChanged(
+  prior: {
+    amount: string | number;
+    description: string;
+    wholesaler_id: string;
+    calculation_method: string;
+    rate_bps: number | null;
+  },
+  next: {
+    amount: string | number;
+    description: string;
+    wholesaler_id: string;
+    calculation_method: string;
+    rate_bps: number | null;
+  }
+): boolean {
+  return (
+    Number(prior.amount) !== Number(next.amount) ||
+    prior.description !== next.description ||
+    prior.wholesaler_id !== next.wholesaler_id ||
+    prior.calculation_method !== next.calculation_method ||
+    (prior.rate_bps ?? null) !== (next.rate_bps ?? null)
+  );
 }

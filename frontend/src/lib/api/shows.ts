@@ -157,6 +157,25 @@ export async function createShowSettlement(
   });
 }
 
+export type UpdateShowSettlementDTO = CreateShowSettlementDTO;
+
+export async function updateShowSettlement(
+  showId: string,
+  settlementId: string,
+  dto: UpdateShowSettlementDTO,
+): Promise<ShowSettlementDTO> {
+  return backendGetJson<ShowSettlementDTO>(
+    `/shows/${showId}/settlements/${settlementId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dto),
+    },
+  );
+}
+
 export async function deleteShowSettlement(
   showId: string,
   settlementId: string,

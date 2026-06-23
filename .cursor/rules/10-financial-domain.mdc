@@ -1,0 +1,38 @@
+---
+description: "Financial domain — ledger integrity and server-side truth"
+globs:
+  - "backend/**"
+  - "frontend/**"
+alwaysApply: false
+---
+
+# Financial domain
+
+## Source of truth
+
+- Balances, profit, settlement caps, statements, and recommendations are computed **server-side**.
+- Do not add client-side financial rollups or "source of truth" logic in the UI.
+
+## Ledger integrity
+
+- Financial history is **append-only in intent**: corrections preserve auditability; do not silently rewrite past financial meaning.
+- Operational writes and financial history must stay consistent (same transaction or an equivalent guarantee).
+
+## Business invariants
+
+- Settlement and obligation rules (payout limits, per-entity constraints) are enforced on the server — do not weaken without explicit approval.
+- Financial constraints must be enforced server-side. Completed or closed financial records should not be mutated without an explicit reopen or correction workflow.
+- Decision and recommendation features **advise**; they do not execute payments or write ledger facts.
+
+## Scope
+
+- Event-first and ledger patterns apply to the **financial domain** only — not auth, marketing, or general configuration unless it affects financial state.
+
+## Verification
+
+- Changes to migrations, settlements, balances, or ledger projections require local integration test verification per [docs/testing.md](../../docs/testing.md).
+
+## Canonical docs
+
+- [docs/architecture/financial-event-sourcing.md](../../docs/architecture/financial-event-sourcing.md)
+- [docs/architecture.md](../../docs/architecture.md) (Financial domain section)

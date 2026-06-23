@@ -93,6 +93,9 @@ export const WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY =
 /** Read-only payout / profit column before close-out. */
 export const WORKFLOW_SHOW_CLOSEOUT_SUMMARY_HEADING = 'Summary';
 
+/** Summary rail — contextual note below money lines. */
+export const WORKFLOW_SHOW_SUMMARY_ABOUT_HEADING = 'About these numbers';
+
 /** Summary sidebar: payout line (already net of platform fees). */
 export const WORKFLOW_SHOW_SUMMARY_PAYOUT_LABEL = 'Payout after fees';
 
@@ -135,13 +138,21 @@ export const WORKFLOW_LOG_SHOW_FORM_DRAWER_NOTE =
   'Next: show page for vendor obligations, receipt, and close-out.';
 
 /** Show detail — vendor obligations section (settlements in code/API). */
-export const WORKFLOW_SHOW_VENDOR_OBLIGATIONS_HEADING = 'Vendor obligations';
+export const WORKFLOW_SHOW_VENDOR_OBLIGATIONS_HEADING = 'Vendor Obligations';
 
 export const WORKFLOW_SHOW_VENDOR_OBLIGATIONS_HINT =
-  'What you owe vendors from this show. Vendor payments are recorded from Vendor Detail.';
+  'Money owed from this show’s payout to vendors. Upfront inventory (including pallets) is recorded under Purchases. Vendor payments are recorded from Vendor Detail.';
 
-export const WORKFLOW_SHOW_LOCKED_BANNER =
-  'Completed — locked. Reopen below to edit payout or vendor obligations.';
+/** Show detail — zero obligations (valid complete state). */
+export const WORKFLOW_SHOW_VENDOR_OBLIGATIONS_EMPTY_TITLE =
+  'No vendor obligations for this show.';
+
+export const WORKFLOW_SHOW_VENDOR_OBLIGATIONS_EMPTY_HINT =
+  'Obligations are owed from this show’s payout. Inventory bought upfront is recorded under Purchases.';
+
+/** Show detail — add obligation composer helper (inline, below section title). */
+export const WORKFLOW_SHOW_VENDOR_OBLIGATIONS_COMPOSER_HINT =
+  'One primary save — fields below match the selected type.';
 
 export const WORKFLOW_SHOW_CLOSED_SUCCESS_TOAST =
   "Show closed successfully. Profit now counts toward this week's totals.";
@@ -157,8 +168,11 @@ export const WORKFLOW_SHOW_STATUS_OPEN_LABEL = 'Open — needs close-out';
 
 export const WORKFLOW_SHOW_STATUS_COMPLETED_LABEL = 'Completed — locked';
 
-/** Show detail rail — contextual status (not financial summary). */
-export const WORKFLOW_SHOW_DETAIL_STATUS_HEADING = 'Show status';
+/** Show detail rail — primary show actions (close / reopen). */
+export const WORKFLOW_SHOW_DETAIL_ACTIONS_HEADING = 'Actions';
+
+export const WORKFLOW_SHOW_DETAIL_ACTIONS_LOCKED_BODY =
+  'This show is completed and locked.';
 
 export const WORKFLOW_SHOW_DETAIL_STATUS_COMPLETED_TITLE = 'Completed';
 
@@ -173,7 +187,19 @@ export const WORKFLOW_SHOW_DETAIL_STATUS_OPEN_BODY =
   'This show still needs close-out.';
 
 export const WORKFLOW_SHOW_DETAIL_REOPEN_HINT =
-  'Reopening will unlock payout and vendor obligations for editing.';
+  'Reopening will unlock this show so you can edit payout or vendor obligations.';
+
+export const WORKFLOW_SHOW_DETAIL_ADJUST_PAYOUT_LABEL = 'Adjust payout';
+
+export const WORKFLOW_SHOW_RECEIPT_HEADING = 'Receipt';
+export const WORKFLOW_SHOW_RECEIPT_OPTIONAL = '(optional)';
+export const WORKFLOW_SHOW_RECEIPT_EMPTY = 'No receipt attached';
+export const WORKFLOW_SHOW_RECEIPT_UPLOAD_LABEL = 'Upload receipt';
+export const WORKFLOW_SHOW_RECEIPT_REPLACE_LABEL = 'Replace receipt';
+export const WORKFLOW_SHOW_RECEIPT_VIEW_LABEL = 'View receipt';
+export const WORKFLOW_SHOW_RECEIPT_ATTACH_LABEL = 'Attach receipt';
+export const WORKFLOW_SHOW_RECEIPT_HINT = 'PDF or image · max 10 MB';
+export const WORKFLOW_SHOW_RECEIPT_UPLOADING = 'Uploading…';
 
 export const WORKFLOW_NEEDS_ATTENTION_HEADING = 'Needs attention';
 
@@ -472,6 +498,14 @@ export const WORKFLOW_VENDORS_VIEW_NEEDS_PAYMENT = 'Needs payment';
 export const WORKFLOW_VENDORS_VIEW_PARTIALLY_PAID = 'Partially paid';
 export const WORKFLOW_VENDORS_VIEW_ALL_VENDORS = 'All vendors';
 
+/** Vendors index — grouped roster cohort bands */
+export const WORKFLOW_VENDORS_GROUP_NEEDS_PAYMENT_SUBTITLE =
+  'Vendors with outstanding balances';
+export const WORKFLOW_VENDORS_GROUP_UP_TO_DATE_TITLE = 'Up to date';
+export const WORKFLOW_VENDORS_GROUP_UP_TO_DATE_SUBTITLE = 'No balance owed';
+export const WORKFLOW_VENDORS_GROUP_NEEDS_PAYMENT_ALL_CURRENT =
+  'All vendors are up to date';
+
 /** Vendors index — xl+ operational rail */
 export function workflowVendorLastPaidLabel(iso: string): string {
   const label = new Date(iso).toLocaleDateString('en-US', {
@@ -484,6 +518,10 @@ export const WORKFLOW_VENDORS_RAIL_RECENT_ACTIVITY_HEADING = 'Recent payments';
 export const WORKFLOW_VENDORS_RAIL_RECORD_PAYMENT = 'Record payment';
 export const WORKFLOW_VENDORS_RAIL_NO_RECENT_PAYMENTS =
   'No vendor payments recorded yet.';
+export const WORKFLOW_VENDORS_RAIL_EMPTY_BODY =
+  'Record your first vendor payment to start building payment history.';
+export const WORKFLOW_VENDORS_RAIL_VIEW_PAYMENT_LEDGER =
+  'View payment ledger →';
 
 /** Vendor charges — ledger correction on Vendor Detail; rare create via advanced flow. */
 export const WORKFLOW_VENDOR_CHARGE_SECTION_TITLE = 'Record vendor obligation';

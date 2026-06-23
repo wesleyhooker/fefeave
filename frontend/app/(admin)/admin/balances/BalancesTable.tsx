@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { WorkspaceEmptyState } from "@/app/(admin)/admin/_components/WorkspaceEmptyState";
 import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
@@ -20,21 +20,27 @@ import {
   WORKFLOW_EMPTY_BALANCES_TITLE,
   WORKFLOW_EMPTY_VENDORS_FILTERED_HINT,
   WORKFLOW_EMPTY_VENDORS_FILTERED_TITLE,
-  WORKFLOW_EMPTY_VENDORS_NEEDS_PAYMENT_HINT,
-  WORKFLOW_EMPTY_VENDORS_NEEDS_PAYMENT_TITLE,
-  WORKFLOW_EMPTY_VENDORS_PARTIALLY_PAID_HINT,
-  WORKFLOW_EMPTY_VENDORS_PARTIALLY_PAID_TITLE,
+  WORKFLOW_VENDORS_GROUP_NEEDS_PAYMENT_ALL_CURRENT,
+  WORKFLOW_VENDORS_GROUP_NEEDS_PAYMENT_SUBTITLE,
+  WORKFLOW_VENDORS_GROUP_UP_TO_DATE_SUBTITLE,
+  WORKFLOW_VENDORS_GROUP_UP_TO_DATE_TITLE,
+  WORKFLOW_VENDORS_VIEW_NEEDS_PAYMENT,
 } from "@/app/(admin)/admin/_lib/adminWorkflowCopy";
-import {
-  VENDORS_PAYMENT_VIEW_ALL,
-  VENDORS_PAYMENT_VIEW_NEEDS_PAYMENT,
-  VENDORS_PAYMENT_VIEW_PARTIALLY_PAID,
-  type VendorsPaymentView,
-} from "./vendorsPaymentView";
 import {
   matchesVendorsAccountStatusFilter,
   type VendorsAccountStatusFilter,
 } from "./vendorsAccountStatusFilter";
+import {
+  isUpToDateCohortVisible,
+  partitionVendorsByObligation,
+  shouldDefaultCollapseUpToDate,
+  shouldForceUpToDateExpanded,
+  shouldShowNeedsPaymentBand,
+} from "./vendorsIndexGroups";
+import {
+  VendorsTableGroupBandRow,
+  VendorsTableGroupBandSection,
+} from "./VendorsTableGroupBand";
 import {
   workspaceBalancesPrimaryTableShell,
   workspaceMoneyClassForLiability,
@@ -67,51 +73,217 @@ const thBtn =
   "inline-flex max-w-full items-center gap-0.5 text-left font-medium text-gray-600 transition-colors hover:text-gray-900";
 const thBtnRight = `${thBtn} w-full justify-end text-right`;
 
-function matchesPaymentView(
-  row: WholesalerBalanceRow,
-  paymentView: VendorsPaymentView,
-): boolean {
+function sortVendorRows(
+  rows: WholesalerBalanceRow[],
+  sortKey: SortKey,
+  sortDir: "asc" | "desc",
+): WholesalerBalanceRow[] {
+  return [...rows].sort((a, b) => {
+    let cmp = 0;
+    switch (sortKey) {
+      case "name":
+        cmp = a.name.localeCompare(b.name);
+        break;
+      case "owed_total":
+        cmp = parseNum(a.owed_total) - parseNum(b.owed_total);
+        break;
+      case "paid_total":
+        cmp = parseNum(a.paid_total) - parseNum(b.paid_total);
+        break;
+      case "balance_owed":
+        cmp = parseNum(a.balance_owed) - parseNum(b.balance_owed);
+        break;
+      case "last_payment_date": {
+        const da = a.last_payment_date ?? "";
+        const db = b.last_payment_date ?? "";
+        cmp = da.localeCompare(db);
+        break;
+      }
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+}
+
+function maxPositiveBalanceFor(rows: WholesalerBalanceRow[]): number {
+  let max = 0;
+  for (const row of rows) {
+    const value = parseNum(row.balance_owed);
+    if (value > max) max = value;
+  }
+  return max;
+}
+
+function VendorMobileCard({
+  row,
+  maxPositiveBalance,
+}: {
+  row: WholesalerBalanceRow;
+  maxPositiveBalance: number;
+}) {
   const balance = parseNum(row.balance_owed);
   const paid = parseNum(row.paid_total);
   const status = getWorkspacePaymentStatus(balance, paid);
-  switch (paymentView) {
-    case VENDORS_PAYMENT_VIEW_NEEDS_PAYMENT:
-      return balance > 0;
-    case VENDORS_PAYMENT_VIEW_PARTIALLY_PAID:
-      return status === "Partially paid";
-    case VENDORS_PAYMENT_VIEW_ALL:
-    default:
-      return true;
-  }
+  const totalOwed = parseNum(row.owed_total);
+  const totalPaid = parseNum(row.paid_total);
+  const hasBalance = balance > 0;
+  const highBalance =
+    hasBalance && maxPositiveBalance > 0 && balance >= maxPositiveBalance * 0.6;
+  const href = vendorDetailHref(row.wholesaler_id);
+
+  return (
+    <Link
+      href={href}
+      className={`group/card block min-w-0 rounded-lg border p-4 shadow-workspace-surface-sm transition-[border-color,box-shadow] duration-200 ease-out [&_*]:cursor-inherit ${
+        hasBalance
+          ? "border-gray-200 bg-white hover:border-gray-300 hover:shadow-md"
+          : "border-gray-200/80 bg-gray-50/45 hover:border-gray-300/80 hover:shadow-sm"
+      }`}
+      aria-label={`Open ${row.name}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <WorkspaceListPaymentStatus status={status} />
+        <WorkspaceRowChevron className="mt-0.5 shrink-0 text-gray-400 transition-transform duration-200 ease-out group-hover/card:translate-x-0.5 group-hover/card:text-gray-700" />
+      </div>
+
+      <p
+        className={`mt-2.5 text-base font-semibold leading-snug transition-colors ${
+          hasBalance
+            ? "text-gray-900 group-hover/card:text-gray-800"
+            : "text-gray-600 group-hover/card:text-gray-700"
+        }`}
+      >
+        {row.name}
+        {row.status === "ARCHIVED" ? (
+          <span className="ml-2 text-xs font-medium text-stone-500">
+            Archived
+          </span>
+        ) : null}
+      </p>
+
+      <div className="mt-3 rounded-md border border-gray-100 bg-stone-50/40 px-3 py-2.5">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+          Balance owed
+        </p>
+        <p
+          className={`mt-0.5 text-2xl tabular-nums leading-tight tracking-tight ${
+            hasBalance
+              ? highBalance
+                ? "font-bold"
+                : "font-semibold"
+              : "font-medium text-gray-500"
+          } ${workspaceMoneyClassForLiability(balance)}`}
+        >
+          {formatCurrency(balance)}
+        </p>
+      </div>
+
+      <ul className="mt-3 space-y-2 border-t border-gray-100 pt-3 text-sm">
+        <li className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+          <span className={workspaceTableCellMeta}>Total owed</span>
+          <span
+            className={`font-medium text-gray-900 ${workspaceMoneyTabular}`}
+          >
+            {formatCurrency(totalOwed)}
+          </span>
+        </li>
+        <li className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+          <span className={workspaceTableCellMeta}>Total paid</span>
+          <span
+            className={`font-medium text-gray-900 ${workspaceMoneyTabular}`}
+          >
+            {formatCurrency(totalPaid)}
+          </span>
+        </li>
+        <li className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+          <span className={workspaceTableCellMeta}>Last payment</span>
+          <span className="font-medium text-gray-900 tabular-nums">
+            {row.last_payment_date ? formatDate(row.last_payment_date) : "—"}
+          </span>
+        </li>
+      </ul>
+    </Link>
+  );
 }
 
-function emptyCopyForView(paymentView: VendorsPaymentView): {
-  title: string;
-  hint: string;
-} {
-  switch (paymentView) {
-    case VENDORS_PAYMENT_VIEW_NEEDS_PAYMENT:
-      return {
-        title: WORKFLOW_EMPTY_VENDORS_NEEDS_PAYMENT_TITLE,
-        hint: WORKFLOW_EMPTY_VENDORS_NEEDS_PAYMENT_HINT,
-      };
-    case VENDORS_PAYMENT_VIEW_PARTIALLY_PAID:
-      return {
-        title: WORKFLOW_EMPTY_VENDORS_PARTIALLY_PAID_TITLE,
-        hint: WORKFLOW_EMPTY_VENDORS_PARTIALLY_PAID_HINT,
-      };
-    case VENDORS_PAYMENT_VIEW_ALL:
-    default:
-      return {
-        title: WORKFLOW_EMPTY_BALANCES_TITLE,
-        hint: WORKFLOW_EMPTY_BALANCES_HINT,
-      };
-  }
+function VendorDesktopRow({
+  row,
+  maxPositiveBalance,
+}: {
+  row: WholesalerBalanceRow;
+  maxPositiveBalance: number;
+}) {
+  const balance = parseNum(row.balance_owed);
+  const paid = parseNum(row.paid_total);
+  const status = getWorkspacePaymentStatus(balance, paid);
+  const hasBalance = balance > 0;
+  const highBalance =
+    hasBalance && maxPositiveBalance > 0 && balance >= maxPositiveBalance * 0.6;
+  const href = vendorDetailHref(row.wholesaler_id);
+
+  return (
+    <WorkspaceTableNavRow
+      href={href}
+      ariaLabel={`Open ${row.name}`}
+      className={
+        hasBalance ? "" : "bg-gray-50/55 text-gray-500 hover:bg-gray-100/80"
+      }
+    >
+      <td
+        className={`w-[5rem] whitespace-nowrap align-middle sm:w-[5.5rem] ${workspaceTableBodyCellPaddingComfortable}`}
+      >
+        <WorkspaceListPaymentStatus status={status} />
+      </td>
+      <td
+        className={`min-w-0 max-w-[min(100%,28rem)] align-top ${workspaceTableBodyCellPaddingComfortable}`}
+      >
+        <span
+          className={`text-sm font-semibold ${
+            hasBalance
+              ? "text-gray-900 group-hover/workspace-row:text-gray-950"
+              : "text-gray-600 group-hover/workspace-row:text-gray-700"
+          }`}
+        >
+          {row.name}
+          {row.status === "ARCHIVED" ? (
+            <span className="ml-2 text-xs font-medium text-stone-500">
+              Archived
+            </span>
+          ) : null}
+        </span>
+      </td>
+      <td
+        className={`whitespace-nowrap text-right align-top text-lg tabular-nums sm:text-xl ${
+          hasBalance
+            ? highBalance
+              ? "font-bold"
+              : "font-semibold"
+            : "font-medium text-gray-500"
+        } ${workspaceTableBodyCellPaddingComfortable} ${workspaceMoneyClassForLiability(balance)}`}
+      >
+        {formatCurrency(balance)}
+      </td>
+      <td
+        className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPaddingComfortable} ${workspaceTableCellSecondary}`}
+      >
+        {formatCurrency(parseNum(row.owed_total))}
+      </td>
+      <td
+        className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPaddingComfortable} ${workspaceTableCellSecondary}`}
+      >
+        {formatCurrency(parseNum(row.paid_total))}
+      </td>
+      <td
+        className={`whitespace-nowrap align-top ${workspaceTableBodyCellPaddingComfortable} ${workspaceTableCellMeta}`}
+      >
+        {row.last_payment_date ? formatDate(row.last_payment_date) : "—"}
+      </td>
+      <WorkspaceTableChevronCell />
+    </WorkspaceTableNavRow>
+  );
 }
 
 export function BalancesTable({
   data,
-  paymentView,
   accountStatusFilter,
   search,
   sortKey,
@@ -120,7 +292,6 @@ export function BalancesTable({
   onSortDirChange,
 }: {
   data: WholesalerBalanceRow[];
-  paymentView: VendorsPaymentView;
   accountStatusFilter: VendorsAccountStatusFilter;
   search: string;
   sortKey: SortKey;
@@ -128,18 +299,59 @@ export function BalancesTable({
   onSortKeyChange: (key: SortKey) => void;
   onSortDirChange: (dir: "asc" | "desc") => void;
 }) {
+  const [upToDateExpanded, setUpToDateExpanded] = useState(false);
+
   const filtered = useMemo(() => {
-    let list = data.filter(
-      (r) =>
-        matchesPaymentView(r, paymentView) &&
-        matchesVendorsAccountStatusFilter(r, accountStatusFilter),
+    let list = data.filter((r) =>
+      matchesVendorsAccountStatusFilter(r, accountStatusFilter),
     );
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter((r) => r.name.toLowerCase().includes(q));
     }
     return list;
-  }, [data, search, paymentView, accountStatusFilter]);
+  }, [data, search, accountStatusFilter]);
+
+  const sorted = useMemo(
+    () => sortVendorRows(filtered, sortKey, sortDir),
+    [filtered, sortKey, sortDir],
+  );
+
+  const { needsPayment, upToDate } = useMemo(
+    () => partitionVendorsByObligation(sorted),
+    [sorted],
+  );
+
+  const forceUpToDateExpanded = shouldForceUpToDateExpanded(
+    search,
+    needsPayment.length,
+  );
+  const collapseEligible = shouldDefaultCollapseUpToDate(upToDate.length);
+  const showUpToDateRows = isUpToDateCohortVisible(
+    upToDate.length,
+    upToDateExpanded,
+    search,
+    needsPayment.length,
+  );
+  const showNeedsPaymentBand =
+    sorted.length > 0 &&
+    shouldShowNeedsPaymentBand(needsPayment.length, upToDate.length, search);
+  const showUpToDateBand = upToDate.length > 0;
+
+  useEffect(() => {
+    if (forceUpToDateExpanded) {
+      setUpToDateExpanded(true);
+    }
+  }, [forceUpToDateExpanded]);
+
+  const needsPaymentMaxBalance = useMemo(
+    () => maxPositiveBalanceFor(needsPayment),
+    [needsPayment],
+  );
+  const upToDateMaxBalance = useMemo(
+    () => maxPositiveBalanceFor(upToDate),
+    [upToDate],
+  );
 
   const emptyCopy = useMemo(() => {
     if (data.length === 0) {
@@ -154,44 +366,11 @@ export function BalancesTable({
         hint: WORKFLOW_EMPTY_VENDORS_FILTERED_HINT,
       };
     }
-    return emptyCopyForView(paymentView);
-  }, [data.length, paymentView, search]);
-
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      let cmp = 0;
-      switch (sortKey) {
-        case "name":
-          cmp = a.name.localeCompare(b.name);
-          break;
-        case "owed_total":
-          cmp = parseNum(a.owed_total) - parseNum(b.owed_total);
-          break;
-        case "paid_total":
-          cmp = parseNum(a.paid_total) - parseNum(b.paid_total);
-          break;
-        case "balance_owed":
-          cmp = parseNum(a.balance_owed) - parseNum(b.balance_owed);
-          break;
-        case "last_payment_date": {
-          const da = a.last_payment_date ?? "";
-          const db = b.last_payment_date ?? "";
-          cmp = da.localeCompare(db);
-          break;
-        }
-      }
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-  }, [filtered, sortKey, sortDir]);
-
-  const maxPositiveBalance = useMemo(() => {
-    let max = 0;
-    for (const row of sorted) {
-      const value = parseNum(row.balance_owed);
-      if (value > max) max = value;
-    }
-    return max;
-  }, [sorted]);
+    return {
+      title: WORKFLOW_EMPTY_BALANCES_TITLE,
+      hint: WORKFLOW_EMPTY_BALANCES_HINT,
+    };
+  }, [data.length, search]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -208,8 +387,6 @@ export function BalancesTable({
         {sortDir === "asc" ? "▲" : "▼"}
       </span>
     ) : null;
-
-  const rowNavigateLabel = (name: string) => `Open ${name}`;
 
   const mobileSortValue = `${sortKey}:${sortDir}`;
   const handleMobileSort = (raw: string) => {
@@ -230,9 +407,18 @@ export function BalancesTable({
     }
   };
 
+  const toggleUpToDate = () => {
+    setUpToDateExpanded((prev) => !prev);
+  };
+
+  const needsPaymentFootnote =
+    needsPayment.length === 0 && upToDate.length > 0 && !search.trim()
+      ? WORKFLOW_VENDORS_GROUP_NEEDS_PAYMENT_ALL_CURRENT
+      : undefined;
+
   return (
     <section
-      className={workspaceBalancesPrimaryTableShell}
+      className={`mt-4 ${workspaceBalancesPrimaryTableShell}`}
       aria-labelledby="balances-table-heading"
     >
       <h2 id="balances-table-heading" className="sr-only">
@@ -283,97 +469,49 @@ export function BalancesTable({
               </span>
             </WorkspaceEmptyState>
           ) : (
-            sorted.map((r) => {
-              const balance = parseNum(r.balance_owed);
-              const paid = parseNum(r.paid_total);
-              const status = getWorkspacePaymentStatus(balance, paid);
-              const totalOwed = parseNum(r.owed_total);
-              const totalPaid = parseNum(r.paid_total);
-              const hasBalance = balance > 0;
-              const highBalance =
-                hasBalance &&
-                maxPositiveBalance > 0 &&
-                balance >= maxPositiveBalance * 0.6;
-              const href = vendorDetailHref(r.wholesaler_id);
-              return (
-                <Link
-                  key={r.wholesaler_id}
-                  href={href}
-                  className={`group/card block min-w-0 rounded-lg border p-4 shadow-workspace-surface-sm transition-[border-color,box-shadow] duration-200 ease-out [&_*]:cursor-inherit ${
-                    hasBalance
-                      ? "border-gray-200 bg-white hover:border-gray-300 hover:shadow-md"
-                      : "border-gray-200/80 bg-gray-50/45 hover:border-gray-300/80 hover:shadow-sm"
-                  }`}
-                  aria-label={rowNavigateLabel(r.name)}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <WorkspaceListPaymentStatus status={status} />
-                    <WorkspaceRowChevron className="mt-0.5 shrink-0 text-gray-400 transition-transform duration-200 ease-out group-hover/card:translate-x-0.5 group-hover/card:text-gray-700" />
-                  </div>
+            <>
+              {showNeedsPaymentBand ? (
+                <VendorsTableGroupBandSection
+                  variant="action"
+                  title={WORKFLOW_VENDORS_VIEW_NEEDS_PAYMENT}
+                  count={needsPayment.length}
+                  subtitle={WORKFLOW_VENDORS_GROUP_NEEDS_PAYMENT_SUBTITLE}
+                  footnote={needsPaymentFootnote}
+                  bandId="vendors-needs-payment"
+                />
+              ) : null}
+              {needsPayment.map((row) => (
+                <VendorMobileCard
+                  key={row.wholesaler_id}
+                  row={row}
+                  maxPositiveBalance={needsPaymentMaxBalance}
+                />
+              ))}
 
-                  <p
-                    className={`mt-2.5 text-base font-semibold leading-snug transition-colors ${
-                      hasBalance
-                        ? "text-gray-900 group-hover/card:text-gray-800"
-                        : "text-gray-600 group-hover/card:text-gray-700"
-                    }`}
-                  >
-                    {r.name}
-                    {r.status === "ARCHIVED" ? (
-                      <span className="ml-2 text-xs font-medium text-stone-500">
-                        Archived
-                      </span>
-                    ) : null}
-                  </p>
-
-                  <div className="mt-3 rounded-md border border-gray-100 bg-stone-50/40 px-3 py-2.5">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                      Balance owed
-                    </p>
-                    <p
-                      className={`mt-0.5 text-2xl tabular-nums leading-tight tracking-tight ${
-                        hasBalance
-                          ? highBalance
-                            ? "font-bold"
-                            : "font-semibold"
-                          : "font-medium text-gray-500"
-                      } ${workspaceMoneyClassForLiability(balance)}`}
-                    >
-                      {formatCurrency(balance)}
-                    </p>
-                  </div>
-
-                  <ul className="mt-3 space-y-2 border-t border-gray-100 pt-3 text-sm">
-                    <li className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                      <span className={workspaceTableCellMeta}>Total owed</span>
-                      <span
-                        className={`font-medium text-gray-900 ${workspaceMoneyTabular}`}
-                      >
-                        {formatCurrency(totalOwed)}
-                      </span>
-                    </li>
-                    <li className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                      <span className={workspaceTableCellMeta}>Total paid</span>
-                      <span
-                        className={`font-medium text-gray-900 ${workspaceMoneyTabular}`}
-                      >
-                        {formatCurrency(totalPaid)}
-                      </span>
-                    </li>
-                    <li className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                      <span className={workspaceTableCellMeta}>
-                        Last payment
-                      </span>
-                      <span className="font-medium text-gray-900 tabular-nums">
-                        {r.last_payment_date
-                          ? formatDate(r.last_payment_date)
-                          : "—"}
-                      </span>
-                    </li>
-                  </ul>
-                </Link>
-              );
-            })
+              {showUpToDateBand ? (
+                <>
+                  <VendorsTableGroupBandSection
+                    variant="quiet"
+                    title={WORKFLOW_VENDORS_GROUP_UP_TO_DATE_TITLE}
+                    count={upToDate.length}
+                    subtitle={WORKFLOW_VENDORS_GROUP_UP_TO_DATE_SUBTITLE}
+                    showTopSeam
+                    collapsible={collapseEligible && !forceUpToDateExpanded}
+                    expanded={showUpToDateRows}
+                    onToggle={toggleUpToDate}
+                  />
+                  {showUpToDateRows
+                    ? upToDate.map((row) => (
+                        <VendorMobileCard
+                          key={row.wholesaler_id}
+                          row={row}
+                          maxPositiveBalance={upToDateMaxBalance}
+                        />
+                      ))
+                    : null}
+                </>
+              ) : null}
+            </>
           )}
         </div>
       </div>
@@ -462,13 +600,14 @@ export function BalancesTable({
                   <SortIndicator column="last_payment_date" />
                 </button>
               </th>
-              <th scope="col" className={`relative px-2 py-3 sm:px-3`}>
+              <th scope="col" className="relative px-2 py-3 sm:px-3">
                 <span className="sr-only">Open</span>
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white [&>tr:first-child>td]:pt-4">
-            {sorted.length === 0 ? (
+
+          {sorted.length === 0 ? (
+            <tbody className="bg-white">
               <tr>
                 <td colSpan={7} className="px-4 py-10">
                   <WorkspaceEmptyState variant="plain" as="div">
@@ -481,85 +620,54 @@ export function BalancesTable({
                   </WorkspaceEmptyState>
                 </td>
               </tr>
-            ) : (
-              sorted.map((r) => {
-                const balance = parseNum(r.balance_owed);
-                const paid = parseNum(r.paid_total);
-                const status = getWorkspacePaymentStatus(balance, paid);
-                const hasBalance = balance > 0;
-                const highBalance =
-                  hasBalance &&
-                  maxPositiveBalance > 0 &&
-                  balance >= maxPositiveBalance * 0.6;
-                const href = vendorDetailHref(r.wholesaler_id);
-                return (
-                  <WorkspaceTableNavRow
-                    key={r.wholesaler_id}
-                    href={href}
-                    ariaLabel={rowNavigateLabel(r.name)}
-                    className={
-                      hasBalance
-                        ? ""
-                        : "bg-gray-50/55 text-gray-500 hover:bg-gray-100/80"
-                    }
-                  >
-                    <td
-                      className={`w-[5rem] whitespace-nowrap align-middle sm:w-[5.5rem] ${workspaceTableBodyCellPaddingComfortable}`}
-                    >
-                      <WorkspaceListPaymentStatus status={status} />
-                    </td>
-                    <td
-                      className={`min-w-0 max-w-[min(100%,28rem)] align-top ${workspaceTableBodyCellPaddingComfortable}`}
-                    >
-                      <span
-                        className={`text-sm font-semibold ${
-                          hasBalance
-                            ? "text-gray-900 group-hover/workspace-row:text-gray-950"
-                            : "text-gray-600 group-hover/workspace-row:text-gray-700"
-                        }`}
-                      >
-                        {r.name}
-                        {r.status === "ARCHIVED" ? (
-                          <span className="ml-2 text-xs font-medium text-stone-500">
-                            Archived
-                          </span>
-                        ) : null}
-                      </span>
-                    </td>
-                    <td
-                      className={`whitespace-nowrap text-right align-top text-lg tabular-nums sm:text-xl ${
-                        hasBalance
-                          ? highBalance
-                            ? "font-bold"
-                            : "font-semibold"
-                          : "font-medium text-gray-500"
-                      } ${workspaceTableBodyCellPaddingComfortable} ${workspaceMoneyClassForLiability(balance)}`}
-                    >
-                      {formatCurrency(balance)}
-                    </td>
-                    <td
-                      className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPaddingComfortable} ${workspaceTableCellSecondary}`}
-                    >
-                      {formatCurrency(parseNum(r.owed_total))}
-                    </td>
-                    <td
-                      className={`whitespace-nowrap text-right align-top ${workspaceTableBodyCellPaddingComfortable} ${workspaceTableCellSecondary}`}
-                    >
-                      {formatCurrency(parseNum(r.paid_total))}
-                    </td>
-                    <td
-                      className={`whitespace-nowrap align-top ${workspaceTableBodyCellPaddingComfortable} ${workspaceTableCellMeta}`}
-                    >
-                      {r.last_payment_date
-                        ? formatDate(r.last_payment_date)
-                        : "—"}
-                    </td>
-                    <WorkspaceTableChevronCell />
-                  </WorkspaceTableNavRow>
-                );
-              })
-            )}
-          </tbody>
+            </tbody>
+          ) : (
+            <>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {showNeedsPaymentBand ? (
+                  <VendorsTableGroupBandRow
+                    variant="action"
+                    title={WORKFLOW_VENDORS_VIEW_NEEDS_PAYMENT}
+                    count={needsPayment.length}
+                    subtitle={WORKFLOW_VENDORS_GROUP_NEEDS_PAYMENT_SUBTITLE}
+                    footnote={needsPaymentFootnote}
+                    bandId="vendors-needs-payment"
+                  />
+                ) : null}
+                {needsPayment.map((row) => (
+                  <VendorDesktopRow
+                    key={row.wholesaler_id}
+                    row={row}
+                    maxPositiveBalance={needsPaymentMaxBalance}
+                  />
+                ))}
+              </tbody>
+
+              {showUpToDateBand ? (
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  <VendorsTableGroupBandRow
+                    variant="quiet"
+                    title={WORKFLOW_VENDORS_GROUP_UP_TO_DATE_TITLE}
+                    count={upToDate.length}
+                    subtitle={WORKFLOW_VENDORS_GROUP_UP_TO_DATE_SUBTITLE}
+                    showTopSeam
+                    collapsible={collapseEligible && !forceUpToDateExpanded}
+                    expanded={showUpToDateRows}
+                    onToggle={toggleUpToDate}
+                  />
+                  {showUpToDateRows
+                    ? upToDate.map((row) => (
+                        <VendorDesktopRow
+                          key={row.wholesaler_id}
+                          row={row}
+                          maxPositiveBalance={upToDateMaxBalance}
+                        />
+                      ))
+                    : null}
+                </tbody>
+              ) : null}
+            </>
+          )}
         </table>
       </div>
     </section>

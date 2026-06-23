@@ -53,7 +53,8 @@ test('detail hero art scales below index hero max-heights', () => {
 
   assert.match(indexLayout, /max-h-\[18\.5rem\]/);
   assert.match(detailLayout, /max-h-\[7\.5rem\]/);
-  assert.match(detailLayout, /minmax\(0,76%\)_minmax\(0,24%\)/);
+  assert.match(detailLayout, /md:flex-row md:items-center md:justify-between/);
+  assert.match(detailLayout, /md:shrink-0/);
   assert.match(detailLayout, /WORKSPACE_ENTITY_HEADER_CONTENT/);
   assert.match(detailLayout, /WORKSPACE_ENTITY_HEADER_KPI_CELL/);
   assert.match(detailLayout, /WORKSPACE_ENTITY_HEADER_ART_IMAGE/);

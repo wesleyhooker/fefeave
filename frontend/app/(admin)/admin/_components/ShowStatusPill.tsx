@@ -15,18 +15,34 @@ import {
  * Show lifecycle in lists/headers: **Planned** (`PLANNED`) / **Open** (`ACTIVE`) / **Closed** (`COMPLETED`).
  * Token source: `workspaceShowStatus*` in `workspaceUi.ts`.
  */
-export function ShowStatusPill({ status }: { status: string }) {
+export function ShowStatusPill({
+  status,
+  variant = "default",
+}: {
+  status: string;
+  /** `compact` — detail hero (status only; lock copy lives in Actions rail). */
+  variant?: "default" | "compact";
+}) {
   const st = (status ?? "").toUpperCase();
   const closed = st === "COMPLETED";
   const open = st === "ACTIVE";
   const planned = st === "PLANNED";
-  const label = closed
-    ? WORKFLOW_SHOW_STATUS_COMPLETED_LABEL
-    : open
-      ? WORKFLOW_SHOW_STATUS_OPEN_LABEL
-      : planned
-        ? "Planned"
-        : status?.trim() || "—";
+  const label =
+    variant === "compact"
+      ? closed
+        ? "Completed"
+        : open
+          ? "Open"
+          : planned
+            ? "Planned"
+            : status?.trim() || "—"
+      : closed
+        ? WORKFLOW_SHOW_STATUS_COMPLETED_LABEL
+        : open
+          ? WORKFLOW_SHOW_STATUS_OPEN_LABEL
+          : planned
+            ? "Planned"
+            : status?.trim() || "—";
   return (
     <span
       className={

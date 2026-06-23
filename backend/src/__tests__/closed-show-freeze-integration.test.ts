@@ -164,6 +164,54 @@ describe('Closed show freeze', () => {
     expect(body.message).toBe(CLOSED_MESSAGE);
   });
 
+  test('when show is COMPLETED, PATCH settlement returns 409', async () => {
+    const showRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows`,
+      payload: { show_date: '2025-10-03b', platform: 'WHATNOT', name: 'Freeze Show PATCH' },
+    });
+    expect(showRes.statusCode).toBe(201);
+    const show = JSON.parse(showRes.payload);
+
+    await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/financials`,
+      payload: { payout_after_fees_amount: 3000 },
+    });
+
+    const wholesalerRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/wholesalers`,
+      payload: { name: 'Freeze W PATCH' },
+    });
+    expect(wholesalerRes.statusCode).toBe(201);
+    const wholesaler = JSON.parse(wholesalerRes.payload);
+
+    const settlementRes = await app.inject({
+      method: 'POST',
+      url: `${prefix}/shows/${show.id}/settlements`,
+      payload: { wholesaler_id: wholesaler.id, method: 'MANUAL', amount: 100 },
+    });
+    expect(settlementRes.statusCode).toBe(201);
+    const settlement = JSON.parse(settlementRes.payload);
+
+    const closeRes = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}`,
+      payload: { status: 'COMPLETED' },
+    });
+    expect(closeRes.statusCode).toBe(200);
+
+    const patchRes = await app.inject({
+      method: 'PATCH',
+      url: `${prefix}/shows/${show.id}/settlements/${settlement.id}`,
+      payload: { wholesaler_id: wholesaler.id, method: 'MANUAL', amount: 120 },
+    });
+    expect(patchRes.statusCode).toBe(409);
+    const body = JSON.parse(patchRes.payload);
+    expect(body.message).toBe(CLOSED_MESSAGE);
+  });
+
   test('after reopening (ACTIVE), financials and settlements can be modified', async () => {
     const showRes = await app.inject({
       method: 'POST',

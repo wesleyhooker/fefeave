@@ -6,7 +6,7 @@ function read(relativePath: string): string {
   return readFileSync(new URL(`../${relativePath}`, import.meta.url), 'utf8');
 }
 
-test('WorkspaceEntityHeader groups identity and KPIs in one content zone', () => {
+test('WorkspaceEntityHeader supports grouped and three-zone structures', () => {
   const header = read('_components/workspace/WorkspaceEntityHeader.tsx');
   const layout = read('_lib/workspaceEntityDetailLayout.ts');
   assert.match(header, /WorkspaceMetadataRow/);
@@ -14,8 +14,10 @@ test('WorkspaceEntityHeader groups identity and KPIs in one content zone', () =>
   assert.match(header, /WORKSPACE_ENTITY_HEADER_CONTENT/);
   assert.match(header, /WORKSPACE_ENTITY_HEADER_KPI_CELL/);
   assert.match(header, /WORKSPACE_ENTITY_HEADER_SHELL/);
+  assert.match(header, /structure === "three-zone"/);
   assert.doesNotMatch(header, /WORKSPACE_ENTITY_HEADER_METRICS/);
-  assert.match(layout, /minmax\(0,76%\)_minmax\(0,24%\)/);
+  assert.match(layout, /md:flex-row md:items-center md:justify-between/);
+  assert.match(layout, /md:flex-row md:items-center md:gap-5/);
   assert.match(layout, /sm:divide-x/);
   assert.match(layout, /divide-admin-border\/30/);
 });
@@ -47,9 +49,9 @@ test('Show detail consumes shared entity detail primitives', () => {
     ),
     'utf8',
   );
-  const status = readFileSync(
+  const summary = readFileSync(
     new URL(
-      '../shows/[id]/_components/ShowDetailStatusCard.tsx',
+      '../shows/[id]/_components/ShowDetailSummaryCard.tsx',
       import.meta.url,
     ),
     'utf8',
@@ -60,8 +62,11 @@ test('Show detail consumes shared entity detail primitives', () => {
   );
 
   assert.match(hero, /WorkspaceEntityHeader/);
-  assert.match(hero, /workspaceShowStatusMetadataSegments/);
-  assert.doesNotMatch(hero, /ShowStatusPill/);
-  assert.match(status, /WorkspaceStatusCard/);
+  assert.match(hero, /ShowStatusPill/);
+  assert.match(summary, /ShowDetailSummaryValueRow/);
+  assert.match(summary, /workspaceMoneyPositive/);
   assert.match(view, /WorkspaceSectionCard/);
+  assert.match(view, /ShowDetailBackLink/);
+  assert.doesNotMatch(view, /AdminEntityBreadcrumb/);
+  assert.match(hero, /structure="three-zone"/);
 });

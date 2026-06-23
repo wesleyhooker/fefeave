@@ -1,22 +1,11 @@
 "use client";
 
-import {
-  ArrowUpTrayIcon,
-  PencilSquareIcon,
-  PlusIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
-import Link from "next/link";
+import { PencilSquareIcon } from "@heroicons/react/24/outline";
+
 import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
+  WORKFLOW_SHOW_DETAIL_ADJUST_PAYOUT_LABEL,
   WORKFLOW_SHOW_FINANCES_SAVE_THEN_RETRY,
   WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST,
   WORKFLOW_SHOW_VENDOR_OBLIGATIONS_HEADING,
@@ -25,48 +14,32 @@ import {
 import { showClosedSuccessHref } from "@/app/(admin)/admin/_lib/showRoutes";
 import { dispatchWorkspaceInvalidate } from "@/lib/workspaceInvalidate";
 import { AdminWorkspacePageLayout } from "@/app/(admin)/admin/_components/AdminWorkspacePageLayout";
-import { vendorDetailHref } from "@/app/(admin)/admin/_lib/vendorRoutes";
-import {
-  SettlementFlatExpandedBody,
-  SettlementItemizedExpandedBody,
-  SettlementPercentExpandedBody,
-} from "@/app/(admin)/admin/_components/SettlementExpandedDetail";
-import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
-import { WorkspaceNativeSelect } from "@/app/(admin)/admin/_components/WorkspaceNativeSelect";
+import { ShowDetailBackLink } from "./_components/ShowDetailBackLink";
 import { WorkspaceConfirmDialog } from "@/app/(admin)/admin/_components/WorkspaceConfirmDialog";
 import { WorkspaceInlineError } from "@/app/(admin)/admin/_components/WorkspaceInlineError";
+import { WorkspaceActionLabel } from "@/app/(admin)/admin/_components/WorkspaceActionLabel";
 import {
-  workspaceActionCompleteSm,
-  workspaceActionInlineText,
   workspaceActionIconMd,
-  workspaceActionIconSm,
   workspaceActionPositiveCompleteMd,
   workspaceActionSecondaryMd,
   workspaceLabelEyebrow,
   workspaceMoneyTabular,
-  workspaceMutedStrip,
   workspaceActionCompleteMd,
+  workspaceActionCompleteSm,
   workspaceTextInput,
-  workspaceTextInputCompact,
-  workspaceTheadSticky,
-  workspaceShowSettlementRowDisclosure,
-  workspaceTableRowInteractive,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import { ShowDetailObligationsList } from "./_components/ShowDetailObligationsList";
+import type { ShowDetailObligationsPanel } from "./_lib/showDetailObligationModel";
 import {
-  WorkspaceLedgerDisclosureIcon,
-  workspaceTableBodyCellPadding,
-  workspaceTableHeaderCellPadding,
-} from "@/app/(admin)/admin/_components/WorkspaceTableRow";
-import {
-  calculationMethodFromStructuredType,
-  mapShowSettlementLinesToLedgerLineItems,
-  settlementMethodHint,
-  settlementMethodPrimaryLabel,
-} from "@/app/(admin)/admin/_lib/settlementUi";
-import { ShowDetailBackLink } from "./_components/ShowDetailBackLink";
+  applyComposerDraft,
+  buildSettlementPayloadFromDraft,
+  hydrateComposerFromSettlement,
+} from "./_lib/showDetailObligationComposer";
+import { ShowDetailReceiptSection } from "./_components/ShowDetailReceiptSection";
 import { workspaceEntityPageHeader } from "@/app/(admin)/admin/_lib/workspaceEntityPageHeader";
 import { ShowDetailHeroCard } from "./_components/ShowDetailHeroCard";
-import { ShowDetailStatusCard } from "./_components/ShowDetailStatusCard";
+import { ShowDetailSummaryCard } from "./_components/ShowDetailSummaryCard";
+import { ShowDetailActionsCard } from "./_components/ShowDetailActionsCard";
 import { WorkspaceSectionCard } from "@/app/(admin)/admin/_components/workspace/WorkspaceSectionCard";
 import {
   SHOW_DETAIL_PAGE_GRID,
@@ -110,6 +83,7 @@ import {
   fetchShowFinancialProfit,
   fetchShowFinancials,
   fetchShowSettlements,
+  updateShowSettlement,
   updateShowStatus,
   upsertShowFinancials,
   type SettlementLineDTO,
@@ -230,8 +204,6 @@ export function ShowDetailView({ id }: { id: string }) {
     null,
   );
   const [payoutAfterFees, setPayoutAfterFees] = useState(0);
-  /** Informational only (capture foundation); null when not recorded. */
-  const [platformFee, setPlatformFee] = useState<number | null>(null);
   const [settlements, setSettlements] = useState<StructuredSettlement[]>([]);
   const [wholesalers, setWholesalers] = useState<BackendWholesalerBalanceRow[]>(
     [],
@@ -248,22 +220,21 @@ export function ShowDetailView({ id }: { id: string }) {
   const [deleteSettlementError, setDeleteSettlementError] = useState<
     string | null
   >(null);
-  const [deletingSettlementId, setDeletingSettlementId] = useState<
-    string | null
-  >(null);
   const [closeError, setCloseError] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const addSettlementPanelRef = useRef<HTMLDivElement>(null);
+  const editSettlementPanelRef = useRef<HTMLDivElement>(null);
   const breakdownSectionRef = useRef<HTMLElement>(null);
   const payoutFigureRef = useRef<HTMLDivElement>(null);
   const settlementsAnchorRef = useRef<HTMLDivElement>(null);
   const receiptFileInputRef = useRef<HTMLInputElement>(null);
   /** Tracks which show we last loaded; initial `null` ensures first mount shows the loading state. */
   const lastLoadedShowIdRef = useRef<string | null>(null);
-  const [addSettlementOpen, setAddSettlementOpen] = useState(false);
+  const [obligationsPanel, setObligationsPanel] =
+    useState<ShowDetailObligationsPanel>({ kind: "closed" });
   const [newRowWholesalerId, setNewRowWholesalerId] = useState("");
   const [newRowMode, setNewRowMode] = useState<
     "PERCENT" | "FIXED" | "QTY_UNIT"
@@ -285,9 +256,6 @@ export function ShowDetailView({ id }: { id: string }) {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
-  const [expandedSettlementIds, setExpandedSettlementIds] = useState<
-    Record<string, boolean>
-  >({});
   /** Brief highlight on payout/settlements block when Close is blocked (scroll target). */
   const [breakdownFlash, setBreakdownFlash] = useState<
     "payout" | "settlements" | null
@@ -331,11 +299,6 @@ export function ShowDetailView({ id }: { id: string }) {
           setPlatform(show.platform ?? "");
           const payout = Number(financials?.payout_after_fees_amount ?? "0");
           setPayoutAfterFees(Number.isFinite(payout) ? payout : 0);
-          const fee =
-            financials?.platform_fee_amount != null
-              ? Number(financials.platform_fee_amount)
-              : null;
-          setPlatformFee(fee != null && Number.isFinite(fee) ? fee : null);
           setClosedAt(
             show.status === "COMPLETED" ? (show.updated_at ?? "") : undefined,
           );
@@ -431,6 +394,75 @@ export function ShowDetailView({ id }: { id: string }) {
     [settlements],
   );
 
+  const resetComposerDraft = useCallback(() => {
+    setNewRowWholesalerId("");
+    setNewRowMode("PERCENT");
+    setNewRowPercent("");
+    setNewRowFixed("");
+    setNewRowItemizedLines([]);
+    setNewRowError(null);
+  }, []);
+
+  const closeObligationsPanel = useCallback(() => {
+    setObligationsPanel({ kind: "closed" });
+    resetComposerDraft();
+  }, [resetComposerDraft]);
+
+  const openAddObligationPanel = useCallback(() => {
+    setObligationsPanel({ kind: "add" });
+    resetComposerDraft();
+  }, [resetComposerDraft]);
+
+  const openEditObligationPanel = useCallback(
+    (settlementId: string) => {
+      const row = settlements.find((s) => s.id === settlementId);
+      if (!row) return;
+      applyComposerDraft(hydrateComposerFromSettlement(row), {
+        setWholesalerId: setNewRowWholesalerId,
+        setMode: setNewRowMode,
+        setPercent: setNewRowPercent,
+        setFixed: setNewRowFixed,
+        setItemizedLines: setNewRowItemizedLines,
+      });
+      setNewRowError(null);
+      setObligationsPanel({ kind: "edit", settlementId });
+    },
+    [settlements],
+  );
+
+  const editingSettlementId =
+    obligationsPanel.kind === "edit" ? obligationsPanel.settlementId : null;
+
+  const composerTotalPercentUsed = useMemo(() => {
+    const base = sumPercentRatesFromSettlements(settlements);
+    if (!editingSettlementId) return base;
+    const editing = settlements.find((s) => s.id === editingSettlementId);
+    if (editing?.type === "PERCENT") {
+      return roundToCents(base - editing.percent);
+    }
+    return base;
+  }, [settlements, editingSettlementId]);
+
+  const composerExistingTotalOwed = useMemo(() => {
+    if (!editingSettlementId) return totals.totalOwed;
+    const editing = settlements.find((s) => s.id === editingSettlementId);
+    if (!editing) return totals.totalOwed;
+    return roundToCents(
+      totals.totalOwed - amountOwedFor(payoutAfterFees, editing),
+    );
+  }, [totals.totalOwed, settlements, editingSettlementId, payoutAfterFees]);
+
+  const composerTakenWholesalerIds = useMemo(() => {
+    const ids = new Set(settlements.map((s) => s.wholesalerId));
+    if (editingSettlementId) {
+      const editing = settlements.find((s) => s.id === editingSettlementId);
+      if (editing) ids.delete(editing.wholesalerId);
+    }
+    return ids;
+  }, [settlements, editingSettlementId]);
+
+  const takenWholesalerIds = composerTakenWholesalerIds;
+
   const isClosed = Boolean(closedAt);
 
   const settlementComposerBlock = useMemo(
@@ -438,11 +470,13 @@ export function ShowDetailView({ id }: { id: string }) {
       evaluateSettlementComposerFull({
         isClosed,
         payoutAfterFees,
-        settlementsExistingTotalOwed: totals.totalOwed,
-        totalPercentUsedOnShow: totalPercentUsed,
+        settlementsExistingTotalOwed: composerExistingTotalOwed,
+        totalPercentUsedOnShow: composerTotalPercentUsed,
         newRowWholesalerId,
         wholesalerAlreadyHasSettlement: settlements.some(
-          (s) => s.wholesalerId === newRowWholesalerId,
+          (s) =>
+            s.wholesalerId === newRowWholesalerId &&
+            s.id !== editingSettlementId,
         ),
         newRowMode,
         newRowPercent,
@@ -454,10 +488,11 @@ export function ShowDetailView({ id }: { id: string }) {
     [
       isClosed,
       payoutAfterFees,
-      totals.totalOwed,
-      totalPercentUsed,
+      composerExistingTotalOwed,
+      composerTotalPercentUsed,
       newRowWholesalerId,
       settlements,
+      editingSettlementId,
       newRowMode,
       newRowPercent,
       newRowFixed,
@@ -467,11 +502,11 @@ export function ShowDetailView({ id }: { id: string }) {
     ],
   );
 
-  const addSettlementSubmitBlockedReason = settlementComposerBlock
+  const obligationSubmitBlockedReason = settlementComposerBlock
     ? settlementComposerBlockMessage(settlementComposerBlock)
     : null;
 
-  const addSettlementPrimaryDisabled =
+  const obligationSubmitDisabled =
     creatingSettlement || settlementComposerBlock != null;
 
   const fieldHints = useMemo(
@@ -486,10 +521,6 @@ export function ShowDetailView({ id }: { id: string }) {
 
   const handleRetry = useCallback(() => {
     setReloadToken((v) => v + 1);
-  }, []);
-
-  const focusSettlementComposer = useCallback(() => {
-    setAddSettlementOpen(true);
   }, []);
 
   const scrollToCloseOutHint = useCallback(
@@ -528,22 +559,21 @@ export function ShowDetailView({ id }: { id: string }) {
     setCloseDialogOpen(true);
   }, [closeOutBlock, scrollToCloseOutHint]);
 
-  const toggleSettlementExpanded = useCallback((settlementId: string) => {
-    setExpandedSettlementIds((prev) => ({
-      ...prev,
-      [settlementId]: !prev[settlementId],
-    }));
-  }, []);
-
   useEffect(() => {
-    if (!addSettlementOpen) return;
+    if (obligationsPanel.kind !== "add" && obligationsPanel.kind !== "edit") {
+      return;
+    }
+    const panelRef =
+      obligationsPanel.kind === "add"
+        ? addSettlementPanelRef
+        : editSettlementPanelRef;
     const id = requestAnimationFrame(() => {
-      const root = addSettlementPanelRef.current;
+      const root = panelRef.current;
       root?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       root?.querySelector<HTMLSelectElement>("select")?.focus();
     });
     return () => cancelAnimationFrame(id);
-  }, [addSettlementOpen]);
+  }, [obligationsPanel]);
 
   const handleAttachReceipt = useCallback(async () => {
     if (!receiptFile) return;
@@ -600,6 +630,18 @@ export function ShowDetailView({ id }: { id: string }) {
     [],
   );
 
+  const handleClearPendingReceipt = useCallback(() => {
+    setReceiptFile(null);
+    setReceiptError(null);
+    if (receiptFileInputRef.current) {
+      receiptFileInputRef.current.value = "";
+    }
+  }, []);
+
+  const handleChooseReceiptFile = useCallback(() => {
+    receiptFileInputRef.current?.click();
+  }, []);
+
   const toInlineWriteError = useCallback((err: unknown): string => {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("(401 ") || message.includes("(403 ")) {
@@ -642,11 +684,7 @@ export function ShowDetailView({ id }: { id: string }) {
       try {
         await createShowSettlement(id, payload);
         setReloadToken((v) => v + 1);
-        setAddSettlementOpen(false);
-        setNewRowWholesalerId("");
-        setNewRowPercent("");
-        setNewRowFixed("");
-        setNewRowItemizedLines([]);
+        closeObligationsPanel();
         return true;
       } catch (err) {
         setCreateSettlementError(toInlineWriteError(err));
@@ -656,102 +694,81 @@ export function ShowDetailView({ id }: { id: string }) {
         setCreatingSettlement(false);
       }
     },
-    [id, toInlineWriteError],
+    [id, closeObligationsPanel, toInlineWriteError],
   );
 
-  const handleAddRow = useCallback(async () => {
+  const handleUpdateSettlement = useCallback(
+    async (
+      settlementId: string,
+      payload: {
+        wholesaler_id: string;
+        method: "PERCENT_PAYOUT" | "MANUAL" | "ITEMIZED";
+        rate_percent?: number;
+        amount?: number;
+        lines?: { itemName: string; quantity: number; unitPrice: number }[];
+      },
+    ): Promise<boolean> => {
+      setCreatingSettlement(true);
+      setCreateSettlementError(null);
+      setNewRowError(null);
+      try {
+        await updateShowSettlement(id, settlementId, payload);
+        setReloadToken((v) => v + 1);
+        closeObligationsPanel();
+        return true;
+      } catch (err) {
+        setCreateSettlementError(toInlineWriteError(err));
+        setNewRowError(toInlineWriteError(err));
+        return false;
+      } finally {
+        setCreatingSettlement(false);
+      }
+    },
+    [id, closeObligationsPanel, toInlineWriteError],
+  );
+
+  const handleSaveObligation = useCallback(async () => {
     if (isClosed) return;
+    if (obligationsPanel.kind !== "add" && obligationsPanel.kind !== "edit") {
+      return;
+    }
     setNewRowError(null);
-    if (!newRowWholesalerId) {
-      setNewRowError("Select a wholesaler.");
-      return;
-    }
-    if (settlements.some((s) => s.wholesalerId === newRowWholesalerId)) {
-      setNewRowError("This wholesaler already has a settlement.");
-      return;
-    }
-    if (newRowMode === "PERCENT") {
-      const rate = Number(newRowPercent);
-      if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
-        setNewRowError("Percent must be between 0 and 100.");
-        return;
-      }
-      const allocated = sumPercentRatesFromSettlements(settlements);
-      if (allocated + rate > 100 + 1e-6) {
-        setNewRowError("Percent shares can’t exceed 100% of payout.");
-        return;
-      }
-      await handleCreateSettlement({
-        wholesaler_id: newRowWholesalerId,
-        method: "PERCENT_PAYOUT",
-        rate_percent: rate,
-      });
-      return;
-    }
-    if (newRowMode === "QTY_UNIT") {
-      if (newRowItemizedLines.length === 0) {
-        setNewRowError(
-          "Add at least one line (item name, quantity, unit price).",
-        );
-        return;
-      }
-      const lines: { itemName: string; quantity: number; unitPrice: number }[] =
-        [];
-      for (const line of newRowItemizedLines) {
-        const name = line.itemName.trim();
-        const qty = Number(line.quantity);
-        const unitDollars = Number(line.unitPriceDollars);
-        if (!name) {
-          setNewRowError("Every line needs an item name.");
-          return;
-        }
-        if (!Number.isFinite(qty) || qty <= 0) {
-          setNewRowError("Quantity must be a positive number for every line.");
-          return;
-        }
-        if (!Number.isFinite(unitDollars) || unitDollars < 0) {
-          setNewRowError("Unit price ($) must be 0 or more for every line.");
-          return;
-        }
-        lines.push({
-          itemName: name,
-          quantity: qty,
-          unitPrice: Math.round(unitDollars * 100),
-        });
-      }
-      const ok = await handleCreateSettlement({
-        wholesaler_id: newRowWholesalerId,
-        method: "ITEMIZED",
-        lines,
-      });
-      if (ok) setNewRowItemizedLines([]);
-      return;
-    }
-    const amount = Number(newRowFixed);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setNewRowError("Amount must be greater than 0.");
-      return;
-    }
-    await handleCreateSettlement({
-      wholesaler_id: newRowWholesalerId,
-      method: "MANUAL",
-      amount,
+
+    const built = buildSettlementPayloadFromDraft({
+      wholesalerId: newRowWholesalerId,
+      mode: newRowMode,
+      percent: newRowPercent,
+      fixed: newRowFixed,
+      itemizedLines: newRowItemizedLines,
     });
+    if (!built.ok) {
+      setNewRowError(built.message);
+      return;
+    }
+
+    if (obligationsPanel.kind === "edit") {
+      await handleUpdateSettlement(
+        obligationsPanel.settlementId,
+        built.payload,
+      );
+      return;
+    }
+
+    await handleCreateSettlement(built.payload);
   }, [
     isClosed,
-    settlements,
-    payoutAfterFees,
+    obligationsPanel,
     newRowWholesalerId,
     newRowMode,
     newRowPercent,
     newRowFixed,
     newRowItemizedLines,
+    handleUpdateSettlement,
     handleCreateSettlement,
   ]);
 
   const executeDeleteSettlement = useCallback(
     async (settlementId: string) => {
-      setDeletingSettlementId(settlementId);
       setDeleteSettlementError(null);
       try {
         await deleteShowSettlement(id, settlementId);
@@ -759,11 +776,11 @@ export function ShowDetailView({ id }: { id: string }) {
       } catch (err) {
         setDeleteSettlementError(toInlineWriteError(err));
       } finally {
-        setDeletingSettlementId(null);
         setDeleteConfirmId(null);
+        closeObligationsPanel();
       }
     },
-    [id, toInlineWriteError],
+    [id, closeObligationsPanel, toInlineWriteError],
   );
 
   const handleCloseShow = useCallback(async () => {
@@ -802,7 +819,9 @@ export function ShowDetailView({ id }: { id: string }) {
     breakdownFlash === "payout"
       ? "rounded-md ring-2 ring-rose-400/90 ring-offset-2 ring-offset-[#fdf0e4] transition-[box-shadow] duration-300"
       : "",
-    addSettlementOpen && fieldHints.payoutFigure && breakdownFlash !== "payout"
+    obligationsPanel.kind !== "closed" &&
+    fieldHints.payoutFigure &&
+    breakdownFlash !== "payout"
       ? "rounded-md ring-2 ring-amber-300/90 ring-offset-2 ring-offset-[#fdf0e4] transition-[box-shadow] duration-300"
       : "",
   ]
@@ -865,25 +884,6 @@ export function ShowDetailView({ id }: { id: string }) {
             totalOwed={totals.totalOwed}
             payoutFigureRef={payoutFigureRef}
             payoutFigureClassName={payoutFigureClassName}
-            payoutSlot={
-              isClosed ? undefined : (
-                <div className="space-y-1">
-                  <EditablePayout
-                    payoutAfterFees={payoutAfterFees}
-                    saving={savingPayout}
-                    disabled={isClosed}
-                    onSave={handleSavePayout}
-                    displayVariant="moneyCard"
-                    embedded
-                  />
-                  {savePayoutError ? (
-                    <p className="text-xs text-amber-700" role="alert">
-                      {savePayoutError}
-                    </p>
-                  ) : null}
-                </div>
-              )
-            }
           />
 
           <div className={SHOW_DETAIL_PAGE_GRID}>
@@ -921,829 +921,44 @@ export function ShowDetailView({ id }: { id: string }) {
                     owed until this is resolved.
                   </p>
                 ) : null}
-                <div className="mt-3 space-y-3 md:hidden">
-                  {settlements.length === 0 ? (
-                    isClosed ? (
-                      <div
-                        className={`rounded-lg border border-gray-200/80 px-4 py-4 text-sm text-gray-600 ${workspaceMutedStrip}`}
-                      >
-                        No vendor obligations recorded.
-                      </div>
-                    ) : (
-                      <div
-                        className={`space-y-3 rounded-lg border border-gray-200/80 px-4 py-4 ${workspaceMutedStrip}`}
-                      >
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-gray-800">
-                            No vendor obligations yet
-                          </p>
-                          <p className="text-sm leading-relaxed text-gray-600">
-                            Add the first obligation to allocate payout before
-                            close-out.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => focusSettlementComposer()}
-                          className={`${workspaceActionSecondaryMd} w-full justify-center gap-2`}
-                        >
-                          <PlusIcon
-                            className={workspaceActionIconMd}
-                            aria-hidden
-                          />
-                          Add obligation
-                        </button>
-                      </div>
-                    )
-                  ) : (
-                    settlements.map((row) => {
-                      const owed = amountOwedFor(payoutAfterFees, row);
-                      const expanded = Boolean(expandedSettlementIds[row.id]);
-                      const calcMethod = calculationMethodFromStructuredType(
-                        row.type,
-                      );
-                      const typeLabel =
-                        settlementMethodPrimaryLabel(calcMethod);
-                      const summaryHint = settlementMethodHint({
-                        calculationMethod: calcMethod,
-                        percentOfPayout:
-                          row.type === "PERCENT" ? row.percent : undefined,
-                        lineCount:
-                          row.type === "ITEMIZED"
-                            ? row.lines?.length
-                            : undefined,
-                      });
-                      return (
-                        <div
-                          key={row.id}
-                          className="rounded-lg border border-gray-200/90 bg-white p-4 shadow-sm"
-                        >
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                            <div className="min-w-0 flex-1">
-                              <Link
-                                href={vendorDetailHref(row.wholesalerId)}
-                                className="text-base font-semibold leading-snug text-gray-900 underline-offset-2 decoration-gray-300 hover:text-gray-800 hover:underline"
-                              >
-                                {row.wholesaler}
-                              </Link>
-                              <p className="mt-1 text-sm font-medium text-gray-800">
-                                {typeLabel}
-                              </p>
-                              {summaryHint ? (
-                                <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
-                                  {summaryHint}
-                                </p>
-                              ) : null}
-                            </div>
-                            <div className="shrink-0 text-right">
-                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                                Owed
-                              </p>
-                              <p
-                                className={`text-lg font-semibold tabular-nums text-gray-900 ${workspaceMoneyTabular}`}
-                              >
-                                {formatCurrency(owed)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                            <button
-                              type="button"
-                              className={`${workspaceActionSecondaryMd} w-full justify-center sm:w-auto`}
-                              aria-expanded={expanded}
-                              aria-controls={`settlement-detail-mobile-${row.id}`}
-                              onClick={() => toggleSettlementExpanded(row.id)}
-                            >
-                              <span className="inline-flex items-center gap-2">
-                                <WorkspaceLedgerDisclosureIcon
-                                  expanded={expanded}
-                                />
-                                {expanded ? "Hide details" : "Details"}
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={
-                                isClosed || deletingSettlementId === row.id
-                              }
-                              onClick={() => setDeleteConfirmId(row.id)}
-                              className={`${workspaceActionSecondaryMd} w-full justify-center border-rose-200/90 text-rose-800 hover:bg-rose-50/80 sm:w-auto`}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                          {expanded ? (
-                            <div
-                              id={`settlement-detail-mobile-${row.id}`}
-                              className="mt-4 border-t border-gray-100 pt-4"
-                              role="region"
-                              aria-label={`Details for ${row.wholesaler}`}
-                            >
-                              {row.type === "PERCENT" ? (
-                                <SettlementPercentExpandedBody
-                                  percentBasisLabel={`${row.percent}% of payout after fees (${formatCurrency(payoutAfterFees)})`}
-                                  amountOwed={owed}
-                                />
-                              ) : null}
-                              {row.type === "FIXED" ? (
-                                <SettlementFlatExpandedBody
-                                  flatAmount={row.fixedAmount}
-                                  amountOwed={owed}
-                                />
-                              ) : null}
-                              {row.type === "ITEMIZED" ? (
-                                <SettlementItemizedExpandedBody
-                                  lines={mapShowSettlementLinesToLedgerLineItems(
-                                    row.lines ?? [],
-                                  )}
-                                  amountOwed={owed}
-                                  emptyFallbackAmountOwed={owed}
-                                />
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-                <div className="mt-3 hidden overflow-x-auto rounded-md border border-gray-200/75 bg-white/80 md:block">
-                  <table className="min-w-full table-fixed border-collapse text-sm">
-                    <colgroup>
-                      <col className="w-9 sm:w-10" />
-                      <col className="min-w-0" />
-                      <col className="w-1 max-w-[4px] p-0" />
-                      <col className="w-[6.5rem] sm:w-[7rem]" />
-                      <col className="min-w-0 max-w-[10.5rem]" />
-                      <col className="w-9 sm:w-10" />
-                    </colgroup>
-                    <thead className={workspaceTheadSticky}>
-                      <tr className="border-b border-gray-200">
-                        <th
-                          scope="col"
-                          className={`w-9 ${workspaceTableHeaderCellPadding} !py-2 text-left sm:w-10`}
-                        >
-                          <span className="sr-only">Expand</span>
-                        </th>
-                        <th
-                          scope="col"
-                          className={`${workspaceTableHeaderCellPadding} !py-2 text-left`}
-                        >
-                          Vendor
-                        </th>
-                        <th
-                          scope="col"
-                          className="w-1 max-w-[4px] p-0"
-                          aria-hidden
-                        >
-                          <span className="sr-only"> </span>
-                        </th>
-                        <th
-                          scope="col"
-                          className={`${workspaceTableHeaderCellPadding} !py-2 text-right`}
-                        >
-                          Amount owed
-                        </th>
-                        <th
-                          scope="col"
-                          className={`${workspaceTableHeaderCellPadding} !py-2 pl-0 text-left sm:pr-3`}
-                        >
-                          Type
-                        </th>
-                        <th
-                          scope="col"
-                          className={`${workspaceTableHeaderCellPadding} !py-2 text-right sm:pr-3`}
-                        >
-                          <span className="sr-only">Remove</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                      {settlements.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={6}
-                            className={`${workspaceTableBodyCellPadding} py-6 text-left text-sm text-gray-600`}
-                          >
-                            {isClosed ? (
-                              <div
-                                className={`rounded-md border border-gray-200/80 px-3 py-2.5 text-sm ${workspaceMutedStrip}`}
-                              >
-                                No vendor obligations recorded.
-                              </div>
-                            ) : (
-                              <div
-                                className={`flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200/80 px-3 py-2.5 ${workspaceMutedStrip}`}
-                              >
-                                <div className="space-y-0.5">
-                                  <p className="text-sm font-medium text-gray-700">
-                                    No vendor obligations yet
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    Add the first obligation to allocate payout
-                                    before close-out.
-                                  </p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => focusSettlementComposer()}
-                                  className={`${workspaceActionInlineText} inline-flex items-center gap-1.5 whitespace-nowrap`}
-                                >
-                                  <PlusIcon className={workspaceActionIconSm} />
-                                  Add obligation
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ) : (
-                        settlements.map((row) => {
-                          const owed = amountOwedFor(payoutAfterFees, row);
-                          const expanded = Boolean(
-                            expandedSettlementIds[row.id],
-                          );
-                          const calcMethod =
-                            calculationMethodFromStructuredType(row.type);
-                          const typeLabel =
-                            settlementMethodPrimaryLabel(calcMethod);
-                          const summaryHint = settlementMethodHint({
-                            calculationMethod: calcMethod,
-                            percentOfPayout:
-                              row.type === "PERCENT" ? row.percent : undefined,
-                            lineCount:
-                              row.type === "ITEMIZED"
-                                ? row.lines?.length
-                                : undefined,
-                          });
-                          return (
-                            <Fragment key={row.id}>
-                              <tr
-                                className={`${workspaceShowSettlementRowDisclosure} ${expanded ? "bg-gray-50/80" : ""}`}
-                              >
-                                <td
-                                  className={`w-9 ${workspaceTableBodyCellPadding} !py-1.5 align-middle sm:w-10`}
-                                >
-                                  <button
-                                    type="button"
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-200/80 hover:text-gray-900 sm:h-8 sm:w-8"
-                                    aria-expanded={expanded}
-                                    aria-controls={`settlement-detail-${row.id}`}
-                                    aria-label={
-                                      expanded
-                                        ? "Collapse obligation details"
-                                        : "Expand obligation details"
-                                    }
-                                    onClick={() =>
-                                      toggleSettlementExpanded(row.id)
-                                    }
-                                  >
-                                    <WorkspaceLedgerDisclosureIcon
-                                      expanded={expanded}
-                                    />
-                                  </button>
-                                </td>
-                                <td
-                                  className={`min-w-0 ${workspaceTableBodyCellPadding} !py-1.5 align-middle`}
-                                >
-                                  <Link
-                                    href={vendorDetailHref(row.wholesalerId)}
-                                    className="block min-w-0 truncate text-sm font-semibold leading-snug text-gray-900 underline-offset-2 decoration-gray-300 transition-colors hover:text-gray-800 hover:underline"
-                                  >
-                                    {row.wholesaler}
-                                  </Link>
-                                </td>
-                                <td
-                                  className="w-1 max-w-[4px] p-0"
-                                  aria-hidden
-                                />
-                                <td
-                                  className={`whitespace-nowrap ${workspaceTableBodyCellPadding} !py-1.5 text-right align-middle text-sm font-semibold text-gray-900 ${workspaceMoneyTabular}`}
-                                >
-                                  {formatCurrency(owed)}
-                                </td>
-                                <td
-                                  className={`min-w-0 ${workspaceTableBodyCellPadding} !py-1.5 pl-0 align-middle sm:pr-3`}
-                                >
-                                  <div className="text-sm font-medium leading-snug text-gray-900">
-                                    {typeLabel}
-                                  </div>
-                                  <div className="text-[11px] leading-snug text-gray-500">
-                                    {summaryHint}
-                                  </div>
-                                </td>
-                                <td
-                                  className={`${workspaceTableBodyCellPadding} !py-1.5 text-right align-middle sm:pr-3`}
-                                >
-                                  <div className="flex min-h-[1.75rem] items-center justify-end sm:min-h-[2rem]">
-                                    <button
-                                      type="button"
-                                      disabled={
-                                        isClosed ||
-                                        deletingSettlementId === row.id
-                                      }
-                                      onClick={() => setDeleteConfirmId(row.id)}
-                                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-rose-700/90 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:w-8"
-                                      aria-label="Remove obligation"
-                                    >
-                                      <TrashIcon
-                                        className={`${workspaceActionIconMd} shrink-0`}
-                                        aria-hidden
-                                      />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                              {expanded ? (
-                                <tr className="bg-gray-50/90">
-                                  <td colSpan={6} className="p-0">
-                                    <div
-                                      id={`settlement-detail-${row.id}`}
-                                      className="px-2 py-2 sm:px-3"
-                                      role="region"
-                                      aria-label={`Details for ${row.wholesaler}`}
-                                    >
-                                      {row.type === "PERCENT" ? (
-                                        <SettlementPercentExpandedBody
-                                          percentBasisLabel={`${row.percent}% of payout after fees (${formatCurrency(payoutAfterFees)})`}
-                                          amountOwed={owed}
-                                        />
-                                      ) : null}
-                                      {row.type === "FIXED" ? (
-                                        <SettlementFlatExpandedBody
-                                          flatAmount={row.fixedAmount}
-                                          amountOwed={owed}
-                                        />
-                                      ) : null}
-                                      {row.type === "ITEMIZED" ? (
-                                        <SettlementItemizedExpandedBody
-                                          lines={mapShowSettlementLinesToLedgerLineItems(
-                                            row.lines ?? [],
-                                          )}
-                                          amountOwed={owed}
-                                          emptyFallbackAmountOwed={owed}
-                                        />
-                                      ) : null}
-                                    </div>
-                                  </td>
-                                </tr>
-                              ) : null}
-                            </Fragment>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                {!isClosed && settlements.length > 0 ? (
-                  <div className="mt-3 flex border-t border-gray-100/90 pt-3 sm:mt-px sm:justify-end sm:pt-1.5">
-                    <button
-                      type="button"
-                      onClick={() => focusSettlementComposer()}
-                      className={`${workspaceActionSecondaryMd} w-full justify-center gap-2 sm:w-auto`}
-                      aria-label="Add vendor obligation"
-                    >
-                      <PlusIcon className={workspaceActionIconMd} aria-hidden />
-                      <span>Add obligation</span>
-                    </button>
-                  </div>
-                ) : null}
-                {!isClosed && addSettlementOpen ? (
-                  <div
-                    ref={addSettlementPanelRef}
-                    className={`mt-4 rounded-lg border bg-stone-50/40 px-3 py-3 sm:px-4 sm:py-3.5 ${
-                      addSettlementSubmitBlockedReason && !creatingSettlement
-                        ? "border-amber-200/90 ring-1 ring-amber-200/70"
-                        : "border-gray-200/90"
-                    }`}
-                  >
-                    <p className="text-sm font-semibold text-gray-900">
-                      Add vendor obligation
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      One primary save — fields below match the selected type.
-                    </p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:gap-4">
-                      <div>
-                        <label
-                          htmlFor="new-settlement-wholesaler"
-                          className="mb-1 block text-xs font-medium text-gray-600"
-                        >
-                          Vendor
-                        </label>
-                        <WorkspaceNativeSelect
-                          id="new-settlement-wholesaler"
-                          value={newRowWholesalerId}
-                          onChange={(e) =>
-                            setNewRowWholesalerId(e.target.value)
-                          }
-                          className={`!h-9 w-full text-sm ${
-                            fieldHints.wholesaler
-                              ? "ring-2 ring-amber-300/90 ring-offset-1"
-                              : ""
-                          }`}
-                        >
-                          <option value="">Select vendor</option>
-                          {wholesalers.map((w) => {
-                            const taken = settlements.some(
-                              (s) => s.wholesalerId === w.wholesaler_id,
-                            );
-                            return (
-                              <option
-                                key={w.wholesaler_id}
-                                value={w.wholesaler_id}
-                                disabled={taken}
-                              >
-                                {taken ? `${w.name} (already added)` : w.name}
-                              </option>
-                            );
-                          })}
-                        </WorkspaceNativeSelect>
-                        {fieldHints.wholesaler && settlementComposerBlock ? (
-                          <p
-                            className="mt-1.5 text-xs font-medium text-amber-900/90"
-                            role="status"
-                          >
-                            {settlementComposerBlockMessage(
-                              settlementComposerBlock,
-                            )}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="new-settlement-type"
-                          className="mb-1 block text-xs font-medium text-gray-600"
-                        >
-                          Type
-                        </label>
-                        <WorkspaceNativeSelect
-                          id="new-settlement-type"
-                          value={newRowMode}
-                          onChange={(e) => {
-                            const v = e.target.value as
-                              | "PERCENT"
-                              | "FIXED"
-                              | "QTY_UNIT";
-                            setNewRowMode(
-                              v === "FIXED" || v === "QTY_UNIT" ? v : "PERCENT",
-                            );
-                            if (
-                              v === "QTY_UNIT" &&
-                              newRowItemizedLines.length === 0
-                            ) {
-                              setNewRowItemizedLines([
-                                {
-                                  id: crypto.randomUUID(),
-                                  itemName: "",
-                                  quantity: "",
-                                  unitPriceDollars: "",
-                                },
-                              ]);
-                            }
-                          }}
-                          className="!h-9 w-full text-sm"
-                        >
-                          <option value="PERCENT">Percent of payout</option>
-                          <option value="FIXED">Flat amount</option>
-                          <option value="QTY_UNIT">
-                            Itemized (qty × price)
-                          </option>
-                        </WorkspaceNativeSelect>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 space-y-3 border-t border-gray-200/80 pt-3">
-                      {settlementComposerBlock?.kind ===
-                      "historically_over_payout" ? (
-                        <p
-                          className="rounded-md border border-amber-200/70 bg-amber-50/50 px-2.5 py-1.5 text-xs font-medium text-amber-950/90"
-                          role="status"
-                        >
-                          {settlementComposerBlockMessage(
-                            settlementComposerBlock,
-                          )}
-                        </p>
-                      ) : null}
-                      {newRowMode === "PERCENT" ? (
-                        <div className="space-y-2">
-                          <p className="text-xs leading-relaxed text-gray-600">
-                            <span className="font-medium text-gray-800">
-                              Percent basis:
-                            </span>{" "}
-                            the full{" "}
-                            <span className="font-medium">
-                              payout after fees
-                            </span>{" "}
-                            for this show ({formatCurrency(payoutAfterFees)}).
-                            Percent lines add up; you can’t assign more than
-                            100% across percent settlements.
-                          </p>
-                          {payoutAfterFees > 0 && totalPercentUsed > 0 ? (
-                            <p className="text-xs text-gray-600">
-                              Already allocated in other rows:{" "}
-                              <span className="font-medium tabular-nums text-gray-800">
-                                {Number.isInteger(totalPercentUsed)
-                                  ? totalPercentUsed
-                                  : totalPercentUsed.toFixed(1)}
-                                %
-                              </span>
-                              {" · "}
-                              <span className="tabular-nums">
-                                up to{" "}
-                                {Math.max(0, 100 - totalPercentUsed).toFixed(1)}
-                                % left for this percent line
-                              </span>
-                              {totalPercentUsed >= 100 - 1e-6 ? (
-                                <span className="ml-1 font-medium text-amber-800">
-                                  (100% used — use flat/itemized or remove a
-                                  percent row.)
-                                </span>
-                              ) : null}
-                            </p>
-                          ) : null}
-                          <label
-                            htmlFor="new-settlement-pct"
-                            className="mb-1 block text-xs font-medium text-gray-600"
-                          >
-                            Percent (0–100)
-                          </label>
-                          <input
-                            id="new-settlement-pct"
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            max={100}
-                            value={newRowPercent}
-                            onChange={(e) => setNewRowPercent(e.target.value)}
-                            className={`w-full max-w-[8rem] ${workspaceTextInputCompact} text-right tabular-nums ${
-                              fieldHints.percent ||
-                              (payoutAfterFees > 0 && !isPercentValueValid)
-                                ? "ring-2 ring-amber-300/90 ring-offset-1"
-                                : ""
-                            }`}
-                            placeholder="0"
-                            aria-invalid={
-                              payoutAfterFees > 0 && !isPercentValueValid
-                            }
-                          />
-                          {payoutAfterFees <= 0 ? (
-                            <p className="mt-1.5 text-xs text-amber-800/90">
-                              {WORKFLOW_SHOW_FINANCES_SET_PAYOUT_FIRST}
-                            </p>
-                          ) : fieldHints.percent && settlementComposerBlock ? (
-                            <p
-                              className="mt-1.5 text-xs font-medium text-amber-900/90"
-                              role="status"
-                            >
-                              {settlementComposerBlockMessage(
-                                settlementComposerBlock,
-                              )}
-                            </p>
-                          ) : newRowTotal != null ? (
-                            <p className="mt-1.5 text-xs text-gray-600">
-                              {newRowPercent || "0"}% ×{" "}
-                              {formatCurrency(payoutAfterFees)} →{" "}
-                              <span className="font-medium text-gray-900">
-                                {formatCurrency(newRowTotal)} owed
-                              </span>
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {newRowMode === "FIXED" ? (
-                        <div>
-                          <label
-                            htmlFor="new-settlement-flat"
-                            className="mb-1 block text-xs font-medium text-gray-700"
-                          >
-                            Dollar amount owed
-                          </label>
-                          <div className="relative max-w-[11rem]">
-                            <span
-                              className="pointer-events-none absolute left-2.5 top-1/2 z-[1] -translate-y-1/2 text-sm text-gray-500"
-                              aria-hidden
-                            >
-                              $
-                            </span>
-                            <input
-                              id="new-settlement-flat"
-                              type="text"
-                              inputMode="decimal"
-                              value={newRowFixed}
-                              onChange={(e) => {
-                                const v = e.target.value.replace(
-                                  /[^0-9.]/g,
-                                  "",
-                                );
-                                const parts = v.split(".");
-                                if (parts.length > 2) return;
-                                if (parts[1]?.length > 2) return;
-                                setNewRowFixed(v);
-                              }}
-                              className={`${workspaceTextInputCompact} w-full border border-gray-200 bg-white pl-7 text-right tabular-nums shadow-sm ${
-                                fieldHints.flat
-                                  ? "ring-2 ring-amber-300/90 ring-offset-1"
-                                  : ""
-                              }`}
-                              placeholder="0.00"
-                            />
-                          </div>
-                          {fieldHints.flat && settlementComposerBlock ? (
-                            <p
-                              className="mt-1.5 text-xs font-medium text-amber-900/90"
-                              role="status"
-                            >
-                              {settlementComposerBlockMessage(
-                                settlementComposerBlock,
-                              )}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {newRowMode === "QTY_UNIT" ? (
-                        <div
-                          className={`space-y-2 rounded-md border px-2 py-2 sm:px-3 ${
-                            fieldHints.itemized
-                              ? "border-amber-300/80 bg-amber-50/40"
-                              : "border-gray-200/80 bg-white/80"
-                          }`}
-                        >
-                          <p className="text-xs font-medium text-gray-700">
-                            Line items
-                          </p>
-                          <div className="hidden border-b border-gray-100 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500 sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] sm:gap-x-1.5">
-                            <span>Item</span>
-                            <span className="text-right">Qty</span>
-                            <span className="text-right">$</span>
-                            <span className="sr-only">Remove line</span>
-                          </div>
-                          <div className="divide-y divide-gray-100">
-                            {newRowItemizedLines.map((line) => (
-                              <div
-                                key={line.id}
-                                className="flex flex-col gap-3 py-3 first:pt-0 sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_4.75rem_1.75rem] sm:items-center sm:gap-x-1.5 sm:py-1.5"
-                              >
-                                <input
-                                  type="text"
-                                  value={line.itemName}
-                                  onChange={(e) =>
-                                    setNewRowItemizedLines((prev) =>
-                                      prev.map((l) =>
-                                        l.id === line.id
-                                          ? {
-                                              ...l,
-                                              itemName: e.target.value,
-                                            }
-                                          : l,
-                                      ),
-                                    )
-                                  }
-                                  placeholder="Item name"
-                                  className={`min-w-0 w-full sm:w-auto ${workspaceTextInputCompact}`}
-                                />
-                                <div className="grid grid-cols-2 gap-2 sm:contents">
-                                  <input
-                                    type="number"
-                                    step="1"
-                                    min={1}
-                                    value={line.quantity}
-                                    onChange={(e) =>
-                                      setNewRowItemizedLines((prev) =>
-                                        prev.map((l) =>
-                                          l.id === line.id
-                                            ? {
-                                                ...l,
-                                                quantity: e.target.value,
-                                              }
-                                            : l,
-                                        ),
-                                      )
-                                    }
-                                    placeholder="Qty"
-                                    className={`${workspaceTextInputCompact} w-full text-right tabular-nums sm:w-auto`}
-                                  />
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min={0}
-                                    value={line.unitPriceDollars}
-                                    onChange={(e) =>
-                                      setNewRowItemizedLines((prev) =>
-                                        prev.map((l) =>
-                                          l.id === line.id
-                                            ? {
-                                                ...l,
-                                                unitPriceDollars:
-                                                  e.target.value,
-                                              }
-                                            : l,
-                                        ),
-                                      )
-                                    }
-                                    placeholder="Price"
-                                    className={`${workspaceTextInputCompact} w-full text-right tabular-nums sm:w-auto`}
-                                  />
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setNewRowItemizedLines((prev) =>
-                                      prev.filter((l) => l.id !== line.id),
-                                    )
-                                  }
-                                  className="flex min-h-10 items-center justify-end text-gray-500 hover:text-gray-800 sm:min-h-0 sm:justify-end"
-                                  aria-label="Remove item"
-                                >
-                                  <TrashIcon
-                                    className={workspaceActionIconSm}
-                                  />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setNewRowItemizedLines((prev) => [
-                                ...prev,
-                                {
-                                  id: crypto.randomUUID(),
-                                  itemName: "",
-                                  quantity: "",
-                                  unitPriceDollars: "",
-                                },
-                              ])
-                            }
-                            className={`${workspaceActionSecondaryMd} !gap-1 !px-2 !py-1 text-xs`}
-                          >
-                            <WorkspaceActionLabel
-                              icon={
-                                <PlusIcon className={workspaceActionIconSm} />
-                              }
-                            >
-                              Add item
-                            </WorkspaceActionLabel>
-                          </button>
-                          <p className="text-xs font-medium text-gray-800">
-                            Line total:{" "}
-                            <span className="tabular-nums">
-                              {newRowTotal != null
-                                ? formatCurrency(newRowTotal)
-                                : "—"}
-                            </span>
-                          </p>
-                          {fieldHints.itemized && settlementComposerBlock ? (
-                            <p
-                              className="text-xs font-medium text-amber-900/90"
-                              role="status"
-                            >
-                              {settlementComposerBlockMessage(
-                                settlementComposerBlock,
-                              )}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-4 flex flex-col gap-2 border-t border-gray-200/80 pt-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          disabled={addSettlementPrimaryDisabled}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            void handleAddRow();
-                          }}
-                          className={`${workspaceActionCompleteSm} disabled:cursor-not-allowed disabled:opacity-50`}
-                        >
-                          {creatingSettlement ? "Saving…" : "Save obligation"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAddSettlementOpen(false);
-                            setNewRowWholesalerId("");
-                            setNewRowPercent("");
-                            setNewRowFixed("");
-                            setNewRowItemizedLines([]);
-                            setNewRowError(null);
-                          }}
-                          className={workspaceActionSecondaryMd}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
+                <ShowDetailObligationsList
+                  settlements={settlements}
+                  payoutAfterFees={payoutAfterFees}
+                  isClosed={isClosed}
+                  panel={obligationsPanel}
+                  onOpenAdd={openAddObligationPanel}
+                  onOpenEdit={openEditObligationPanel}
+                  onClosePanel={closeObligationsPanel}
+                  onDelete={setDeleteConfirmId}
+                  amountOwedFor={amountOwedFor}
+                  addPanelRef={addSettlementPanelRef}
+                  editPanelRef={editSettlementPanelRef}
+                  wholesalers={wholesalers}
+                  takenWholesalerIds={takenWholesalerIds}
+                  totalPercentUsed={composerTotalPercentUsed}
+                  newRowWholesalerId={newRowWholesalerId}
+                  onWholesalerChange={setNewRowWholesalerId}
+                  newRowMode={newRowMode}
+                  onModeChange={setNewRowMode}
+                  newRowPercent={newRowPercent}
+                  onPercentChange={setNewRowPercent}
+                  newRowFixed={newRowFixed}
+                  onFixedChange={setNewRowFixed}
+                  newRowItemizedLines={newRowItemizedLines}
+                  onItemizedLinesChange={setNewRowItemizedLines}
+                  newRowTotal={newRowTotal}
+                  isPercentValueValid={isPercentValueValid}
+                  settlementComposerBlock={settlementComposerBlock}
+                  fieldHints={fieldHints}
+                  submitBlockedMessage={obligationSubmitBlockedReason}
+                  saving={creatingSettlement}
+                  submitDisabled={obligationSubmitDisabled}
+                  onSave={() => void handleSaveObligation()}
+                />
                 {deleteSettlementError ||
                 createSettlementError ||
                 newRowError ? (
-                  <p
-                    className="mt-3 rounded-md border border-amber-200/80 bg-amber-50/50 px-3 py-2 text-sm text-amber-800"
-                    role="alert"
-                  >
+                  <p className="mt-3 text-sm text-red-600" role="alert">
                     {deleteSettlementError ??
                       (createSettlementError
                         ?.toLowerCase()
@@ -1757,134 +972,51 @@ export function ShowDetailView({ id }: { id: string }) {
                 ) : null}
               </WorkspaceSectionCard>
 
-              <WorkspaceSectionCard
-                titleId="payout-receipt-heading"
-                title={
-                  <>
-                    Receipt{" "}
-                    <span className="text-base font-normal text-admin-inkMuted sm:text-lg">
-                      (optional)
-                    </span>
-                  </>
-                }
-              >
-                <input
-                  ref={receiptFileInputRef}
-                  id="show-receipt-file"
-                  type="file"
-                  className="sr-only"
-                  accept=".pdf,image/png,image/jpeg,image/jpg"
-                  onChange={handleReceiptFileChange}
-                />
-                <div className="mt-3 flex min-h-[1.5rem] flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
-                  {uploadingReceipt ? (
-                    <span className="text-xs text-gray-500">Uploading…</span>
-                  ) : receiptFile ? (
-                    <>
-                      <span className="min-w-0 max-w-[min(100%,14rem)] truncate text-xs text-gray-800">
-                        {receiptFile.name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleAttachReceipt}
-                        disabled={uploadingReceipt}
-                        className="min-h-10 rounded-md px-3 py-2 text-sm font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 disabled:opacity-60 sm:min-h-0 sm:px-2 sm:py-0.5 sm:text-[11px]"
-                      >
-                        Attach
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReceiptFile(null);
-                          if (receiptFileInputRef.current) {
-                            receiptFileInputRef.current.value = "";
-                          }
-                          receiptFileInputRef.current?.click();
-                        }}
-                        disabled={uploadingReceipt}
-                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-60 sm:h-7 sm:w-7"
-                        aria-label="Choose a different file"
-                      >
-                        <ArrowUpTrayIcon
-                          className={workspaceActionIconSm}
-                          aria-hidden
-                        />
-                      </button>
-                    </>
-                  ) : showAttachments.length > 0 ? (
-                    <>
-                      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                        {showAttachments.map((att) => (
-                          <span
-                            key={att.id}
-                            className="inline-flex max-w-full items-center gap-1"
-                          >
-                            <span className="max-w-[9rem] truncate text-xs text-gray-800">
-                              {att.filename}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadAttachment(att)}
-                              className="min-h-9 shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-900 sm:min-h-0 sm:px-1.5 sm:py-0.5 sm:text-[11px]"
-                            >
-                              View
-                            </button>
-                          </span>
-                        ))}
-                      </span>
-                      {!isClosed ? (
-                        <button
-                          type="button"
-                          onClick={() => receiptFileInputRef.current?.click()}
-                          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 sm:h-7 sm:w-7"
-                          aria-label="Replace receipt"
-                        >
-                          <ArrowUpTrayIcon
-                            className={workspaceActionIconSm}
-                            aria-hidden
-                          />
-                        </button>
-                      ) : null}
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-xs text-gray-500">None</span>
-                      {!isClosed ? (
-                        <button
-                          type="button"
-                          onClick={() => receiptFileInputRef.current?.click()}
-                          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 sm:h-7 sm:w-7"
-                          aria-label="Add receipt"
-                        >
-                          <ArrowUpTrayIcon
-                            className={workspaceActionIconSm}
-                            aria-hidden
-                          />
-                        </button>
-                      ) : null}
-                    </>
-                  )}
-                  {receiptError ? (
-                    <span className="text-xs text-rose-700">
-                      {receiptError}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-xs leading-tight text-admin-inkMuted">
-                  PDF or image · max{" "}
-                  {Math.round(getMaxUploadBytes() / 1024 / 1024)} MB
-                </p>
-              </WorkspaceSectionCard>
+              <ShowDetailReceiptSection
+                isClosed={isClosed}
+                uploadingReceipt={uploadingReceipt}
+                receiptFile={receiptFile}
+                receiptError={receiptError}
+                showAttachments={showAttachments}
+                fileInputRef={receiptFileInputRef}
+                onFileChange={handleReceiptFileChange}
+                onAttach={handleAttachReceipt}
+                onChooseFile={handleChooseReceiptFile}
+                onClearPendingFile={handleClearPendingReceipt}
+                onViewAttachment={handleDownloadAttachment}
+              />
             </div>
 
             <div className={SHOW_DETAIL_RAIL_COLUMN}>
-              <ShowDetailStatusCard
+              <ShowDetailSummaryCard
+                payoutAfterFees={payoutAfterFees}
+                displayProfit={displayProfit}
+                totalOwed={totals.totalOwed}
+              />
+              <ShowDetailActionsCard
                 isClosed={isClosed}
                 closing={closing}
                 closeError={closeError}
-                platformFee={platformFee}
                 onCloseClick={handleCloseShowClick}
                 onReopenClick={() => setReopenDialogOpen(true)}
+                adjustPayout={
+                  isClosed ? undefined : (
+                    <div className="space-y-2">
+                      <EditablePayout
+                        payoutAfterFees={payoutAfterFees}
+                        saving={savingPayout}
+                        disabled={isClosed}
+                        onSave={handleSavePayout}
+                        displayVariant="actionsRail"
+                      />
+                      {savePayoutError ? (
+                        <p className="text-xs text-red-600" role="alert">
+                          {savePayoutError}
+                        </p>
+                      ) : null}
+                    </div>
+                  )
+                }
               />
             </div>
           </div>
@@ -1949,7 +1081,7 @@ function EditablePayout({
   saving: boolean;
   disabled?: boolean;
   onSave: (amount: number) => Promise<boolean>;
-  displayVariant?: "default" | "moneyCard";
+  displayVariant?: "default" | "moneyCard" | "actionsRail";
   /** Inside grouped breakdown — lighter chrome, compact edit. */
   embedded?: boolean;
 }) {
@@ -1970,6 +1102,73 @@ function EditablePayout({
     if (parts[1]?.length > 2) return;
     setInput(cleaned);
   };
+
+  if (displayVariant === "actionsRail") {
+    if (editing) {
+      return (
+        <div className="rounded-lg border border-admin-border/80 bg-white/85 px-3 py-3">
+          <p className="text-xs font-medium text-admin-inkMuted">
+            Payout after fees
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="relative min-w-0">
+              <span
+                className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-sm text-gray-500"
+                aria-hidden
+              >
+                $
+              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={input}
+                onChange={(e) => onInputChange(e.target.value)}
+                disabled={disabled}
+                className={`${workspaceTextInput} w-full min-w-[8rem] pl-7 tabular-nums disabled:opacity-50 sm:w-36`}
+                placeholder="0.00"
+                aria-label="Payout amount in dollars"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!canSave || saving || disabled) return;
+                const ok = await onSave(roundToCents(Number(parsed)));
+                if (ok) setEditing(false);
+              }}
+              disabled={disabled || !canSave || saving}
+              className={`${workspaceActionPositiveCompleteMd} disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              {saving ? "Saving…" : "Apply"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setInput(String(payoutAfterFees));
+                setEditing(false);
+              }}
+              className={workspaceActionSecondaryMd}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setEditing(true)}
+        className={`${workspaceActionSecondaryMd} w-full justify-center gap-2 shadow-none disabled:cursor-not-allowed disabled:opacity-50`}
+        aria-label="Adjust payout after fees"
+      >
+        <PencilSquareIcon className={workspaceActionIconMd} aria-hidden />
+        {WORKFLOW_SHOW_DETAIL_ADJUST_PAYOUT_LABEL}
+      </button>
+    );
+  }
 
   if (displayVariant === "moneyCard") {
     const shell = embedded
