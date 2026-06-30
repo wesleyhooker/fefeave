@@ -50,7 +50,7 @@ test('Purchases uses one stable Record purchase primary action', () => {
     'utf8',
   );
   const toolbar = readFileSync(
-    new URL('./PurchasesResourceToolbar.tsx', import.meta.url),
+    new URL('./_components/PurchasesFeedToolbar.tsx', import.meta.url),
     'utf8',
   );
   assert.match(page, /WORKFLOW_PURCHASES_RECORD_PURCHASE_PANEL_TITLE/);
@@ -86,7 +86,7 @@ test('Record purchase panel opens form with purchase type as first field', () =>
 });
 
 test('Purchases page subtitle reflects inventory and expenses only', () => {
-  assert.match(WORKFLOW_PURCHASES_PAGE_SUBTITLE, /inventory purchases/i);
+  assert.match(WORKFLOW_PURCHASES_PAGE_SUBTITLE, /inventory/i);
   assert.match(WORKFLOW_PURCHASES_PAGE_SUBTITLE, /business expenses/i);
   assert.doesNotMatch(WORKFLOW_PURCHASES_PAGE_SUBTITLE, /vendor charge/i);
 });

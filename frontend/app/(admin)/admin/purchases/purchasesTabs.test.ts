@@ -7,22 +7,27 @@ import {
   purchasesTabFromParam,
 } from './purchasesTabs';
 
-test('Purchases tab options include only Inventory and Expenses', () => {
-  assert.equal(PURCHASES_TAB_OPTIONS.length, 2);
+test('Purchases tab options include All, Inventory, and Business expenses', () => {
+  assert.equal(PURCHASES_TAB_OPTIONS.length, 3);
   assert.deepEqual(
     PURCHASES_TAB_OPTIONS.map((option) => option.value),
-    ['inventory', 'expenses'],
+    ['all', 'inventory', 'expenses'],
   );
 });
 
-test('purchasesTabFromParam normalizes legacy vendor-charges to inventory', () => {
-  assert.equal(purchasesTabFromParam('vendor-charges'), 'inventory');
+test('purchasesTabFromParam defaults unknown tabs to all purchases', () => {
+  assert.equal(purchasesTabFromParam('vendor-charges'), 'all');
   assert.equal(purchasesTabFromParam('expenses'), 'expenses');
-  assert.equal(purchasesTabFromParam(null), 'inventory');
+  assert.equal(purchasesTabFromParam('inventory'), 'inventory');
+  assert.equal(purchasesTabFromParam(null), 'all');
 });
 
-test('purchasesHrefForTab links inventory and expenses only', () => {
-  assert.equal(purchasesHrefForTab('inventory'), '/admin/purchases');
+test('purchasesHrefForTab links all, inventory, and expenses', () => {
+  assert.equal(purchasesHrefForTab('all'), '/admin/purchases');
+  assert.equal(
+    purchasesHrefForTab('inventory'),
+    '/admin/purchases?tab=inventory',
+  );
   assert.equal(
     purchasesHrefForTab('expenses'),
     '/admin/purchases?tab=expenses',

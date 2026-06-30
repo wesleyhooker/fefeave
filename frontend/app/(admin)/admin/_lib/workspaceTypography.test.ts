@@ -47,7 +47,7 @@ test('top-level pages use shared typography tokens', () => {
     '../shows/_components/ShowsCurrentPeriodSection.tsx',
     '../shows/_components/ShowsPastWeeksSection.tsx',
     '../balances/VendorsHeroMetricsCard.tsx',
-    '../purchases/PurchasesActivityStrip.tsx',
+    '../purchases/_components/PurchasesHeroCard.tsx',
     '../business-health/BusinessHealthSummaryCard.tsx',
     '../_components/workspace/WorkspacePageHeader.tsx',
   ];

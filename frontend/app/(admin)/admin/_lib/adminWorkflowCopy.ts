@@ -590,10 +590,52 @@ export const WORKFLOW_EMPTY_VENDORS_FILTERED_HINT =
   'Try another view or clear your search.';
 
 /** Purchases index */
+export const WORKFLOW_PURCHASES_TAB_ALL_LABEL = 'All purchases';
 export const WORKFLOW_PURCHASES_TAB_INVENTORY_LABEL = 'Inventory purchases';
 export const WORKFLOW_PURCHASES_PAGE_SUBTITLE =
-  'Record inventory purchases and business expenses.';
-export const WORKFLOW_PURCHASES_TAB_EXPENSES_LABEL = 'Expenses';
+  'Track inventory investments and business expenses in one place.';
+export const WORKFLOW_PURCHASES_TAB_EXPENSES_LABEL = 'Business expenses';
+export const WORKFLOW_PURCHASES_HERO_HEADING =
+  'Track inventory investments and business expenses';
+export const WORKFLOW_PURCHASES_HERO_BODY =
+  'Stay organized, control costs, and grow your business.';
+export const WORKFLOW_PURCHASES_HERO_INVENTORY_SPEND_LABEL =
+  'Inventory spend (30d)';
+export const WORKFLOW_PURCHASES_HERO_EXPENSES_SPEND_LABEL =
+  'Business expenses (30d)';
+export const WORKFLOW_PURCHASES_HERO_VENDORS_LABEL = 'Vendors purchased from';
+export const WORKFLOW_PURCHASES_HERO_EVENTS_LABEL = 'Purchase events (30d)';
+export function workflowPurchasesHeroMetricDaysLabel(
+  baseLabel: string,
+  days: number,
+): string {
+  return baseLabel.replace('(30d)', `(${days}d)`);
+}
+export function workflowPurchasesFeedTitle(days: number): string {
+  return `Recent purchases (last ${days} days)`;
+}
+export const WORKFLOW_PURCHASES_FEED_EMPTY_TITLE =
+  'No purchases recorded in the last 30 days.';
+export function workflowPurchasesFeedEmptyTitle(days: number): string {
+  return `No purchases recorded in the last ${days} days.`;
+}
+export const WORKFLOW_PURCHASES_FEED_EMPTY_BODY =
+  'Record inventory purchases and business expenses to see them here.';
+export const WORKFLOW_PURCHASES_FEED_FILTER_EMPTY =
+  'No purchases match your filters. Try another search or clear filters.';
+export const WORKFLOW_PURCHASES_SEARCH_PLACEHOLDER = 'Search purchases…';
+export const WORKFLOW_PURCHASES_EXPORT_LABEL = 'Export';
+export const WORKFLOW_PURCHASES_EXPORT_CSV = 'Download CSV';
+export const WORKFLOW_PURCHASES_DATE_RANGE_LABEL = 'Date range';
+export const WORKFLOW_PURCHASES_VENDOR_FILTER_LABEL = 'Vendor';
+export const WORKFLOW_PURCHASES_CATEGORY_FILTER_LABEL = 'Category';
+export const WORKFLOW_PURCHASES_KIND_FILTER_LABEL = 'Kind';
+export const WORKFLOW_PURCHASES_MORE_FILTERS_LABEL = 'More filters';
+export const WORKFLOW_PURCHASES_TYPE_FILTER_LABEL = 'Inventory type';
+export const WORKFLOW_PURCHASES_TYPE_INVENTORY_CHIP = 'Inventory purchase';
+export const WORKFLOW_PURCHASES_TYPE_EXPENSE_CHIP = 'Business expense';
+export const WORKFLOW_PURCHASES_PAYMENT_PAID_BADGE = 'Paid';
+export const WORKFLOW_PURCHASES_PAYMENT_UNPAID_BADGE = 'Unpaid';
 export const WORKFLOW_PURCHASES_TAB_INVENTORY_HELPER =
   'Use Inventory purchases for pallets, lots, and vendor buys. Choose “Owe vendor” when you have not paid yet.';
 export const WORKFLOW_PURCHASES_TAB_EXPENSES_HELPER =

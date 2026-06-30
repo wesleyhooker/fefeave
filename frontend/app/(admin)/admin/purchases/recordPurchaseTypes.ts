@@ -3,6 +3,7 @@ import {
   WORKFLOW_PURCHASES_RECORD_TYPE_INVENTORY_LABEL,
 } from '@/app/(admin)/admin/_lib/adminWorkflowCopy';
 import {
+  PURCHASES_TAB_ALL,
   PURCHASES_TAB_EXPENSES,
   PURCHASES_TAB_INVENTORY,
   type PurchasesTab,
@@ -29,11 +30,14 @@ export const RECORD_PURCHASE_TYPE_OPTIONS = [
 export function defaultRecordPurchaseTypeForTab(
   tab: PurchasesTab,
 ): RecordPurchaseType {
-  return tab === PURCHASES_TAB_EXPENSES
-    ? RECORD_PURCHASE_TYPE_EXPENSE
-    : RECORD_PURCHASE_TYPE_INVENTORY;
+  if (tab === PURCHASES_TAB_EXPENSES) return RECORD_PURCHASE_TYPE_EXPENSE;
+  return RECORD_PURCHASE_TYPE_INVENTORY;
 }
 
 export function isPurchasesTab(value: string | null): value is PurchasesTab {
-  return value === PURCHASES_TAB_INVENTORY || value === PURCHASES_TAB_EXPENSES;
+  return (
+    value === PURCHASES_TAB_ALL ||
+    value === PURCHASES_TAB_INVENTORY ||
+    value === PURCHASES_TAB_EXPENSES
+  );
 }

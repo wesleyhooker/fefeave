@@ -9,6 +9,10 @@ import {
 
 test('defaultRecordPurchaseTypeForTab follows active Purchases tab', () => {
   assert.equal(
+    defaultRecordPurchaseTypeForTab('all'),
+    RECORD_PURCHASE_TYPE_INVENTORY,
+  );
+  assert.equal(
     defaultRecordPurchaseTypeForTab('inventory'),
     RECORD_PURCHASE_TYPE_INVENTORY,
   );

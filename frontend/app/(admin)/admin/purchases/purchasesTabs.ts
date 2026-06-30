@@ -1,8 +1,10 @@
 import {
+  WORKFLOW_PURCHASES_TAB_ALL_LABEL,
   WORKFLOW_PURCHASES_TAB_EXPENSES_LABEL,
   WORKFLOW_PURCHASES_TAB_INVENTORY_LABEL,
 } from '@/app/(admin)/admin/_lib/adminWorkflowCopy';
 
+export const PURCHASES_TAB_ALL = 'all';
 export const PURCHASES_TAB_INVENTORY = 'inventory';
 export const PURCHASES_TAB_EXPENSES = 'expenses';
 
@@ -10,10 +12,15 @@ export const PURCHASES_TAB_EXPENSES = 'expenses';
 export const PURCHASES_TAB_VENDOR_CHARGES_LEGACY = 'vendor-charges';
 
 export type PurchasesTab =
+  | typeof PURCHASES_TAB_ALL
   | typeof PURCHASES_TAB_INVENTORY
   | typeof PURCHASES_TAB_EXPENSES;
 
 export const PURCHASES_TAB_OPTIONS = [
+  {
+    value: PURCHASES_TAB_ALL,
+    label: WORKFLOW_PURCHASES_TAB_ALL_LABEL,
+  },
   {
     value: PURCHASES_TAB_INVENTORY,
     label: WORKFLOW_PURCHASES_TAB_INVENTORY_LABEL,
@@ -26,12 +33,16 @@ export const PURCHASES_TAB_OPTIONS = [
 
 export function purchasesTabFromParam(rawTab: string | null): PurchasesTab {
   if (rawTab === PURCHASES_TAB_EXPENSES) return PURCHASES_TAB_EXPENSES;
-  return PURCHASES_TAB_INVENTORY;
+  if (rawTab === PURCHASES_TAB_INVENTORY) return PURCHASES_TAB_INVENTORY;
+  return PURCHASES_TAB_ALL;
 }
 
 export function purchasesHrefForTab(tab: PurchasesTab): string {
   if (tab === PURCHASES_TAB_EXPENSES) {
     return '/admin/purchases?tab=expenses';
+  }
+  if (tab === PURCHASES_TAB_INVENTORY) {
+    return '/admin/purchases?tab=inventory';
   }
   return '/admin/purchases';
 }
