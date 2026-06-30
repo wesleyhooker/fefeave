@@ -74,10 +74,19 @@ test('show detail hero uses three-zone entity header layout', () => {
     'utf8',
   );
   assert.match(hero, /structure="three-zone"/);
-  assert.match(hero, /SHOW_DETAIL_HERO_BANNER/);
-  assert.match(layout, /md:grid md:grid-cols-\[auto_minmax\(0,1fr\)_auto\]/);
-  assert.match(layout, /SHOW_DETAIL_HERO_BANNER[\s\S]*lg:py-6/);
-  assert.match(layout, /SHOW_DETAIL_HERO_BANNER[\s\S]*xl:py-6/);
+  assert.match(hero, /WORKSPACE_ENTITY_HEADER_THREE_ZONE_BANNER/);
+  const sharedLayout = readFileSync(
+    new URL('../../../_lib/workspaceEntityDetailLayout.ts', import.meta.url),
+    'utf8',
+  );
+  assert.match(
+    sharedLayout,
+    /WORKSPACE_ENTITY_HEADER_THREE_ZONE_BANNER[\s\S]*lg:py-6/,
+  );
+  assert.match(
+    sharedLayout,
+    /WORKSPACE_ENTITY_HEADER_THREE_ZONE_BANNER[\s\S]*xl:gap-x-6/,
+  );
 });
 
 test('show detail hero uses status pill in metadata', () => {
@@ -87,6 +96,7 @@ test('show detail hero uses status pill in metadata', () => {
   );
   assert.match(hero, /WorkspaceEntityHeader/);
   assert.match(hero, /ShowStatusPill/);
+  assert.doesNotMatch(hero, /identityLayout/);
   assert.doesNotMatch(hero, /workspaceShowStatusMetadataSegments/);
 });
 

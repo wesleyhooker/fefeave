@@ -9,6 +9,10 @@
 export const VENDOR_PAYMENT_HASH = '#vendor-payment';
 export const VENDOR_BALANCE_BY_SHOW_HASH = '#balance-by-show';
 
+/** Query keys for deep-linking ledger row focus on vendor detail. */
+export const VENDOR_LEDGER_PAYMENT_QUERY = 'ledgerPayment';
+export const VENDOR_LEDGER_EXPENSE_QUERY = 'ledgerExpense';
+
 export function vendorDetailHref(vendorId: string): string {
   return `/admin/vendors/${vendorId}`;
 }
@@ -16,6 +20,28 @@ export function vendorDetailHref(vendorId: string): string {
 /** Inline payment form on vendor detail — canonical payment creation destination. */
 export function vendorDetailPaymentHref(vendorId: string): string {
   return `${vendorDetailHref(vendorId)}${VENDOR_PAYMENT_HASH}`;
+}
+
+/** Vendor detail — focus inline payment edit for a ledger payment row. */
+export function vendorDetailLedgerPaymentHref(
+  vendorId: string,
+  paymentId: string,
+): string {
+  const params = new URLSearchParams({
+    [VENDOR_LEDGER_PAYMENT_QUERY]: paymentId,
+  });
+  return `${vendorDetailHref(vendorId)}?${params.toString()}${VENDOR_PAYMENT_HASH}`;
+}
+
+/** Vendor detail — focus inline vendor-charge edit for a ledger expense row. */
+export function vendorDetailLedgerExpenseHref(
+  vendorId: string,
+  expenseId: string,
+): string {
+  const params = new URLSearchParams({
+    [VENDOR_LEDGER_EXPENSE_QUERY]: expenseId,
+  });
+  return `${vendorDetailHref(vendorId)}?${params.toString()}${VENDOR_PAYMENT_HASH}`;
 }
 
 /** @deprecated Use {@link vendorDetailPaymentHref}. Legacy route redirects here. */

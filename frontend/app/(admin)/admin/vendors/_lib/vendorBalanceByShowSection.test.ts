@@ -42,6 +42,9 @@ test('VendorBalanceByShowSection does not duplicate in-page Record payment CTA',
   assert.doesNotMatch(source, /Record payment/);
 });
 
-test('vendor ledger subtitle distinguishes chronological history', () => {
-  assert.match(WORKFLOW_VENDOR_LEDGER_SUBTITLE, /Chronological ledger events/i);
+test('vendor ledger subtitle describes recent activity preview', () => {
+  assert.match(
+    WORKFLOW_VENDOR_LEDGER_SUBTITLE,
+    /Recent obligations, payments/i,
+  );
 });

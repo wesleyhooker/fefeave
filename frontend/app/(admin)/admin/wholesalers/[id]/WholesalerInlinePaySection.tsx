@@ -41,6 +41,13 @@ import {
   workspaceTextInput,
   workspaceTextInputCompact,
 } from "@/app/(admin)/admin/_components/workspaceUi";
+import {
+  VENDOR_DETAIL_PAYMENT_EDIT_FOOTER,
+  VENDOR_DETAIL_PAYMENT_FOOTER,
+  VENDOR_DETAIL_PAYMENT_FORM,
+  VENDOR_DETAIL_PAYMENT_PRIMARY_ROW,
+  VENDOR_DETAIL_PAYMENT_SECONDARY_ROW,
+} from "./_lib/vendorDetailPaymentLayout";
 
 const METHOD_OPTIONS = (
   ["Cash", "Zelle", "Venmo", "Check", "Other"] as const
@@ -75,6 +82,8 @@ export function WholesalerInlinePaySection({
   density = "default",
   /** When true, omit outer card + main title (parent provides Transactions shell). */
   embedded = false,
+  /** When true with embedded, parent card renders edit-mode cancel in header. */
+  parentHandlesEditHeader = false,
 }: {
   wholesalerId: string;
   currentBalance: number;
@@ -84,15 +93,22 @@ export function WholesalerInlinePaySection({
   onRecorded: () => void;
   density?: "default" | "compact";
   embedded?: boolean;
+  parentHandlesEditHeader?: boolean;
 }) {
   const isCompact = density === "compact";
-  const fieldLabelClass =
-    isCompact && embedded ? workspaceFormLabelSecondary : workspaceFormLabel;
+  const isVendorDetailEmbed = isCompact && embedded;
+  const primaryLabelClass = workspaceFormLabel;
+  const secondaryLabelClass = workspaceFormLabelSecondary;
+  const fieldLabelClass = isVendorDetailEmbed
+    ? primaryLabelClass
+    : isCompact && embedded
+      ? workspaceFormLabelSecondary
+      : workspaceFormLabel;
   const textField = isCompact ? workspaceTextInputCompact : workspaceTextInput;
   const dateField = isCompact ? workspaceDateInputCompact : workspaceDateInput;
-  const primaryFieldShell = `${workspacePanel} ${
-    isCompact ? "p-2.5 sm:p-3" : "p-3.5 sm:p-4"
-  }`;
+  const primaryFieldShell = isVendorDetailEmbed
+    ? "min-w-0"
+    : `${workspacePanel} ${isCompact ? "p-2.5 sm:p-3" : "p-3.5 sm:p-4"}`;
 
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<string>("Zelle");
@@ -278,71 +294,60 @@ export function WholesalerInlinePaySection({
       : null;
   const isOverage = mode === "create" && validAmount && amtNum > currentBalance;
 
-  const formStack =
-    isCompact && embedded
+  const formStack = isVendorDetailEmbed
+    ? VENDOR_DETAIL_PAYMENT_FORM
+    : isCompact && embedded
       ? "space-y-3.5"
       : isCompact
         ? "space-y-4"
         : "space-y-6";
-  const formPadding = embedded
-    ? isCompact
-      ? "px-3.5 pb-3.5 pt-2 sm:px-5 sm:pb-4"
-      : "px-4 pb-5 pt-3 sm:px-6 sm:pb-6"
-    : isCompact
-      ? "px-3.5 pb-4 pt-3 sm:px-5 sm:pb-5"
-      : "px-4 pb-5 pt-4 sm:px-6 sm:pb-6";
-  const primaryRowGrid =
-    isCompact && embedded
+  const formPadding = isVendorDetailEmbed
+    ? ""
+    : embedded
+      ? isCompact
+        ? "px-3.5 pb-3.5 pt-2 sm:px-5 sm:pb-4"
+        : "px-4 pb-5 pt-3 sm:px-6 sm:pb-6"
+      : isCompact
+        ? "px-3.5 pb-4 pt-3 sm:px-5 sm:pb-5"
+        : "px-4 pb-5 pt-4 sm:px-6 sm:pb-6";
+  const primaryRowGrid = isVendorDetailEmbed
+    ? VENDOR_DETAIL_PAYMENT_PRIMARY_ROW
+    : isCompact && embedded
       ? "grid grid-cols-1 gap-3.5 sm:gap-4 lg:grid-cols-2 lg:items-start"
       : isCompact
         ? "grid grid-cols-1 gap-4 sm:gap-4 lg:grid-cols-2 lg:items-start"
         : "grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-2 lg:items-start";
-  const secondaryRowGrid =
-    isCompact && embedded
+  const secondaryRowGrid = isVendorDetailEmbed
+    ? VENDOR_DETAIL_PAYMENT_SECONDARY_ROW
+    : isCompact && embedded
       ? "grid grid-cols-1 gap-3 border-t border-gray-200/60 pt-2 sm:grid-cols-2 sm:items-start sm:gap-4"
       : isCompact
         ? "grid grid-cols-1 gap-3 border-t border-gray-200/90 pt-3 sm:grid-cols-2 sm:items-start sm:gap-4"
         : "grid grid-cols-1 gap-4 border-t border-gray-200/90 pt-5 sm:grid-cols-2 sm:items-start sm:gap-5";
-  const tertiaryBlock =
-    isCompact && embedded
+  const tertiaryBlock = isVendorDetailEmbed
+    ? ""
+    : isCompact && embedded
       ? "border-t border-gray-200/55 pt-3"
       : isCompact
         ? "border-t border-gray-200/90 pt-3"
         : "border-t border-gray-200/90 pt-5";
-  const footerBlockCreate =
-    isCompact && embedded
+  const footerBlockCreate = isVendorDetailEmbed
+    ? VENDOR_DETAIL_PAYMENT_FOOTER
+    : isCompact && embedded
       ? "flex flex-col gap-2 border-t border-gray-200/60 pt-2.5 sm:flex-row sm:flex-wrap sm:items-center"
       : isCompact
         ? "flex flex-col gap-2.5 border-t border-gray-200/90 pt-3 sm:flex-row sm:flex-wrap sm:items-center"
         : "flex flex-col gap-3 border-t border-gray-200/90 pt-5 sm:flex-row sm:flex-wrap sm:items-center";
-  const footerBlockEdit =
-    "flex flex-col-reverse gap-3 border-t border-gray-200/90 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
+  const footerBlockEdit = isVendorDetailEmbed
+    ? VENDOR_DETAIL_PAYMENT_EDIT_FOOTER
+    : "flex flex-col-reverse gap-3 border-t border-gray-200/90 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
 
   const isEdit = mode === "edit" && editPayment;
 
-  const headerBlock = embedded ? (
-    isEdit ? (
-      <div className="flex justify-end border-b border-gray-200/50 bg-gray-50/40 px-4 py-2 sm:px-5">
-        <button
-          type="button"
-          className={`${workspaceActionSecondaryMd} shrink-0 text-sm`}
-          onClick={onCancelEdit}
-        >
-          <WorkspaceActionLabel
-            icon={<XMarkIcon className={workspaceActionIconMd} />}
-          >
-            Cancel edit
-          </WorkspaceActionLabel>
-        </button>
-      </div>
-    ) : null
-  ) : (
-    <div className={workspaceSectionToolbar}>
-      <div className="flex w-full min-w-0 items-center justify-between gap-3">
-        <h2 id="wholesaler-pay-heading" className={workspaceSectionTitle}>
-          {isEdit ? "Edit payment" : "Make payment"}
-        </h2>
-        {isEdit ? (
+  const headerBlock =
+    embedded && parentHandlesEditHeader ? null : embedded ? (
+      isEdit ? (
+        <div className="flex justify-end border-b border-gray-200/50 bg-gray-50/40 px-4 py-2 sm:px-5">
           <button
             type="button"
             className={`${workspaceActionSecondaryMd} shrink-0 text-sm`}
@@ -354,10 +359,30 @@ export function WholesalerInlinePaySection({
               Cancel edit
             </WorkspaceActionLabel>
           </button>
-        ) : null}
+        </div>
+      ) : null
+    ) : (
+      <div className={workspaceSectionToolbar}>
+        <div className="flex w-full min-w-0 items-center justify-between gap-3">
+          <h2 id="wholesaler-pay-heading" className={workspaceSectionTitle}>
+            {isEdit ? "Edit payment" : "Make payment"}
+          </h2>
+          {isEdit ? (
+            <button
+              type="button"
+              className={`${workspaceActionSecondaryMd} shrink-0 text-sm`}
+              onClick={onCancelEdit}
+            >
+              <WorkspaceActionLabel
+                icon={<XMarkIcon className={workspaceActionIconMd} />}
+              >
+                Cancel edit
+              </WorkspaceActionLabel>
+            </button>
+          ) : null}
+        </div>
       </div>
-    </div>
-  );
+    );
 
   const outerClass = embedded
     ? "min-w-0"
@@ -431,14 +456,20 @@ export function WholesalerInlinePaySection({
               {!isEdit ? (
                 <div
                   className={
-                    isCompact
-                      ? "mt-1.5 border-t border-dashed border-gray-200/90 pt-1.5"
-                      : "mt-2 border-t border-dashed border-gray-200/90 pt-2"
+                    isVendorDetailEmbed
+                      ? "mt-2"
+                      : isCompact
+                        ? "mt-1.5 border-t border-dashed border-gray-200/90 pt-1.5"
+                        : "mt-2 border-t border-dashed border-gray-200/90 pt-2"
                   }
                 >
                   <button
                     type="button"
-                    className="text-left text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-2 transition-colors hover:text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
+                    className={
+                      isVendorDetailEmbed
+                        ? "text-left text-sm font-medium text-admin-actionPrimary underline decoration-admin-actionPrimary/30 underline-offset-2 transition-colors hover:text-admin-actionPrimary/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-actionPrimary/40"
+                        : "text-left text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-2 transition-colors hover:text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
+                    }
                     onClick={() => {
                       setAmount(formatBalanceForInput(currentBalance));
                       setAmountHighlight(true);
@@ -456,27 +487,48 @@ export function WholesalerInlinePaySection({
             {!isEdit && validAmount ? (
               <div
                 className={
-                  isCompact
-                    ? "mt-2 rounded-md border border-gray-200/90 bg-gray-50/90 px-2.5 py-1.5 text-xs text-gray-800"
-                    : "mt-3 rounded-md border border-gray-200/90 bg-gray-50/90 px-3 py-2 text-xs text-gray-800"
+                  isVendorDetailEmbed
+                    ? "mt-2 space-y-0.5 text-xs leading-snug text-admin-inkMuted"
+                    : isCompact
+                      ? "mt-2 rounded-md border border-gray-200/90 bg-gray-50/90 px-2.5 py-1.5 text-xs text-gray-800"
+                      : "mt-3 rounded-md border border-gray-200/90 bg-gray-50/90 px-3 py-2 text-xs text-gray-800"
                 }
               >
                 <p>
                   Balance before{" "}
-                  <span className="font-medium text-stone-900">
+                  <span
+                    className={
+                      isVendorDetailEmbed
+                        ? "font-medium text-admin-ink"
+                        : "font-medium text-stone-900"
+                    }
+                  >
                     {formatCurrency(currentBalance)}
                   </span>
                 </p>
                 {projected !== null ? (
-                  <p className="mt-1">
+                  <p className={isVendorDetailEmbed ? undefined : "mt-1"}>
                     After this payment{" "}
-                    <span className="font-medium text-stone-900">
+                    <span
+                      className={
+                        isVendorDetailEmbed
+                          ? "font-medium text-admin-ink"
+                          : "font-medium text-stone-900"
+                      }
+                    >
                       {formatCurrency(projected)}
                     </span>
                   </p>
                 ) : null}
                 {isOverage ? (
-                  <p className="mt-2 text-amber-800" role="status">
+                  <p
+                    className={
+                      isVendorDetailEmbed
+                        ? "text-amber-800"
+                        : "mt-2 text-amber-800"
+                    }
+                    role="status"
+                  >
                     Exceeds balance — creates vendor credit.
                   </p>
                 ) : null}
@@ -508,7 +560,7 @@ export function WholesalerInlinePaySection({
           <div className="min-w-0">
             <label
               htmlFor="wholesaler-pay-note"
-              className={`${workspaceFormLabelSecondary} block`}
+              className={`${secondaryLabelClass} block`}
             >
               Note <span className="font-normal text-gray-400">(optional)</span>
             </label>
@@ -525,7 +577,7 @@ export function WholesalerInlinePaySection({
           <div className="min-w-0">
             <label
               htmlFor="wholesaler-pay-date"
-              className={`${workspaceFormLabelSecondary} block`}
+              className={`${isVendorDetailEmbed ? primaryLabelClass : fieldLabelClass} block`}
             >
               Payment date
             </label>
@@ -543,9 +595,9 @@ export function WholesalerInlinePaySection({
           </div>
         </div>
 
-        <div className={tertiaryBlock}>
+        <div className={tertiaryBlock || undefined}>
           <WorkspaceFileUpload
-            tone={embedded ? "flush" : "default"}
+            tone={isVendorDetailEmbed || embedded ? "flush" : "default"}
             id="wholesaler-inline-receipt"
             label={
               <>

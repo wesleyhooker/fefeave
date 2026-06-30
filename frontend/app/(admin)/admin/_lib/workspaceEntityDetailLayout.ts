@@ -67,6 +67,48 @@ export const WORKSPACE_ENTITY_METADATA_ROW = [
 export const WORKSPACE_ENTITY_METADATA_SEP =
   'text-admin-inkMuted/50 select-none';
 
+/** Status row — stacked identity layout only; no bullet separators. */
+export const WORKSPACE_ENTITY_HEADER_STATUS_ROW = [
+  'flex flex-wrap items-center gap-x-2 gap-y-1',
+].join(' ');
+
+/** Vertical identity stack — title, status, detail lines (vendor detail). */
+export const WORKSPACE_ENTITY_HEADER_IDENTITY_STACK = [
+  'flex min-w-0 flex-col gap-1',
+].join(' ');
+
+/** Supplemental identity line below status (e.g. last payment). */
+export const WORKSPACE_ENTITY_HEADER_IDENTITY_DETAIL = [
+  'text-sm leading-snug text-admin-inkMuted',
+].join(' ');
+
+/**
+ * Equal-width KPI strip — retained for reference; Vendor Detail uses page-local layout.
+ * @deprecated Prefer page-local hero KPI tokens.
+ */
+export const WORKSPACE_ENTITY_HEADER_KPI_ROW_EQUAL = [
+  'grid w-full min-w-0 grid-cols-1 divide-y divide-admin-border/30',
+  'sm:grid-cols-3 sm:divide-x sm:divide-y-0',
+].join(' ');
+
+export const WORKSPACE_ENTITY_HEADER_KPI_CELL_EQUAL = [
+  'flex min-w-0 items-center justify-center',
+  'px-3 py-1.5 sm:px-4 sm:py-0',
+].join(' ');
+
+/**
+ * Three-zone entity hero banner — identity | KPIs | illustration.
+ * Shared by Show Detail and Vendor Detail page-local layout tokens.
+ */
+export const WORKSPACE_ENTITY_HEADER_THREE_ZONE_BANNER = [
+  WORKSPACE_PAD_X,
+  'flex flex-col gap-3 py-4',
+  'sm:gap-3.5 sm:py-4',
+  'md:grid md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_auto] md:items-center md:gap-x-4 md:py-5',
+  'lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto] lg:gap-x-5 lg:py-6',
+  'xl:gap-x-6',
+].join(' ');
+
 /**
  * Compact inline KPI group — vertical dividers match Shows index stat footer.
  * @see SHOWS_HERO_CARD_STATS_GRID

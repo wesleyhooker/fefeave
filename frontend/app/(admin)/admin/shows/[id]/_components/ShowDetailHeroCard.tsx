@@ -17,12 +17,12 @@ import { SHOW_DETAIL_VENDOR_OWED_LABEL } from "../_lib/showDetailLayout";
 import {
   SHOW_DETAIL_HERO_ART_CELL,
   SHOW_DETAIL_HERO_ART_IMAGE,
-  SHOW_DETAIL_HERO_BANNER,
   SHOW_DETAIL_HERO_IDENTITY,
   SHOW_DETAIL_HERO_ILLUSTRATION_SIZES,
   SHOW_DETAIL_HERO_KPI_CELL,
   SHOW_DETAIL_HERO_KPI_ROW,
 } from "../_lib/showDetailHeroLayout";
+import { WORKSPACE_ENTITY_HEADER_THREE_ZONE_BANNER } from "@/app/(admin)/admin/_lib/workspaceEntityDetailLayout";
 
 export function ShowDetailHeroCard({
   showName,
@@ -70,7 +70,7 @@ export function ShowDetailHeroCard({
       metadata={metadata}
       illustration="shows"
       structure="three-zone"
-      bannerClassName={SHOW_DETAIL_HERO_BANNER}
+      bannerClassName={WORKSPACE_ENTITY_HEADER_THREE_ZONE_BANNER}
       identityClassName={SHOW_DETAIL_HERO_IDENTITY}
       kpiRowClassName={SHOW_DETAIL_HERO_KPI_ROW}
       kpiCellClassName={SHOW_DETAIL_HERO_KPI_CELL}

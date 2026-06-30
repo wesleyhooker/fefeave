@@ -24,7 +24,7 @@ function valueClassForTone(
     return `${lead ? "text-[1.75rem] sm:text-[2.25rem]" : "text-xl sm:text-2xl"} font-semibold ${workspaceMoneyTabular} leading-none tracking-tight ${workspaceListPrimaryMoneyAmountClass(numericValue)}`;
   }
   if (tone === "liability" && numericValue != null) {
-    return `text-xl font-semibold ${workspaceMoneyTabular} leading-none tracking-tight sm:text-2xl ${workspaceMoneyClassForLiability(numericValue)}`;
+    return `${lead ? "text-[1.75rem] sm:text-[2.25rem]" : "text-xl sm:text-2xl"} font-semibold ${workspaceMoneyTabular} leading-none tracking-tight ${workspaceMoneyClassForLiability(numericValue)}`;
   }
   return `text-xl font-semibold ${workspaceMoneyTabular} leading-none tracking-tight text-admin-ink sm:text-2xl`;
 }
@@ -38,6 +38,7 @@ export function ShowsHeroStatCell({
   iconWell,
   icon,
   lead = false,
+  subtext,
 }: {
   label: string;
   value: ReactNode;
@@ -46,6 +47,8 @@ export function ShowsHeroStatCell({
   iconWell: WorkspaceIconWellVariant;
   icon: ReactNode;
   lead?: boolean;
+  /** Optional line between value and label (e.g. last-payment context). */
+  subtext?: ReactNode;
 }) {
   return (
     <div className="inline-flex min-w-0 max-w-full items-center gap-2.5 sm:gap-3">
@@ -56,6 +59,11 @@ export function ShowsHeroStatCell({
         <p className={valueClassForTone(valueTone, lead, numericValue)}>
           {value}
         </p>
+        {subtext ? (
+          <p className="mt-0.5 text-xs leading-snug text-admin-inkMuted">
+            {subtext}
+          </p>
+        ) : null}
         <p className={`mt-1 ${WORKSPACE_LABEL}`}>{label}</p>
       </div>
     </div>

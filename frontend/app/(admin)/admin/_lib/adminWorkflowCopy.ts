@@ -453,7 +453,35 @@ export const WORKFLOW_VENDORS_PAYMENT_LEDGER_LINK = 'Payment Ledger';
 /** Vendor detail — embedded ledger from financial events (settlements + payments). */
 export const WORKFLOW_VENDOR_LEDGER_HEADING = 'Vendor Ledger';
 export const WORKFLOW_VENDOR_LEDGER_SUBTITLE =
-  'Chronological ledger events for this vendor.';
+  'Recent obligations, payments, and adjustments for this vendor.';
+
+/** Vendor detail — hero helper copy under vendor name. */
+/** @deprecated Removed from Vendor Detail hero — page structure is self-explanatory. */
+export const WORKFLOW_VENDOR_DETAIL_HERO_HELPER =
+  "Record payments and review this vendor's ledger.";
+
+/** Vendor detail — record payment primary card */
+export const WORKFLOW_VENDOR_DETAIL_RECORD_PAYMENT_HEADING = 'Record payment';
+export const WORKFLOW_VENDOR_DETAIL_RECORD_PAYMENT_HINT =
+  'Apply a payment to this vendor.';
+
+/** Vendor detail — attachments rail */
+export const WORKFLOW_VENDOR_DETAIL_ATTACHMENTS_HEADING = 'Attachments';
+export const WORKFLOW_VENDOR_DETAIL_ATTACHMENTS_HINT =
+  'Receipts and documents connected to this vendor.';
+export const WORKFLOW_VENDOR_DETAIL_ATTACHMENTS_EMPTY_TITLE =
+  'No attachments yet';
+export const WORKFLOW_VENDOR_DETAIL_ATTACHMENTS_EMPTY_BODY =
+  'Receipts from payments and vendor charges appear here.';
+export const WORKFLOW_VENDOR_DETAIL_LAST_PAYMENT_LABEL = 'Last payment';
+export const WORKFLOW_VENDOR_DETAIL_LAST_PAYMENT_NONE = 'No payments recorded';
+export const WORKFLOW_VENDOR_DETAIL_CURRENT_BALANCE_LABEL = 'Current balance';
+export const WORKFLOW_VENDOR_DETAIL_TOTAL_OWED_LABEL = 'Total owed';
+export const WORKFLOW_VENDOR_DETAIL_TOTAL_PAID_LABEL = 'Total paid';
+
+/** Vendor detail — attachment source labels */
+export const WORKFLOW_VENDOR_ATTACHMENT_SOURCE_PAYMENT = 'Payment receipt';
+export const WORKFLOW_VENDOR_ATTACHMENT_SOURCE_CHARGE = 'Vendor document';
 
 /** Vendor detail — link to full Ledger scoped to this vendor. */
 export const WORKFLOW_VENDOR_VIEW_FULL_LEDGER = 'View full Ledger';
@@ -532,9 +560,9 @@ export const WORKFLOW_VENDOR_CHARGE_DESCRIPTION_PLACEHOLDER =
 export const WORKFLOW_VENDOR_CHARGE_SCOPE =
   'Increases what you owe this vendor. Cash moves when you record a payment.';
 export const WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_TOGGLE =
-  'Record vendor obligation (advanced)';
+  'Add manual vendor charge';
 export const WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_HELP =
-  'Rare fees not tied to inventory or a show. Prefer inventory purchases or show close-out when possible.';
+  'Use only for rare fees not tied to a purchase or show.';
 /** @deprecated Removed from Vendor Detail primary CTAs — use advanced obligation flow. */
 export const WORKFLOW_VENDOR_DETAIL_RECORD_CHARGE_CTA =
   WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_TOGGLE;

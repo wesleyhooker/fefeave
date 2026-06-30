@@ -5,7 +5,6 @@ import {
   WORKFLOW_PURCHASES_PAGE_SUBTITLE,
   WORKFLOW_PURCHASES_RECORD_PURCHASE_LABEL,
   WORKFLOW_PURCHASES_RECORD_PURCHASE_PANEL_TITLE,
-  WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_TOGGLE,
 } from '../_lib/adminWorkflowCopy';
 import {
   purchasesInventoryAcquisitionHref,
@@ -92,7 +91,7 @@ test('Purchases page subtitle reflects inventory and expenses only', () => {
   assert.doesNotMatch(WORKFLOW_PURCHASES_PAGE_SUBTITLE, /vendor charge/i);
 });
 
-test('Vendor detail uses advanced obligation toggle instead of Purchases CTA', () => {
+test('Vendor detail is payment-first without manual charge create affordance', () => {
   const moneySection = readFileSync(
     new URL(
       '../wholesalers/[id]/WholesalerVendorMoneySection.tsx',
@@ -101,17 +100,13 @@ test('Vendor detail uses advanced obligation toggle instead of Purchases CTA', (
     'utf8',
   );
   assert.doesNotMatch(moneySection, /purchasesVendorChargeHref/);
-  assert.doesNotMatch(moneySection, /Record vendor charge/);
-  assert.match(
+  assert.doesNotMatch(
     moneySection,
     /WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_TOGGLE/,
   );
+  assert.doesNotMatch(moneySection, /mode="create"/);
   assert.match(moneySection, /WholesalerInlineExpenseSection/);
-  assert.match(moneySection, /mode="create"/);
-});
-
-test('Vendor detail advanced toggle copy is not a primary charge CTA', () => {
-  assert.match(WORKFLOW_VENDOR_DETAIL_ADVANCED_OBLIGATION_TOGGLE, /advanced/i);
+  assert.match(moneySection, /mode="edit"/);
 });
 
 test('Vendor detail keeps ledger charge edit path', () => {
@@ -119,9 +114,24 @@ test('Vendor detail keeps ledger charge edit path', () => {
     new URL('../wholesalers/[id]/WholesalerDetailView.tsx', import.meta.url),
     'utf8',
   );
+  const ledgerDisplay = readFileSync(
+    new URL(
+      '../wholesalers/[id]/_lib/vendorDetailLedgerDisplay.ts',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  const moneySection = readFileSync(
+    new URL(
+      '../wholesalers/[id]/WholesalerVendorMoneySection.tsx',
+      import.meta.url,
+    ),
+    'utf8',
+  );
   assert.match(detailView, /VENDOR_EXPENSE/);
-  assert.match(detailView, /Vendor charge/);
-  assert.match(detailView, /WholesalerInlineExpenseSection/);
+  assert.match(detailView, /ledgerFocus/);
+  assert.match(ledgerDisplay, /Vendor charge/);
+  assert.match(moneySection, /WholesalerInlineExpenseSection/);
 });
 
 test('Purchases server page redirects legacy vendor-charges tab', () => {

@@ -5,22 +5,16 @@
  * Default entity-header tokens remain unchanged for other consumers.
  */
 
-import { WORKSPACE_PAD_X } from '@/app/(admin)/admin/_lib/workspaceDesignTokens';
+import { WORKSPACE_ENTITY_HEADER_THREE_ZONE_BANNER } from '@/app/(admin)/admin/_lib/workspaceEntityDetailLayout';
 import {
   SHOWS_HERO_ILLUSTRATION_IMAGE_NUDGE,
   SHOWS_HERO_ILLUSTRATION_OBJECT,
 } from '@/app/(admin)/admin/shows/_lib/showsHeroIllustration';
 import { WORKSPACE_ENTITY_HEADER_KPI_CELL } from '@/app/(admin)/admin/_lib/workspaceEntityDetailLayout';
 
-/** Three-zone banner — identity auto, KPIs absorb middle space, illustration pinned right. */
-export const SHOW_DETAIL_HERO_BANNER = [
-  WORKSPACE_PAD_X,
-  'flex flex-col gap-3 py-4',
-  'sm:gap-3.5 sm:py-4',
-  'md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-x-5 md:py-5',
-  'lg:gap-x-6 lg:py-6',
-  'xl:gap-x-8 xl:py-6',
-].join(' ');
+/** Three-zone banner — re-exports shared entity-header grid for Show Detail. */
+export const SHOW_DETAIL_HERO_BANNER =
+  WORKSPACE_ENTITY_HEADER_THREE_ZONE_BANNER;
 
 export const SHOW_DETAIL_HERO_IDENTITY = [
   'min-w-0 md:max-w-[13rem] md:justify-self-start',

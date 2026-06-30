@@ -35,6 +35,8 @@ export type WorkspaceEntityHeaderMetric = {
   icon: ReactNode;
   cellClassName?: string;
   cellRef?: React.RefObject<HTMLDivElement | null>;
+  lead?: boolean;
+  subtext?: ReactNode;
 };
 
 export type WorkspaceEntityHeaderStructure = "grouped" | "three-zone";
@@ -42,10 +44,11 @@ export type WorkspaceEntityHeaderStructure = "grouped" | "three-zone";
 export type WorkspaceEntityHeaderProps = {
   title: ReactNode;
   titleId?: string;
-  /** First metadata segments (e.g. status labels). */
+  /** Status and metadata segments — bullet-separated row under title. */
   status?: ReactNode | ReactNode[];
-  /** Additional metadata segments after status — dates, platform, etc. */
   metadata?: ReactNode[];
+  /** Helper copy below metadata row. */
+  identityHelper?: ReactNode;
   metrics: WorkspaceEntityHeaderMetric[];
   illustration?: WorkspaceEntityIllustration;
   className?: string;
@@ -54,22 +57,13 @@ export type WorkspaceEntityHeaderProps = {
    * `three-zone` — identity, KPIs, and illustration are sibling columns on desktop.
    */
   structure?: WorkspaceEntityHeaderStructure;
-  /** Optional layout overrides (e.g. show-detail three-zone tokens). */
   bannerClassName?: string;
   identityClassName?: string;
   kpiRowClassName?: string;
   kpiCellClassName?: string;
   artCellClassName?: string;
   artImageClassName?: string;
-  /** Optional Next/Image sizes override (e.g. show-detail desktop art column). */
   artImageSizes?: string;
-};
-
-const ILLUSTRATION_SRC: Record<
-  Exclude<WorkspaceEntityIllustration, "none">,
-  string
-> = {
-  shows: SHOWS_INDEX_HERO_ILLUSTRATION_SRC,
 };
 
 function normalizeSegments(
@@ -81,15 +75,21 @@ function normalizeSegments(
   return Array.isArray(value) ? value : [value];
 }
 
+function filterRenderable(items: ReactNode[]): ReactNode[] {
+  return items.filter(
+    (item) => item !== null && item !== undefined && item !== false,
+  );
+}
+
 /**
- * Entity detail record header — desktop: [title + metadata][KPIs] … illustration.
- * First consumer: Show Detail; reusable for Vendor/Purchase detail pages.
+ * Show Detail entity header — title, inline metadata, KPI cluster, compact art.
  */
 export function WorkspaceEntityHeader({
   title,
   titleId = "workspace-entity-title",
   status,
   metadata = [],
+  identityHelper,
   metrics,
   illustration = "none",
   className = "",
@@ -102,15 +102,13 @@ export function WorkspaceEntityHeader({
   artImageClassName,
   artImageSizes,
 }: WorkspaceEntityHeaderProps) {
-  const metadataItems = [
+  const metadataItems = filterRenderable([
     ...normalizeSegments(status),
-    ...metadata.filter(
-      (item) => item !== null && item !== undefined && item !== false,
-    ),
-  ];
+    ...metadata,
+  ]);
 
   const illustrationSrc =
-    illustration !== "none" ? ILLUSTRATION_SRC[illustration] : null;
+    illustration === "shows" ? SHOWS_INDEX_HERO_ILLUSTRATION_SRC : null;
 
   const defaultBannerClass = illustrationSrc
     ? WORKSPACE_ENTITY_HEADER_BANNER
@@ -131,6 +129,11 @@ export function WorkspaceEntityHeader({
         {title}
       </h1>
       <WorkspaceMetadataRow items={metadataItems} />
+      {identityHelper ? (
+        <div className="mt-1.5 text-sm leading-snug text-admin-inkMuted">
+          {identityHelper}
+        </div>
+      ) : null}
     </div>
   );
 
@@ -150,6 +153,8 @@ export function WorkspaceEntityHeader({
             valueTone={metric.valueTone ?? "count"}
             iconWell={metric.iconWell}
             icon={metric.icon}
+            lead={metric.lead}
+            subtext={metric.subtext}
           />
         </div>
       ))}

@@ -31,11 +31,30 @@ test('FinancialActivityPageContent passes vendor filter to API client', () => {
   assert.match(source, /Vendor filter active/);
 });
 
-test('WholesalerDetailView View full Ledger link uses vendorFullLedgerHref', () => {
+test('VendorDetailLedgerCard View full Ledger link uses vendorFullLedgerHref', () => {
   const source = readFileSync(
-    new URL('../wholesalers/[id]/WholesalerDetailView.tsx', import.meta.url),
+    new URL(
+      '../wholesalers/[id]/_components/VendorDetailLedgerCard.tsx',
+      import.meta.url,
+    ),
     'utf8',
   );
-  assert.match(source, /vendorFullLedgerHref\(id\)/);
+  assert.match(source, /vendorFullLedgerHref\(vendorId\)/);
+  assert.match(source, /WholesalerLedgerExportMenu/);
   assert.doesNotMatch(source, /WORKFLOW_VENDOR_VIEW_FULL_LEDGER_SCOPE_NOTE/);
+  assert.match(source, /VendorDetailLedgerOverflowFooter/);
+  assert.match(source, /VendorDetailLedgerActivityRow/);
+  assert.doesNotMatch(source, /<table/i);
+});
+
+test('VendorDetailLedgerOverflowFooter links to full ledger with hidden-entry copy', () => {
+  const source = readFileSync(
+    new URL(
+      '../wholesalers/[id]/_components/VendorDetailLedgerOverflowFooter.tsx',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  assert.match(source, /workflowVendorDetailLedgerHiddenEntriesHeadline/);
+  assert.match(source, /vendorFullLedgerHref\(vendorId\)/);
 });
